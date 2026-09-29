@@ -1,5 +1,5 @@
 // Dist gate: Cloudflare Pages limits with headroom, no source maps, and the bundle budgets
-// (brief Step 2 §6, gzip -9 sizes). Prints the budget table.
+// (brief Step 2 §6 and Step 3 §4, gzip -9 sizes). Prints the budget table.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,6 +69,19 @@ budget('compress.worker*.js', match(/^_astro\/compress\.worker[^/]*\.js$/), 330 
 budget('vendor/qpdf/*/qpdf.wasm', match(/^vendor\/qpdf\/[^/]+\/qpdf\.wasm$/), 480 * KB);
 budget('MozJPEG enc + dec wasm', match(/^_astro\/mozjpeg_(enc|dec)[^/]*\.wasm$/), 140 * KB);
 budget('resize wasm', match(/^_astro\/squoosh_resize[^/]*\.wasm$/), 30 * KB);
+budget('photo.worker*.js', match(/^_astro\/photo\.worker[^/]*\.js$/), 60 * KB);
+for (const glue of match(/^_astro\/webp_enc[^/]*\.js$/)) budget(`WebP glue ${glue.slice(7)}`, [glue], 20 * KB);
+for (const wasm of match(/^_astro\/webp_enc[^/]*\.wasm$/)) budget(`WebP wasm ${wasm.slice(7)}`, [wasm], 130 * KB);
+budget('fflate chunk (zip*.js)', match(/^_astro\/zip[.-][^/]*\.js$/), 12 * KB);
+
+// Both workers share one MozJPEG encoder; each WebP build ships once.
+const count = (re, want, label) => {
+  const n = match(re).length;
+  if (n !== want) errors.push(`${label}: ${n} file(s), expected exactly ${want}`);
+};
+count(/^_astro\/mozjpeg_enc[^/]*\.wasm$/, 1, 'mozjpeg_enc*.wasm');
+count(/^_astro\/webp_enc-[^/]*\.wasm$/, 1, 'webp_enc*.wasm');
+count(/^_astro\/webp_enc_simd-[^/]*\.wasm$/, 1, 'webp_enc_simd*.wasm');
 
 console.log('check-dist: budgets (gzip -9)');
 for (const r of rows) console.log(`  ${r.label.padEnd(40)} ${(r.size / KB).toFixed(1).padStart(7)} KB  / ${r.limit / KB} KB`);

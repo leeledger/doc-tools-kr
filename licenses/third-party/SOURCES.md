@@ -14,3 +14,9 @@ and embedded into `/licenses/` by `scripts/gen-licenses.mjs` (`localFiles` in `l
 | `libjpeg-turbo/README.ijg` | https://raw.githubusercontent.com/ImageMagick/jpeg-turbo/7aa2a898c564041a24b09d0a6e780aaa632d08d3/README.ijg (holds the IJG license that LICENSE.md refers to) |
 | `zlib/LICENSE` | Lines 1–23 of https://raw.githubusercontent.com/madler/zlib/21767c654d31d2dccdde4330529775c6c5fd5389/zlib.h (zlib 1.2.12; this commit has no separate LICENSE file, the notice lives in `zlib.h` and `README`) |
 | `qpdf-wasm/LICENSE` | The wrapper repository has no LICENSE file; its `package.json` declares `"license": "ISC"` and has no `author`. Standard ISC text (https://opensource.org/license/isc-license-txt). The copyright line "Copyright (c) 2022 neslinesli93" is taken from the repository owner handle (neslinesli93) and the repository creation year (created 2022-12-21), because there is no licence file to copy it from (Arch decision, 2026-09-29). |
+
+## Dev-only tools (never shipped)
+
+| Tool | Licence | Use |
+|---|---|---|
+| Pillow 12.2.0 (Python) | HPND (MIT-CMU) | `tests/fixtures/build-cmyk.py` writes the CMYK JPEG test fixture. Not an npm dependency and not in `dist/`. |

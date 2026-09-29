@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { makeBigFixture, makeRuntimeFixtures } from '../fixtures/build.mjs';
-import { RUNTIME_DIR } from './paths';
+import { makePhotoRuntimeFixtures } from '../fixtures/build-photo.mjs';
+import { PHOTO_RUNTIME_DIR, RUNTIME_DIR } from './paths';
 
 export default async function globalSetup(): Promise<void> {
   if (!existsSync(join(process.cwd(), 'dist', 'index.html'))) {
@@ -10,4 +11,5 @@ export default async function globalSetup(): Promise<void> {
   await makeRuntimeFixtures(RUNTIME_DIR);
   await makeBigFixture(RUNTIME_DIR, 51);
   await makeBigFixture(RUNTIME_DIR, 21);
+  await makePhotoRuntimeFixtures(PHOTO_RUNTIME_DIR);
 }

@@ -1,0 +1,992 @@
+{
+ "source": "spikes/photo/results/compress.json",
+ "chromium": "151.0.7922.34",
+ "images": {
+  "p01": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9602,
+     "psnr": 39.07,
+     "ms": 15106
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9636,
+     "psnr": 39.25,
+     "ms": 10937
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9594,
+     "psnr": 38.16,
+     "ms": 951
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9065,
+     "psnr": 35.43,
+     "ms": 8597
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9116,
+     "psnr": 35.68,
+     "ms": 7988
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9079,
+     "psnr": 34.98,
+     "ms": 501
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.871,
+     "psnr": 33.67,
+     "ms": 6956
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.871,
+     "psnr": 33.71,
+     "ms": 5800
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8723,
+     "psnr": 33.28,
+     "ms": 383
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9877,
+     "psnr": 45.39,
+     "ms": 16213
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9877,
+     "psnr": 45.39,
+     "ms": 17873
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.987,
+     "psnr": 43.28,
+     "ms": 741
+    }
+   }
+  },
+  "p02": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9575,
+     "psnr": 38.25,
+     "ms": 14617
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.958,
+     "psnr": 38.37,
+     "ms": 9673
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9548,
+     "psnr": 37.46,
+     "ms": 744
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8923,
+     "psnr": 34.2,
+     "ms": 10355
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8957,
+     "psnr": 34.48,
+     "ms": 6649
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.898,
+     "psnr": 34.17,
+     "ms": 477
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8365,
+     "psnr": 31.84,
+     "ms": 7575
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8427,
+     "psnr": 32.3,
+     "ms": 3981
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8428,
+     "psnr": 31.99,
+     "ms": 355
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9867,
+     "psnr": 45.08,
+     "ms": 21910
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.986,
+     "psnr": 44.86,
+     "ms": 17846
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9871,
+     "psnr": 44.27,
+     "ms": 813
+    }
+   }
+  },
+  "p03": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9654,
+     "psnr": 38.58,
+     "ms": 18048
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9571,
+     "psnr": 38.23,
+     "ms": 8355
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9642,
+     "psnr": 38.06,
+     "ms": 784
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9178,
+     "psnr": 35.26,
+     "ms": 13440
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9187,
+     "psnr": 35.39,
+     "ms": 6441
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9182,
+     "psnr": 34.91,
+     "ms": 493
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8817,
+     "psnr": 33.22,
+     "ms": 10658
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8668,
+     "psnr": 32.41,
+     "ms": 5589
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8822,
+     "psnr": 32.99,
+     "ms": 354
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9938,
+     "psnr": 47.01,
+     "ms": 24966
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9938,
+     "psnr": 47.01,
+     "ms": 20206
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9946,
+     "psnr": 45.25,
+     "ms": 826
+    }
+   }
+  },
+  "p05": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9715,
+     "psnr": 37.93,
+     "ms": 6881
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9715,
+     "psnr": 37.93,
+     "ms": 5708
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9702,
+     "psnr": 37.12,
+     "ms": 272
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9111,
+     "psnr": 33.37,
+     "ms": 7095
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8847,
+     "psnr": 32.43,
+     "ms": 4122
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9135,
+     "psnr": 33.15,
+     "ms": 278
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8468,
+     "psnr": 31.15,
+     "ms": 4179
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8504,
+     "psnr": 31.24,
+     "ms": 3522
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8524,
+     "psnr": 31.07,
+     "ms": 196
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9902,
+     "psnr": 44.34,
+     "ms": 2199
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9912,
+     "psnr": 45.03,
+     "ms": 6138
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9921,
+     "psnr": 41.76,
+     "ms": 62
+    }
+   }
+  },
+  "p07": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9694,
+     "psnr": 40.71,
+     "ms": 11283
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9694,
+     "psnr": 40.71,
+     "ms": 2119
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9435,
+     "psnr": 36.93,
+     "ms": 393
+    },
+    "baseline-jpeg": {
+     "ssim": 0.9654,
+     "psnr": 39.98,
+     "q": 67,
+     "bytes": 510871,
+     "note": "Arch F3a (2026-09-30): re-baselined to the measured baseline-JPEG (SOF0) result after the scored scale re-search; SSIM passed, PSNR missed only by the baseline penalty. regress:photo Chromium 153"
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9106,
+     "psnr": 36.02,
+     "ms": 7552
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9017,
+     "psnr": 35.76,
+     "ms": 4936
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9114,
+     "psnr": 35.54,
+     "ms": 519
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8887,
+     "psnr": 34.55,
+     "ms": 5160
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8897,
+     "psnr": 34.63,
+     "ms": 4833
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8896,
+     "psnr": 34.16,
+     "ms": 374
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9427,
+     "psnr": 38.1,
+     "ms": 9419
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9427,
+     "psnr": 38.1,
+     "ms": 6299
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.929,
+     "psnr": 36.6,
+     "ms": 388
+    }
+   }
+  },
+  "p09": {
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9943,
+     "psnr": 46.81,
+     "ms": 4017
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9943,
+     "psnr": 46.81,
+     "ms": 3965
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.995,
+     "psnr": 44.81,
+     "ms": 158
+    },
+    "baseline-jpeg": {
+     "ssim": 0.9931,
+     "psnr": 46.03,
+     "q": 82,
+     "bytes": 195853,
+     "note": "Arch F3-ii (2026-09-30): re-baselined to the measured baseline-JPEG (SOF0) result, regress:photo Chromium 153"
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9855,
+     "psnr": 41.93,
+     "ms": 3881
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9807,
+     "psnr": 39.16,
+     "ms": 2958
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9833,
+     "psnr": 39.74,
+     "ms": 166
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9868,
+     "psnr": 42.73,
+     "ms": 3392
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9843,
+     "psnr": 40.8,
+     "ms": 3643
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9857,
+     "psnr": 40.67,
+     "ms": 148
+    }
+   }
+  },
+  "p11": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.963,
+     "psnr": 38.28,
+     "ms": 22874
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9624,
+     "psnr": 38.96,
+     "ms": 10165
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9636,
+     "psnr": 37.44,
+     "ms": 878
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9333,
+     "psnr": 35.59,
+     "ms": 14737
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9322,
+     "psnr": 35.44,
+     "ms": 7809
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9356,
+     "psnr": 34.96,
+     "ms": 558
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9127,
+     "psnr": 33.34,
+     "ms": 11520
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9134,
+     "psnr": 33.21,
+     "ms": 5759
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.915,
+     "psnr": 32.89,
+     "ms": 491
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9901,
+     "psnr": 43.54,
+     "ms": 23424
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9901,
+     "psnr": 43.54,
+     "ms": 16341
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9905,
+     "psnr": 41.79,
+     "ms": 889
+    }
+   }
+  },
+  "p12": {
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9869,
+     "psnr": 46.02,
+     "ms": 3583
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.984,
+     "psnr": 45.34,
+     "ms": 2839
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9814,
+     "psnr": 42.76,
+     "ms": 155
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9384,
+     "psnr": 39.25,
+     "ms": 3338
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9382,
+     "psnr": 39.28,
+     "ms": 3466
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9377,
+     "psnr": 38.71,
+     "ms": 145
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9461,
+     "psnr": 40.33,
+     "ms": 3013
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9427,
+     "psnr": 39.9,
+     "ms": 3608
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9402,
+     "psnr": 38.79,
+     "ms": 148
+    }
+   }
+  },
+  "g01": {
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9833,
+     "psnr": 35.87,
+     "ms": 2814
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9833,
+     "psnr": 35.87,
+     "ms": 2472
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9783,
+     "psnr": 34.23,
+     "ms": 139
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9396,
+     "psnr": 30.29,
+     "ms": 2605
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9274,
+     "psnr": 28.98,
+     "ms": 2738
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9339,
+     "psnr": 30.17,
+     "ms": 130
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9755,
+     "psnr": 34.78,
+     "ms": 2454
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9603,
+     "psnr": 31.84,
+     "ms": 3050
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9628,
+     "psnr": 33.43,
+     "ms": 221
+    }
+   }
+  },
+  "g02": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9244,
+     "psnr": 29.63,
+     "ms": 5014
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9244,
+     "psnr": 29.63,
+     "ms": 4325
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9187,
+     "psnr": 28.89,
+     "ms": 206
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8171,
+     "psnr": 24.48,
+     "ms": 5015
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8427,
+     "psnr": 25.38,
+     "ms": 2882
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8234,
+     "psnr": 24.51,
+     "ms": 185
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.7223,
+     "psnr": 22.41,
+     "ms": 3329
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.75,
+     "psnr": 22.91,
+     "ms": 2380
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.7321,
+     "psnr": 22.45,
+     "ms": 152
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9351,
+     "psnr": 31.38,
+     "ms": 6913
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9346,
+     "psnr": 31.29,
+     "ms": 6421
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9464,
+     "psnr": 30.64,
+     "ms": 189
+    }
+   }
+  },
+  "g03": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.97,
+     "psnr": 41.13,
+     "ms": 7821
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.97,
+     "psnr": 41.13,
+     "ms": 6098
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9683,
+     "psnr": 40.13,
+     "ms": 350
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9331,
+     "psnr": 37.57,
+     "ms": 6707
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9284,
+     "psnr": 37.33,
+     "ms": 4665
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9315,
+     "psnr": 36.86,
+     "ms": 412
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8987,
+     "psnr": 35.4,
+     "ms": 5319
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8963,
+     "psnr": 35.28,
+     "ms": 4625
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9006,
+     "psnr": 34.95,
+     "ms": 348
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9853,
+     "psnr": 45.38,
+     "ms": 9674
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9853,
+     "psnr": 45.38,
+     "ms": 10793
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9858,
+     "psnr": 43.48,
+     "ms": 422
+    }
+   }
+  },
+  "g04": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8957,
+     "psnr": 35.29,
+     "ms": 11035
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9016,
+     "psnr": 35.3,
+     "ms": 2071
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8994,
+     "psnr": 34.95,
+     "ms": 478
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8142,
+     "psnr": 33.13,
+     "ms": 7591
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.8112,
+     "psnr": 33.11,
+     "ms": 4557
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8192,
+     "psnr": 32.87,
+     "ms": 338
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.752,
+     "psnr": 31.89,
+     "ms": 5370
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.7602,
+     "psnr": 31.96,
+     "ms": 3246
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.7588,
+     "psnr": 31.72,
+     "ms": 229
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9721,
+     "psnr": 40.34,
+     "ms": 13219
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9704,
+     "psnr": 40.11,
+     "ms": 12438
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9711,
+     "psnr": 39.06,
+     "ms": 557
+    }
+   }
+  },
+  "s01_exif6": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9682,
+     "psnr": 40.53,
+     "ms": 7946
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9682,
+     "psnr": 40.53,
+     "ms": 6644
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9563,
+     "psnr": 37.86,
+     "ms": 490
+    },
+    "baseline-jpeg": {
+     "ssim": 0.962,
+     "psnr": 39.61,
+     "q": 67,
+     "bytes": 490037,
+     "note": "Arch F3-ii (2026-09-30): re-baselined to the measured baseline-JPEG (SOF0) result, regress:photo Chromium 153"
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9124,
+     "psnr": 36.23,
+     "ms": 8233
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9028,
+     "psnr": 35.86,
+     "ms": 5187
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9135,
+     "psnr": 35.77,
+     "ms": 522
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8911,
+     "psnr": 34.77,
+     "ms": 5916
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.891,
+     "psnr": 34.77,
+     "ms": 5204
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8913,
+     "psnr": 34.33,
+     "ms": 464
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9902,
+     "psnr": 44.81,
+     "ms": 9705
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9888,
+     "psnr": 44.37,
+     "ms": 9236
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9944,
+     "psnr": 45.91,
+     "ms": 458
+    }
+   }
+  },
+  "s02_p3": {
+   "500KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9243,
+     "psnr": 30.94,
+     "ms": 5184
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9243,
+     "psnr": 30.94,
+     "ms": 4385
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9179,
+     "psnr": 29.99,
+     "ms": 221
+    }
+   },
+   "200KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.8176,
+     "psnr": 24.92,
+     "ms": 4344
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.845,
+     "psnr": 26,
+     "ms": 3017
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.8229,
+     "psnr": 24.97,
+     "ms": 223
+    }
+   },
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.7132,
+     "psnr": 22.48,
+     "ms": 3597
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.7491,
+     "psnr": 23.2,
+     "ms": 2495
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.7318,
+     "psnr": 22.75,
+     "ms": 159
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9338,
+     "psnr": 31.96,
+     "ms": 5776
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9338,
+     "psnr": 31.96,
+     "ms": 4974
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9309,
+     "psnr": 30.88,
+     "ms": 193
+    }
+   }
+  },
+  "s03_screenshot": {
+   "100KB": {
+    "fit-mozjpeg": {
+     "ssim": 0.9831,
+     "psnr": 27.1,
+     "ms": 3694
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9702,
+     "psnr": 25.1,
+     "ms": 2446
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.9788,
+     "psnr": 26.75,
+     "ms": 188
+    }
+   },
+   "50%": {
+    "fit-mozjpeg": {
+     "ssim": 0.9722,
+     "psnr": 25.35,
+     "ms": 3779
+    },
+    "hybrid-mozjpeg": {
+     "ssim": 0.9689,
+     "psnr": 25.01,
+     "ms": 2208
+    },
+    "fit-canvas-jpeg-q40": {
+     "ssim": 0.971,
+     "psnr": 25.78,
+     "ms": 205
+    }
+   }
+  }
+ }
+}

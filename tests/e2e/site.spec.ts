@@ -1,8 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, gotoReady, test } from './no-upload';
-import { fixturePath, runtimePath } from './paths';
+import { fixturePath, photoFixture, runtimePath } from './paths';
 
-const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/privacy/', '/licenses/', '/does-not-exist/'];
+const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/privacy/', '/licenses/', '/does-not-exist/'];
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 for (const path of PAGES) {
@@ -39,7 +39,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   expect(await serious()).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/privacy/', '/licenses/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/privacy/', '/licenses/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -62,6 +62,7 @@ for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/privacy/', '/license
 for (const [path, name] of [
   ['/pdf-merge/', 'PDF 합치기'],
   ['/pdf-compress/', 'PDF 용량 줄이기'],
+  ['/photo-compress/', '사진 용량 줄이기'],
 ] as const) {
   test(`tool page JSON-LD, title and description on ${path}`, async ({ page }) => {
     await gotoReady(page, path);
@@ -82,17 +83,25 @@ for (const [path, name] of [
   });
 }
 
-test('related tools: each tool page links to the other live tool', async ({ page }) => {
-  await gotoReady(page, '/pdf-merge/');
-  await expect(page.locator('.related').getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
-  await gotoReady(page, '/pdf-compress/');
-  await expect(page.locator('.related').getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
+test('related tools: each tool page links to the other live tools', async ({ page }) => {
+  const tools = [
+    ['/pdf-merge/', 'PDF 합치기'],
+    ['/pdf-compress/', 'PDF 용량 줄이기'],
+    ['/photo-compress/', '사진 용량 줄이기'],
+  ] as const;
+  for (const [path] of tools) {
+    await gotoReady(page, path);
+    for (const [other, name] of tools.filter(([p]) => p !== path)) {
+      await expect(page.locator('.related').getByRole('link', { name })).toHaveAttribute('href', other);
+    }
+    await expect(page.locator('.related a')).toHaveCount(2);
+  }
 });
 
 test('sitemap lists exactly the live pages; robots points to it', async ({ request }) => {
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
-  expect(locs.sort()).toEqual(['/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/privacy/'].sort());
+  expect(locs.sort()).toEqual(['/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/'].sort());
   const robots = await (await request.get('/robots.txt')).text();
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
 });
@@ -113,21 +122,22 @@ test('CSP header is present with the locked policy', async ({ request }) => {
   expect(csp).toContain("connect-src 'self'");
 });
 
-test('landing page: live PDF cards link to their tools, others are 곧 공개, footer has legal links', async ({ page }) => {
+test('landing page: live cards link to their tools, others are 곧 공개, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(3);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
-  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기']);
-  await expect(page.locator('.card .status', { hasText: '곧 공개' })).toHaveCount(3);
+  await expect(cards.getByRole('link', { name: '사진 용량 줄이기' })).toHaveAttribute('href', '/photo-compress/');
+  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기', '사용하기']);
+  await expect(page.locator('.card .status', { hasText: '곧 공개' })).toHaveCount(2);
   await expect(page.locator('footer').getByRole('link', { name: '개인정보 처리방침' })).toHaveAttribute('href', '/privacy/');
   await expect(page.locator('footer').getByRole('link', { name: '오픈소스 라이선스' })).toHaveAttribute('href', '/licenses/');
 });
 
 test('licenses page lists the shipped packages and their texts', async ({ page }) => {
   await gotoReady(page, '/licenses/');
-  for (const name of ['@cantoo/pdf-lib', 'pdfjs-dist', 'pretendard', 'fflate', '@neslinesli93/qpdf-wasm', 'qpdf', 'libjpeg-turbo', 'zlib', '@jsquash/jpeg', '@jsquash/resize']) {
+  for (const name of ['@cantoo/pdf-lib', 'pdfjs-dist', 'pretendard', 'fflate', '@neslinesli93/qpdf-wasm', 'qpdf', 'libjpeg-turbo', 'zlib', '@jsquash/jpeg', '@jsquash/resize', '@jsquash/webp', 'wasm-feature-detect']) {
     await expect(page.locator('table')).toContainText(name);
   }
   const body = await page.locator('main').textContent();
@@ -138,12 +148,14 @@ test('licenses page lists the shipped packages and their texts', async ({ page }
   expect(body).toContain('ISC License');
   expect(body).toContain('codec/LICENSE.codec.md');
   expect(body).toContain('lib/resize/LICENSE.codec.md');
+  // libwebp (BSD-3) through @jsquash/webp.
+  expect(body).toContain('Copyright (c) 2010, Google Inc. All rights reserved.');
 });
 
 test.describe('mobile layout', () => {
   test.use({ viewport: { width: 360, height: 780 } });
 
-  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/privacy/', '/licenses/']) {
+  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/privacy/', '/licenses/']) {
     test(`no horizontal scroll at 360 px on ${path}`, async ({ page }) => {
       await gotoReady(page, path);
       const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -178,6 +190,26 @@ test.describe('mobile layout', () => {
     expect(sw).toBeLessThanOrEqual(cw);
     const small = await page
       .locator('#compress-tool button:visible, #compress-tool label.btn:visible, #compress-tool .radio:visible, #compress-tool summary:visible')
+      .evaluateAll((els) =>
+        els
+          .filter((e) => !e.closest('[hidden]'))
+          .map((e) => ({ t: e.textContent?.trim(), h: e.getBoundingClientRect().height, w: e.getBoundingClientRect().width }))
+          .filter((r) => r.h < 44 || r.w < 44),
+      );
+    expect(small).toEqual([]);
+  });
+  test('photo controls are at least 44 px at 360 px, with no horizontal scroll (ready state, details open, 직접 입력)', async ({ page }) => {
+    await gotoReady(page, '/photo-compress/');
+    const supported = await page.evaluate(() => typeof OffscreenCanvas !== 'undefined');
+    test.skip(!supported, 'No OffscreenCanvas here: the photo page shows its unsupported notice (photo-compress.spec.ts).');
+    await page.setInputFiles('#ph-input', [photoFixture('portrait_pd.jpg'), photoFixture('alpha.png')]);
+    await expect(page.locator('#ph-list .info', { hasText: '확인 중' })).toHaveCount(0);
+    await page.getByText('저장 형식: JPG').click();
+    await page.getByRole('radiogroup', { name: '목표 용량' }).getByText('직접 입력', { exact: true }).click();
+    const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+    expect(sw).toBeLessThanOrEqual(cw);
+    const small = await page
+      .locator('#photo-tool button:visible, #photo-tool label.btn:visible, #photo-tool .radio:visible, #photo-tool .chip:visible, #photo-tool summary:visible, #photo-tool .check:visible, #photo-tool select:visible, #photo-tool .num-input:visible')
       .evaluateAll((els) =>
         els
           .filter((e) => !e.closest('[hidden]'))

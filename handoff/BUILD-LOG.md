@@ -157,3 +157,246 @@
 - Worker checks the raster page count at raster-end; regress judges raster page counts; null openPdf in raster → error; `password` from qpdf shows the password prompt copy; done/kept panels scroll below the sticky header (scroll-margin-top 76 px); qpdf log capture capped at 200 lines with console-restore tests; level-switch e2e is `test.slow()`.
 - Gates: check 0 errors; unit 94/94; build/budgets OK; licences OK; compress e2e 33/33 on 3 desktop browsers; regress raster 29/29.
 - Known Gap: a real-phone check (Gate 11) is still owed; real Chrome/Edge/Firefox are covered by the orchestrator's post-deploy live smoke.
+
+## Step 4 decisions (Arch, 2026-09-29; staged in handoff/ARCHITECT-BRIEF-STEP4.md, promoted after Step 3 ships)
+- **Slug** `/id-photo/`. H1 and title keyword "여권사진 규격" (56,600/mo). The card name stays "여권·증명사진 규격 맞추기".
+- **Presets re-verified today against official pages.**
+  - Ship:
+    - passport_online: 413×531, range 395–431 × 507–550, ≤ 500,000 B, 300 dpi
+    - gosi: 137×177, "350KB 미만" → 349,999 B
+    - qnet: ≤ 200,000 B. The 413×531 size is our choice, because Q-Net publishes none.
+    - saramin: 100×140
+    - jobkorea: 150×210 max, 5 MB. The FAQ is official; the older 1 MB Q&A is superseded.
+    - half_card: 354×472, labelled as a computed size, not an agency spec
+    - custom
+  - Dropped as 확인 필요:
+    - resident_id: the only official value is width 336
+    - driver_license: the current safedriving page has no px or KB; 350×450 is from a 2016 notice
+    - toeic, work24, local_gosi
+  - A dropped preset ships only with a verbatim quote from its official page.
+- **외교부 photo checker link:** https://www.passport.go.kr/home/kor/onlinePhotoVerify/index.do?menuPos=33 (verified). The copy says the photo is uploaded to 외교부 on that site.
+- **Rotation:** manual only, ±5° in 0.5° steps, for camera tilt. A residual-roll warning covers a tilted head. The §4 notice becomes "자르기·기울기 조정·크기 조정·재압축만".
+- **Faces > 1** is a warning, not a block (the spike proposed a block). The largest face is used, and confirmation is mandatory anyway.
+- **Never upscale, never pad.** Zoom is clamped at s ≤ 1. Low resolution and a frame outside the photo block the save.
+- **Confirmation checkbox** is required. It clears on any adjustment or preset change.
+- **MediaPipe placement and loading:**
+  - It runs on the main thread (its glue injects a `<script>`; a module worker cannot do that).
+  - Assets are self-hosted under `/vendor/mediapipe/1.0.1/`. The model is committed in `vendor-assets/` with a SHA-256 pin.
+  - Loading starts only after a photo is chosen, with progress over the build-time raw sizes.
+  - It falls back to manual on error, on a 60 s timeout, on skip, when deviceMemory ≤ 2, or when the sessionStorage crash flag is set.
+- **CSP unchanged.** Arch found no eval / new Function in the MediaPipe glue.
+- **Model licenses verified:** the Face Mesh V2, Blendshape V2 and BlazeFace short-range cards all say "LICENSED UNDER Apache License, Version 2.0". Their out-of-scope uses (identification, surveillance) do not apply to framing.
+- **tasks-vision 1.0.1** ships no LICENSE file. The Apache text will be committed from the upstream repo.
+- **§0 license exception.**
+  - A string probe finds Eigen compiled into `vision_wasm_internal.wasm` (EigenForTFLite). Eigen is MPL-2.0.
+  - Decision: allow unmodified upstream Eigen inside the MediaPipe wasm only. /licenses/ carries the notice, the MPL text and a source link. check-licenses gets an explicit one-entry exception; every other MPL/GPL entry still fails.
+  - The kill switch `PUBLIC_ID_PHOTO_AUTOFRAME=0` builds a manual-only tool with no MediaPipe bytes. The owner may veto the exception by setting it; no code change is needed.
+- **Encoding:** exact px, MozJPEG baseline, and integer q 50–95 at the largest q that fits. There is never a downscale. The JFIF dpi is set (300 for passport, qnet and half_card; 99 for gosi; 96 otherwise), and a verify step discards off-spec output.
+- **File names** are ASCII preset tags (`passport_413x531.jpg`), so no user file name leaks.
+- **Test corpus:** `tests/corpus/id-photo/` (≤ 2.5 MB, a separate cap; `tests/fixtures/` is already 2.3 MB of 3). It holds only US-government PD and CC0/PD-self portraits. CC BY/BY-SA, NC datasets, scraped, stock and AI-generated faces are excluded.
+- **Calibration:** K 0.88 / C 1.68 stay provisional (from 6 smiling heads). The step re-fits them on ≥ 8 neutral, skull-visible heads, and adopts the new values only if they are not worse on LOO. Otherwise the gap is logged, and launch is not blocked.
+
+### Known Gaps (added by the Step 4 brief)
+- Presets for 주민등록증, 운전면허증, TOEIC, 고용24 and 지방공무원: pending official verification. KPC (3×4, 115–235 × 150–315 px, ≤ 500 KB, verified) is deferred for scope.
+- Print layout sheets (4×6 with several copies), camera capture, PNG output, and batch.
+- MediaPipe in a classic worker, to move init and detect off the main thread.
+- Q-Net physical size wording: raw HTML to be quoted by Bob (Flag Q1). The output does not depend on it.
+
+## Open questions for owner (added 2026-09-29, non-blocking)
+- The Eigen MPL-2.0 exception for the MediaPipe wasm is decided by Arch (see Step 4 decisions). The owner may veto it with `PUBLIC_ID_PHOTO_AUTOFRAME=0`; the result is a manual-only tool.
+
+## Polish P decisions (Arch, 2026-09-30; staged in handoff/ARCHITECT-BRIEF-POLISH.md, runs after Step 3 ships and before Step 4)
+- **Source:** docs/UX-AUDIT-1.md. Scope: all P0, the listed P1, the beacon stub, and the domain runbook.
+- **Live tools include photo-compress** once Step 3 ships. The site-wide items apply to it: engine-load panel, preload, menu, icons and SW. Its layout does not change.
+- **Engine-load errors** get their own code `engine`, distinct from corrupt. The page-level panel has a 새로고침 button. The copy depends on the state: offline, a new deploy (a `/deploy-manifest.json` build vs `<meta name="build-id">` compare), or generic. There is one automatic retry.
+- **Deploy resilience** comes from build-time carry-forward:
+  - `carry-assets.mjs` fetches the live `deploy-manifest.json` and copies `_astro/`, `vendor/` and `fonts/` files from the last 2 generations, verified by SHA-256.
+  - It runs only on CF (`CF_PAGES=1`) or with `CARRY_ASSETS=1`, and it fails open with a log line.
+  - Rejected: committing assets to git, a Pages Function fallback (backend), and `_redirects` (it cannot fall back on a 404).
+  - check-dist runs before carry, so budgets judge only the fresh build.
+- **Post-deploy smoke:** `npm run smoke:assets -- URL [--previous manifest]`.
+- **Operator:** 사이티드 (Cited).
+  - The contact is `PUBLIC_CONTACT_EMAIL`. When unset, the page shows "문의: 준비 중"; an invalid value fails the build.
+  - The privacy officer defaults to "사이티드 대표" (`PUBLIC_PRIVACY_OFFICER` overrides it).
+  - `PUBLIC_BIZ_REG_NO` is optional.
+  - The 이용약관 text is drafted in the brief. The disclaimer excludes intent and gross negligence (약관규제법).
+- **Home, meta, OG and JSON-LD** are derived from LIVE_TOOLS. Soon tools appear only as a name list under "준비 중", with no links and no dates.
+- **WebKit weights:** static instances at 400/600/700/800 (subset-font `variationAxes`) replace the variable UI face. Only 400 and 800 are preloaded, within a 170 KB budget. A lint limits weights to that set.
+- **목표 용량:** MB × 1,000,000 bytes. The ladder is high → recommended → strong → target-1 (96 ppi, q50, SSIM 0.82) → target-2 (96 ppi, q45, SSIM 0.80).
+  - Floors: 96 ppi, q45, SSIM 0.80. Raster is never searched.
+  - Every Step 2 guarantee is kept, with verify on the chosen result. A miss offers the smallest result with an explicit warning.
+- **Preload** starts on the first interaction plus idle, not on idle alone, so Lighthouse gate 8 stays comparable. It is skipped on saveData or 2G. Gate 8's wording is amended to "…or after the first interaction plus idle".
+- **Service worker:**
+  - It handles only same-origin GETs under an allowlist and never reads request bodies. User files are never fetched.
+  - Navigation is network-first, and hashed assets are cache-first. The precache is the HTML shell only; engines are cached on use.
+  - There is no skipWaiting; an update bar appears instead.
+  - Kill switch `PUBLIC_SW=0` emits a self-unregistering worker. A deploy-gate revert must ship that kill-switch file.
+- **Icons and OG** are generated at prebuild with `@napi-rs/canvas@1.0.9`, now an explicit devDependency (MIT; already installed as pdfjs' optional dependency). The committed `public/og.png` and `scripts/gen-og.mjs` are removed.
+- **Error beacon:** a same-origin, whitelisted-field stub, off unless `PUBLIC_ERROR_BEACON_PATH` is set. The off build contains no sendBeacon, and the privacy section renders only when it is on.
+- **HSTS** is generated for a non-pages.dev `PUBLIC_SITE_URL` host only, with max-age 1 year and no includeSubDomains or preload. pages.dev gets noindex once a custom domain is set. The runbook is `docs/DOMAIN-RUNBOOK.md`.
+- **QA:** `npm run qa:visual -- --url BASE` reproduces the audit matrix into the OS temp folder. It exits 1 on hard failures.
+
+### Known Gaps (added by the Polish P brief)
+- Error-beacon endpoint (Pages Function or other), retention policy and enablement.
+- Analytics counters; ad slots, CMP and the ad CSP (audit 7.11, 8).
+- Per-tool OG images, a hero visual or home drop zone, success animations, download rename, zoom compare (audit P2-1 to P2-4).
+- HSTS includeSubDomains/preload; the IDN domain; a Kakao share check on a real device.
+- WebKit weight rendering for Pretendard fallback glyphs (file names only).
+- 13 px secondary text, 44 px logo/footer hit areas, a mobile card table on /licenses/ (P2-6, P2-9).
+- The level-mode hint "N MB 이하 제출처에 올릴 수 있습니다".
+- Real iPhone Safari weight check (Gate 11).
+
+### Open questions for owner (non-blocking)
+- The contact email for `PUBLIC_CONTACT_EMAIL`. The site shows "문의: 준비 중" until it is set.
+- The privacy officer name. The default is "사이티드 대표".
+- Whether to show the 사업자등록번호 (`PUBLIC_BIZ_REG_NO`).
+- HSTS preload, after the custom domain has been stable.
+
+## Step 3 build notes (Bob, 2026-09-30)
+
+### Dependencies (exact pins; licences)
+- `@jsquash/webp@1.5.0` (Apache-2.0; libwebp BSD-3 in `codec/LICENSE.codec.md`). Encoder only; `webp_enc.wasm` and `webp_enc_simd.wasm` both ship. Its decoder is used by the e2e tests in Node only.
+- `wasm-feature-detect@1.9.0` (Apache-2.0): the version npm resolves for @jsquash/webp, made a direct exact dependency because `src/lib/codecs/wasm-browser.ts` imports `simd()` itself.
+- `fflate@0.8.3` (MIT) is now direct (same lockfile copy as @cantoo/pdf-lib's, deduped). Only `zipSync`, in the lazily imported `zip.ts` chunk.
+- Dev only: Pillow 12.2.0 (HPND) for `tests/fixtures/build-cmyk.py`, recorded in `licenses/third-party/SOURCES.md`.
+- `check:licenses` OK, 25 production packages.
+
+### Decisions
+- **Step 0:** the jSquash loaders moved to `src/lib/codecs/wasm-browser.ts` (`loadMozjpegEncoder/Decoder`, `loadResize`, `loadWebpEncoder`, each compiled once per worker, failures cached too). The PDF loader keeps qpdf and composes `loadCodecs()`. The network guard allowlists exactly these two files; the PDF file itself no longer contains `fetch(`, so the guard checks "every hit is allowlisted" plus the exact allowlist. `dist/` holds one `mozjpeg_enc*.wasm` (check-dist asserts it). regress:compress before/after: 122/122 both, 0 differing rows ignoring ms (it runs the Node codecs; the browser loader is covered by the Step 2 e2e, green on 5 projects).
+- **Step 2 carry-overs:** none (all Should Fix items were done in Step 2 round 2).
+- **MozJPEG baseline:** `progressive: false` alone still produced SOF1 (extended sequential) at some q, found by regress:photo. The worker also sets `baseline: true` (force_baseline, quantisers capped at 255), so every output is SOF0.
+- **Stripped path** only when JPG output is chosen and the stored long edge is within the max long edge (a stripped original would ignore both). A result that the max long edge or the mobile cap resized is always offered, never "kept": the pixel size is what was asked for.
+- **Sniff on the main thread** reads 256 KB of head plus a 64 KB tail. A partial view never calls a JPEG truncated (a motion photo's trailer after EOI can be megabytes); the worker re-sniffs the whole file and decides. PNG truncation uses the tail.
+- **alphaPossible** is also true for GIF with a transparent colour, 32-bpp BMP, and AVIF/HEIC (conservative; only costs an alpha scan). Otherwise a transparent GIF would turn black in JPG.
+- **Decode cap:** resizeWidth/Height from the oriented header size; if the bitmap's aspect does not match, it is decoded again at full size and shrunk on a canvas (guards a browser that resizes before orienting).
+- **Fixture sizes:** `scene_cc0.jpg` cannot be q88 and ≤ 300 KB (345 KB). The builder takes the highest q ≤ 88 that fits (q85, 281 KB). `portrait_pd.jpg` is q88 progressive, 340 KB. `tests/fixtures/` is 2.3 MB.
+- **P3 patches** were chosen inside the sRGB gamut (no clipping) and differ from their raw values by 9–38 levels.
+- **Means in regress:photo** are over the 15 spike-baseline images (the set the thresholds came from); the report also shows the all-input means.
+- **UX-AUDIT-1 §11 (coordinator):**
+  - `src/lib/ui/engine-error.ts` is new and shared. The PDF tools adopt it in the polish step.
+  - A worker that never answers, a WebP or resize codec that fails to load (`engine` code), or a ZIP chunk that fails to import shows "처리 도구를 불러오지 못했습니다. 파일에는 문제가 없으니 새로고침한 뒤 다시 시도해 주세요." with a 새로고침 button (the offline copy when `navigator.onLine` is false). Rows go back to 대기 and are never marked as file errors. MozJPEG load failure still falls back to the canvas, per the brief.
+  - Done state: a visible headline ("N장 중 M장을 줄였습니다. 3.2 MB → 480.0 KB") and the ZIP or first download come before the compare view. Focus moves to a visible element.
+  - The drop hint is hidden under `(pointer: coarse)` on this page only.
+  - The live region is cleared on a run start and on reset.
+  - Sizes under 1 MiB show in KB.
+  - EXIF/GPS is always removed.
+  - Not done (out of this step): automatic retry, prefetch, the `accept="image/*"` suggestion (the brief's accept list stays).
+
+### Known Gaps (Step 3)
+- AVIF output, PNG output and lossless PNG optimisation, animated GIF/WebP, HEIC decoding, a keep-EXIF option, per-file settings, parallel workers, a MozJPEG-driven scale re-search, fixed pixel output and JFIF dpi, and institution presets: all out of scope per the brief.
+- Target mode on an input that already fits but cannot be stripped (EXIF-rotated, CMYK, PNG) re-encodes from q 0.92 and can come out larger than the input (exif6_gps: 25 KB → 86 KB at 200 KB, still ≤ target). This is per the brief ("runs the pipeline normally"); open question for Arch.
+- A real-iPhone check (FAQ 4 sentence) and Gate 11 are still owed.
+- The engine-error path has no automatic retry (UX-AUDIT P0-1 ④).
+
+### Step 3 status (Bob)
+- BLOCKED on Flags, listed in REVIEW-REQUEST:
+  - Playwright WebKit (Windows) has no OffscreenCanvas: 29 photo e2e fail on webkit and mobile-safari.
+  - Playwright Firefox does not colour-manage P3 (skipped at runtime with the reason).
+  - regress:photo misses: 5 per-pair rows, the MozJPEG gain at 100 KB (0.48 dB against ≥ 0.5 dB), and the s02_p3 vs g02 rule (29.59 dB; the decoded input alone is 34.28 dB).
+- All other gates are green: check, unit 174/174, licences, dist budgets, Lighthouse, and regress:compress unchanged.
+
+## Step 3 decisions, round 1b (Arch/orchestrator, 2026-09-30, relayed by the coordinator)
+- **F1 OffscreenCanvas:** (b)+(a).
+  - The page checks for OffscreenCanvas (2d + convertToBlob) on load.
+  - Without it, the page shows "이 브라우저에서는 사진 줄이기를 쓸 수 없습니다. Safari 16.4 이상, Chrome, Edge, Firefox 최신 버전에서 이용해 주세요." and disables the file picker.
+  - On Playwright's Windows WebKit, e2e asserts the notice and that nothing uploads; the engine tests run on the other 3 projects.
+  - No main-thread fallback. The real iPhone/Safari 16.4+ check is owed.
+- **F2:** the runtime-detected skip for Firefox ICC stays as built.
+- **F3 (quality first):**
+  - (i) MozJPEG scale re-search: when the canvas probe downscales, MozJPEG first tries the full size over q 50–95; it downscales only if that fails.
+  - (ii) Baseline JPEG stays (for 기관 uploads). p09 at 200 KB and s01_exif6 at 500 KB are re-baselined to the measured baseline-JPEG numbers, as long as they meet the target, the floor and the mean rules.
+  - (iii) 빠른 모드 is exempt from the per-pair comparison with the spike's q40 reference; its target, floor and blockiness rules stay.
+- **F4:** the MozJPEG gain rule at 100 KB is ≥ +0.45 dB; the other targets stay at ≥ +0.5.
+- **F5:** the rule becomes PSNR(s02_p3 50 % output, decoded original) ≥ 31.0 dB.
+- **F6:** absolute BI cap = 1.25 × the largest MozJPEG BI of the first full run (Appendix A), rounded up to 0.1; the output must also stay less blocky than naive.
+- **Target mode, input already under the target:**
+  - Nothing to remove → keep the original.
+  - Re-encoding needed to drop GPS or apply the orientation → the output may exceed the input, but never the target, with the note "위치 정보 등 개인정보를 지우고 방향을 바로잡느라 파일을 다시 저장했습니다".
+
+## Step 3 round 1b build notes (Bob, 2026-09-30)
+- **F1:** `canCompressPhotos()` in the controller. The page-side OffscreenCanvas check stands in for the worker's, since workers expose it wherever the page does. With no support, `#ph-unsupported` (role alert) shows, both file inputs are disabled, and drops are ignored. `open()` in the photo e2e skips engine tests with the reason when the check fails; the new test asserts the notice, the disabled picker, no rows and no engine request.
+- **F3 (i):** `engine.ts` MozJPEG branch; `finalSearch` gains `lowFirst` (one encode decides when full size cannot fit). 빠른 모드 keeps the canvas decision.
+- **"Nothing to remove"** means the lossless strip changes no byte. That row is `kept` (encoder `original`, no download, the existing kept note). An upright JPEG with EXIF still gets the lossless strip. A re-encode sets `report.resaved` (note shown) only when the input had EXIF/XMP/GPS or an orientation other than 1. A PNG without metadata is re-encoded without the note.
+- **F6 cap = 2.5**, from the corpus photos only: the largest MozJPEG BI there was 1.968 (g03 at 200 KB); × 1.25 → 2.5.
+  - The literal all-input maximum is 391.6 (p3_patches at 50 %), which would give a cap of 489.5. The synthetic flat-patch fixtures put real colour edges on the 8-px grid, so BI does not measure blocking there.
+  - The "less blocky than naive" rule keeps its brief scope (naive q < 0.30). On high-q pairs naive has fewer edges (BI ≈ 1.1) and the rule would not measure blocking either.
+  - Arch to confirm both readings.
+- **e2e targets:** the batch, cancel, crash and keyboard tests now use 200 KB, because a 340 KB portrait at the default 500 KB is now kept. The keyboard test selects 200 KB with the arrow keys. The lazy-load test uses 30 KB so a downscale (resize codec) is still required.
+
+### Step 3 round 1b status (Bob)
+- BLOCKED on 2 regress:photo items for Arch:
+  - p07 at 500 KB is 0.13 dB short, from the baseline-JPEG penalty. Re-baseline it?
+  - The scale re-search pushes p12 at 100 KB to BI 2.621, over the 2.5 cap, and slightly lowers p12's quality. Options are in REVIEW-REQUEST.
+- Every other gate is green: check; unit 177/177; e2e 311 passed / 0 failed / 58 skipped / 1 flaky; Lighthouse 100×4 on all 4 pages; licences; budgets; regress:compress 122/122 with 0 differing rows; regress:photo 83/85 rows and 23/24 rules.
+
+## Step 3 decisions, round 1c (Arch/orchestrator, 2026-09-30, relayed by the coordinator)
+- **F6a:** (c). When the re-search finds both a full-size and a downscaled MozJPEG result, each is scored with an in-worker luma SSIM at 1024 px against the source (the spike's quickScore). The higher score wins; a tie within 0.002 goes to the full size.
+- **F3a:** p07 at 500 KB is re-baselined to its measured baseline-JPEG numbers (SSIM 0.9654 / PSNR 39.98, q67, 510,871 B). SSIM passed; PSNR missed only by the baseline penalty.
+- **F6 reading confirmed:** the cap (2.5) comes from the corpus photos only. The naive comparison keeps the brief scope (naive q < 0.30).
+- **Accepted:** the "already small" copy "더 줄일 수 없는 사진입니다. 원본을 그대로 쓰세요."
+
+## Step 3 round 1c build notes (Bob, 2026-09-30)
+- **SSIM** moved to `src/lib/image/ssim.ts`. `scripts/regress/photo-metrics.mjs` re-exports it, so the regress metric and the worker score are the same code; the checked-in SSIM vector is unchanged.
+- **Engine:** the optional `deps.quickScore(src, bytes)`, plus `RESEARCH_TIE` 0.002, `QUICK_SCORE_EDGE` 1024 and `quickScoreSize`.
+  - Worker: the source is drawn on white at ≤ 1024 px (cached per bitmap); the candidate is decoded and drawn at the same size.
+  - Node: a lanczos resize of both.
+  - The downscaled candidate is encoded only when a scorer exists.
+- **Tests:** 4 new unit tests (3 scorer choices, 1 real-codec score). photo.worker is 17.3 KB gzip.
+- **Status:** DONE.
+  - unit 181/181, check 0 errors.
+  - regress:photo 85/85 rows and 24/24 rules. Max corpus BI is 2.488 (cap 2.5); p12 at 100 KB now keeps the downscaled result (BI 1.896).
+  - Photo e2e 64 passed, 0 failed:
+    - chromium 20 passed, firefox 19, mobile-chrome 21;
+    - webkit and mobile-safari 2 each (the unsupported notice and SEO), with the engine tests skipped with the F1 reason.
+
+## Step 3 decisions, round 2 (Arch/orchestrator, 2026-09-30, after Richard's CHANGES REQUIRED)
+- **Grown re-save copy:** never "0 % 줄었습니다" for a larger file.
+  - With a target: "{before} → {after} (늘어남) — 위치 정보 등 개인정보를 지우고 방향을 바로잡느라 다시 저장했습니다. 목표 용량 안입니다."
+  - Without a target (quality mode): the same, minus the last sentence.
+- **Privacy first in every mode:** the tool never tells the user to keep an original that still carries EXIF, XMP or GPS, or an orientation to bake in.
+  - In quality/percent mode with no size gain: the stripped file if the strip removes something, otherwise the re-encoded file with the privacy note.
+  - "원본을 그대로 쓰세요" only when the original has none of those.
+
+## Step 3 round 2 build notes (Bob, 2026-09-30)
+- **Must 1: jpeg-strip walks every segment, including between scans.**
+  - After each SOS, `scanEnd()` skips the entropy data: stuffed FF 00, RST0–7 and fill bytes.
+  - Between scans only DHT/DQT/DAC/DRI/DNL are kept; APPn and COM are dropped wherever they are.
+  - It stops at the first real EOI, so an FF D9 inside a COM payload is never taken for the end.
+  - The re-sniff requires no EXIF, XMP or GPS; otherwise it throws and the engine re-encodes.
+  - `sniffJpeg` walks the same way, so APP1/GPS between scans sets the flags. On the whole file, truncated means "the walk never reached an EOI".
+  - Unit tests: GPS APP1 after scan 1; COM with FF D9 after scan 1 (the output equals the strip of the clean file); a truncated progressive file vs a trailer after EOI. The existing trailer and fuzz tests are still green.
+- **Also in sniff:** PNG `eXIf` (GPS parsed), PNG iTXt XMP, WebP `EXIF` (GPS parsed) and a HEIF `Exif` item now count as metadata. Orientation stays JPEG-only.
+- **Must 2: compare viewer.**
+  - `.pc-stage` gets `max-width: calc(70vh * var(--pc-ar))` and `margin-inline: auto`; `--pc-ar` is set in `show()`.
+  - e2e: a portrait at 1280×900 has a box ratio within 1 % of outW/outH.
+- **Should Fix:**
+  - The scorer has its own try; a failure keeps the full-size MozJPEG result, with no fallback note (unit test).
+  - `touch-action: none` applies only at 2×/4×.
+  - Arrow keys are ignored at 1× (no preventDefault).
+  - regress: `baseline-jpeg` pairs get only 0.001 SSIM / 0.05 dB of slack.
+  - regress: without the corpus the run exits 1 unless `--fixtures-only` is given; the header then says PARTIAL.
+- **Arch decisions in code:**
+  - `hasPrivateData()` and the new kept rule are in engine.ts.
+  - `NOTES.grown()` is in messages.ts; the controller uses it in place of the size and percent lines when out > in, and drops the separate resaved note.
+  - e2e: exif6_gps at 500 KB (target mode) shows the grown line with "목표 용량 안입니다."; exif6_gps at 화질 95 is offered re-saved, with no "원본을 그대로 쓰세요".
+- **Fixed during the round:** a raw NUL byte crept into sniff.ts during editing (a `'Exif\0\0'` literal) and was replaced by the escape. The unused `indexOfPair` was removed.
+- **PARTIAL regress runs:** a `--fixtures-only` run reports the corpus-only mean and gain rules as SKIP instead of failing on empty means. Every other rule still judges the fixture rows.
+- **Status: DONE.**
+  - check 0 errors; unit 190/190; build and budgets OK (photo.worker 17.5 KB, photo initial JS 12.5 KB); licences OK (25).
+  - photo e2e ×5: 68 passed / 0 failed / 51 skipped / 1 flaky (Firefox `goto` race).
+  - pdf, merge and site e2e on chromium: 50 passed / 2 skipped.
+  - regress:photo: 85/85 and 24/24; the three re-baselined pairs reproduce their numbers exactly.
+  - regress:compress: 122/122, 0 differing rows.
+
+## Step 3 decisions, round 3 (Arch, 2026-09-30, on Richard's round-2 escalation)
+- **Non-JPEG input or CMYK JPEG, already under the target, nothing private:** still converted to JPG, because many upload sites require JPG.
+  - If the result grew, the row shows the neutral line "{before} → {after} (늘어남) — JPG로 바꾸느라 용량이 늘었습니다. 제출처가 원래 형식을 받는다면 원본을 쓰셔도 됩니다.", plus " 목표 용량 안입니다." when a target exists.
+- **Richard's Must Fix:** the privacy reason in the grown line appears only when `report.resaved` is true (a privacy/orientation re-save).
+
+## Step 3 round 3 build notes (Bob, 2026-09-30)
+- `NOTES.grown(before, after, withinTarget, resaved)` picks the privacy reason or the neutral JPG-conversion reason; the controller passes `rep.resaved`.
+- Unit (+4):
+  - `NOTES.grown`: all four combinations, exact copy.
+  - Engine: a CMYK JPEG under the target without metadata is converted with `resaved: false`.
+- e2e (+1): opaque_rgba.png at the default 500 KB shows the neutral line, contains no "개인정보", has no percent line, and the download is ≤ 500,000 bytes.
+- Status DONE: check 0 errors; unit 194/194; build and budgets OK (photo initial JS 12.6 KB, photo.worker 17.5 KB); photo e2e ×5 72 passed / 0 failed / 53 skipped / 0 flaky.

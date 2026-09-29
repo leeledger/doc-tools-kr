@@ -6,10 +6,11 @@ import { describe, expect, it } from 'vitest';
 const SRC = join(__dirname, '..', '..', 'src');
 const FORBIDDEN = ['sendBeacon', 'XMLHttpRequest', 'WebSocket', 'EventSource'];
 /**
- * Files allowed to call fetch( — only for our own static assets.
- * wasm-browser.ts: the compress worker's WebAssembly loads (versioned same-origin GETs, no file data).
+ * Files allowed to call fetch( — only for our own static assets (versioned same-origin GETs, no file data).
+ * - lib/codecs/wasm-browser.ts: the jSquash codec loads (MozJPEG, resize, WebP) shared by both workers.
+ * - lib/pdf/compress/wasm-browser.ts: the compress worker's qpdf load (a same-origin module import).
  */
-const FETCH_ALLOWLIST: string[] = ['lib/pdf/compress/wasm-browser.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/pdf/compress/wasm-browser.ts'];
 
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
@@ -31,12 +32,13 @@ describe('no network APIs in src/', () => {
     expect(hits).toEqual([]);
   });
 
-  it('uses fetch( only in allowlisted files, and the allowlist names exactly the wasm loader', () => {
+  it('uses fetch( only in allowlisted files, and the allowlist names exactly the two wasm loaders', () => {
     const hits = all
       .filter((f) => /\bfetch\s*\(/.test(readFileSync(f, 'utf8')))
       .map((f) => relative(SRC, f).split('\\').join('/'));
-    expect(hits.sort()).toEqual([...FETCH_ALLOWLIST].sort());
-    expect(FETCH_ALLOWLIST).toEqual(['lib/pdf/compress/wasm-browser.ts']);
+    expect(hits.length).toBeGreaterThan(0);
+    for (const h of hits) expect(FETCH_ALLOWLIST, h).toContain(h);
+    expect(FETCH_ALLOWLIST).toEqual(['lib/codecs/wasm-browser.ts', 'lib/pdf/compress/wasm-browser.ts']);
   });
 
   it('never imports the original pdf-lib', () => {

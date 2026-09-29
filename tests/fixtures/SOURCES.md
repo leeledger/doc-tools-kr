@@ -27,3 +27,20 @@ Generated at test time, never committed (`makeRuntimeFixtures()` / `makeBigFixtu
 - `jpx_only.pdf`: one page drawing a 200×200 `/JPXDecode` image of 64 KB seeded bytes.
 - `cmyk_jpeg.pdf`: one page drawing a 900×900 JPEG with a `/DeviceCMYK` dictionary (the JPEG bytes are RGB; the skip rule reads the dictionary only).
 - `junk_content.pdf`: one 900×900 JPEG whose only `Do` is swallowed by garbage content (unbalanced `q`, stray delimiters, a 1 MB token, an unterminated string).
+
+## Photo fixtures (`photo/`, 사진 용량 줄이기)
+
+Built by `node tests/fixtures/build-photo.mjs` (Node MozJPEG/resize from `@jsquash`, our own PNG/EXIF/ICC/GIF writers in `tests/helpers/image-writers.ts`) and `python tests/fixtures/build-cmyk.py` (Pillow, HPND licence, dev only, never shipped). `CORPUS_DIR` (default `spikes/photo/corpus`) is needed only to regenerate the two photo files.
+
+| File | Source | Transformation | Size |
+|---|---|---|---|
+| `portrait_pd.jpg` | Spike p03: "Don Bacon 117th Congress.jpg", U.S. House, public domain (https://commons.wikimedia.org/wiki/File:Don_Bacon_117th_Congress.jpg; `corpus/SOURCES.json`) | 3360×4200 → lanczos3 1400×1750, MozJPEG q88 (jSquash defaults, progressive) | 340 KB |
+| `scene_cc0.jpg` | Spike g04 (CC0, `corpus/SOURCES.json`) | 3400×2150 → lanczos3 1600×1012, MozJPEG q85 (q88 is 345 KB, over the 300 KB limit; the script takes the highest q ≤ 88 that fits) | 281 KB |
+| `exif6_gps.jpg` | Synthetic | 1200×900 stored gradient + seeded noise (LCG seed 606, ±4); red block at the stored top-left, blue block at the stored top-right (160×160); EXIF APP1 (big-endian) with Orientation 6 and a GPS IFD (37.5665 N, 126.978 E); after EOI an MPF-like trailer `FF D8 FF E1 … "GPS-TRAILER" … FF D9` | 25 KB |
+| `p3_patches.jpg` | Synthetic | 600×400, six 200×200 patches of Display-P3 values, MozJPEG q92, plus our own ICC v2 profile (Display-P3 primaries Bradford-adapted to D50, 1024-entry sRGB curve). Expected sRGB (colour-managed decode): 200,60,60 → 217,42,52; 90,170,100 → 52,172,92; 60,90,200 → 50,91,207; 220,200,110 → 224,199,94; 128,128,128 → 128,128,128; 230,150,90 → 244,145,76 | 6 KB |
+| `alpha.png` | Synthetic | 800×600 RGBA (colour type 6); left half alpha 0, right half an opaque gradient | 30 KB |
+| `opaque_rgba.png` | Synthetic | 750×1334 flat UI (header bar, cards, text lines), colour type 6, every alpha 255 | 9 KB |
+| `cmyk.jpg` | Synthetic (`build-cmyk.py`) | 400×300 CMYK JPEG (Pillow, q90, Adobe APP14): cyan (255,0,0,0), magenta (0,255,0,0), yellow (0,0,255,0), grey K=128 patches of 200×150 | 8 KB |
+| `anim.gif` | Synthetic | 16×16, 2 frames (hand-written LZW) | 0.4 KB |
+
+Generated at test time (`makePhotoRuntimeFixtures()` in `build-photo.mjs`, e2e global setup), never committed: `truncated.jpg` (portrait cut at 60 %), `not_image.txt`, `fake.heic` (an `ftypheic` box then zeros), `exif3.jpg` (exif6 with Orientation patched to 3), `zero.jpg` (0 bytes), `pano_20000x1000.jpg` and `big_5000x3750.jpg` (flat gradients, MozJPEG q75), `small_60k.jpg` (the portrait re-encoded to ≤ 62 KB plus EXIF with GPS and a comment), and copies named `사진.jpg`, `scene.jpg`, `scene.png` for the batch/ZIP test.

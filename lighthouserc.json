@@ -6,7 +6,8 @@
       "url": [
         "http://127.0.0.1:4173/",
         "http://127.0.0.1:4173/pdf-merge/",
-        "http://127.0.0.1:4173/pdf-compress/"
+        "http://127.0.0.1:4173/pdf-compress/",
+        "http://127.0.0.1:4173/photo-compress/"
       ],
       "numberOfRuns": 3,
       "settings": {

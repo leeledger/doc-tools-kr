@@ -162,6 +162,93 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .related-list a { font-weight: 700; color: var(--brand); display: inline-block; min-height: 24px; }
 .related-list span { color: var(--muted); font-size: 15px; }
 
+/* ---------- 사진 용량 줄이기 ---------- */
+.photo-list { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 10px; }
+.photo-row {
+  display: grid; grid-template-columns: 72px minmax(0, 1fr); grid-template-areas: "thumb meta" "actions actions";
+  gap: 8px 14px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+}
+.ph-thumb {
+  grid-area: thumb; width: 72px; height: 72px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg);
+  display: grid; place-items: center; overflow: hidden; color: var(--muted);
+}
+.ph-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ph-meta { grid-area: meta; min-width: 0; }
+.ph-meta p { margin: 0; }
+.ph-meta .name { font-weight: 700; overflow-wrap: anywhere; }
+.ph-meta .info, .ph-dims, .ph-status { color: var(--muted); font-size: 15px; }
+.ph-size { font-weight: 700; margin-top: 4px !important; }
+.ph-pct { color: var(--brand); font-size: 15px; font-weight: 700; }
+.ph-badges { margin-top: 4px !important; }
+.badge { display: inline-block; font-size: 13.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.ph-notes { margin: 6px 0 0; padding-left: 18px; font-size: 14.5px; }
+.photo-row .actions { grid-area: actions; justify-content: flex-end; }
+.photo-row[data-state="done"] { border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
+.photo-row[data-state="error"], .photo-row[data-state="invalid"] { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+.ph-add-row { margin-top: 12px; }
+.ph-add-row label.btn { cursor: pointer; }
+.ph-done-bar { margin-top: 20px; display: grid; gap: 12px; scroll-margin-top: 76px; }
+.ph-done-bar .result-title { margin: 0; }
+.ph-engine-error p { margin: 0 0 10px; }
+.file-input:disabled + label.btn { opacity: .45; cursor: not-allowed; }
+/* Touch devices cannot drag files: no drop hint there. */
+@media (pointer: coarse) { #ph-drop .drop-hint { display: none; } }
+.ph-controls { margin-top: 20px; display: grid; gap: 14px; }
+.ph-sub { margin: 0 0 4px 32px; display: grid; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { position: relative; display: inline-flex; cursor: pointer; }
+.chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip span {
+  display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: center; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-weight: 700; font-size: 15px;
+}
+.chip input:checked + span { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+.chip input:focus-visible + span { outline: 3px solid var(--brand); outline-offset: 2px; }
+.chip input:disabled + span { opacity: .45; cursor: not-allowed; }
+.ph-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ph-custom label { font-size: 15px; }
+.num-input, .select {
+  min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--muted); background: var(--bg); color: var(--text); font: inherit;
+}
+.num-input { width: 9em; }
+.num-input[aria-invalid="true"] { border-color: var(--danger); }
+.field-error { flex-basis: 100%; margin: 0; color: var(--danger); font-size: 15px; }
+.field-error:empty { display: none; }
+.ph-range { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ph-range input[type="range"] { flex: 1 1 160px; min-height: 44px; accent-color: var(--brand); }
+.ph-range output { font-weight: 800; min-width: 2.5em; }
+.ph-field { display: grid; gap: 6px; }
+.ph-field > label:first-child:not(.check) { font-weight: 800; }
+.ph-field .level-desc, .ph-controls .level-desc { margin-left: 0; }
+.levels .level > .level-desc { margin-left: 32px; }
+fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; }
+
+.ph-compare { margin: 20px 0 0; display: grid; gap: 10px; }
+.pc-stage {
+  /* The box always has the result's aspect (--pc-ar = width / height, set by compare.ts): the width is also
+     capped so a portrait photo never hits max-height and gets squashed. */
+  position: relative; width: 100%; max-height: 70vh; max-width: calc(70vh * var(--pc-ar, 1)); margin-inline: auto;
+  overflow: hidden; border: 1px solid var(--line); border-radius: 8px;
+  background: repeating-conic-gradient(#e9e9e9 0% 25%, #ffffff 0% 50%) 50% / 20px 20px; user-select: none;
+}
+/* Drag pans only while zoomed; at 1× a swipe over the photo scrolls the page. */
+.pc-stage[data-zoom="2"], .pc-stage[data-zoom="4"] { cursor: grab; touch-action: none; }
+.pc-pane { position: absolute; inset: 0; overflow: hidden; }
+.pc-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; transform-origin: 0 0; pointer-events: none; }
+.pc-divider { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); pointer-events: none; }
+.pc-tag {
+  position: absolute; top: 8px; padding: 2px 8px; border-radius: 6px; font-size: 13.5px; font-weight: 700;
+  background: rgba(0,0,0,.66); color: #fff; pointer-events: none;
+}
+.pc-tag-left { left: 8px; }
+.pc-tag-right { right: 8px; }
+.pc-caption { color: var(--muted); font-size: 14.5px; overflow-wrap: anywhere; }
+.pc-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.pc-slider-label { font-weight: 700; }
+.pc-slider { flex: 1 1 180px; min-height: 44px; accent-color: var(--brand); }
+.pc-zooms { border: 0; margin: 0; padding: 0; display: flex; gap: 8px; align-items: center; min-width: 0; }
+.pc-zooms legend { float: left; font-weight: 700; margin-right: 8px; }
+
 @media (max-width: 480px) {
   .previews { grid-template-columns: minmax(0, 240px); }
 }

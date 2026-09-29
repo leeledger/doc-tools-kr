@@ -1,0 +1,245 @@
+---
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+
+const tool = getTool('photo-compress');
+const jsonLd = toolJsonLd(tool, Astro.site);
+
+const targets = [
+  { value: '100', label: '100 KB' },
+  { value: '200', label: '200 KB' },
+  { value: '300', label: '300 KB' },
+  { value: '500', label: '500 KB' },
+  { value: '1000', label: '1 MB' },
+  { value: 'custom', label: '직접 입력' },
+];
+const percents = [
+  { value: '70', label: '70 %' },
+  { value: '50', label: '50 %' },
+  { value: '30', label: '30 %' },
+  { value: 'custom', label: '직접 입력' },
+];
+const edges = [
+  { value: 'keep', label: '원본 크기 유지' },
+  { value: '3840', label: '3840 px' },
+  { value: '2560', label: '2560 px' },
+  { value: '1920', label: '1920 px' },
+  { value: '1280', label: '1280 px' },
+  { value: '800', label: '800 px' },
+  { value: 'custom', label: '직접 입력' },
+];
+const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif';
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">사진과 이미지 용량을 원하는 KB 이하로 줄입니다. 화질은 최대한 지키고 위치 정보(EXIF)는 지우며, 사진은 서버로 전송되지 않습니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="사진 용량 줄이기 도구">
+    <div class="wrap narrow">
+      <div id="photo-tool" class="photo" data-state="empty">
+        <div class="drop" id="ph-drop">
+          <input id="ph-input" class="file-input" type="file" multiple accept={accept}>
+          <label class="btn primary" for="ph-input" id="ph-pick">사진 선택</label>
+          <p class="drop-hint">또는 여기에 사진을 끌어다 놓으세요</p>
+          <p class="privacy-note">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="error-box" id="ph-unsupported" role="alert" hidden>이 브라우저에서는 사진 줄이기를 쓸 수 없습니다. Safari 16.4 이상, Chrome, Edge, Firefox 최신 버전에서 이용해 주세요.</p>
+        <p class="notice" id="ph-notice" hidden></p>
+
+        <div class="progress-box" id="ph-progress" hidden>
+          <p id="ph-progress-text">사진 줄이는 중…</p>
+          <progress id="ph-progress-bar" aria-labelledby="ph-progress-text"></progress>
+          <button type="button" class="btn ghost" id="ph-cancel">취소</button>
+        </div>
+
+        <div class="error-box ph-engine-error" id="ph-engine-error" role="alert" hidden></div>
+
+        <div class="ph-done-bar" id="ph-done-bar" hidden>
+          <p class="result-title" id="ph-headline"></p>
+          <div class="row">
+            <button type="button" class="btn primary" id="ph-zip" hidden>모두 내려받기 (ZIP)</button>
+            <button type="button" class="btn ghost" id="ph-again">이 설정으로 다시 줄이기</button>
+            <button type="button" class="btn ghost" id="ph-reset">처음부터</button>
+          </div>
+          <p class="error-box" id="ph-zip-error" role="alert" hidden></p>
+        </div>
+
+        <div id="ph-list-box" hidden>
+          <ul class="photo-list" id="ph-list" aria-label="선택한 사진"></ul>
+          <div class="row ph-add-row" id="ph-add-row">
+            <input id="ph-add" class="file-input" type="file" multiple accept={accept}>
+            <label class="btn ghost" for="ph-add">사진 추가</label>
+          </div>
+        </div>
+
+        <figure class="ph-compare" id="ph-compare" hidden>
+          <div class="pc-stage" tabindex="0" role="group" aria-label="비교 화면, 화살표 키로 이동">
+            <div class="pc-pane"><img class="pc-img pc-img-orig" alt="원본 사진" draggable="false"></div>
+            <div class="pc-pane pc-top"><img class="pc-img pc-img-res" alt="줄인 사진" draggable="false"></div>
+            <div class="pc-divider" aria-hidden="true"></div>
+            <span class="pc-tag pc-tag-left pc-label-orig" aria-hidden="true">원본</span>
+            <span class="pc-tag pc-tag-right" aria-hidden="true">결과</span>
+          </div>
+          <figcaption class="pc-caption"></figcaption>
+          <div class="pc-controls">
+            <label class="pc-slider-label" for="ph-slider">비교 위치</label>
+            <input class="pc-slider" id="ph-slider" type="range" min="0" max="100" step="1" value="50">
+            <fieldset class="pc-zooms">
+              <legend>확대</legend>
+              <label class="chip"><input class="pc-zoom" type="radio" name="ph-zoom" value="1" checked><span>1×</span></label>
+              <label class="chip"><input class="pc-zoom" type="radio" name="ph-zoom" value="2"><span>2×</span></label>
+              <label class="chip"><input class="pc-zoom" type="radio" name="ph-zoom" value="4"><span>4×</span></label>
+            </fieldset>
+          </div>
+        </figure>
+
+        <div class="ph-controls" id="ph-controls" hidden>
+          <fieldset class="levels">
+            <legend>줄이는 방법</legend>
+            <div class="level">
+              <label class="radio"><input type="radio" name="ph-mode" value="target" checked aria-describedby="ph-help-target"><span>목표 용량</span></label>
+              <div class="ph-sub" id="ph-sub-target">
+                <div class="chips" role="radiogroup" aria-label="목표 용량">
+                  {targets.map((t) => (
+                    <label class="chip"><input type="radio" name="ph-target" value={t.value} checked={t.value === '500'}><span>{t.label}</span></label>
+                  ))}
+                </div>
+                <div class="ph-custom" id="ph-target-custom-box" hidden>
+                  <label for="ph-target-kb">목표 용량 (KB)</label>
+                  <input class="num-input" id="ph-target-kb" type="text" inputmode="numeric" autocomplete="off" aria-describedby="ph-target-kb-error">
+                  <span>KB</span>
+                  <p class="field-error" id="ph-target-kb-error"></p>
+                </div>
+              </div>
+              <p class="level-desc" id="ph-help-target">결과 파일이 이 용량보다 크지 않게 맞춥니다.</p>
+            </div>
+            <div class="level">
+              <label class="radio"><input type="radio" name="ph-mode" value="percent" aria-describedby="ph-help-percent"><span>비율</span></label>
+              <div class="ph-sub" id="ph-sub-percent" hidden>
+                <div class="chips" role="radiogroup" aria-label="비율">
+                  {percents.map((t) => (
+                    <label class="chip"><input type="radio" name="ph-percent" value={t.value} checked={t.value === '50'}><span>{t.label}</span></label>
+                  ))}
+                </div>
+                <div class="ph-custom" id="ph-percent-custom-box" hidden>
+                  <label for="ph-percent-num">비율 (%)</label>
+                  <input class="num-input" id="ph-percent-num" type="text" inputmode="numeric" autocomplete="off" aria-describedby="ph-percent-num-error">
+                  <span>%</span>
+                  <p class="field-error" id="ph-percent-num-error"></p>
+                </div>
+              </div>
+              <p class="level-desc" id="ph-help-percent">원래 용량의 몇 %로 줄일지 고릅니다.</p>
+            </div>
+            <div class="level">
+              <label class="radio"><input type="radio" name="ph-mode" value="quality" aria-describedby="ph-help-quality"><span>화질</span></label>
+              <div class="ph-sub" id="ph-sub-quality" hidden>
+                <div class="ph-range">
+                  <label for="ph-quality">화질 값</label>
+                  <input id="ph-quality" type="range" min="10" max="95" step="1" value="80" aria-describedby="ph-help-quality">
+                  <output id="ph-quality-out" for="ph-quality">80</output>
+                </div>
+              </div>
+              <p class="level-desc" id="ph-help-quality">숫자가 클수록 선명하고 용량이 큽니다. 용량은 사진마다 다릅니다.</p>
+            </div>
+          </fieldset>
+
+          <div class="ph-field">
+            <label for="ph-edge">최대 크기 (긴 변)</label>
+            <select id="ph-edge" class="select" aria-describedby="ph-help-edge">
+              {edges.map((e) => <option value={e.value} selected={e.value === 'keep'}>{e.label}</option>)}
+            </select>
+            <div class="ph-custom" id="ph-edge-custom-box" hidden>
+              <label for="ph-edge-px">긴 변 (px)</label>
+              <input class="num-input" id="ph-edge-px" type="text" inputmode="numeric" autocomplete="off" aria-describedby="ph-edge-px-error">
+              <span>px</span>
+              <p class="field-error" id="ph-edge-px-error"></p>
+            </div>
+            <p class="level-desc" id="ph-help-edge">사진이 이보다 크면 비율을 유지하며 줄입니다. 키우지는 않습니다.</p>
+          </div>
+
+          <details class="more" id="ph-format-box">
+            <summary id="ph-format-summary">저장 형식: JPG</summary>
+            <fieldset class="plain">
+              <legend class="visually-hidden">저장 형식</legend>
+              <label class="radio"><input type="radio" name="ph-format" value="jpeg" checked><span>JPG (기본)</span></label>
+              <label class="radio"><input type="radio" name="ph-format" value="webp" aria-describedby="ph-help-webp"><span>WebP</span></label>
+              <p class="level-desc" id="ph-help-webp">투명한 배경을 유지합니다. 제출하는 곳이 WebP를 받는지 먼저 확인하세요.</p>
+            </fieldset>
+          </details>
+
+          <div class="ph-field">
+            <label class="check"><input type="checkbox" id="ph-fast" aria-describedby="ph-help-fast ph-fast-reason"><span>빠른 모드</span></label>
+            <p class="level-desc" id="ph-help-fast">처리 시간이 짧은 대신 같은 용량에서 화질이 조금 낮습니다. 오래된 휴대폰에 알맞습니다.</p>
+            <p class="level-desc" id="ph-fast-reason" hidden>WebP로 저장할 때는 빠른 모드를 쓸 수 없습니다.</p>
+          </div>
+
+          <div class="confirm" id="ph-confirm" hidden>
+            <p id="ph-confirm-text"></p>
+            <div class="row">
+              <button type="button" class="btn primary" id="ph-confirm-yes">계속 줄이기</button>
+              <button type="button" class="btn ghost" id="ph-confirm-no">취소</button>
+            </div>
+          </div>
+          <div class="row" id="ph-run-row">
+            <button type="button" class="btn primary" id="ph-run" disabled>사진 용량 줄이기</button>
+          </div>
+          <p class="hint" id="ph-hint"></p>
+        </div>
+
+        <p class="visually-hidden" id="ph-status" aria-live="polite"></p>
+      </div>
+      <AdSlot id="photo-compress-result" size="rect" />
+    </div>
+  </section>
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>사진 선택</strong><span>줄일 사진을 고르거나 끌어다 놓습니다. 여러 장을 한 번에 고를 수 있습니다.</span></li>
+        <li><strong>목표 용량 고르기</strong><span>100 KB, 200 KB, 500 KB처럼 제출할 곳의 제한에 맞는 용량을 고르거나 직접 입력합니다.</span></li>
+        <li><strong>내려받기</strong><span>사진 용량 줄이기를 누르고 원본과 비교해 본 뒤, 한 장씩 또는 ZIP 파일로 내려받습니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">안전한 이유</h2>
+      <ul class="points">
+        <li><strong>업로드하지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 전송되지 않습니다.</span></li>
+        <li><strong>위치 정보를 지웁니다</strong><span>촬영 위치(GPS) 같은 사진 정보(EXIF)는 결과 파일에서 지워집니다.</span></li>
+        <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} />
+  <div class="wrap narrow"><AdSlot id="photo-compress-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import { initPhotoTool } from '../../tools/photo-compress/controller';
+  initPhotoTool();
+</script>

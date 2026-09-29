@@ -10,7 +10,7 @@
     },
     {
       "name": "fflate",
-      "use": "@cantoo/pdf-lib 의존성 (압축)",
+      "use": "@cantoo/pdf-lib 의존성 (압축), 사진 용량 줄이기: 모두 내려받기(ZIP)",
       "files": [
         "LICENSE"
       ]
@@ -107,7 +107,7 @@
     },
     {
       "name": "@jsquash/jpeg",
-      "use": "PDF 용량 줄이기: 이미지 JPEG 인코딩·디코딩 (MozJPEG, 작업자 스레드)",
+      "use": "PDF·사진 용량 줄이기: JPEG 인코딩·디코딩 (MozJPEG, 작업자 스레드)",
       "files": [
         "LICENSE",
         "codec/LICENSE.codec.md"
@@ -116,12 +116,28 @@
     },
     {
       "name": "@jsquash/resize",
-      "use": "PDF 용량 줄이기: 이미지 크기 줄이기 (Lanczos3, 작업자 스레드)",
+      "use": "PDF·사진 용량 줄이기: 이미지 크기 줄이기 (Lanczos3, 작업자 스레드)",
       "files": [
         "LICENSE",
         "lib/resize/LICENSE.codec.md"
       ],
       "homepage": "https://github.com/jamsinclair/jSquash"
+    },
+    {
+      "name": "@jsquash/webp",
+      "use": "사진 용량 줄이기: WebP 저장 (libwebp, 작업자 스레드)",
+      "files": [
+        "LICENSE",
+        "codec/LICENSE.codec.md"
+      ],
+      "homepage": "https://github.com/jamsinclair/jSquash"
+    },
+    {
+      "name": "wasm-feature-detect",
+      "use": "@jsquash/webp 의존성 (WebAssembly SIMD 지원 확인)",
+      "files": [
+        "LICENSE"
+      ]
     }
   ]
 }

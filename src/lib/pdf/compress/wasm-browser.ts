@@ -1,12 +1,7 @@
-// Every WebAssembly load of the compress worker lives in this file (network-guard allowlist: these
-// fetches only ever GET our own versioned static assets; no file data is sent anywhere).
-// Loaded only inside the worker, which is created when "PDF 용량 줄이기" is pressed.
-import encode, { init as initEncode } from '@jsquash/jpeg/encode.js';
-import decode, { init as initDecode } from '@jsquash/jpeg/decode.js';
-import mozjpegEncUrl from '@jsquash/jpeg/codec/enc/mozjpeg_enc.wasm?url';
-import mozjpegDecUrl from '@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm?url';
-import initResize, { resize as wasmResize } from '@jsquash/resize/lib/resize/pkg/squoosh_resize.js';
-import resizeWasmUrl from '@jsquash/resize/lib/resize/pkg/squoosh_resize_bg.wasm?url';
+// Every WebAssembly load of the compress worker goes through this file or src/lib/codecs/wasm-browser.ts
+// (network-guard allowlist: both only ever GET our own versioned static assets; no file data is sent
+// anywhere). Loaded only inside the worker, which is created when "PDF 용량 줄이기" is pressed.
+import { loadMozjpegDecoder, loadMozjpegEncoder, loadResize } from '../../codecs/wasm-browser';
 import { codecDeps, type CompressDeps } from './deps';
 import { runQpdf, type QpdfFactory } from './qpdf-run';
 
@@ -15,25 +10,13 @@ export const QPDF_VENDOR_DIR = '12.2.0-w0.3.0';
 const QPDF_MJS_URL = `/vendor/qpdf/${QPDF_VENDOR_DIR}/qpdf.mjs`;
 const QPDF_WASM_URL = `/vendor/qpdf/${QPDF_VENDOR_DIR}/qpdf.wasm`;
 
-/** Streaming compile; falls back to an ArrayBuffer compile if the server sent the wrong MIME type. */
-async function compileWasm(url: string): Promise<WebAssembly.Module> {
-  try {
-    return await WebAssembly.compileStreaming(fetch(url));
-  } catch {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`wasm ${res.status}`);
-    return WebAssembly.compile(await res.arrayBuffer());
-  }
-}
-
 let codecs: Promise<Pick<CompressDeps, 'jpegEncode' | 'jpegDecode' | 'resize'>> | null = null;
 
-/** MozJPEG encoder/decoder and the resize codec, compiled once per worker. */
+/** MozJPEG encoder/decoder and the resize codec (the shared loaders compile each once per worker). */
 export function loadCodecs(): Promise<Pick<CompressDeps, 'jpegEncode' | 'jpegDecode' | 'resize'>> {
   codecs ??= (async () => {
-    const [enc, dec, rz] = await Promise.all([compileWasm(mozjpegEncUrl), compileWasm(mozjpegDecUrl), compileWasm(resizeWasmUrl)]);
-    await Promise.all([initEncode(enc), initDecode(dec), initResize(rz)]);
-    return codecDeps(encode, decode, wasmResize);
+    const [enc, dec, rz] = await Promise.all([loadMozjpegEncoder(), loadMozjpegDecoder(), loadResize()]);
+    return codecDeps(enc, dec, rz);
   })();
   return codecs;
 }

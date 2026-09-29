@@ -62,6 +62,8 @@ test('happy path: 권장 on a scan shows sizes, both previews, and a download at
   await expect(page.locator('#cmp-previews figcaption')).toHaveText(['원본', '결과']);
   await expect(page.locator('#cmp-signed')).toBeHidden();
   await expect(page.getByRole('link', { name: 'PDF 합치기' }).first()).toHaveAttribute('href', '/pdf-merge/');
+  await expect(page.locator('#cmp-result').getByRole('link', { name: '사진 용량 줄이기' })).toHaveAttribute('href', '/photo-compress/');
+  await expect(page.locator('#cmp-result')).toContainText('사진 파일이라면 사진 용량 줄이기에서 KB에 맞춰 줄일 수 있습니다.');
   const { bytes, download } = await downloadBytes(page);
   expect(download.suggestedFilename()).toBe('gen_scan_a6_압축.pdf');
   expect(await pageCount(bytes)).toBe(1);
