@@ -1,0 +1,12 @@
+---
+import { ADS_ENABLED } from '../data/site';
+
+interface Props {
+  id: string;
+  size: 'rect' | 'leaderboard';
+}
+const { id, size } = Astro.props;
+---
+{ADS_ENABLED && (
+  <div class:list={['ad-slot', `ad-${size}`]} id={`ad-${id}`} aria-label="광고" role="complementary"></div>
+)}

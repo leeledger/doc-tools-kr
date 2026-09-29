@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Build (copy-vendor, gen-licenses, gen-ui-font, astro build, check-dist)
+        run: npm run build
+      - name: Typecheck
+        run: npm run check
+      - name: Unit tests (incl. static network-API guard)
+        run: npm test
+      - name: License gate
+        run: npm run check:licenses
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: E2E (5 projects, no-upload assertion, axe)
+        run: npm run test:e2e
+      - name: Lighthouse CI
+        run: npm run lhci
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: reports
+          path: |
+            playwright-report/
+            test-results/
+            .lighthouseci/
+          retention-days: 7

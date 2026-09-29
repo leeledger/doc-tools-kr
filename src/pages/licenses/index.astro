@@ -1,0 +1,46 @@
+---
+import Base from '../../layouts/Base.astro';
+import licenses from '../../generated/licenses.json';
+
+interface LicenseEntry {
+  name: string;
+  version: string;
+  license: string;
+  use: string;
+  homepage: string | null;
+  texts: { file: string; text: string }[];
+}
+const list = licenses as LicenseEntry[];
+---
+<Base
+  title="오픈소스 라이선스 | 안올림"
+  description="안올림이 브라우저에서 파일을 처리하는 데 쓰는 오픈소스 소프트웨어와 글꼴의 목록, 버전, 라이선스 전문을 안내합니다."
+>
+  <div class="prose">
+    <div class="wrap narrow">
+      <h1>오픈소스 라이선스</h1>
+      <p class="meta-line">안올림은 아래 오픈소스 소프트웨어와 글꼴을 이 사이트에서 직접 제공해 사용합니다. 각 라이선스 전문은 항목을 펼쳐 볼 수 있습니다.</p>
+      <table>
+        <thead><tr><th scope="col">이름</th><th scope="col">버전</th><th scope="col">라이선스</th><th scope="col">용도</th></tr></thead>
+        <tbody>
+          {list.map((p) => (
+            <tr><td>{p.name}</td><td>{p.version}</td><td>{p.license}</td><td>{p.use}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <h2>라이선스 전문</h2>
+      {list.map((p) => (
+        <details class="license">
+          <summary>{p.name} {p.version} ({p.license})</summary>
+          {p.homepage && <p><a href={p.homepage} rel="noopener">{p.homepage}</a></p>}
+          {p.texts.map((t) => (
+            <>
+              <h3>{t.file}</h3>
+              <pre>{t.text}</pre>
+            </>
+          ))}
+        </details>
+      ))}
+    </div>
+  </div>
+</Base>

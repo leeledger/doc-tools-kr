@@ -1,0 +1,35 @@
+{
+  "$comment": "Everything shipped to the browser. gen-licenses.mjs embeds these files into /licenses/ and fails the build if one is missing.",
+  "packages": [
+    {
+      "name": "@cantoo/pdf-lib",
+      "use": "PDF 합치기 엔진 (작업자 스레드)",
+      "files": ["LICENSE.md"]
+    },
+    { "name": "fflate", "use": "@cantoo/pdf-lib 의존성 (압축)", "files": ["LICENSE"] },
+    { "name": "culori", "use": "@cantoo/pdf-lib 의존성 (색상)", "files": ["LICENSE"] },
+    { "name": "tslib", "use": "@cantoo/pdf-lib 의존성 (런타임 도우미)", "files": ["LICENSE.txt"] },
+    { "name": "node-html-better-parser", "use": "@cantoo/pdf-lib 의존성", "files": ["LICENSE"] },
+    { "name": "html-entities", "use": "@cantoo/pdf-lib 의존성", "files": ["LICENSE"] },
+    {
+      "name": "pdfjs-dist",
+      "use": "PDF 미리보기·쪽수 확인 (PDF.js)",
+      "files": [
+        "LICENSE",
+        "wasm/LICENSE_PDFJS_OPENJPEG",
+        "wasm/LICENSE_OPENJPEG",
+        "wasm/LICENSE_PDFJS_JBIG2",
+        "wasm/LICENSE_JBIG2",
+        "wasm/LICENSE_PDFJS_QCMS",
+        "wasm/LICENSE_QCMS",
+        "cmaps/LICENSE",
+        "standard_fonts/LICENSE_FOXIT"
+      ]
+    },
+    {
+      "name": "pretendard",
+      "use": "글꼴 (Pretendard Variable 원본, 그리고 이 사이트에 쓰인 글자만 남긴 수정본 \"Anolim UI Sans\")",
+      "files": ["dist/LICENSE.txt"]
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+---
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { SITE } from '../../data/site';
+import { getTool } from '../../data/tools';
+
+const tool = getTool('pdf-merge');
+const url = new URL(`/${tool.slug}/`, Astro.site).href;
+const home = new URL('/', Astro.site).href;
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: `${tool.name} — ${SITE.name}`,
+    url,
+    description: tool.description,
+    applicationCategory: 'UtilitiesApplication',
+    operatingSystem: '웹 브라우저',
+    inLanguage: 'ko',
+    offers: { '@type': 'Offer', price: 0, priceCurrency: 'KRW' },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: SITE.name, item: home },
+      { '@type': 'ListItem', position: 2, name: tool.name, item: url },
+    ],
+  },
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">여러 PDF 파일을 한 파일로 합칩니다. 파일은 서버로 전송되지 않고 이 브라우저 안에서만 처리됩니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="PDF 합치기 도구">
+    <div class="wrap narrow">
+      <div id="merge-tool" class="merge" data-state="empty">
+        <div class="drop" id="merge-drop">
+          <input id="merge-input" class="file-input" type="file" accept="application/pdf,.pdf" multiple>
+          <label class="btn primary" for="merge-input" id="merge-pick">PDF 파일 선택</label>
+          <p class="drop-hint">또는 여기에 파일을 끌어다 놓으세요</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="notice" id="merge-notice" hidden></p>
+
+        <ol class="file-list" id="merge-list" aria-label="합칠 파일 목록" hidden></ol>
+
+        <div class="merge-controls" id="merge-controls" hidden>
+          <label class="check">
+            <input type="checkbox" id="merge-bookmarks" checked>
+            <span>파일마다 책갈피 추가</span>
+          </label>
+          <div class="confirm" id="merge-confirm" hidden>
+            <p id="merge-confirm-text"></p>
+            <div class="row">
+              <button type="button" class="btn primary" id="merge-confirm-yes">계속 합치기</button>
+              <button type="button" class="btn ghost" id="merge-confirm-no">취소</button>
+            </div>
+          </div>
+          <div class="row">
+            <button type="button" class="btn primary" id="merge-run" disabled>PDF 합치기</button>
+          </div>
+          <p class="hint" id="merge-hint"></p>
+        </div>
+
+        <div class="progress-box" id="merge-progress" hidden>
+          <p id="merge-progress-text">합치는 중…</p>
+          <progress id="merge-progress-bar" max="1" value="0" aria-labelledby="merge-progress-text"></progress>
+          <button type="button" class="btn ghost" id="merge-cancel">취소</button>
+        </div>
+
+        <div class="result" id="merge-result" hidden>
+          <p class="result-title">합친 파일이 준비되었습니다</p>
+          <p class="result-summary" id="merge-summary"></p>
+          <ul class="result-notes" id="merge-notes"></ul>
+          <div class="row">
+            <a class="btn primary" id="merge-download" href="#" download>내려받기</a>
+            <button type="button" class="btn ghost" id="merge-reset">처음부터</button>
+          </div>
+        </div>
+
+        <p class="error-box" id="merge-error" role="alert" hidden></p>
+        <p class="visually-hidden" id="merge-status" aria-live="polite"></p>
+      </div>
+      <AdSlot id="pdf-merge-result" size="rect" />
+    </div>
+  </section>
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>PDF 파일 선택</strong><span>합칠 PDF 파일을 두 개 이상 고르거나 끌어다 놓습니다.</span></li>
+        <li><strong>순서 정하기</strong><span>위로·아래로 버튼으로 파일 순서를 정합니다. 비밀번호가 걸린 파일은 비밀번호를 입력합니다.</span></li>
+        <li><strong>합치고 내려받기</strong><span>PDF 합치기를 누른 뒤 내려받기로 저장합니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">안전한 이유</h2>
+      <ul class="points">
+        <li><strong>업로드하지 않습니다</strong><span>합치는 작업은 이 브라우저 안에서 실행됩니다. 파일 내용은 네트워크로 전송되지 않습니다.</span></li>
+        <li><strong>남기지 않습니다</strong><span>파일과 비밀번호는 이 화면의 메모리에만 머무르고, 처음부터를 누르거나 창을 닫으면 사라집니다.</span></li>
+        <li><strong>직접 확인할 수 있습니다</strong><span>브라우저 개발자 도구의 네트워크 탭을 열어 두고 합쳐 보면 파일이 전송되지 않는 것을 볼 수 있습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+  <div class="wrap narrow"><AdSlot id="pdf-merge-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import { initMergeTool } from '../../tools/pdf-merge/controller';
+  initMergeTool();
+</script>

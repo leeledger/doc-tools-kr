@@ -1,0 +1,41 @@
+{
+  "name": "doc-tools-kr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "predev": "node scripts/copy-vendor.mjs && node scripts/gen-licenses.mjs && node scripts/gen-ui-font.mjs",
+    "dev": "astro dev",
+    "prebuild": "node scripts/copy-vendor.mjs && node scripts/gen-licenses.mjs && node scripts/gen-ui-font.mjs",
+    "build": "astro build",
+    "postbuild": "node scripts/check-dist.mjs",
+    "preview": "node tests/e2e/serve.mjs",
+    "check": "astro check",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "lhci": "lhci autorun",
+    "regress:merge": "node scripts/regress/merge.mjs"
+  },
+  "dependencies": {
+    "@cantoo/pdf-lib": "2.11.1",
+    "pdfjs-dist": "6.3.289",
+    "pretendard": "1.3.9"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@axe-core/playwright": "4.13.0",
+    "@lhci/cli": "0.15.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.19.1",
+    "astro": "7.3.5",
+    "fontverter": "2.0.0",
+    "subset-font": "2.9.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

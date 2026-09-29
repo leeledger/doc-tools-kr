@@ -1,0 +1,89 @@
+---
+import '../generated/anolim-ui.css';
+import '../styles/global.css';
+import '../styles/app.css';
+import { SITE, VERIFICATION } from '../data/site';
+import uiFontUrl from '../generated/anolim-ui.woff2?url';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogDescription?: string;
+  /** Id the skip link jumps to. */
+  skipTarget?: string;
+  isHome?: boolean;
+  noindex?: boolean;
+}
+
+const {
+  title = SITE.defaultTitle,
+  description = SITE.defaultDescription,
+  ogDescription = description,
+  skipTarget = 'main',
+  isHome = false,
+  noindex = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL('/og.png', Astro.site).href;
+const nav = isHome ? '' : '/';
+const favicon =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M10 9h8l4 4v10H10z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M13 18l2.5 2.5L20 16' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
+---
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<meta name="description" content={description}>
+{noindex && <meta name="robots" content="noindex">}
+{!noindex && <link rel="canonical" href={canonical}>}
+<meta name="theme-color" content={SITE.themeColor}>
+<meta property="og:type" content="website">
+<meta property="og:locale" content={SITE.locale}>
+<meta property="og:site_name" content={SITE.name}>
+<meta property="og:title" content={title}>
+<meta property="og:description" content={ogDescription}>
+<meta property="og:url" content={canonical}>
+<meta property="og:image" content={ogImage}>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+{VERIFICATION.naver && <meta name="naver-site-verification" content={VERIFICATION.naver}>}
+{VERIFICATION.google && <meta name="google-site-verification" content={VERIFICATION.google}>}
+<link rel="icon" href={favicon}>
+<link rel="preload" href={uiFontUrl} as="font" type="font/woff2" crossorigin>
+<slot name="head" />
+</head>
+<body>
+<a class="skip" href={`#${skipTarget}`}>본문으로 건너뛰기</a>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="brand" href="/" aria-label="안올림 홈">
+      <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M10 9h8l4 4v10H10z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M13 18l2.5 2.5L20 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>안올림</span>
+    </a>
+    <nav aria-label="주요 메뉴">
+      <a href={`${nav}#tools`}>도구</a>
+      <a href={`${nav}#privacy`}>보안</a>
+      <a href={`${nav}#faq`}>자주 묻는 질문</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<slot />
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>© 2026 안올림 · 파일을 올리지 않는 서류 도구</p>
+    <nav class="foot-links" aria-label="사이트 정보">
+      <a href="/privacy/">개인정보 처리방침</a>
+      <a href="/licenses/">오픈소스 라이선스</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>
