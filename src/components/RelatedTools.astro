@@ -1,0 +1,24 @@
+---
+import { LIVE_TOOLS } from '../data/tools';
+
+interface Props {
+  /** The current tool, left out of the list. */
+  current: string;
+}
+const others = LIVE_TOOLS.filter((t) => t.slug !== Astro.props.current);
+---
+{others.length > 0 && (
+  <section class="related" aria-labelledby="related-title">
+    <div class="wrap narrow">
+      <h2 id="related-title">관련 도구</h2>
+      <ul class="related-list">
+        {others.map((t) => (
+          <li>
+            <a href={`/${t.slug}/`}>{t.name}</a>
+            <span>{t.summary}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

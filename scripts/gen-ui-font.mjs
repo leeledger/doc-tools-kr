@@ -12,7 +12,7 @@ import subsetFont from 'subset-font';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readNames, renameFont } from './font-rename.mjs';
+import { readNames, renameFont, reservedNameProblems } from './font-rename.mjs';
 
 export const UI_FAMILY = 'Anolim UI Sans';
 
@@ -45,8 +45,9 @@ const font = readFileSync(join(root, 'node_modules', 'pretendard', 'dist', 'web'
 const subset = await subsetFont(font, text, { targetFormat: 'truetype' });
 const renamed = renameFont(subset, 'Pretendard', UI_FAMILY);
 const names = readNames(renamed);
-const leaked = Object.entries(names).filter(([id, v]) => ![0, 7, 13, 14].includes(Number(id)) && /Pretendard/i.test(v));
-if (leaked.length) throw new Error(`gen-ui-font: reserved name left in name IDs ${leaked.map(([id]) => id).join(', ')}`);
+// Every record on every platform, plus a raw byte scan of the name table (OFL Reserved Font Name).
+const leaked = reservedNameProblems(renamed, 'Pretendard');
+if (leaked.length) throw new Error(`gen-ui-font: reserved name "Pretendard" left in the subset: ${leaked.join('; ')}`);
 const woff2 = await fontverter.convert(Buffer.from(renamed), 'woff2', 'truetype');
 
 // unicode-range as merged runs, so the browser knows exactly which characters this face covers.

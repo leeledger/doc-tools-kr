@@ -1,0 +1,113 @@
+{
+ "$comment": "Raster (이미지로 변환) baseline for the shipped pipeline: pdf.js 150 dpi (long side ≤ 3000 px) → MozJPEG q70, 1-channel when gray; kept when not ≥ 1 % smaller. Measured by regress:compress in Node on 2026-09-29 (Arch decision: replaces the spike canvas-JPEG raster numbers). reduction % (0 = kept), ssimMin as for the normal levels. File names and numbers only.",
+ "files": {
+  "edge_damaged_badxref.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "edge_damaged_truncated.pdf": {
+   "error": true
+  },
+  "edge_encrypted_userpw_1234.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "en_iea_korea2025.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "irs_f1040.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "irs_fw9.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "kr_gongmun_moleg.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "kr_gongmun_msit.pdf": {
+   "reduction": 23.2,
+   "kept": false,
+   "ssimMin": 0.9605
+  },
+  "kr_gongmun_opm.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "kr_kcc_briefing.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "kr_kpmg_outlook.pdf": {
+   "reduction": 79.9,
+   "kept": false,
+   "ssimMin": 0.9335
+  },
+  "kr_law_form.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "kr_pen_doc.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "pdfjs_tracemonkey.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "resume_racz_cc0.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "scan_book_sangsomun.pdf": {
+   "reduction": 32.7,
+   "kept": false,
+   "ssimMin": 0.8913
+  },
+  "scan_donga_1949.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "scan_keti_bizreg_bank.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "scan_us_nkarmy_history.pdf": {
+   "reduction": 0,
+   "kept": true,
+   "ssimMin": 1
+  },
+  "synth_resume_kr_photo.pdf": {
+   "reduction": 85.1,
+   "kept": false,
+   "ssimMin": 0.9183
+  },
+  "synth_scan_mfp_gongmun.pdf": {
+   "reduction": 96.1,
+   "kept": false,
+   "ssimMin": 0.9243
+  },
+  "synth_scan_phone_cv.pdf": {
+   "reduction": 86.7,
+   "kept": false,
+   "ssimMin": 0.8873
+  }
+ }
+}

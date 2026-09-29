@@ -1,12 +1,15 @@
-// Dist gate: Cloudflare Pages limits with headroom, and no source maps.
-import { readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
+// Dist gate: Cloudflare Pages limits with headroom, no source maps, and the bundle budgets
+// (brief Step 2 §6, gzip -9 sizes). Prints the budget table.
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 const MAX_FILE = 24 * 1024 * 1024;
 const MAX_FILES = 15000;
+const KB = 1024;
 
 const files = [];
 const walk = (dir) => {
@@ -24,6 +27,51 @@ for (const f of files) {
   if (f.path.endsWith('.map')) errors.push(`${f.path}: source maps must not ship`);
 }
 if (files.length > MAX_FILES) errors.push(`${files.length} files (limit ${MAX_FILES})`);
+
+const gz = (path) => gzipSync(readFileSync(join(dist, path)), { level: 9 }).length;
+
+// Initial JS of a page: its module scripts plus their static imports (dynamic import() is lazy).
+function staticClosure(entry) {
+  const seen = new Set();
+  const visit = (path) => {
+    if (seen.has(path)) return;
+    seen.add(path);
+    const code = readFileSync(join(dist, path), 'utf8');
+    for (const m of code.matchAll(/(?:^|[;\s}])import\s*(?:[\w${},\s*]+from\s*)?["']([^"']+)["']/g)) {
+      const spec = m[1];
+      if (!spec.startsWith('.') && !spec.startsWith('/')) continue;
+      visit(spec.startsWith('/') ? spec.slice(1) : posix.join(posix.dirname(path), spec));
+    }
+  };
+  visit(entry);
+  return [...seen];
+}
+
+const rows = [];
+const budget = (label, paths, limit) => {
+  if (!paths.length) {
+    errors.push(`${label}: no file found`);
+    return;
+  }
+  const size = paths.reduce((a, p) => a + gz(p), 0);
+  rows.push({ label, size, limit });
+  if (size > limit) errors.push(`${label} (${paths.join(' + ')}) is ${(size / KB).toFixed(1)} KB gzip, budget ${limit / KB} KB`);
+};
+
+for (const html of files.filter((f) => f.path.endsWith('.html'))) {
+  const text = readFileSync(join(dist, html.path), 'utf8');
+  const entries = [...text.matchAll(/<script[^>]*type="module"[^>]*src="\/([^"]+)"/g)].map((m) => m[1]);
+  const js = [...new Set(entries.flatMap(staticClosure))];
+  if (js.length) budget(`initial JS /${html.path.replace(/index\.html$/, '')}`, js, 30 * KB);
+}
+const match = (re) => files.filter((f) => re.test(f.path)).map((f) => f.path);
+budget('compress.worker*.js', match(/^_astro\/compress\.worker[^/]*\.js$/), 330 * KB);
+budget('vendor/qpdf/*/qpdf.wasm', match(/^vendor\/qpdf\/[^/]+\/qpdf\.wasm$/), 480 * KB);
+budget('MozJPEG enc + dec wasm', match(/^_astro\/mozjpeg_(enc|dec)[^/]*\.wasm$/), 140 * KB);
+budget('resize wasm', match(/^_astro\/squoosh_resize[^/]*\.wasm$/), 30 * KB);
+
+console.log('check-dist: budgets (gzip -9)');
+for (const r of rows) console.log(`  ${r.label.padEnd(40)} ${(r.size / KB).toFixed(1).padStart(7)} KB  / ${r.limit / KB} KB`);
 
 const largest = files.reduce((a, f) => (f.size > a.size ? f : a), { path: '-', size: 0 });
 if (errors.length) {

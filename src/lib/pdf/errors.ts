@@ -1,4 +1,5 @@
-export type PdfErrorCode = 'not-pdf' | 'password' | 'wrong-password' | 'corrupt' | 'oom' | 'unknown';
+/** `verify`: the main-thread check of a compressed result failed (PDF 용량 줄이기). */
+export type PdfErrorCode = 'not-pdf' | 'password' | 'wrong-password' | 'corrupt' | 'oom' | 'unknown' | 'verify';
 
 export class PdfError extends Error {
   readonly code: PdfErrorCode;

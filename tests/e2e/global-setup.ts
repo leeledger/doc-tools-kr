@@ -9,4 +9,5 @@ export default async function globalSetup(): Promise<void> {
   }
   await makeRuntimeFixtures(RUNTIME_DIR);
   await makeBigFixture(RUNTIME_DIR, 51);
+  await makeBigFixture(RUNTIME_DIR, 21);
 }

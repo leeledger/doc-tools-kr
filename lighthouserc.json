@@ -5,7 +5,8 @@
       "startServerReadyPattern": "serve:",
       "url": [
         "http://127.0.0.1:4173/",
-        "http://127.0.0.1:4173/pdf-merge/"
+        "http://127.0.0.1:4173/pdf-merge/",
+        "http://127.0.0.1:4173/pdf-compress/"
       ],
       "numberOfRuns": 3,
       "settings": {

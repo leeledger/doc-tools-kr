@@ -1,115 +1,56 @@
-# Review Feedback — Step 1 (Foundation + PDF 합치기)
+# Review Feedback — Step 2 (PDF 용량 줄이기 `/pdf-compress/`, round 1b)
 Date: 2026-09-29
-Reviewer: Richard
-Verdict (round 2): APPROVE  (round 1 was CHANGES REQUIRED; see the Round 2 section at the end)
 Ready for Builder: YES
 
-## Gates re-run by the reviewer (Windows 11, Node 22.15.1)
-- npm run check: 0 errors, 0 warnings, 0 hints (41 files)
-- npm test: 32/32 passed
-- npm run build: OK; the postbuild check-dist step reports 300 files, largest 1.21 MiB, no .map
-- npm run check:licenses: OK, 20 production packages
-- dist/_headers is byte-identical to public/_headers. The only script tags in dist are 2x application/ld+json and 1 external module. There is no unsafe-inline in script-src.
-- E2E on chromium: 27 passed, 1 skipped (stated reason). E2E for pdf-merge.spec on firefox, webkit and mobile-safari: 18 passed, 3 skipped (stated reasons).
-- Gate 11 (partial). Headless Chromium through Playwright against serve.mjs, desktop 1280, Pixel 7, and dark mode on both:
-  - home and /pdf-merge/
-  - 4 files added: kr_law_form, irs_fw9, a Korean file name "한글 서류_견적서(최종).pdf", and PNG bytes saved as photo.pdf
-  - the not-PDF error showed inline and the other files were kept. After deleting it, the merge ran, and 17쪽 were downloaded as kr_law_form_외2건_합침.pdf.
-  - 0 console errors and 0 horizontal scroll in all 4 contexts. Every request was a same-origin GET.
-  - the pages looked right in light and dark, and the landing page matches the old design.
-  - NOT done: real Chrome, Firefox or Edge with a window, and a real phone. This is still owed before deploy (Arch or the owner, on the Cloudflare preview).
+## Gates re-run by Richard
+- `npm run check`: 0 errors / 0 warnings / 0 hints (77 files).
+- `npm test`: 7 files, 92/92.
+- `npm run build` (+ check-dist): OK; budgets identical to REVIEW-REQUEST (initial JS 6.4 / 5.8 KB, worker 255.9, qpdf.wasm 439.1, MozJPEG 120.8, resize 16.7 KB gzip).
+- `npm run check:licenses`: OK, 23 production packages.
+- e2e `pdf-compress.spec.ts` on chromium + firefox + webkit: 33 passed, 3 skipped (mobile-only soft-limit test), 0 flaky.
+- e2e compress + site + merge on all 5 projects: 224 passed, 10 skipped, 1 flaky (mobile-safari "level switch", 60 s timeout waiting for the download under full parallel load; passed on retry).
+- Manual (headless Chromium, built site on a separate port): 1280 px, 360 px (DPR 2, touch) and dark mode; ready (details open), done (gen_scan_a6 권장, 0.6 → 0.1 MB, 93 %, both previews render) and kept (gen_already_small). No horizontal overflow, no console errors or warnings, no non-GET or cross-origin request, no fallback glyphs. (Full-page shots show the sticky header mid-page; that is a capture artefact, not a layout bug.)
+- regress:compress not re-run (corpus is local; it takes about 10 min). I reviewed the judging logic instead; see below.
 
 ## Must Fix
-- src/lib/pdf/mergePlus.ts:350-357 (confidence: 10). Field renaming can produce duplicate fully-qualified field names.
-  - Code: if (usedNames.has(nm) && !namesThisDoc.has(nm)) then d.set(N("T"), PDFHexString.fromText(nm + "_" + (fi + 1)))
-  - It never checks whether the new name is already taken. It also only adds the ORIGINAL names to usedNames (namesThisDoc.add(nm)).
-  - I reproduced it with a temporary vitest (since deleted). File 1 has fields a and a_2; file 2 has field a. The output fields are [a, a_2, a_2].
-  - The realistic trigger is re-merging an output of this tool (it already contains x_2) with another copy of the same form.
-  - Two root fields with the same /T is invalid (PDF names must be unique). Viewers then link or share the values, which breaks the "모두 입력할 수 있게 했습니다" promise.
-  - Fix:
-    - Pick the first free candidate: nm_{fi+1}, then nm_{fi+1}_2, and so on, until neither usedNames nor namesThisDoc contains it.
-    - Add the FINAL name to both sets.
-    - Add a unit test with the case above, plus a 3-way case: file A has a, B has a, C has a_2.
+None.
 
 ## Should Fix
-- public/robots.txt:4 (confidence: 9). The Sitemap URL https://doc-tools-kr.pages.dev/sitemap.xml is hard-coded, so it does not follow PUBLIC_SITE_URL. Brief section 5 says a domain move is "one variable". Generate it as src/pages/robots.txt.ts from site, the same way as the sitemap.
-- src/data/tools.ts, FAQ "휴대폰에서도 쓸 수 있나요?" (confidence: 7). The answer "최신 크롬, 사파리, 삼성 인터넷에서 동작합니다" claims Samsung Internet, which no gate tests. Brief section 4 says to claim only what the tests prove. Either drop 삼성 인터넷, or verify it on a real device at Gate 11 first.
-- src/lib/pdf/mergePlus.ts:200-205 (confidence: 6). withFileIndex turns ANY non-PdfError, including a bug in our own code such as a TypeError in step 2 or 3, into PdfCorruptError with a file index. The user is then told the file is damaged and is asked to remove it. Suggest: only errors from loadSource/copyPages become corrupt; anything else becomes unknown (keep the fileIndex).
-- src/tools/pdf-merge/controller.ts:413-424 (confidence: 5, verify). Suppose the user cancels while file.arrayBuffer() is still pending and then clicks PDF 합치기 again. The first runMerge passes the state check, because the state is merging again, and it creates a second worker. That worker is never terminated. Its messages are ignored (worker !== w), but it still burns CPU and memory. Guard with a per-run token (const run = ++runId; then return if run !== runId).
-- src/lib/pdf/mergePlus.ts:329 (confidence: 5, verify). Only the /DR of the first file with a form is kept. A later file whose fields use a DA font name missing from that DR will get wrong or missing glyphs when a viewer regenerates appearances (NeedAppearances, or when the user edits the field). This is not a regression versus the spike. Merge the /DR /Font subdictionaries (first one wins per key), or log it as a Known Gap.
-- src/lib/pdf/mergePlus.ts:144-148. Outline entries whose action is not GoTo (URI, Named) are dropped silently, and only their children are kept. This is acceptable, but log it in BUILD-LOG Known Gaps, since the FAQ says 책갈피 are kept.
+- src/lib/pdf/compress.worker.ts:66 (confidence: 8/10). `raster-end` does not check `raster.assembler.pages === raster.pageCount`. `pageCount` is stored and never read. The main-thread `checkResult` page-count compare (controller.ts:428) does catch a short raster output, so no partial file reaches the user today. The engine rule is "never partial" at every layer, though. Fix: throw `PdfCorruptError` in the worker when the counts differ. It is one line.
+- scripts/regress/compress.mjs:147-153 (confidence: 8/10). The raster branch never judges `outPages !== pages`. For corpus rows a page mismatch surfaces indirectly: `ssimMin` becomes 0 and fails the baseline gate. For fixture raster rows (no baseline) a page-count regression passes silently, because only `!r.kept && r.reduction < 1` is checked. Fix: add an explicit page-count problem to the raster branch. Otherwise the re-baseline logic is sound and does not hide regressions. Baseline-relative SSIM (-0.005) and reduction (-3) are both applied. Kept/offered must match, and a file missing from the raster baseline fails loudly (`spike.kept` is undefined, so it counts as a mismatch). The KPMG named floor still applies.
+- src/tools/pdf-compress/controller.ts:386-387 (confidence: 5/10, verify). `if (!opened || run !== runId) return;` leaves the tool in `working` with a live worker if `openPdf` returns null. That happens only when a user password is needed and none is held, which the state machine should prevent, so the path is practically unreachable. Fix: when `!opened` and the run is current, call `fail('unknown')`.
+- src/tools/pdf-compress/controller.ts:507-513 (confidence: 5/10). When qpdf reports `password` (no password was given) the UI shows "비밀번호가 맞지 않습니다." even though the user never typed one. That can only happen when pdf.js opened the file without a password and qpdf refused it, which is rare. Recommendation: use `MESSAGES.password` for code `password` and keep `wrong-password` for the other case.
+- src/tools/pdf-compress/controller.ts:494 (confidence: 6/10). In the kept state, focus goes to the button, and the browser scrolls so that the kept message sits right under the sticky header. In the 1280 px dark screenshot only its last line is visible. Recommendation: give the tool box a `scroll-margin-top` equal to the header height, or scroll the kept box into view before focusing. The same applies to `download.focus()` in the done state.
+- src/lib/pdf/compress/qpdf-run.ts:16-27 (confidence: 6/10). The console swap is correct. I verified in the vendored glue that `console.log.bind` / `console.error.bind` run synchronously inside the non-async factory, before its only `await`. The `finally` restores both on throw. The capture closure lives only as long as the module instance and the per-run array. Nothing is posted: `qpdfFailure` only regex-tests the lines. Two cheap additions: (a) a unit test that a throwing factory leaves console.log/error restored; (b) cap `logs` (for example the first 200 lines), because a badly damaged file can make qpdf emit a warning per object.
+- tests/e2e/pdf-compress.spec.ts:71 (confidence: 5/10). The "level switch" test does two full runs inside the default 60 s. It flaked once on mobile-safari under a 5-project parallel run. Recommendation: `test.slow()` for this test.
+
+## Deviations (the 8 listed)
+1. qpdf wasm through `locateFile` rather than `wasmBinary`: accepted. The build's INCOMING_MODULE_JS_API confirms it, and `/vendor/*` is immutable in `_headers`, so re-runs hit the HTTP cache. Patching the minified glue would be worse.
+2. Console capture: accepted (see Should Fix note).
+3. Resize initialised with a compiled module, pkg-only import: accepted. hqx and magic-kernel are not in dist; `dist/_astro` holds only the squoosh_resize wasm.
+4. `password` vs `wrong-password`, and the header assert in the engine: accepted. See the UI copy note above.
+5. `done` with `bytes: null` for kept: accepted.
+6. Kept state offers "다른 단계로 다시 줄이기" and "처음부터": accepted (navigation only).
+7. Closing the details resets to 권장 and announces it: accepted. It is a sensible guard.
+8. Shared refactors (font.ts, jsonld.ts, inspect exports): accepted. Merge e2e is green on 5 projects.
+
+## Bob's open questions
+- Run-token paths: they are correct. Cancel during raster bumps `runId` and `stopWorker()` releases `pendingAck`. The loop re-checks the token after the ack and after each render, and `finally` closes the pdf.js doc. A worker error or crash calls `stopWorker` and then `fail`, which bumps the token synchronously before the awaiting continuation resumes. `finish` re-checks the token after the verify awaits, so cancel during "결과 확인 중…" wins. Stale messages are dropped by the `worker !== w || run !== runId` guard.
+- `hasEncryptKey`: acceptable. It only sets the report field `ownerRestrictionRemoved`, which the UI does not read. The user-facing owner notice comes from pdf.js `getPermissions()`. A false positive (a literal /Encrypt in an uncompressed content stream) would only mislabel the report.
+
+## Other checks (passed)
+- Engine: page count is checked after normalize and after repair (one check covers both paths, engine.ts:131) and again after optimize (engine.ts:160). Kept returns the input bytes (engine.ts:163-166). Passwords are passed only when given. Log text never leaves `qpdfFailure`. Metadata is unchanged.
+- Runtime text check: first, middle and last page, whitespace-stripped, normal levels only; page count for raster (check.ts, controller.ts:428).
+- Lazy load and no-upload: the e2e request log is green on 5 projects. `fetch(` appears only in wasm-browser.ts (network-guard test). CSP is unchanged (script-src 'self' 'wasm-unsafe-eval', connect-src 'self'). The glue has no eval or new Function.
+- Licences: /licenses/ embeds qpdf (Apache-2.0 plus NOTICE), libjpeg-turbo (LICENSE.md plus README.ijg), zlib, the qpdf-wasm ISC text, jsquash jpeg with the MozJPEG codec licence, and resize with its codec licence. SOURCES.md pins each commit. The ISC copyright line and the zlib notice (from zlib.h) are documented as Arch decisions; the zlib text is the complete zlib licence.
+- Carry-overs: `reservedNameProblems` checks every record on every platform, plus raw ASCII and UTF-16BE bytes. gen-ui-font fails on any hit, and the build passed. The `withFileIndex` tests cover TypeError to unknown, corrupt kept, and OOM unchanged.
+- Copy, a11y and SEO: brief copy is verbatim. Descriptions are linked with aria-describedby, and one polite live region handles announcements. The related-tools section and the merge done-state link are present. There is one H1 and the JSON-LD is shared. axe is green.
 
 ## Escalate to Architect
-- Pretendard subset and OFL Reserved Font Name. node_modules/pretendard/dist/LICENSE.txt:2 says "with Reserved Font Name Pretendard". scripts/gen-ui-font.mjs makes our own subset of PretendardVariable.woff2, which is a Modified Version under the OFL. HarfBuzz keeps the internal name table ("Pretendard"), and the CSS family is still "Pretendard Variable". OFL section 3 bars Modified Versions from using the RFN without permission. Whether web-delivery subsetting counts is argued (OFL-FAQ), so this is a licensing call, not a code call. Options:
-  - (a) rename the family inside the subset (name table) and in the CSS to something without "Pretendard"
-  - (b) get written permission from the author (the repo is active)
-  - (c) accept, with a documented rationale
-  The author-made dynamic-subset files are unmodified and fine as shipped, and renaming the CSS family to "Pretendard Dynamic" does not modify the font.
-- Privacy 시행일 (deviation 10) must become the real deploy date, and the 문의처 placeholder remains an owner decision. Korean PIPA expects a contact for the privacy officer, so do not leave the placeholder in place for long.
-- Gate 11 on the real Cloudflare preview (real Chrome, Firefox and Edge, plus one phone). This is also where to confirm that Cloudflare serves .mjs with a JavaScript MIME type (under nosniff, a wrong type breaks the pdf.js module worker) and that _headers applies, including the :hash noindex rule. I could not do this locally.
-
-## Answers to the Builder questions
-1. Is the UI-subset font the permanent strategy? Technically yes: one preloaded file, deterministic, rebuilt from src/ on every build, and the numbers justify it.
-   - Conditions: resolve the RFN escalation above first.
-   - Keep the "Pretendard Dynamic" fallback on any page that shows user-supplied text.
-   - Watch the subset size as pages are added; if it passes about 150 KiB, split it by page group.
-2. /P detach for widgets not in any /Annots? Not required for Step 1. A cheap way to make it complete is to also walk AcroForm /Fields -> /Kids and delete /P on every widget dict found there before copyPages. Note that verifyOutput cannot catch orphan pages, because they do not change the page count of the page tree, so the unit test is the only guard. Log it as a Known Gap if you do not do it now.
-3. Is an HTMLCanvasElement thumbnail OK for Step 1b? It is fine for one thumbnail per file. For per-page thumbnails in Step 1b, hundreds of canvases at DPR 2 is a lot of memory. Use ImageBitmap or a blob-URL img, and render lazily (IntersectionObserver). Decide that in the Step 1b brief.
-
-## Deviations 1-10
-- All 10 are accepted as reasoned.
-- #1 is subject to the OFL escalation. #2 is correct and is covered by unit tests. #3 is confirmed: no eval path in the shipped pdf.js, and CSP blocks it anyway. #4 is correct: Liberation is GPL-2 plus an exception, so omitting it is right; the only cost is 404 GETs for the fallback font on non-embedded Helvetica thumbnails.
-- #9 (retries: 1) is fine while flakes stay visible in the report. #10 is for Arch.
+- Gate 11 (real Chrome, Firefox and Edge, plus a phone) could not be done from this environment: I have headless Playwright browsers only, and no Edge or phone. Everything above ran in headless Chromium, Firefox and WebKit. Arch: accept the deploy-gate live smoke in real Chrome as the Chrome part, and log real Firefox, Edge and phone as owed (same as the Step 1 Known Gap). Or hold the step until someone runs them by hand.
+- Raster SSIM gate: the baseline-relative definition is defensible. An absolute floor is a product decision (Bob's question). I recommend keeping it relative.
 
 ## Cleared
-- Error mapping in the worker and controller: not-pdf (sniffing %PDF- in the first 1 KiB), password, wrong-password, corrupt, oom (RangeError or a message match), and worker onerror -> unknown. The worker always verifies before done, so no partial output reaches the user.
-- The limits and their messages. The password stays in memory only: it is cleared on remove and reset, and it is never logged or put in the URL.
-- Focus after move, remove and unlock, the live region, and the labelled controls.
-- There is no innerHTML: file names go in through textContent. JSON-LD escapes the less-than sign. The only set:html is on static icon SVG.
-- CSP (connect-src self, no unsafe-inline scripts). The no-upload auto fixture cannot be opted out of. It checks method, body, origin, websockets, and CSP on every response. The static network-API guard is in place and the original pdf-lib is absent.
-- The license manifest covers the shipped pdf.js wasm, cmaps and Foxit notices. Canonical, og, and the noindex-on-404 logic are correct, and the sitemap lists exactly the 4 pages. The CI workflow is sound. For Cloudflare Pages: dist output, .node-version 22, and all prebuild tools, including subset-font, are installed by npm ci.
-- Korean copy follows docs/COPY.md.
+Engine, worker, controller, wasm loading, licences, regress logic, UI, a11y and SEO were reviewed. All re-run gates are green. There are no blocking findings; the Should Fix items are small.
 
-Step 1 is not yet clear. Re-review needs only the Must Fix plus its test. The Should Fix items can be fixed inline or logged.
-
----
-
-# Round 2 re-review — 2026-09-29
-Verdict: APPROVE. There are no Must Fix items.
-
-## Gates (re-run by Richard)
-- check: 0 errors (43 files).
-- test: 35/35.
-- build: OK. gen-ui-font reports 428 chars, 94.8 KiB, name "Anolim UI Sans Variable". check-dist reports 300 files.
-- check:licenses: OK, 20 packages.
-- E2E chromium: 27 passed, 1 skipped (stated reason).
-
-## Verified
-- **Must Fix, field renaming (mergePlus.ts:390-422):**
-  - A candidate is rejected if it is in the final names of earlier files, the original names of this file, or the names already assigned in this file.
-  - Final names are added to usedNames.
-  - The three new tests cover my repro, a 3-way case, and the case where the second file keeps its own a_2. Resolved.
-- **robots.txt.ts:** it builds the Sitemap URL from site. public/robots.txt is gone, and dist/robots.txt is correct.
-- **Error mapping:**
-  - withFileIndex now maps foreign errors to unknown.
-  - readingInput wraps getPages and copyPages and maps them to corrupt. OOM and PdfError pass through.
-  - The truncated and not-pdf tests are still green.
-- **runId:** it is bumped on each start, cancel and reset. A late read returns before creating a worker, and the read-failure path is guarded too. Resolved.
-- **stripFieldTreeP:** it runs after the page-annots pass, so hadP and the re-attach are unchanged. The walk uses a seen-set and a depth bound. Only widgets that are not in any /Annots lose /P for good, and those are invisible anyway. Low risk.
-- **mergeDrFonts (beyond the ask):** it only adds missing /DR /Font keys, first file wins, into a DR copy that belongs to the output alone. It cannot change the fields of file 1. Its only cost is that fonts already copied through page resources get copied again (a separate copier), so output grows slightly. Accepted.
-- **OFL rename:**
-  - I decoded dist-equivalent anolim-ui.woff2 back to TTF and loaded it with fontTools: name IDs 1 and 4 are "Anolim UI Sans Variable", 6 is "AnolimUISansVariable-Regular", and the fvar instance PS names are renamed.
-  - There are zero "Pretendard" byte sequences, ASCII or UTF-16, in the whole font.
-  - I ran renameFont directly on a fresh subset: fontTools checkChecksums=2 passes for every table, and the whole-file sum equals 0xB1B0AFBA, so checkSumAdjustment is correct.
-  - The upstream dynamic-subset CSS and woff2 are byte-identical to node_modules (diff -rq and cmp). "Pretendard Dynamic" appears nowhere in src, scripts or dist.
-  - The font stack order is "Anolim UI Sans", "Pretendard Variable", and so on. /licenses/ names the modified subset.
-
-## Informational (non-blocking; fix when convenient)
-- scripts/font-rename.mjs readNames (confidence: 8). It uses `names[id] ??= ...`, so the gen-ui-font leak guard only checks the FIRST record for each name ID. A second platform or language record that still contains the name would pass the guard. It does not happen today: my byte scan shows 0 occurrences. Make the guard check every record, or scan the raw name-table bytes for "Pretendard" in ASCII and UTF-16BE.
-- The new unknown mapping for non-input errors has no unit test. It is cheap to add one: inject a throwing onProgress and expect code unknown with a fileIndex.
-
-## Still open for the deploy gate (not blocking, per Arch)
-- Gate 11 on the Cloudflare preview: real browsers and a phone, the .mjs MIME type, and whether _headers and noindex apply.
-- Privacy 시행일 and 문의처.
-
-Step 1 is clear.
+Step 2 is clear.

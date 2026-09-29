@@ -88,24 +88,70 @@ function buildNameTable(name, from, to, toPostScript) {
 
 /** Returns the names found in the `name` table (nameID -> first string), for verification. */
 export function readNames(sfnt) {
-  const b = sfnt instanceof Uint8Array ? sfnt : new Uint8Array(sfnt);
+  const names = {};
+  for (const r of readAllNames(sfnt)) names[r.nameID] ??= r.value;
+  return names;
+}
+
+function nameTable(b) {
   const numTables = u16(b, 4);
   for (let i = 0; i < numTables; i++) {
     const o = 12 + i * 16;
-    if (tagAt(b, o) !== 'name') continue;
-    const name = b.slice(u32(b, o + 8), u32(b, o + 8) + u32(b, o + 12));
-    const storage = u16(name, 4);
-    const names = {};
-    for (let k = 0; k < u16(name, 2); k++) {
-      const r = 6 + k * 12;
-      const id = u16(name, r + 6);
-      const len = u16(name, r + 8);
-      const off = u16(name, r + 10);
-      names[id] ??= decode(name.slice(storage + off, storage + off + len), u16(name, r));
-    }
-    return names;
+    if (tagAt(b, o) === 'name') return b.slice(u32(b, o + 8), u32(b, o + 8) + u32(b, o + 12));
   }
-  return {};
+  return null;
+}
+
+/** Every record of the `name` table as `{platformID, encodingID, languageID, nameID, value}`. */
+export function readAllNames(sfnt) {
+  const name = nameTable(sfnt instanceof Uint8Array ? sfnt : new Uint8Array(sfnt));
+  if (!name) return [];
+  const storage = u16(name, 4);
+  const out = [];
+  for (let k = 0; k < u16(name, 2); k++) {
+    const r = 6 + k * 12;
+    const platformID = u16(name, r);
+    const len = u16(name, r + 8);
+    const off = u16(name, r + 10);
+    out.push({
+      platformID,
+      encodingID: u16(name, r + 2),
+      languageID: u16(name, r + 4),
+      nameID: u16(name, r + 6),
+      value: decode(name.slice(storage + off, storage + off + len), platformID),
+    });
+  }
+  return out;
+}
+
+/**
+ * Reserved-name guard for the renamed subset: returns a list of problems (empty = clean).
+ * Checks every name record (all platforms, languages and IDs) and, independently of record
+ * parsing, the raw `name` table bytes for the word as ASCII and as UTF-16BE.
+ */
+export function reservedNameProblems(sfnt, word) {
+  const b = sfnt instanceof Uint8Array ? sfnt : new Uint8Array(sfnt);
+  const problems = [];
+  const re = new RegExp(word, 'i');
+  for (const r of readAllNames(b)) {
+    if (re.test(r.value)) problems.push(`name record ${r.platformID}/${r.encodingID}/0x${r.languageID.toString(16)} nameID ${r.nameID}`);
+  }
+  const name = nameTable(b);
+  if (!name) return [...problems, 'no name table'];
+  const lower = Uint8Array.from(name, (c) => (c >= 0x41 && c <= 0x5a ? c + 32 : c));
+  const find = (needle) => {
+    outer: for (let i = 0; i + needle.length <= lower.length; i++) {
+      for (let k = 0; k < needle.length; k++) if (lower[i + k] !== needle[k]) continue outer;
+      return true;
+    }
+    return false;
+  };
+  const ascii = Uint8Array.from(word.toLowerCase(), (c) => c.charCodeAt(0));
+  const utf16 = new Uint8Array(ascii.length * 2);
+  ascii.forEach((c, i) => (utf16[i * 2 + 1] = c));
+  if (find(ascii)) problems.push('raw name table bytes contain the word (ASCII)');
+  if (find(utf16)) problems.push('raw name table bytes contain the word (UTF-16BE)');
+  return problems;
 }
 
 /** Rewrites `from` to `to` in the name table and re-lays out the sfnt with correct checksums. */

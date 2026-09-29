@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { PdfCorruptError, PdfError, errorCode, hasPdfHeader, mapLoadError } from '../../src/lib/pdf/errors';
-import { baseName, formatMB, formatPages, mergedFileName } from '../../src/tools/pdf-merge/format';
-import { LIMITS, MAX_FILES, MB, checkAddBytes, checkFileCount, checkMerge } from '../../src/tools/pdf-merge/limits';
+import { MB } from '../../src/lib/ui/device';
+import { baseName, formatMB, formatPages } from '../../src/lib/ui/format';
+import { mergedFileName } from '../../src/tools/pdf-merge/format';
+import { LIMITS, MAX_FILES, checkAddBytes, checkFileCount, checkMerge } from '../../src/tools/pdf-merge/limits';
 
 const enc = (s: string) => new TextEncoder().encode(s);
 

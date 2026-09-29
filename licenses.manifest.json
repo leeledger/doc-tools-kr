@@ -1,16 +1,48 @@
 {
-  "$comment": "Everything shipped to the browser. gen-licenses.mjs embeds these files into /licenses/ and fails the build if one is missing.",
+  "$comment": "Everything shipped to the browser. gen-licenses.mjs embeds these files into /licenses/ and fails the build if one is missing. `files` are paths inside the npm package; `localFiles` are paths relative to the repo root (license texts the package does not ship, see licenses/third-party/SOURCES.md). Entries with `component` instead of `name` describe code compiled into a package (no npm package of their own).",
   "packages": [
     {
       "name": "@cantoo/pdf-lib",
       "use": "PDF 합치기 엔진 (작업자 스레드)",
-      "files": ["LICENSE.md"]
+      "files": [
+        "LICENSE.md"
+      ]
     },
-    { "name": "fflate", "use": "@cantoo/pdf-lib 의존성 (압축)", "files": ["LICENSE"] },
-    { "name": "culori", "use": "@cantoo/pdf-lib 의존성 (색상)", "files": ["LICENSE"] },
-    { "name": "tslib", "use": "@cantoo/pdf-lib 의존성 (런타임 도우미)", "files": ["LICENSE.txt"] },
-    { "name": "node-html-better-parser", "use": "@cantoo/pdf-lib 의존성", "files": ["LICENSE"] },
-    { "name": "html-entities", "use": "@cantoo/pdf-lib 의존성", "files": ["LICENSE"] },
+    {
+      "name": "fflate",
+      "use": "@cantoo/pdf-lib 의존성 (압축)",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "culori",
+      "use": "@cantoo/pdf-lib 의존성 (색상)",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "tslib",
+      "use": "@cantoo/pdf-lib 의존성 (런타임 도우미)",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "name": "node-html-better-parser",
+      "use": "@cantoo/pdf-lib 의존성",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "html-entities",
+      "use": "@cantoo/pdf-lib 의존성",
+      "files": [
+        "LICENSE"
+      ]
+    },
     {
       "name": "pdfjs-dist",
       "use": "PDF 미리보기·쪽수 확인 (PDF.js)",
@@ -29,7 +61,67 @@
     {
       "name": "pretendard",
       "use": "글꼴 (Pretendard Variable 원본, 그리고 이 사이트에 쓰인 글자만 남긴 수정본 \"Anolim UI Sans\")",
-      "files": ["dist/LICENSE.txt"]
+      "files": [
+        "dist/LICENSE.txt"
+      ]
+    },
+    {
+      "name": "@neslinesli93/qpdf-wasm",
+      "use": "PDF 용량 줄이기: qpdf를 WebAssembly로 빌드한 래퍼 (작업자 스레드)",
+      "files": [],
+      "localFiles": [
+        "licenses/third-party/qpdf-wasm/LICENSE"
+      ]
+    },
+    {
+      "component": "qpdf",
+      "version": "12.2.0",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/qpdf/qpdf",
+      "use": "PDF 용량 줄이기: PDF 구조 정리·암호 해제·압축 (@neslinesli93/qpdf-wasm에 포함)",
+      "localFiles": [
+        "licenses/third-party/qpdf-12.2.0/LICENSE.txt",
+        "licenses/third-party/qpdf-12.2.0/NOTICE.md"
+      ]
+    },
+    {
+      "component": "libjpeg-turbo",
+      "version": "2.1.1 (ImageMagick/jpeg-turbo 7aa2a89)",
+      "license": "IJG AND BSD-3-Clause AND Zlib",
+      "homepage": "https://github.com/ImageMagick/jpeg-turbo",
+      "use": "qpdf의 JPEG 처리 (@neslinesli93/qpdf-wasm에 포함)",
+      "localFiles": [
+        "licenses/third-party/libjpeg-turbo/LICENSE.md",
+        "licenses/third-party/libjpeg-turbo/README.ijg"
+      ]
+    },
+    {
+      "component": "zlib",
+      "version": "1.2.12",
+      "license": "Zlib",
+      "homepage": "https://github.com/madler/zlib",
+      "use": "qpdf의 압축 (@neslinesli93/qpdf-wasm에 포함)",
+      "localFiles": [
+        "licenses/third-party/zlib/LICENSE"
+      ]
+    },
+    {
+      "name": "@jsquash/jpeg",
+      "use": "PDF 용량 줄이기: 이미지 JPEG 인코딩·디코딩 (MozJPEG, 작업자 스레드)",
+      "files": [
+        "LICENSE",
+        "codec/LICENSE.codec.md"
+      ],
+      "homepage": "https://github.com/jamsinclair/jSquash"
+    },
+    {
+      "name": "@jsquash/resize",
+      "use": "PDF 용량 줄이기: 이미지 크기 줄이기 (Lanczos3, 작업자 스레드)",
+      "files": [
+        "LICENSE",
+        "lib/resize/LICENSE.codec.md"
+      ],
+      "homepage": "https://github.com/jamsinclair/jSquash"
     }
   ]
 }

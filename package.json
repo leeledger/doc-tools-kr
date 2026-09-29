@@ -18,10 +18,14 @@
     "test:e2e": "playwright test",
     "check:licenses": "node scripts/check-licenses.mjs",
     "lhci": "lhci autorun",
-    "regress:merge": "node scripts/regress/merge.mjs"
+    "regress:merge": "node scripts/regress/merge.mjs",
+    "regress:compress": "node scripts/regress/compress.mjs"
   },
   "dependencies": {
     "@cantoo/pdf-lib": "2.11.1",
+    "@jsquash/jpeg": "1.6.0",
+    "@jsquash/resize": "2.1.1",
+    "@neslinesli93/qpdf-wasm": "0.3.0",
     "pdfjs-dist": "6.3.289",
     "pretendard": "1.3.9"
   },

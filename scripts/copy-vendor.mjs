@@ -1,6 +1,6 @@
 // Copies self-hosted third-party assets from node_modules into public/ (git-ignored).
 // Runs as predev/prebuild. Paths are versioned where the asset is cacheable as immutable.
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,4 +41,21 @@ if (existsSync(nm('pdfjs-dist', 'wasm'))) {
   copy(nm('pdfjs-dist', 'wasm'), join(pdfjsOut, 'wasm'), { filter: (src) => !/quickjs/i.test(src) });
 }
 
-console.log(`copy-vendor: pretendard ${version('pretendard')}, pdfjs ${pdfjsVer}`);
+// qpdf-wasm (qpdf 12.2.0 Apache-2.0, wrapper ISC): the wasm plus its Emscripten glue as an ES module.
+// The glue is the original dist/qpdf.js followed by `export default Module;` (its UMD tail does
+// nothing when `module` and `define` are undefined). The compress worker imports it at runtime with
+// a /* @vite-ignore */ dynamic import, so Vite never bundles it. The directory name must match
+// QPDF_VENDOR_DIR in src/lib/pdf/compress/wasm-browser.ts (unit-tested).
+const QPDF_WRAPPER = '0.3.0';
+const QPDF_VENDOR_DIR = '12.2.0-w0.3.0';
+if (version('@neslinesli93/qpdf-wasm') !== QPDF_WRAPPER) {
+  throw new Error(`copy-vendor: @neslinesli93/qpdf-wasm is ${version('@neslinesli93/qpdf-wasm')}, expected ${QPDF_WRAPPER}; update QPDF_VENDOR_DIR here and in wasm-browser.ts`);
+}
+const qpdfOut = pub('vendor', 'qpdf', QPDF_VENDOR_DIR);
+rmSync(pub('vendor', 'qpdf'), { recursive: true, force: true });
+copy(nm('@neslinesli93/qpdf-wasm', 'dist', 'qpdf.wasm'), join(qpdfOut, 'qpdf.wasm'));
+const glue = readFileSync(nm('@neslinesli93/qpdf-wasm', 'dist', 'qpdf.js'), 'utf8');
+if (!/^var Module = /m.test(glue)) throw new Error('copy-vendor: qpdf.js no longer defines `var Module`');
+writeFileSync(join(qpdfOut, 'qpdf.mjs'), `${glue}\nexport default Module;\n`);
+
+console.log(`copy-vendor: pretendard ${version('pretendard')}, pdfjs ${pdfjsVer}, qpdf ${QPDF_VENDOR_DIR}`);

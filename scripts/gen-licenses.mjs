@@ -1,5 +1,5 @@
 // Builds src/generated/licenses.json from licenses.manifest.json and the license texts in node_modules.
-// Fails if a listed package or license file is missing.
+// Fails if a listed package or license file (in node_modules or under licenses/third-party/) is missing.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +9,39 @@ const manifest = JSON.parse(readFileSync(join(root, 'licenses.manifest.json'), '
 const errors = [];
 const out = [];
 
+const readText = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n').trim();
+
+/** `localFiles`: license texts committed under licenses/third-party/ (paths relative to the repo root). */
+function localTexts(entry, label) {
+  const texts = [];
+  for (const f of entry.localFiles ?? []) {
+    const p = join(root, f);
+    if (!existsSync(p)) {
+      errors.push(`${label}: missing local license file ${f}`);
+      continue;
+    }
+    texts.push({ file: f.replace(/^licenses\/third-party\//, ''), text: readText(p) });
+  }
+  return texts;
+}
+
 for (const entry of manifest.packages) {
+  if (entry.component) {
+    // Code compiled into another package: no npm package of its own, so every field is in the manifest.
+    for (const k of ['version', 'license', 'use', 'homepage']) {
+      if (!entry[k]) errors.push(`${entry.component}: manifest field "${k}" missing`);
+    }
+    if (!entry.localFiles?.length) errors.push(`${entry.component}: no localFiles`);
+    out.push({
+      name: entry.component,
+      version: entry.version,
+      license: entry.license,
+      use: entry.use,
+      homepage: entry.homepage,
+      texts: localTexts(entry, entry.component),
+    });
+    continue;
+  }
   const dir = join(root, 'node_modules', ...entry.name.split('/'));
   const pkgPath = join(dir, 'package.json');
   if (!existsSync(pkgPath)) {
@@ -24,8 +56,10 @@ for (const entry of manifest.packages) {
       errors.push(`${entry.name}: missing license file ${f}`);
       continue;
     }
-    texts.push({ file: f, text: readFileSync(p, 'utf8').replace(/\r\n/g, '\n').trim() });
+    texts.push({ file: f, text: readText(p) });
   }
+  texts.push(...localTexts(entry, entry.name));
+  if (!texts.length) errors.push(`${entry.name}: no license text`);
   const repo = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
   const toHttp = (u) =>
     u ? u.replace(/^git\+/, '').replace(/^git@github\.com:/, 'https://github.com/').replace(/\.git$/, '') : null;
@@ -34,7 +68,7 @@ for (const entry of manifest.packages) {
     version: pkg.version,
     license: pkg.license,
     use: entry.use,
-    homepage: [pkg.homepage, toHttp(repo)].find((u) => typeof u === 'string' && /^https:\/\//.test(u)) ?? null,
+    homepage: [entry.homepage, pkg.homepage, toHttp(repo)].find((u) => typeof u === 'string' && /^https:\/\//.test(u)) ?? null,
     texts,
   });
 }

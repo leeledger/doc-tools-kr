@@ -1,0 +1,169 @@
+---
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+
+const tool = getTool('pdf-compress');
+const jsonLd = toolJsonLd(tool, Astro.site);
+
+const levels = [
+  { value: 'high', label: '고화질 (적게 줄이기)', desc: '이미지를 200 ppi까지만 낮춥니다. 원본과 거의 구분되지 않아 인쇄할 문서에 알맞습니다.' },
+  { value: 'recommended', label: '권장', desc: '이미지를 150 ppi로 맞춥니다. 화면과 일반 인쇄에서 선명하게 읽혀 제출용 서류에 알맞습니다.' },
+  { value: 'strong', label: '강력', desc: '이미지를 110 ppi로 낮추고 더 압축합니다. 화면에서는 읽을 수 있지만 확대하면 흐려질 수 있습니다.' },
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">스캔하거나 사진이 들어간 PDF의 용량을 줄입니다. 글자는 그대로 두고 이미지만 줄이며, 파일은 서버로 전송되지 않습니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="PDF 용량 줄이기 도구">
+    <div class="wrap narrow">
+      <div id="compress-tool" class="compress" data-state="empty">
+        <div class="drop" id="cmp-drop">
+          <input id="cmp-input" class="file-input" type="file" accept="application/pdf,.pdf">
+          <label class="btn primary" for="cmp-input" id="cmp-pick">PDF 파일 선택</label>
+          <p class="drop-hint">또는 여기에 파일을 끌어다 놓으세요</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="notice" id="cmp-notice" hidden></p>
+
+        <div class="file-item file-card" id="cmp-file" hidden>
+          <div class="thumb" id="cmp-thumb" aria-hidden="true"></div>
+          <div class="meta">
+            <p class="name" id="cmp-name"></p>
+            <p class="info" id="cmp-info"></p>
+            <p class="note" id="cmp-owner" hidden>보안 설정(편집 제한)이 해제된 사본이 만들어집니다</p>
+          </div>
+          <form class="pw" id="cmp-pw" novalidate hidden>
+            <label class="pw-label" for="cmp-pw-input">이 파일은 비밀번호로 보호되어 있습니다</label>
+            <div class="row">
+              <input class="pw-input" id="cmp-pw-input" type="password" autocomplete="off" aria-describedby="cmp-pw-error">
+              <button type="submit" class="btn small primary">확인</button>
+            </div>
+            <p class="pw-error" id="cmp-pw-error"></p>
+          </form>
+        </div>
+
+        <div class="cmp-controls" id="cmp-controls" hidden>
+          <fieldset class="levels">
+            <legend>압축 단계</legend>
+            {levels.map((l) => (
+              <div class="level">
+                <label class="radio">
+                  <input type="radio" name="cmp-level" value={l.value} checked={l.value === 'recommended'} aria-describedby={`cmp-desc-${l.value}`}>
+                  <span>{l.label}</span>
+                </label>
+                <p class="level-desc" id={`cmp-desc-${l.value}`}>{l.desc}</p>
+              </div>
+            ))}
+            <p class="levels-common">세 단계 모두 글자와 선은 그대로 두고 이미지만 줄입니다.</p>
+          </fieldset>
+          <details class="more" id="cmp-more">
+            <summary>더 줄여야 하나요?</summary>
+            <div class="level">
+              <label class="radio">
+                <input type="radio" name="cmp-level" value="raster" aria-describedby="cmp-desc-raster">
+                <span>이미지로 변환</span>
+              </label>
+              <div class="warn-box" id="cmp-desc-raster" role="note">모든 쪽을 150 dpi 이미지로 바꿉니다. 글자를 선택하거나 검색할 수 없게 되고, 입력 칸·링크·책갈피가 사라집니다. 글자 위주 문서는 오히려 커질 수 있으며, 그때는 원본을 그대로 둡니다.</div>
+            </div>
+          </details>
+          <div class="confirm" id="cmp-confirm" hidden>
+            <p id="cmp-confirm-text"></p>
+            <div class="row">
+              <button type="button" class="btn primary" id="cmp-confirm-yes">계속 줄이기</button>
+              <button type="button" class="btn ghost" id="cmp-confirm-no">취소</button>
+            </div>
+          </div>
+          <div class="row">
+            <button type="button" class="btn primary" id="cmp-run" disabled>PDF 용량 줄이기</button>
+          </div>
+          <p class="hint" id="cmp-hint"></p>
+        </div>
+
+        <div class="progress-box" id="cmp-progress" hidden>
+          <p id="cmp-progress-text">구조 정리 중…</p>
+          <progress id="cmp-progress-bar" aria-labelledby="cmp-progress-text"></progress>
+          <button type="button" class="btn ghost" id="cmp-cancel">취소</button>
+        </div>
+
+        <div class="result" id="cmp-result" hidden>
+          <p class="result-title" id="cmp-headline"></p>
+          <p class="result-summary" id="cmp-summary"></p>
+          <div class="previews" id="cmp-previews"></div>
+          <div class="warn-box" id="cmp-signed" role="note" hidden>이 파일에는 전자서명이 들어 있습니다. 용량을 줄인 파일에서는 서명이 더 이상 유효하지 않습니다. 발급받은 증명서처럼 서명이 필요한 문서는 원본을 제출하세요.</div>
+          <ul class="result-notes" id="cmp-notes"></ul>
+          <div class="row">
+            <a class="btn primary" id="cmp-download" href="#" download>내려받기</a>
+            <button type="button" class="btn ghost" id="cmp-again">다른 단계로 다시 줄이기</button>
+            <button type="button" class="btn ghost" id="cmp-reset">처음부터</button>
+          </div>
+          <p class="related-line">여러 파일을 하나로 묶으려면 <a href="/pdf-merge/">PDF 합치기</a></p>
+        </div>
+
+        <div class="kept" id="cmp-kept" hidden>
+          <div id="cmp-kept-text"></div>
+          <div class="row">
+            <button type="button" class="btn primary" id="cmp-strong" hidden>강력으로 다시 줄이기</button>
+            <button type="button" class="btn ghost" id="cmp-kept-again">다른 단계로 다시 줄이기</button>
+            <button type="button" class="btn ghost" id="cmp-kept-reset">처음부터</button>
+          </div>
+        </div>
+
+        <p class="error-box" id="cmp-error" role="alert" hidden></p>
+        <p class="visually-hidden" id="cmp-status" aria-live="polite"></p>
+      </div>
+      <AdSlot id="pdf-compress-result" size="rect" />
+    </div>
+  </section>
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>파일 선택</strong><span>줄일 PDF 파일을 고르거나 끌어다 놓습니다. 비밀번호가 걸린 파일은 비밀번호를 입력합니다.</span></li>
+        <li><strong>단계 고르기</strong><span>고화질·권장·강력 중에서 고릅니다. 제출용 서류라면 권장이 알맞습니다.</span></li>
+        <li><strong>내려받기</strong><span>PDF 용량 줄이기를 누르고, 줄어든 용량과 미리보기를 확인한 뒤 내려받기로 저장합니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">안전한 이유</h2>
+      <ul class="points">
+        <li><strong>업로드하지 않습니다</strong><span>용량을 줄이는 작업은 이 브라우저 안에서 실행됩니다. 파일 내용은 네트워크로 전송되지 않습니다.</span></li>
+        <li><strong>남기지 않습니다</strong><span>파일과 비밀번호는 이 화면의 메모리에만 머무르고, 처음부터를 누르거나 창을 닫으면 사라집니다.</span></li>
+        <li><strong>직접 확인할 수 있습니다</strong><span>브라우저 개발자 도구의 네트워크 탭을 열어 두고 줄여 보면 파일이 전송되지 않는 것을 볼 수 있습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} />
+  <div class="wrap narrow"><AdSlot id="pdf-compress-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import { initCompressTool } from '../../tools/pdf-compress/controller';
+  initCompressTool();
+</script>

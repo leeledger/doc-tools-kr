@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runnerImport } from 'vite';
+import { openPdf, pageText, renderRgba, unitSize } from './lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const corpus = resolve(root, process.env.CORPUS_DIR ?? 'spikes/pdf/corpus');
@@ -38,44 +39,12 @@ if (!existsSync(corpus)) {
 const load = async (p) => (await runnerImport(join(root, p), { root })).module;
 const { mergePlus } = await load('src/lib/pdf/mergePlus.ts');
 const { PDFDocument } = await import('@cantoo/pdf-lib');
-const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-const pdfjsRoot = join(root, 'node_modules', 'pdfjs-dist');
-
-async function openPdf(bytes, password) {
-  const task = pdfjs.getDocument({
-    data: bytes.slice(),
-    password,
-    cMapUrl: join(pdfjsRoot, 'cmaps') + '/',
-    cMapPacked: true,
-    standardFontDataUrl: join(pdfjsRoot, 'standard_fonts') + '/',
-    wasmUrl: join(pdfjsRoot, 'wasm') + '/',
-    verbosity: 0,
-  });
-  const doc = await task.promise;
-  doc.close = () => task.destroy();
-  return doc;
-}
-
-async function pageText(doc, i) {
-  const page = await doc.getPage(i + 1);
-  const tc = await page.getTextContent();
-  return tc.items.map((it) => it.str ?? '').join('');
-}
 
 async function renderGray(doc, i, width = 600) {
-  const page = await doc.getPage(i + 1);
-  const unit = page.getViewport({ scale: 1 });
-  const viewport = page.getViewport({ scale: width / unit.width });
-  const w = Math.ceil(viewport.width);
-  const h = Math.ceil(viewport.height);
-  const cc = doc.canvasFactory.create(w, h);
-  cc.context.fillStyle = '#fff';
-  cc.context.fillRect(0, 0, w, h);
-  await page.render({ canvas: cc.canvas, canvasContext: cc.context, viewport }).promise;
-  const rgba = cc.context.getImageData(0, 0, w, h).data;
+  const unit = await unitSize(doc, i);
+  const { rgba, w, h } = await renderRgba(doc, i, width / unit.width);
   const g = new Float64Array(w * h);
   for (let k = 0; k < w * h; k++) g[k] = 0.299 * rgba[k * 4] + 0.587 * rgba[k * 4 + 1] + 0.114 * rgba[k * 4 + 2];
-  doc.canvasFactory.destroy(cc);
   return { g, w, h };
 }
 

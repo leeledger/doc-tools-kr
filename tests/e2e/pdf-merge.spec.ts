@@ -52,6 +52,7 @@ test('happy path: add two files, move irs_fw9 up, merge and download', async ({ 
   await expect(page.locator('#merge-list')).toBeHidden();
   await expect(page.locator('#merge-controls')).toBeHidden();
   await expect(page.locator('#merge-progress')).toBeHidden();
+  await expect(page.locator('#merge-result').getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
 
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: '내려받기' }).click()]);
   expect(download.suggestedFilename()).toBe('irs_fw9_외1건_합침.pdf');

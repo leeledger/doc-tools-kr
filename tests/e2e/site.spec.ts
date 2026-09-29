@@ -2,12 +2,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, gotoReady, test } from './no-upload';
 import { fixturePath, runtimePath } from './paths';
 
-const PAGES = ['/', '/pdf-merge/', '/privacy/', '/licenses/', '/does-not-exist/'];
+const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/privacy/', '/licenses/', '/does-not-exist/'];
+const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 for (const path of PAGES) {
   test(`axe: no serious or critical violations on ${path}`, async ({ page }) => {
     await gotoReady(page, path);
-    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
     const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
     expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
@@ -17,12 +18,28 @@ test('axe: /pdf-merge/ with files listed has no serious or critical violations',
   await gotoReady(page, '/pdf-merge/');
   await page.setInputFiles('#merge-input', [fixturePath('kr_law_form.pdf'), fixturePath('irs_fw9.pdf')]);
   await expect(page.locator('#merge-list > li .info').last()).toContainText('쪽');
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+  const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
   const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(bad.map((v) => v.id)).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/privacy/', '/licenses/']) {
+test('axe: /pdf-compress/ in the ready state (details open) and the done state', async ({ page }) => {
+  await gotoReady(page, '/pdf-compress/');
+  await page.setInputFiles('#cmp-input', fixturePath('gen_scan_a6.pdf'));
+  await expect(page.locator('#cmp-info')).toContainText('1쪽');
+  await page.getByText('더 줄여야 하나요?').click();
+  await expect(page.locator('#cmp-desc-raster')).toBeVisible();
+  const serious = async () =>
+    (await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()).violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+  expect(await serious()).toEqual([]);
+  await page.getByRole('button', { name: 'PDF 용량 줄이기' }).click();
+  await expect(page.locator('#compress-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  expect(await serious()).toEqual([]);
+});
+
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/privacy/', '/licenses/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -42,28 +59,40 @@ for (const path of ['/', '/pdf-merge/', '/privacy/', '/licenses/']) {
   });
 }
 
-test('tool page JSON-LD: WebApplication + BreadcrumbList', async ({ page }) => {
-  await gotoReady(page, '/pdf-merge/');
-  const data = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap((j) => JSON.parse(j));
-  const app = data.find((d: { '@type': string }) => d['@type'] === 'WebApplication');
-  expect(app).toMatchObject({
-    applicationCategory: 'UtilitiesApplication',
-    operatingSystem: '웹 브라우저',
-    inLanguage: 'ko',
-    offers: { price: 0, priceCurrency: 'KRW' },
+for (const [path, name] of [
+  ['/pdf-merge/', 'PDF 합치기'],
+  ['/pdf-compress/', 'PDF 용량 줄이기'],
+] as const) {
+  test(`tool page JSON-LD, title and description on ${path}`, async ({ page }) => {
+    await gotoReady(page, path);
+    const data = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap((j) => JSON.parse(j));
+    const app = data.find((d: { '@type': string }) => d['@type'] === 'WebApplication');
+    expect(app).toMatchObject({
+      applicationCategory: 'UtilitiesApplication',
+      operatingSystem: '웹 브라우저',
+      inLanguage: 'ko',
+      offers: { price: 0, priceCurrency: 'KRW' },
+    });
+    expect(data.some((d: { '@type': string }) => d['@type'] === 'BreadcrumbList')).toBe(true);
+    await expect(page).toHaveTitle(`${name} — 업로드 없이 브라우저에서 무료로 | 안올림`);
+    const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
+    expect(desc).toContain(name);
+    expect([...desc].length).toBeGreaterThanOrEqual(80);
+    expect([...desc].length).toBeLessThanOrEqual(120);
   });
-  expect(data.some((d: { '@type': string }) => d['@type'] === 'BreadcrumbList')).toBe(true);
-  await expect(page).toHaveTitle('PDF 합치기 — 업로드 없이 브라우저에서 무료로 | 안올림');
-  const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
-  expect(desc).toContain('PDF 합치기');
-  expect([...desc].length).toBeGreaterThanOrEqual(80);
-  expect([...desc].length).toBeLessThanOrEqual(120);
+}
+
+test('related tools: each tool page links to the other live tool', async ({ page }) => {
+  await gotoReady(page, '/pdf-merge/');
+  await expect(page.locator('.related').getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
+  await gotoReady(page, '/pdf-compress/');
+  await expect(page.locator('.related').getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
 });
 
 test('sitemap lists exactly the live pages; robots points to it', async ({ request }) => {
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
-  expect(locs.sort()).toEqual(['/', '/licenses/', '/pdf-merge/', '/privacy/'].sort());
+  expect(locs.sort()).toEqual(['/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/privacy/'].sort());
   const robots = await (await request.get('/robots.txt')).text();
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
 });
@@ -84,32 +113,37 @@ test('CSP header is present with the locked policy', async ({ request }) => {
   expect(csp).toContain("connect-src 'self'");
 });
 
-test('landing page: live PDF card links to the tool, others are 곧 공개, footer has legal links', async ({ page }) => {
+test('landing page: live PDF cards link to their tools, others are 곧 공개, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
-  const card = page.locator('.card.live');
-  await expect(card).toHaveCount(1);
-  await expect(card.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
-  await expect(card.locator('.status')).toHaveText('사용하기');
-  await expect(page.locator('.card .status', { hasText: '곧 공개' })).toHaveCount(4);
+  const cards = page.locator('.card.live');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
+  await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
+  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기']);
+  await expect(page.locator('.card .status', { hasText: '곧 공개' })).toHaveCount(3);
   await expect(page.locator('footer').getByRole('link', { name: '개인정보 처리방침' })).toHaveAttribute('href', '/privacy/');
   await expect(page.locator('footer').getByRole('link', { name: '오픈소스 라이선스' })).toHaveAttribute('href', '/licenses/');
 });
 
 test('licenses page lists the shipped packages and their texts', async ({ page }) => {
   await gotoReady(page, '/licenses/');
-  for (const name of ['@cantoo/pdf-lib', 'pdfjs-dist', 'pretendard', 'fflate']) {
+  for (const name of ['@cantoo/pdf-lib', 'pdfjs-dist', 'pretendard', 'fflate', '@neslinesli93/qpdf-wasm', 'qpdf', 'libjpeg-turbo', 'zlib', '@jsquash/jpeg', '@jsquash/resize']) {
     await expect(page.locator('table')).toContainText(name);
   }
   const body = await page.locator('main').textContent();
   expect(body).toContain('SIL OPEN FONT LICENSE');
   expect(body).toContain('LICENSE_OPENJPEG');
   expect(body).toContain('LICENSE_JBIG2');
+  expect(body).toContain('qpdf-12.2.0/NOTICE.md');
+  expect(body).toContain('ISC License');
+  expect(body).toContain('codec/LICENSE.codec.md');
+  expect(body).toContain('lib/resize/LICENSE.codec.md');
 });
 
 test.describe('mobile layout', () => {
   test.use({ viewport: { width: 360, height: 780 } });
 
-  for (const path of ['/', '/pdf-merge/', '/privacy/', '/licenses/']) {
+  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/privacy/', '/licenses/']) {
     test(`no horizontal scroll at 360 px on ${path}`, async ({ page }) => {
       await gotoReady(page, path);
       const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -126,6 +160,24 @@ test.describe('mobile layout', () => {
     expect(sw).toBeLessThanOrEqual(cw);
     const small = await page
       .locator('#merge-tool button:visible, #merge-tool label.btn:visible, #merge-tool .check:visible')
+      .evaluateAll((els) =>
+        els
+          .filter((e) => !e.closest('[hidden]'))
+          .map((e) => ({ t: e.textContent?.trim(), h: e.getBoundingClientRect().height, w: e.getBoundingClientRect().width }))
+          .filter((r) => r.h < 44 || r.w < 44),
+      );
+    expect(small).toEqual([]);
+  });
+
+  test('compress controls are at least 44 px tall at 360 px, with no horizontal scroll', async ({ page }) => {
+    await gotoReady(page, '/pdf-compress/');
+    await page.setInputFiles('#cmp-input', runtimePath('encrypted_userpw_1234'));
+    await expect(page.locator('#cmp-pw-input')).toBeVisible();
+    await page.getByText('더 줄여야 하나요?').click();
+    const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+    expect(sw).toBeLessThanOrEqual(cw);
+    const small = await page
+      .locator('#compress-tool button:visible, #compress-tool label.btn:visible, #compress-tool .radio:visible, #compress-tool summary:visible')
       .evaluateAll((els) =>
         els
           .filter((e) => !e.closest('[hidden]'))

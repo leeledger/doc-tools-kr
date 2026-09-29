@@ -201,8 +201,9 @@ async function loadSource(f: MergeInput): Promise<PDFDocument> {
  * Tags an error with the input file it came from. Load and copy failures are already PdfErrors
  * (not-pdf / password / corrupt); anything else is a bug on our side and stays `unknown`, so the
  * user is never told to remove a file that is fine.
+ * @internal exported for tests
  */
-function withFileIndex(err: unknown, fileIndex: number): unknown {
+export function withFileIndex(err: unknown, fileIndex: number): unknown {
   if (isOutOfMemory(err)) return err;
   const e = err instanceof PdfError ? err : new PdfError('unknown', err instanceof Error ? err.message : String(err));
   e.fileIndex = fileIndex;

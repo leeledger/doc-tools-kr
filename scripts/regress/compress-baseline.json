@@ -1,0 +1,605 @@
+{
+ "$comment": "Spike numbers (spikes/pdf/work/compress_results.json, Chromium, 2026-09-29): reduction % (1 decimal; negative = larger), ssimMin (pdf.js 110 dpi, luma 8x8 stride 4, up to 7 sampled pages), text pages equal, engine ms. File names and numbers only.",
+ "files": {
+  "synth_resume_kr_photo.pdf": {
+   "high": {
+    "reduction": 94.3,
+    "ssimMin": 0.9997,
+    "text": "1/1",
+    "ms": 1161
+   },
+   "recommended": {
+    "reduction": 95.6,
+    "ssimMin": 0.9997,
+    "text": "1/1",
+    "ms": 1212
+   },
+   "strong": {
+    "reduction": 96.1,
+    "ssimMin": 0.9992,
+    "text": "1/1",
+    "ms": 1189
+   },
+   "raster": {
+    "reduction": 79.8,
+    "ssimMin": 0.8229,
+    "text": "0/1",
+    "ms": 1527
+   }
+  },
+  "synth_scan_mfp_gongmun.pdf": {
+   "high": {
+    "reduction": 87.3,
+    "ssimMin": 0.9531,
+    "text": "4/4",
+    "ms": 7048
+   },
+   "recommended": {
+    "reduction": 95.6,
+    "ssimMin": 0.9449,
+    "text": "4/4",
+    "ms": 4363
+   },
+   "strong": {
+    "reduction": 98,
+    "ssimMin": 0.9273,
+    "text": "4/4",
+    "ms": 2816
+   },
+   "raster": {
+    "reduction": 93.4,
+    "ssimMin": 0.9202,
+    "text": "4/4",
+    "ms": 457
+   }
+  },
+  "synth_scan_phone_cv.pdf": {
+   "high": {
+    "reduction": 54.1,
+    "ssimMin": 0.972,
+    "text": "2/2",
+    "ms": 2893
+   },
+   "recommended": {
+    "reduction": 85.1,
+    "ssimMin": 0.968,
+    "text": "2/2",
+    "ms": 1457
+   },
+   "strong": {
+    "reduction": 94,
+    "ssimMin": 0.9314,
+    "text": "2/2",
+    "ms": 1260
+   },
+   "raster": {
+    "reduction": 81.8,
+    "ssimMin": 0.892,
+    "text": "2/2",
+    "ms": 272
+   }
+  },
+  "edge_damaged_badxref.pdf": {
+   "high": {
+    "reduction": 11.6,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 208
+   },
+   "recommended": {
+    "reduction": 11.6,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 198
+   },
+   "strong": {
+    "reduction": 11.6,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 241
+   },
+   "raster": {
+    "reduction": -824.3,
+    "ssimMin": 0.9048,
+    "text": "1/7",
+    "ms": 624
+   }
+  },
+  "edge_damaged_truncated.pdf": {
+   "high": {
+    "error": true
+   },
+   "recommended": {
+    "error": true
+   },
+   "strong": {
+    "error": true
+   },
+   "raster": {
+    "error": true
+   }
+  },
+  "edge_encrypted_userpw_1234.pdf": {
+   "high": {
+    "reduction": 5.4,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 271
+   },
+   "recommended": {
+    "reduction": 14,
+    "ssimMin": 0.9995,
+    "text": "2/2",
+    "ms": 239
+   },
+   "strong": {
+    "reduction": 18.1,
+    "ssimMin": 0.9989,
+    "text": "2/2",
+    "ms": 183
+   },
+   "raster": {
+    "reduction": -54.4,
+    "ssimMin": 0.952,
+    "text": "0/2",
+    "ms": 394
+   }
+  },
+  "en_iea_korea2025.pdf": {
+   "high": {
+    "reduction": 24.3,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 4550
+   },
+   "recommended": {
+    "reduction": 25.1,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 4294
+   },
+   "strong": {
+    "reduction": 25.6,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 4410
+   },
+   "raster": {
+    "reduction": -673.3,
+    "ssimMin": 0.8687,
+    "text": "0/7",
+    "ms": 3052
+   }
+  },
+  "irs_f1040.pdf": {
+   "high": {
+    "reduction": 12,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 2034
+   },
+   "recommended": {
+    "reduction": 12,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 1267
+   },
+   "strong": {
+    "reduction": 12,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 1235
+   },
+   "raster": {
+    "reduction": -204.9,
+    "ssimMin": 0.8826,
+    "text": "0/2",
+    "ms": 427
+   }
+  },
+  "irs_fw9.pdf": {
+   "high": {
+    "reduction": 12.4,
+    "ssimMin": 1,
+    "text": "6/6",
+    "ms": 392
+   },
+   "recommended": {
+    "reduction": 12.4,
+    "ssimMin": 1,
+    "text": "6/6",
+    "ms": 370
+   },
+   "strong": {
+    "reduction": 12.4,
+    "ssimMin": 1,
+    "text": "6/6",
+    "ms": 384
+   },
+   "raster": {
+    "reduction": -1582.9,
+    "ssimMin": 0.9117,
+    "text": "0/6",
+    "ms": 649
+   }
+  },
+  "kr_gongmun_moleg.pdf": {
+   "high": {
+    "reduction": 4.1,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 162
+   },
+   "recommended": {
+    "reduction": 12.8,
+    "ssimMin": 0.9995,
+    "text": "2/2",
+    "ms": 146
+   },
+   "strong": {
+    "reduction": 17,
+    "ssimMin": 0.9989,
+    "text": "2/2",
+    "ms": 149
+   },
+   "raster": {
+    "reduction": -56.6,
+    "ssimMin": 0.952,
+    "text": "0/2",
+    "ms": 271
+   }
+  },
+  "kr_gongmun_msit.pdf": {
+   "high": {
+    "reduction": 10.8,
+    "ssimMin": 1,
+    "text": "1/1",
+    "ms": 165
+   },
+   "recommended": {
+    "reduction": 15.4,
+    "ssimMin": 0.9995,
+    "text": "1/1",
+    "ms": 144
+   },
+   "strong": {
+    "reduction": 17,
+    "ssimMin": 0.9993,
+    "text": "1/1",
+    "ms": 140
+   },
+   "raster": {
+    "reduction": -7.9,
+    "ssimMin": 0.9422,
+    "text": "0/1",
+    "ms": 299
+   }
+  },
+  "kr_gongmun_opm.pdf": {
+   "high": {
+    "reduction": 13.9,
+    "ssimMin": 1,
+    "text": "4/4",
+    "ms": 290
+   },
+   "recommended": {
+    "reduction": 13.9,
+    "ssimMin": 1,
+    "text": "4/4",
+    "ms": 312
+   },
+   "strong": {
+    "reduction": 13.9,
+    "ssimMin": 1,
+    "text": "4/4",
+    "ms": 307
+   },
+   "raster": {
+    "reduction": -136.8,
+    "ssimMin": 0.8624,
+    "text": "1/4",
+    "ms": 677
+   }
+  },
+  "kr_kcc_briefing.pdf": {
+   "high": {
+    "reduction": 6.5,
+    "ssimMin": 0.9999,
+    "text": "20/20",
+    "ms": 1629
+   },
+   "recommended": {
+    "reduction": 8.5,
+    "ssimMin": 0.9992,
+    "text": "20/20",
+    "ms": 1625
+   },
+   "strong": {
+    "reduction": 14.9,
+    "ssimMin": 0.9879,
+    "text": "20/20",
+    "ms": 1493
+   },
+   "raster": {
+    "reduction": -435.7,
+    "ssimMin": 0.936,
+    "text": "0/20",
+    "ms": 1855
+   }
+  },
+  "kr_law_form.pdf": {
+   "high": {
+    "reduction": 11.6,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 225
+   },
+   "recommended": {
+    "reduction": 11.6,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 190
+   },
+   "strong": {
+    "reduction": 11.6,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 180
+   },
+   "raster": {
+    "reduction": -824.3,
+    "ssimMin": 0.9048,
+    "text": "1/7",
+    "ms": 614
+   }
+  },
+  "kr_pen_doc.pdf": {
+   "high": {
+    "reduction": 9.4,
+    "ssimMin": 1,
+    "text": "1/1",
+    "ms": 94
+   },
+   "recommended": {
+    "reduction": 9.4,
+    "ssimMin": 1,
+    "text": "1/1",
+    "ms": 107
+   },
+   "strong": {
+    "reduction": 9.4,
+    "ssimMin": 1,
+    "text": "1/1",
+    "ms": 107
+   },
+   "raster": {
+    "reduction": -64.3,
+    "ssimMin": 0.9351,
+    "text": "0/1",
+    "ms": 233
+   }
+  },
+  "pdfjs_tracemonkey.pdf": {
+   "high": {
+    "reduction": 21.3,
+    "ssimMin": 1,
+    "text": "14/14",
+    "ms": 710
+   },
+   "recommended": {
+    "reduction": 21.3,
+    "ssimMin": 1,
+    "text": "14/14",
+    "ms": 644
+   },
+   "strong": {
+    "reduction": 21.3,
+    "ssimMin": 1,
+    "text": "14/14",
+    "ms": 715
+   },
+   "raster": {
+    "reduction": -406.2,
+    "ssimMin": 0.8996,
+    "text": "0/14",
+    "ms": 1353
+   }
+  },
+  "scan_book_sangsomun.pdf": {
+   "high": {
+    "reduction": 0.5,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 881
+   },
+   "recommended": {
+    "reduction": 0.5,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 1024
+   },
+   "strong": {
+    "reduction": 0.5,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 972
+   },
+   "raster": {
+    "reduction": 10.5,
+    "ssimMin": 0.9002,
+    "text": "2/7",
+    "ms": 39946
+   }
+  },
+  "scan_donga_1949.pdf": {
+   "high": {
+    "reduction": 0,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 114
+   },
+   "recommended": {
+    "reduction": 0,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 108
+   },
+   "strong": {
+    "reduction": 0,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 86
+   },
+   "raster": {
+    "reduction": -136.4,
+    "ssimMin": 0.9317,
+    "text": "0/2",
+    "ms": 1169
+   }
+  },
+  "scan_keti_bizreg_bank.pdf": {
+   "high": {
+    "reduction": 1.1,
+    "ssimMin": 1,
+    "text": "2/2",
+    "ms": 536
+   },
+   "recommended": {
+    "reduction": 9.8,
+    "ssimMin": 0.9963,
+    "text": "2/2",
+    "ms": 459
+   },
+   "strong": {
+    "reduction": 29.4,
+    "ssimMin": 0.9879,
+    "text": "2/2",
+    "ms": 396
+   },
+   "raster": {
+    "reduction": -107.3,
+    "ssimMin": 0.9577,
+    "text": "2/2",
+    "ms": 186
+   }
+  },
+  "kr_customs_cases.pdf": {
+   "high": {
+    "reduction": 17.7,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 6100
+   },
+   "recommended": {
+    "reduction": 19.5,
+    "ssimMin": 0.9996,
+    "text": "7/7",
+    "ms": 5497
+   },
+   "strong": {
+    "reduction": 24.5,
+    "ssimMin": 0.9975,
+    "text": "7/7",
+    "ms": 5079
+   }
+  },
+  "kr_gongmun_ice.pdf": {
+   "high": {
+    "reduction": 8.9,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 28640
+   },
+   "recommended": {
+    "reduction": 13,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 23385
+   },
+   "strong": {
+    "reduction": 18.8,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 19897
+   }
+  },
+  "kr_kpmg_outlook.pdf": {
+   "high": {
+    "reduction": 19.7,
+    "ssimMin": 1,
+    "text": "51/51",
+    "ms": 43110
+   },
+   "recommended": {
+    "reduction": 20.9,
+    "ssimMin": 0.9637,
+    "text": "51/51",
+    "ms": 43693
+   },
+   "strong": {
+    "reduction": 21.4,
+    "ssimMin": 0.9572,
+    "text": "51/51",
+    "ms": 41965
+   },
+   "raster": {
+    "reduction": 73.9,
+    "ssimMin": 0.9356,
+    "text": "51/51",
+    "ms": 9910
+   }
+  },
+  "scan_us_nkarmy_history.pdf": {
+   "high": {
+    "reduction": 2,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 10866
+   },
+   "recommended": {
+    "reduction": 3.5,
+    "ssimMin": 0.9983,
+    "text": "7/7",
+    "ms": 10152
+   },
+   "strong": {
+    "reduction": 5.8,
+    "ssimMin": 0.9649,
+    "text": "7/7",
+    "ms": 8128
+   },
+   "raster": {
+    "reduction": -180,
+    "ssimMin": 0.9317,
+    "text": "0/7",
+    "ms": 25896
+   }
+  },
+  "resume_racz_cc0.pdf": {
+   "high": {
+    "reduction": 2.2,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 681
+   },
+   "recommended": {
+    "reduction": 2.2,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 588
+   },
+   "strong": {
+    "reduction": 2.2,
+    "ssimMin": 1,
+    "text": "7/7",
+    "ms": 573
+   },
+   "raster": {
+    "reduction": -1164.8,
+    "ssimMin": 0.8922,
+    "text": "0/7",
+    "ms": 3069
+   }
+  }
+ }
+}

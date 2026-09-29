@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',
+    setupFiles: ['tests/helpers/image-data.ts'],
     testTimeout: 60_000,
   },
 });

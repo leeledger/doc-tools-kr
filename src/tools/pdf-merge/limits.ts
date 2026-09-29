@@ -1,5 +1,5 @@
 // Device limits for PDF 합치기. Basis: spike S7 (75 MB / 845쪽 took 6.5–10.8 s and about +351 MB of memory on desktop).
-export const MB = 1024 * 1024;
+import { MB, type Device } from '../../lib/ui/device';
 
 export const MAX_FILES = 50;
 
@@ -12,19 +12,10 @@ export interface DeviceLimits {
   hardBytes: number;
 }
 
-export const LIMITS: Record<'desktop' | 'mobile', DeviceLimits> = {
+export const LIMITS: Record<Device, DeviceLimits> = {
   desktop: { softBytes: 200 * MB, softPages: 1500, hardBytes: 500 * MB },
   mobile: { softBytes: 50 * MB, softPages: Number.POSITIVE_INFINITY, hardBytes: 150 * MB },
 };
-
-export type Device = keyof typeof LIMITS;
-
-/** Mobile = coarse pointer and a screen narrower than 1024 px. */
-export function detectDevice(): Device {
-  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-  const narrow = typeof screen !== 'undefined' && screen.width < 1024;
-  return coarse && narrow ? 'mobile' : 'desktop';
-}
 
 export type LimitCheck = { level: 'ok' } | { level: 'soft' | 'hard'; message: string };
 

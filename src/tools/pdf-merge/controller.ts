@@ -3,9 +3,11 @@
 import type { PdfErrorCode } from '../../lib/pdf/errors';
 import type { MergeReport } from '../../lib/pdf/mergePlus';
 import type { MergeRequest, MergeResponse, WorkerFile } from '../../lib/pdf/merge.worker';
-import { version as pretendardVersion } from 'pretendard/package.json';
-import { baseName, formatMB, formatPages, mergedFileName } from './format';
-import { MAX_FILES, checkAddBytes, checkFileCount, checkMerge, detectDevice } from './limits';
+import { detectDevice } from '../../lib/ui/device';
+import { loadDynamicFont } from '../../lib/ui/font';
+import { baseName, formatMB, formatPages } from '../../lib/ui/format';
+import { mergedFileName } from './format';
+import { MAX_FILES, checkAddBytes, checkFileCount, checkMerge } from './limits';
 
 type State = 'empty' | 'listing' | 'merging' | 'done' | 'error';
 
@@ -29,6 +31,8 @@ const MESSAGES: Record<PdfErrorCode, string> = {
   corrupt: '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아주세요.',
   oom: '기기 메모리가 부족합니다. 파일 수를 줄여 나눠서 합쳐 주세요.',
   unknown: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
+  // Not sent by the merge worker (it maps a failed output check to corrupt); required by the type.
+  verify: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
 };
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -36,16 +40,6 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   if (cls) e.className = cls;
   if (text !== undefined) e.textContent = text;
   return e;
-}
-
-/** File names can contain characters outside the preloaded UI font subset; load the full dynamic subset once. */
-function loadDynamicFont(): void {
-  if (document.getElementById('font-dynamic')) return;
-  const link = document.createElement('link');
-  link.id = 'font-dynamic';
-  link.rel = 'stylesheet';
-  link.href = `/fonts/pretendard/${pretendardVersion}/pretendardvariable-dynamic-subset.css`;
-  document.head.append(link);
 }
 
 function must<T extends HTMLElement>(id: string): T {

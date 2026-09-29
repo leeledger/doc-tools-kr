@@ -5,8 +5,11 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = join(__dirname, '..', '..', 'src');
 const FORBIDDEN = ['sendBeacon', 'XMLHttpRequest', 'WebSocket', 'EventSource'];
-/** Files allowed to call fetch( — only for our own static assets. Currently none. */
-const FETCH_ALLOWLIST: string[] = [];
+/**
+ * Files allowed to call fetch( — only for our own static assets.
+ * wasm-browser.ts: the compress worker's WebAssembly loads (versioned same-origin GETs, no file data).
+ */
+const FETCH_ALLOWLIST: string[] = ['lib/pdf/compress/wasm-browser.ts'];
 
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
@@ -28,12 +31,12 @@ describe('no network APIs in src/', () => {
     expect(hits).toEqual([]);
   });
 
-  it('uses fetch( only in allowlisted files', () => {
+  it('uses fetch( only in allowlisted files, and the allowlist names exactly the wasm loader', () => {
     const hits = all
       .filter((f) => /\bfetch\s*\(/.test(readFileSync(f, 'utf8')))
-      .map((f) => relative(SRC, f).split('\\').join('/'))
-      .filter((f) => !FETCH_ALLOWLIST.includes(f));
-    expect(hits).toEqual([]);
+      .map((f) => relative(SRC, f).split('\\').join('/'));
+    expect(hits.sort()).toEqual([...FETCH_ALLOWLIST].sort());
+    expect(FETCH_ALLOWLIST).toEqual(['lib/pdf/compress/wasm-browser.ts']);
   });
 
   it('never imports the original pdf-lib', () => {
