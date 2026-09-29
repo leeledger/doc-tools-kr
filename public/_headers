@@ -10,5 +10,13 @@
   Cache-Control: public, max-age=31536000, immutable
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
+/brand/*
+  Cache-Control: public, max-age=86400
+/favicon.ico
+  Cache-Control: public, max-age=86400
+/deploy-manifest.json
+  Cache-Control: no-store
+/sw.js
+  Cache-Control: no-cache
 https://:hash.doc-tools-kr.pages.dev/*
   X-Robots-Tag: noindex

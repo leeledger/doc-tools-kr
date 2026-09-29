@@ -1,34 +1,38 @@
-// Engine load failure (a worker script, chunk or wasm that did not arrive: offline, a tab left open across
-// a deploy, a network hiccup). It is never the file's fault, so it never uses a file-error message
-// (UX-AUDIT-1 P0-1 and §11.1). Written for every tool; 사진 용량 줄이기 is the first user, the PDF tools
-// adopt it in the polish step after Step 3.
+// The engine-load panel (#engine-error, src/components/EngineError.astro), shared by every tool. An engine
+// failure is never the file's fault, so it never uses a file-error message (UX-AUDIT-1 P0-1, §11.1).
+import { clearStatus } from './announce';
+import { ENGINE_COPY, engineErrorCopy, type EngineCopy } from './engine-load';
 
-export const ENGINE_ERROR = {
-  message: '처리 도구를 불러오지 못했습니다. 파일에는 문제가 없으니 새로고침한 뒤 다시 시도해 주세요.',
-  offline: '인터넷 연결이 끊겨 처리 도구를 불러오지 못했습니다. 파일에는 문제가 없으니 연결을 확인한 뒤 새로고침해 주세요.',
-  reload: '새로고침',
-} as const;
+const panel = (): HTMLElement | null => document.getElementById('engine-error');
 
-export function engineErrorMessage(): string {
-  return typeof navigator !== 'undefined' && navigator.onLine === false ? ENGINE_ERROR.offline : ENGINE_ERROR.message;
-}
-
-/** Fills `box` (a role="alert" element) with the message and a reload button, shows it, and returns the message. */
-export function showEngineError(box: HTMLElement, reload: () => void = () => location.reload()): string {
-  const msg = engineErrorMessage();
-  const p = document.createElement('p');
-  p.textContent = msg;
+/**
+ * Fills the panel with the state-dependent copy (offline, new deploy or generic), a [새로고침] button, shows
+ * it and focuses the button. The polite status region is cleared so no stale progress text is read after it.
+ */
+export async function showEngineError(reload: () => void = () => location.reload()): Promise<EngineCopy> {
+  const copy = await engineErrorCopy();
+  const box = panel();
+  if (!box) return copy;
+  const title = document.createElement('p');
+  title.className = 'engine-title';
+  title.textContent = copy.title;
+  const body = document.createElement('p');
+  body.textContent = copy.body;
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn primary';
-  btn.textContent = ENGINE_ERROR.reload;
+  btn.textContent = ENGINE_COPY.reload;
   btn.addEventListener('click', reload);
-  box.replaceChildren(p, btn);
+  clearStatus();
+  box.replaceChildren(title, body, btn);
   box.hidden = false;
-  return msg;
+  btn.focus();
+  return copy;
 }
 
-export function hideEngineError(box: HTMLElement): void {
+export function hideEngineError(): void {
+  const box = panel();
+  if (!box) return;
   box.hidden = true;
   box.replaceChildren();
 }

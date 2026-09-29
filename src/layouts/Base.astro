@@ -2,8 +2,12 @@
 import '../generated/anolim-ui.css';
 import '../styles/global.css';
 import '../styles/app.css';
-import { SITE, VERIFICATION } from '../data/site';
-import uiFontUrl from '../generated/anolim-ui.woff2?url';
+import { BIZ_REG_NO, OPERATOR_LABEL, SITE, VERIFICATION, contactLine, defaultDescription } from '../data/site';
+import { BUILD_ID } from '../data/build';
+import { LIVE_TOOLS } from '../data/tools';
+// Preloaded UI weights (Polish P.12): 400 (body) and 800 (every H1, the LCP element). 600 and 700 load on demand.
+import uiFont400 from '../generated/anolim-ui-400.woff2?url';
+import uiFont800 from '../generated/anolim-ui-800.woff2?url';
 
 interface Props {
   title?: string;
@@ -17,7 +21,7 @@ interface Props {
 
 const {
   title = SITE.defaultTitle,
-  description = SITE.defaultDescription,
+  description = defaultDescription(),
   ogDescription = description,
   skipTarget = 'main',
   isHome = false,
@@ -25,8 +29,10 @@ const {
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const ogImage = new URL('/og.png', Astro.site).href;
+const ogImage = new URL('/brand/og.png', Astro.site).href;
+const ogAlt = `${SITE.name} — ${SITE.tagline}`;
 const nav = isHome ? '' : '/';
+const path = Astro.url.pathname;
 const favicon =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M10 9h8l4 4v10H10z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M13 18l2.5 2.5L20 16' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 ---
@@ -39,6 +45,7 @@ const favicon =
 <meta name="description" content={description}>
 {noindex && <meta name="robots" content="noindex">}
 {!noindex && <link rel="canonical" href={canonical}>}
+<meta name="build-id" content={BUILD_ID}>
 <meta name="theme-color" content={SITE.themeColor}>
 <meta property="og:type" content="website">
 <meta property="og:locale" content={SITE.locale}>
@@ -49,10 +56,16 @@ const favicon =
 <meta property="og:image" content={ogImage}>
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content={ogAlt}>
+<meta name="twitter:card" content="summary_large_image">
 {VERIFICATION.naver && <meta name="naver-site-verification" content={VERIFICATION.naver}>}
 {VERIFICATION.google && <meta name="google-site-verification" content={VERIFICATION.google}>}
-<link rel="icon" href={favicon}>
-<link rel="preload" href={uiFontUrl} as="font" type="font/woff2" crossorigin>
+<link rel="icon" href={favicon} type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preload" href={uiFont400} as="font" type="font/woff2" crossorigin>
+<link rel="preload" href={uiFont800} as="font" type="font/woff2" crossorigin>
 <slot name="head" />
 </head>
 <body>
@@ -64,10 +77,27 @@ const favicon =
       <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M10 9h8l4 4v10H10z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M13 18l2.5 2.5L20 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>안올림</span>
     </a>
-    <nav aria-label="주요 메뉴">
-      <a href={`${nav}#tools`}>도구</a>
-      <a href={`${nav}#privacy`}>보안</a>
-      <a href={`${nav}#faq`}>자주 묻는 질문</a>
+    <nav aria-label="주요 메뉴" class="top-nav">
+      <div class="menu" data-menu>
+        {/* Without JS this stays a link to the tool list; the site script turns it into the disclosure button. */}
+        <a class="menu-toggle" href="/#tools" data-menu-toggle>도구</a>
+        <div class="menu-panel" id="tools-menu" hidden>
+          <ul>
+            {LIVE_TOOLS.map((t) => (
+              <li>
+                <a href={`/${t.slug}/`} aria-current={path === `/${t.slug}/` ? 'page' : undefined}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" set:html={t.icon} />
+                  <span>{t.name}</span>
+                </a>
+              </li>
+            ))}
+            <li class="menu-sep"><a href="/#privacy">보안</a></li>
+            <li><a href="/#faq">자주 묻는 질문</a></li>
+          </ul>
+        </div>
+      </div>
+      <a class="nav-extra" href={`${nav}#privacy`}>보안</a>
+      <a class="nav-extra" href={`${nav}#faq`}>자주 묻는 질문</a>
     </nav>
   </div>
 </header>
@@ -77,13 +107,18 @@ const favicon =
 </main>
 
 <footer class="foot">
-  <div class="wrap">
-    <p>© 2026 안올림 · 파일을 올리지 않는 서류 도구</p>
+  <div class="wrap foot-inner">
+    <p class="foot-op">운영: {OPERATOR_LABEL} · <Fragment set:html={contactLine()} />{BIZ_REG_NO && ` · 사업자등록번호 ${BIZ_REG_NO}`}</p>
     <nav class="foot-links" aria-label="사이트 정보">
+      <a href="/terms/">이용약관</a>
       <a href="/privacy/">개인정보 처리방침</a>
       <a href="/licenses/">오픈소스 라이선스</a>
     </nav>
+    <p class="foot-copy">© 2026 안올림 · 파일을 올리지 않는 서류 도구</p>
   </div>
 </footer>
+<script>
+  import '../lib/ui/site';
+</script>
 </body>
 </html>

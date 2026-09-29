@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { capSize } from '../../src/lib/image/decode';
 import { NOTES } from '../../src/lib/image/messages';
 import { LIMITS, checkCount, checkDims, checkFileBytes, checkRun } from '../../src/tools/photo-compress/limits';
-import { DEFAULT_FORM, formatSize, parseOptions, parseWhole, reductionPercent, type FormState } from '../../src/tools/photo-compress/options';
+import { formatSize } from '../../src/lib/ui/format';
+import { DEFAULT_FORM, parseOptions, parseWhole, reductionPercent, type FormState } from '../../src/tools/photo-compress/options';
 import { cancelRun, crash, currentRow, startRun, summary, type QueueRow } from '../../src/tools/photo-compress/queue';
 import { buildZip, dedupeNames } from '../../src/tools/photo-compress/zip';
 
@@ -44,13 +45,12 @@ describe('options', () => {
     expect(parseWhole(' 1,500 ', 10, 20000)).toBe(1500);
     expect(parseWhole('1e3', 10, 20000)).toBeNull();
   });
-  it('display sizes are 1024-based and round up to 0.1', () => {
-    expect(formatSize(498_995)).toBe('487.3 KB');
-    expect(formatSize(1024 * 100)).toBe('100.0 KB');
-    expect(formatSize(1024 * 100 + 1)).toBe('100.1 KB');
-    expect(formatSize(200_000)).toBe('195.4 KB');
+  it('display sizes (shared formatSize, Polish P.14): 1024-based KB rounded up, MB by the formatMB rule', () => {
+    expect(formatSize(498_995)).toBe('488 KB');
+    expect(formatSize(1024 * 100)).toBe('100 KB');
+    expect(formatSize(1024 * 100 + 1)).toBe('101 KB');
+    expect(formatSize(200_000)).toBe('196 KB');
     expect(formatSize(3.2 * MB)).toBe('3.2 MB');
-    expect(formatSize(3.2 * MB + 1)).toBe('3.3 MB');
   });
   it('reduction percent is floored and clamped', () => {
     expect(reductionPercent(1000, 149)).toBe(85);

@@ -88,13 +88,6 @@ export function parseOptions(f: FormState): Parsed {
   return { ok: true, options: { mode: 'quality', quality: q, ...common }, targetKb: null };
 }
 
-/** Display size, 1024-based and rounded up to 0.1 (never smaller than Windows Explorer shows). */
-export function formatSize(bytes: number): string {
-  const up = (v: number): string => (Math.ceil(v * 10 - 1e-9) / 10).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  if (bytes >= 1024 * 1024) return `${up(bytes / (1024 * 1024))} MB`;
-  return `${up(bytes / 1024)} KB`;
-}
-
 /** floor(100 × (1 − out/in)), clamped to 0–100. */
 export function reductionPercent(inBytes: number, outBytes: number): number {
   if (inBytes <= 0) return 0;

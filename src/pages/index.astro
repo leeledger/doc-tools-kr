@@ -1,8 +1,10 @@
 ---
 import Base from '../layouts/Base.astro';
 import JsonLd from '../components/JsonLd.astro';
-import { SITE } from '../data/site';
-import { TOOLS } from '../data/tools';
+import { SITE, defaultDescription, liveNames, ogDescription } from '../data/site';
+import { LIVE_TOOLS, TOOLS } from '../data/tools';
+
+const soon = TOOLS.filter((t) => t.status !== 'live');
 
 const home = new URL('/', Astro.site).href;
 const jsonLd = [
@@ -12,24 +14,25 @@ const jsonLd = [
     name: SITE.name,
     url: home,
     inLanguage: 'ko',
-    description: SITE.defaultDescription,
+    description: defaultDescription(),
   },
   {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: SITE.name,
     url: home,
-    logo: new URL('/og.png', Astro.site).href,
+    description: defaultDescription(),
+    logo: new URL('/brand/icon-512.png', Astro.site).href,
   },
 ];
 ---
-<Base isHome skipTarget="tools" ogDescription={SITE.ogDescription}>
+<Base isHome skipTarget="tools" ogDescription={ogDescription()}>
   <JsonLd slot="head" data={jsonLd} />
   <section class="hero">
     <div class="wrap">
       <p class="eyebrow">업로드 없음 · 회원가입 없음 · 무료</p>
       <h1>서류 파일, 올리지 말고 <br>내 브라우저에서 바로 처리하세요</h1>
-      <p class="lead">PDF 합치기부터 여권사진 규격 맞추기, 한글(HWP) 파일 변환까지.
+      <p class="lead">지금 쓸 수 있는 도구: {liveNames()}.
         파일은 서버로 전송되지 않고 지금 보고 계신 기기 안에서만 처리됩니다.</p>
       <div class="hero-cta">
         <a class="btn primary" href="#tools">도구 둘러보기</a>
@@ -43,21 +46,25 @@ const jsonLd = [
       <h2 id="tools-title">자주 쓰는 서류 작업</h2>
       <p class="section-lead">공공기관·채용 사이트 제출, 사무 업무에서 가장 많이 찾는 작업부터 준비하고 있습니다.</p>
       <ul class="grid">
-        {TOOLS.map((t) => (
-          <li class:list={['card', { live: t.status === 'live' }]}>
+        {LIVE_TOOLS.map((t) => (
+          <li class="card live">
             <div class="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" set:html={t.icon} />
             </div>
-            {t.status === 'live' ? (
-              <h3><a class="card-link" href={`/${t.slug}/`}>{t.name}</a></h3>
-            ) : (
-              <h3>{t.name}</h3>
-            )}
+            <h3><a class="card-link" href={`/${t.slug}/`}>{t.name}</a></h3>
             <p>{t.summary}</p>
-            <span class:list={['status', { 'status-live': t.status === 'live' }]}>{t.status === 'live' ? '사용하기' : '곧 공개'}</span>
+            <span class="status status-live">사용하기</span>
           </li>
         ))}
       </ul>
+      {soon.length > 0 && (
+        <div class="soon">
+          <h3>준비 중</h3>
+          <ul class="soon-list">
+            {soon.map((t) => <li>{t.name}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   </section>
 
@@ -72,7 +79,7 @@ const jsonLd = [
       <ul class="points">
         <li><strong>업로드 없음</strong><span>파일 내용은 네트워크로 전송되지 않습니다.</span></li>
         <li><strong>저장 없음</strong><span>창을 닫으면 작업한 파일은 기기 메모리에서 사라집니다.</span></li>
-        <li><strong>설치·가입 없음</strong><span>PC와 휴대폰 브라우저에서 바로 사용합니다.</span></li>
+        <li><strong>설치·가입 없음</strong><span>PC와 휴대폰 브라우저에서 바로 사용합니다. 한 번 사용한 도구는 인터넷을 끊어도 동작합니다. 비행기 모드에서 직접 확인해 보세요.</span></li>
       </ul>
     </div>
   </section>
@@ -86,11 +93,7 @@ const jsonLd = [
       </details>
       <details>
         <summary>무료인가요?</summary>
-        <p>기본 기능은 무료입니다. 운영비는 광고로 충당할 예정입니다.</p>
-      </details>
-      <details>
-        <summary>여권사진 배경을 바꾸거나 보정해 주나요?</summary>
-        <p>아니요. 여권 사진은 배경 합성이나 보정이 허용되지 않습니다. 안올림은 규격에 맞게 자르기, 크기 조정, 용량 조정만 합니다.</p>
+        <p>모든 기능을 무료로 쓸 수 있습니다. 운영비는 광고로 충당할 예정입니다.</p>
       </details>
       <details>
         <summary>언제 사용할 수 있나요?</summary>

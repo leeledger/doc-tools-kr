@@ -1,11 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
+import { LIVE_TOOLS } from '../data/tools';
 ---
 <Base title="페이지를 찾을 수 없습니다 | 안올림" description="요청하신 페이지를 찾을 수 없습니다. 주소를 확인하시거나 안올림 첫 화면에서 필요한 도구를 찾아 주세요." noindex>
   <div class="prose">
     <div class="wrap narrow">
       <h1>페이지를 찾을 수 없습니다</h1>
-      <p>주소가 바뀌었거나 없는 페이지입니다. 첫 화면에서 필요한 도구를 찾아 주세요.</p>
+      <p>주소가 바뀌었거나 없는 페이지입니다. 지금 쓸 수 있는 도구로 바로 가거나 첫 화면으로 돌아가 주세요.</p>
+      <ul class="nf-tools">
+        {LIVE_TOOLS.map((t) => <li><a href={`/${t.slug}/`}>{t.name}</a></li>)}
+      </ul>
       <p><a class="btn primary" href="/">첫 화면으로</a></p>
     </div>
   </div>

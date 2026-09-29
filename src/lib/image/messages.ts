@@ -1,5 +1,6 @@
 // Error codes and the user-facing copy of 사진 용량 줄이기 (brief Step 3 §3.2). Step 4 reuses the heic,
 // corrupt and animated copy.
+import { isEngineLoadFailure } from '../ui/engine-load';
 
 export type PhotoErrorCode =
   | 'heic'
@@ -29,6 +30,8 @@ export class PhotoError extends Error {
 /** Any thrown value → an error code (OOM surfaces as RangeError or an allocation message). */
 export function photoErrorCode(err: unknown): PhotoErrorCode {
   if (err instanceof PhotoError) return err.code;
+  // A chunk or codec that did not load is never the photo's fault (Polish P.1).
+  if (isEngineLoadFailure(err)) return 'engine';
   const msg = String((err as { message?: unknown })?.message ?? err);
   if (err instanceof RangeError || /out of memory|allocation failed|memory access out of bounds/i.test(msg)) return 'oom';
   return 'unknown';

@@ -18,6 +18,9 @@ export default defineConfig({
     locale: 'ko-KR',
     trace: 'retain-on-failure',
     navigationTimeout: 20_000,
+    // Every spec runs without the service worker (Polish P.11), so its behaviour and its no-upload recordings
+    // do not change; tests/e2e/sw.spec.ts opts back in with serviceWorkers: 'allow'.
+    serviceWorkers: 'block',
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

@@ -1,6 +1,9 @@
 /** `verify`: the main-thread check of a compressed result failed (PDF 용량 줄이기). */
 export type PdfErrorCode = 'not-pdf' | 'password' | 'wrong-password' | 'corrupt' | 'oom' | 'unknown' | 'verify';
 
+/** What a PDF worker reports: a file error, or `engine` when its code or wasm did not load (never the file). */
+export type WorkerErrorCode = PdfErrorCode | 'engine';
+
 export class PdfError extends Error {
   readonly code: PdfErrorCode;
   /** Index of the input file that caused the error, when known. */

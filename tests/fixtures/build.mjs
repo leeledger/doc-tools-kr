@@ -236,6 +236,43 @@ export async function makeBigFixture(dir, megabytes = 51) {
   return path;
 }
 
+/**
+ * scan_multi_{pages}.pdf (Polish P.13 목표 용량 e2e): `pages` A6 scan pages, each the gen_scan_a6 image with
+ * its own seeded noise (so no two image streams are equal and dedupe cannot merge them), JPEG q92.
+ * Built from the committed fixture, so it needs no pdf.js rendering.
+ */
+export async function makeScanMultiFixture(dir, pages = 40) {
+  mkdirSync(dir, { recursive: true });
+  const { createCanvas, loadImage } = await import('@napi-rs/canvas');
+  const scan = await PDFDocument.load(readFileSync(join(FIXTURES, 'gen_scan_a6.pdf')), { updateMetadata: false });
+  let jpeg = null;
+  for (const [, obj] of scan.context.enumerateIndirectObjects()) {
+    if (!jpeg && obj?.dict?.get(N('Subtype')) === N('Image')) jpeg = obj.contents;
+  }
+  if (!jpeg) throw new Error('scan_multi: no image in gen_scan_a6.pdf');
+  const img = await loadImage(Buffer.from(jpeg));
+  const c = createCanvas(img.width, img.height);
+  const g = c.getContext('2d');
+  const out = await PDFDocument.create({ updateMetadata: false });
+  for (let p = 0; p < pages; p++) {
+    g.drawImage(img, 0, 0);
+    const id = g.getImageData(0, 0, c.width, c.height);
+    const noise = seededBytes(id.data.length / 4, 1000 + p);
+    for (let k = 0, i = 0; k < id.data.length; k += 4, i++) {
+      const n = (noise[i] % 7) - 3;
+      id.data[k] += n;
+      id.data[k + 1] += n;
+      id.data[k + 2] += n;
+    }
+    g.putImageData(id, 0, 0);
+    const page = await out.embedJpg(new Uint8Array(await c.encode('jpeg', 92)));
+    out.addPage([297.64, 419.53]).drawImage(page, { x: 0, y: 0, width: 297.64, height: 419.53 });
+  }
+  const path = join(dir, `scan_multi_${pages}.pdf`);
+  writeFileSync(path, await out.save({ useObjectStreams: false }));
+  return path;
+}
+
 // ---------- committed PDF 용량 줄이기 fixtures (dev time: @napi-rs/canvas, pdf.js legacy build) ----------
 
 const A6 = [297.64, 419.53];

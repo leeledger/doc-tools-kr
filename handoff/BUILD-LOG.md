@@ -400,3 +400,105 @@
   - Engine: a CMYK JPEG under the target without metadata is converted with `resaved: false`.
 - e2e (+1): opaque_rgba.png at the default 500 KB shows the neutral line, contains no "개인정보", has no percent line, and the download is ≤ 500,000 bytes.
 - Status DONE: check 0 errors; unit 194/194; build and budgets OK (photo initial JS 12.6 KB, photo.worker 17.5 KB); photo e2e ×5 72 passed / 0 failed / 53 skipped / 0 flaky.
+
+## Step 5 decisions (Arch, 2026-09-30; staged in handoff/ARCHITECT-BRIEF-STEP5.md, promoted after Step 4 ships)
+- **Gate:** the 120-file corpus gives 6/120 broken = 5.0 % (CI 2.3–10.5 %). The orchestrator decided: ship the converter WITH guards. The non-routed set is 101 files, 2 broken (2.0 %). The routing-parity target is the 19 spike keys listed in the brief.
+- **Routing:** caps first, then the guard. Viewer-first when pages ≥ 100, equations > 0 or textboxes ≥ 3 (features.py semantics, bit for bit). Viewer-only above the caps:
+  - mobile: 10 MB, 60 p, 256 MiB WASM, 8 MB images
+  - desktop: 80 MB, 300 p, 1 GiB WASM, 60 MB images
+- **Hard limits added by Arch:** desktop 150 MB, mobile 25 MB, checked before any parse. Viewer-only still parses, and kr01 (64 MB) needs 785 MB of WASM.
+- **Viewer-first copy:** the orchestrator's sentence verbatim for equations/도형. For ≥ 100 pages it reads "이 문서는 100쪽이 넘어 변환 결과가 원본과 다를 수 있습니다", because the 수식·도형 wording would be false for a long plain document.
+- **Output:** print-to-PDF only, with per-browser guidance, including in-app browsers. The title is swapped to the file name during print. Viewer-only print CSS shows a one-line notice.
+- **Engine placement:** rhwp runs in a module worker. It is terminated after a full render, to free WASM before print. If rhwp cannot initialise in a worker in any engine, the main thread is used in every browser (one code path); decided, not a Flag.
+- **measureTextWidth:** registered in the worker (OffscreenCanvas, or a deterministic estimate) with a call counter. The harness requires 0 calls, so the tool does not depend on OffscreenCanvas and WebKit on Windows runs the full suite.
+- **Ported spike fixes:**
+  - scopeIds with a real word boundary, plus a repo-wide C0-control-byte unit test
+  - dropCellClips
+  - fitFillImages
+  - no getPageText
+  - addSpaces with the row index
+  - the pick() font map
+  - named @page per size
+- **Added:**
+  - a defence-in-depth SVG sanitizer (the harness requires 0 removals on the corpus)
+  - ensureViewBox
+  - image downscale to 200 dpi at the printed size on HTMLCanvasElement (data: → blob:)
+  - an `hwp-inflight` tab-kill notice
+  - a 90 s watchdog
+- **Scan:** own read-only CFB and ZIP-directory readers (no `cfb`/SheetJS dependency), with fflate inflate, a 512 MB inflate cap and a 5 M record cap. The password flag is rejected before rhwp is called.
+- **Fonts:**
+  - @fontsource Noto Serif KR, Noto Sans KR, Nanum Myeongjo and Nanum Gothic, 400/700, as shipped slices, byte-identical, renamed in CSS only.
+  - Pretendard reuses the existing dynamic subset.
+  - An optional "Anolim HWP Fallback" subset covers ㊞, ㆍ, ᆞ and ‧, renamed if its name records carry an RFN. No covering OFL face → Known Gap.
+- **rhwp:** @rhwp/core 0.8.6 pinned. The wasm is copied at prebuild to `/vendor/rhwp/0.8.6/` with a SHA-256 pin (not committed). check-dist asserts exactly one copy.
+- **Fixtures:** `tests/corpus/hwp/` (own cap, 3 MB) holds only law.go.kr 별표·서식 and 행정규칙 attachments (저작권법 §7): law05, law07, law09, law10, law17, law18, adm02, adm14, adm19 and adm28. No official PDFs are committed; `expected.json` holds page counts and the official content text.
+- **Regression:** `regress:hwp` recomputes the gate as manual classes plus automated proxies. Pass rules: non-routed ≤ 5 %, routing parity, fixtures, 0 measure calls, 0 sanitizer removals, a size rule (≤ 3× official, median ≤ 1.5×, kr01 ≤ 5 MB) and time limits. Every rhwp upgrade re-runs it.
+- **Dev dependency:** jsdom (MIT) for the DOM unit tests.
+- **Legal:** the Hancom notice and the trademark line appear verbatim in the tool footer, the 도움말 section and /licenses/. The Hancom line also goes in README.md and in the header comments of `src/lib/hwp/{features,cfb}.ts`.
+
+### Known Gaps (added by the Step 5 brief)
+- A no-dialog PDF download (jsPDF path rejected; image-PDF path C not built).
+- Batch conversion, HWPML (.hml), HWP → HWPX/DOCX, editing and 누름틀 filling.
+- rhwp bugs R1–R13 beyond the four workarounds; filing them upstream needs the owner's GitHub account.
+- rhwp devel builds or a self-built wasm (re-run the harness when 0.8.7/0.9 ships).
+- Middle-dot (U+00B7) width normalisation.
+- No feature scan for HWP 3.0. HWP5 and HWPX "textboxes" semantics differ (kept for gate parity).
+- A /hwp-viewer/ landing page for "hwp 뷰어" (3,560/mo).
+- Viewer search, zoom and thumbnails.
+- Real-device checks (mid-range Android, iPhone, Safari macOS print), and whether the iOS picker allows .hwp.
+
+## Polish P build notes (Bob, 2026-09-30)
+
+### Dependencies
+- `@napi-rs/canvas@1.0.9` (MIT) is now an explicit exact devDependency (already in the lockfile as pdfjs' optional dependency; package-lock only moves it from `optional` to `devOptional`). Used by `scripts/gen-brand.mjs` and the new `scan_multi` e2e fixture. No production dependency changed; `check:licenses` OK, 25 packages.
+
+### Decisions (reasonable calls under the "never stop" instruction; each is in REVIEW-REQUEST)
+- **Reused, not duplicated:** Step 3's `src/lib/ui/engine-error.ts` became the DOM half of the engine panel (now `#engine-error`, `EngineError.astro`); the new `engine-load.ts` holds detection, retry and copy. Step 3's photo `formatSize` (options.ts) moved into `src/lib/ui/format.ts` with the P.14 rule; options.ts no longer defines it. `src/lib/codecs/wasm-browser.ts` `compileWasm` now throws `EngineLoadError`.
+- **Engine detection:** `isEngineLoadFailure` also matches WebKit's `Load failed` and Firefox's `NetworkError when attempting to fetch resource` (same failure, other spelling). qpdf: a module instance that never starts (the glue aborts with an XHR `NetworkError`) is an `EngineLoadError` from `runQpdf` itself, so the Node deps behave the same.
+- **Photo** gets the shared panel and copy; its engine test now expects the P.1 copy and an empty status (P.17: an alert clears the status). Photo reset button "처음부터" → "다른 사진 처리하기", percent chips "70%" etc.: the dist copy test bans "처음부터" and "n %" site-wide. Layout unchanged.
+- **Merge list at ≤ 400 px** hides the 48×64 thumbnail (the name got ~50 px otherwise). Above 400 px the row is exactly as specified. The sticky bar is the actions container moved to a direct child of `#merge-tool` (sticky needs a containing block that spans the list); the drop zone hides once files are listed and the whole tool is the drop target; "파일 추가" moved into that bar (second file input). Run button reads "PDF {n}개 합치기" on every viewport.
+- **Download links** (`#merge-download`, `#cmp-download`) carry `tabindex="0"`: focus now lands on the headline (P.5), and Safari/WebKit leave plain links out of the Tab order, so without it a Safari keyboard user could not reach 내려받기.
+- **Preload `claim()`:** the real run claims the preload; a preload that has not started by then never starts (otherwise a click on "PDF 용량 줄이기" plus idle would warm a second worker and fetch everything twice). Inspection waits for a running preload; the run claims it.
+- **Precache** holds the preloaded UI fonts (400, 800) only. With 600/700 it is 491 KB (the /licenses/ HTML alone is 143 KB) > 450 KB; now 404.9 KB. 600/700 are runtime-cached on first use (and immutable in the HTTP cache).
+- **UI font instances** keep only the browser-default OpenType features (HarfBuzz horizontal defaults); the alternates (ss01…, case, aalt) no longer ship. Rendering is unchanged (no CSS enables other features). Without this each face was 52 KB (> 50 KB budget). Total now 169.4 KB / 170 KB — little headroom; any new UI copy with new Hangul may need a decision.
+- **`.prose h1` is 800** (was the browser default 700), so every H1 / LCP element uses a preloaded weight. CLS stayed 0 with 600/700 on demand (Lighthouse median 0.0000 on all 5 URLs), so no third preload.
+- **P.12 e2e probe** compares ink (800 vs 400 ≥ 1.3×), not advance width: Pretendard keeps Hangul advances nearly equal across weights (measured 0.8 %, below the brief's 3 %). A face that ignores the weight would give 1.0. Measured ink ratio 1.72–1.77 in all five browsers.
+- **Beacon** path is a build-time `define` (`__ERROR_BEACON_PATH__`, astro.config via Vite `loadEnv`), so the off build contains no `sendBeacon` (check-dist asserts it).
+- **check-dist, gen-headers, gen-sw, astro.config** read PUBLIC_* with Vite `loadEnv` (process env and .env, like Astro). `site` now comes from the same env.
+- **Kill switch** navigates only controlled clients (`clients.matchAll` default), so a first-time visitor on a PUBLIC_SW=0 build is not reload-looped.
+- **Home:** the passport-photo FAQ is removed (it described a tool that is not live). The soon list shows names only.
+- **Legal dates:** `src/data/legal.ts` holds the privacy revision and terms effective date (set to 2026-09-30 for now); Arch sets both at the deploy gate.
+- **licenses.manifest.json:** qpdf's use line "PDF 구조 정리·…" → "PDF 분석·…" (the dist copy test bans "구조 정리").
+- **Gate 8 wording** in ARCHITECT-BRIEF.md §3 amended as decided ("…or after the first interaction plus idle").
+- **Local server** (`tests/e2e/serve.mjs`) now applies dist/_headers path rules (immutable, no-cache), serves .ico/.webmanifest types, and exports `startServer` (root swap, request log, "host down") for the SW, preload, smoke and carry tests.
+
+### Known Gaps (Polish P, additions)
+- UI font budget headroom is 0.6 KB.
+- 600/700 are not precached (offline first paint uses them from the HTTP cache).
+- Playwright WebKit (Windows) cannot read a `setInputFiles` file while `context.setOffline(true)` (NotReadableError), and fails navigations under setOffline before the SW answers: the offline-copy e2e is skipped on webkit/mobile-safari with that reason; the SW offline e2e on webkit takes the host down instead.
+- Tool-state CLS in qa:visual (0.03–0.19) is state changes after `setInputFiles` (not counted as input by the API); static pages max 0.0002.
+
+### Polish P status (Bob)
+- **DONE.** check 0/0/0; unit 303/303; e2e 5 projects 508 passed / 0 failed / 4 flaky (Firefox `goto` race) / 103 skipped (stated reasons); Lighthouse 5 URLs all assertions pass; licences OK; budgets OK; regress:merge 5/5, regress:compress 122/122, regress:photo 85/85 + 24/24; smoke:assets OK (331 URLs); qa:visual 176 PNGs, 0 hard failures; carry-forward dry run green. Nothing committed.
+
+## Polish P round 2 (Bob, 2026-09-30, after Richard's CHANGES REQUIRED and the Arch decisions)
+- **Must Fix (drag):** `drag.ts` ends a drag on `pointerup` (commit) and on `pointercancel`, `lostpointercapture` or the page becoming hidden (cancel), so the auto-scroll loop, the capture keydown and the visibilitychange listeners never outlive it. The drag does not start at all if `setPointerCapture` throws. The controller holds `renderList()` while a drag is active and re-renders once when it ends (or `reorder()` does). The auto-scroll uses `behavior: 'instant'`: with `html { scroll-behavior: smooth }` a last smooth step kept moving after release in Firefox.
+  - New e2e (chromium, firefox, webkit): 5 PDFs, the pdf.js worker delayed 3 s, the first handle held at the bottom edge for 6 s, then released. Afterwards there is no placeholder and no `.dragging` row, the held re-render shows all 5 inspected, scrollY is stable over 1 s, and 0 drag listeners are left. Verified to fail without the fix (a placeholder stays).
+- **carry-assets:** a download must match the manifest's length (checked against Content-Length when not encoded, and against the bytes received) and its SHA-256. The bytes actually downloaded count against the 60 MB cap. The live manifest is refused above 1 MB before parsing.
+- **Offline fallback:** `/404.html` is no longer precached. New static page `/offline/` (200, noindex, not in the sitemap) is precached and is the SW navigation fallback. smoke:assets checks it.
+- **Kill switch:** no `clients.navigate`. It deletes the caches and unregisters; open tabs keep working from the network and are uncontrolled from their next load.
+- **Beacon path:** `scripts/lib/beacon-path.mjs`: exactly one leading "/" (`/^\/(?!\/)/`, no backslash). Used by astro.config and check-dist.
+- **Terms §9:** 7 days' notice, 30 days for changes that disadvantage users (이용자에게 불리한 변경).
+- **pdf.js:** a worker that failed to start is destroyed before `pdfjsPromise` is cleared (no second worker leaks on retry).
+- **Arch, contact:** production ships with "문의: 준비 중". check-dist fails when the error beacon (same-origin path) or `ADS_ENABLED = true` is on while `PUBLIC_CONTACT_EMAIL` is unset. Unset contact alone passes.
+- **Arch, font budget:** 180 KB total (was 170): the four faces are 169.4 KB, so the next copy change with new Hangul would have failed the build. Each face stays ≤ 50 KB.
+- **Arch, legal dates:** 2026-09-30 in `src/data/legal.ts` (no longer a placeholder).
+- **Not done (verify on the first preview deploy, per Richard):** `curl -sI https://<preview>/offline/` should be a plain 200; `/404.html` is no longer precached, so the redirect risk he raised no longer applies to the SW.
+
+### Known Gaps (round 2)
+- **Owner-owed before ads or analytics go live:** set `PUBLIC_CONTACT_EMAIL` and the privacy officer's name (`PUBLIC_PRIVACY_OFFICER`). The build now enforces this for the error beacon and ads (개인정보 보호법 제30조: once personal data is processed, the policy must name the officer and a contact).
+
+### Round 2 status (Bob)
+- **DONE.** check 0/0/0; unit 309/309; build and budgets OK (UI fonts 169.4 / 180 KB; precache 405.4 / 450 KB); licences OK (25); e2e 5 projects 516 passed / 0 failed / 4 flaky (the Firefox `goto` race) / 105 skipped; smoke:assets OK (332 URLs); qa:visual 176 PNGs, 0 hard failures. Nothing committed.
+
+- Known Gap (Polish P, Richard r2): carry-assets reads a live manifest without Content-Length in full before the 1 MB check; bounded only by the 60 s timeout; source is our own origin. Low risk, deferred.

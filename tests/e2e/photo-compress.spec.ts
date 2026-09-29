@@ -120,9 +120,12 @@ test('lazy load: nothing from the worker or the codecs before the button; WebP w
   await open(page);
   await pick(page, [PORTRAIT]);
   // 30 KB: the portrait needs the MozJPEG final encode and a lanczos downscale (MozJPEG cannot fit the full size).
+  // Nothing loads before the first interaction (setInputFiles is not one).
+  expect(network.requests.map((r) => r.url()).filter((u) => ENGINE.test(u) || ZIP_CHUNK.test(u))).toEqual([]);
   await chooseTarget(page, '직접 입력');
   await page.getByLabel('목표 용량 (KB)').fill('30');
-  expect(network.requests.map((r) => r.url()).filter((u) => ENGINE.test(u) || ZIP_CHUNK.test(u))).toEqual([]);
+  // After an interaction the preload (Polish P.7) may warm the worker, never WebP or the ZIP chunk.
+  expect(network.requests.map((r) => r.url()).filter((u) => WEBP_WASM.test(u) || ZIP_CHUNK.test(u))).toEqual([]);
   await run(page);
   const urls = () => network.requests.map((r) => r.url());
   for (const part of ['photo.worker', 'mozjpeg_enc', 'squoosh_resize']) expect(urls().some((u) => u.includes(part)), part).toBe(true);
@@ -145,7 +148,7 @@ test('happy path, 200 KB: portrait and scene come out ≤ 200,000 bytes, baselin
   for (const name of ['portrait_pd.jpg', 'scene_cc0.jpg']) {
     const r = row(page, name);
     await expect(r.locator('.ph-size')).toHaveText(/^[\d.,]+ KB → [\d.,]+ KB$/);
-    await expect(r.locator('.ph-pct')).toHaveText(/^\d+ % 줄었습니다$/);
+    await expect(r.locator('.ph-pct')).toHaveText(/^\d+% 줄었습니다$/);
     const { bytes, name: file } = await download(page, r);
     expect(file).toBe(name.replace('.jpg', '_압축.jpg'));
     expect(bytes.length).toBeLessThanOrEqual(200_000);
@@ -514,13 +517,15 @@ test('engine load failure: its own message with 새로고침, rows back to 대�
     await route.fulfill({ status: 404, body: 'gone', headers: { ...res.headers(), 'content-type': 'text/plain', 'cache-control': 'no-store' } });
   });
   await page.getByRole('button', { name: '사진 용량 줄이기', exact: true }).click();
-  const banner = page.locator('#ph-engine-error');
+  const banner = page.locator('#engine-error');
   await expect(banner).toBeVisible();
-  await expect(banner).toContainText('처리 도구를 불러오지 못했습니다. 파일에는 문제가 없으니');
+  await expect(banner).toContainText('처리 도구를 불러오지 못했습니다.');
+  await expect(banner).toContainText('파일에는 문제가 없습니다.');
   await expect(banner.getByRole('button', { name: '새로고침' })).toBeFocused();
   await expect(page.locator('#ph-list .file-error')).toHaveCount(0);
   await expect(page.locator('#ph-list .ph-status')).toHaveText(['대기', '대기']);
-  await expect(page.locator('#ph-status')).toContainText('처리 도구를 불러오지 못했습니다');
+  // The alert cleared the polite status (Polish P.17).
+  await expect(page.locator('#ph-status')).toHaveText('');
   await page.context().unroute(/\/_astro\/photo\.worker[^/]*\.js/);
   await chooseTarget(page, '200 KB');
   await run(page);

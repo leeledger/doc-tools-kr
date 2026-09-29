@@ -1,0 +1,18 @@
+---
+// The service worker's offline fallback for a page that is not stored on this device (Polish P.11, round 2).
+// Precached; never in the sitemap; noindex.
+import Base from '../../layouts/Base.astro';
+import { LIVE_TOOLS } from '../../data/tools';
+---
+<Base title="인터넷에 연결되어 있지 않습니다 | 안올림" description="인터넷에 연결되어 있지 않아 이 페이지를 열 수 없습니다. 연결을 확인한 뒤 다시 시도해 주세요." noindex>
+  <div class="prose">
+    <div class="wrap narrow">
+      <h1>인터넷에 연결되어 있지 않습니다</h1>
+      <p>이 페이지는 아직 이 기기에 저장되지 않아 인터넷 없이 열 수 없습니다. 연결을 확인한 뒤 다시 시도해 주세요.</p>
+      <p>한 번 사용한 도구는 인터넷 없이도 열립니다.</p>
+      <ul class="nf-tools">
+        {LIVE_TOOLS.map((t) => <li><a href={`/${t.slug}/`}>{t.name}</a></li>)}
+      </ul>
+    </div>
+  </div>
+</Base>

@@ -17,7 +17,13 @@ export interface PhotoItem {
   file: Blob;
 }
 
-export type PhotoRequest = { type: 'run'; items: PhotoItem[]; options: Omit<PhotoOptions, 'workingLongEdge'>; device: Device };
+export type PhotoRequest =
+  | { type: 'run'; items: PhotoItem[]; options: Omit<PhotoOptions, 'workingLongEdge'>; device: Device }
+  /** Preload (Polish P.7): compile MozJPEG and resize (not WebP), then answer warm-done. */
+  | { type: 'warm' };
+
+/** The answer to `warm` (separate from the run messages). */
+export type PhotoWarmResponse = { type: 'warm-done' } | { type: 'error'; code: 'engine' };
 
 export type PhotoResponse =
   | { type: 'item-phase'; id: number; phase: PhotoPhase }
@@ -159,7 +165,7 @@ async function thumbOf(bytes: Uint8Array, mime: string): Promise<Uint8Array | nu
   }
 }
 
-async function runItem(item: PhotoItem, req: PhotoRequest): Promise<void> {
+async function runItem(item: PhotoItem, req: Extract<PhotoRequest, { type: 'run' }>): Promise<void> {
   const phase = (p: PhotoPhase): void => post({ type: 'item-phase', id: item.id, phase: p });
   phase('decode');
   const bytes = await blobBytes(item.file);
@@ -191,6 +197,14 @@ async function runItem(item: PhotoItem, req: PhotoRequest): Promise<void> {
 
 scope.onmessage = (ev) => {
   const req = ev.data;
+  if (req.type === 'warm') {
+    const answer = (msg: PhotoWarmResponse): void => scope.postMessage(msg, []);
+    Promise.all([loadMozjpegEncoder(), loadResize()]).then(
+      () => answer({ type: 'warm-done' }),
+      () => answer({ type: 'error', code: 'engine' }),
+    );
+    return;
+  }
   if (req.type !== 'run') return;
   void (async () => {
     for (const item of req.items) {

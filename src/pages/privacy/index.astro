@@ -1,5 +1,12 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { OPERATOR_LABEL, PRIVACY_OFFICER, contactLine } from '../../data/site';
+import { PRIVACY_REVISED } from '../../data/legal';
+import { BEACON_ENABLED } from '../../lib/ui/beacon';
+
+// The anonymous error statistics section exists only while the beacon is on, so the policy and the code
+// cannot drift apart (Polish P.18).
+const n = (base: number): number => (BEACON_ENABLED && base >= 5 ? base + 1 : base);
 ---
 <Base
   title="개인정보 처리방침 | 안올림"
@@ -8,7 +15,7 @@ import Base from '../../layouts/Base.astro';
   <div class="prose">
     <div class="wrap narrow">
       <h1>개인정보 처리방침</h1>
-      <p class="meta-line">시행일: 2026년 9월 29일</p>
+      <p class="meta-line">시행일: {PRIVACY_REVISED}</p>
 
       <h2>1. 파일과 파일 내용</h2>
       <p>안올림은 이용자가 선택한 파일과 그 내용을 수집하거나 저장하거나 전송하지 않습니다. 파일 처리는 처리 코드를 이용자의 브라우저로 내려받아 이용자의 기기 안에서 실행하는 방식으로 이루어집니다. PDF 비밀번호도 처리하는 동안 브라우저 메모리에만 머무르며 저장하거나 전송하지 않습니다.</p>
@@ -22,11 +29,24 @@ import Base from '../../layouts/Base.astro';
       <h2>4. 광고</h2>
       <p>현재 광고를 게재하지 않습니다. 앞으로 광고(Google AdSense 등)를 게재하게 되면, 그 전에 이 방침을 개정하고 필요한 동의 절차를 먼저 마련합니다.</p>
 
-      <h2>5. 문의처</h2>
-      <p>문의처는 곧 안내합니다.</p>
+      {BEACON_ENABLED && (
+        <>
+          <h2>5. 익명 오류 통계</h2>
+          <p>도구가 처리 도중 실패하면(처리 도구를 불러오지 못함, 메모리 부족 등) 열 번에 한 번꼴로 익명 오류 기록을 이 사이트로 보냅니다. 기록에는 도구 이름, 실패한 단계, 오류 종류, 브라우저 종류와 주 버전, 기기 종류(휴대폰 또는 PC), 사이트 버전만 담깁니다. 파일 이름, 크기, 내용과 IP 주소는 담지 않습니다.</p>
+        </>
+      )}
 
-      <h2>6. 변경 이력</h2>
+      <h2>{n(5)}. 운영자와 문의처</h2>
       <ul>
+        <li>운영자: {OPERATOR_LABEL}</li>
+        <li>개인정보 보호책임자: {PRIVACY_OFFICER}</li>
+        <li><Fragment set:html={contactLine('준비 중입니다. 연락처가 정해지면 이 페이지와 모든 페이지 하단에 표시합니다.')} /></li>
+      </ul>
+      <p>문의 메일은 답변에만 쓰고, 문의가 끝나면 지웁니다.</p>
+
+      <h2>{n(6)}. 변경 이력</h2>
+      <ul>
+        <li>{PRIVACY_REVISED}: 운영자·문의처 항목 추가, 이용약관 신설</li>
         <li>2026년 9월 29일: 처음 제정</li>
       </ul>
     </div>

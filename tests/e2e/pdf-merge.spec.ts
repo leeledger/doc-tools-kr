@@ -8,6 +8,8 @@ const LAW = fixturePath('kr_law_form.pdf');
 const FW9 = fixturePath('irs_fw9.pdf');
 
 const items = (page: Page) => page.locator('#merge-list > li');
+/** The run button reads "PDF {n}개 합치기" (Polish P.16). */
+const runButton = (page: Page) => page.getByRole('button', { name: /^PDF \d+개 합치기$/ });
 const item = (page: Page, name: string) => items(page).filter({ has: page.locator('.name', { hasText: name }) });
 
 async function open(page: Page): Promise<void> {
@@ -33,7 +35,8 @@ test('happy path: add two files, move irs_fw9 up, merge and download', async ({ 
   await add(page, [LAW, FW9]);
   await expectInspected(page, 'kr_law_form.pdf', 7);
   await expectInspected(page, 'irs_fw9.pdf', 6);
-  await expect(item(page, 'irs_fw9.pdf').locator('canvas')).toBeVisible();
+  // The thumbnail is rendered (hidden by design at ≤ 400 px, where the name needs the room).
+  await expect(item(page, 'irs_fw9.pdf').locator('canvas')).toHaveCount(1);
   await expect(page.locator('#merge-bookmarks')).toBeChecked();
   // Only the listing UI is visible.
   await expect(page.locator('#merge-progress')).toBeHidden();
@@ -44,10 +47,11 @@ test('happy path: add two files, move irs_fw9 up, merge and download', async ({ 
   await expect(items(page).first()).toContainText('irs_fw9.pdf');
   await expect(page.locator('#merge-status')).toContainText('1번째');
 
-  await page.getByRole('button', { name: 'PDF 합치기' }).click();
+  await runButton(page).click();
   await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'done');
   await expect(page.locator('#merge-summary')).toContainText('13쪽');
-  await expect(page.locator('#merge-summary')).toContainText('MB');
+  await expect(page.locator('#merge-summary')).toHaveText(/^13쪽 · [\d.,]+ (KB|MB)$/);
+  await expect(page.locator('#merge-save-name')).toHaveText('저장될 이름: irs_fw9_외1건_합침.pdf');
   await expect(page.locator('#merge-drop')).toBeHidden();
   await expect(page.locator('#merge-list')).toBeHidden();
   await expect(page.locator('#merge-controls')).toBeHidden();
@@ -61,7 +65,7 @@ test('happy path: add two files, move irs_fw9 up, merge and download', async ({ 
   expect(out.length).toBe(13);
   expect(out[0]).toBe((await pageTexts(fixture('irs_fw9.pdf'), undefined, [0]))[0]);
 
-  await page.getByRole('button', { name: '처음부터' }).click();
+  await page.getByRole('button', { name: '다른 파일 처리하기' }).click();
   await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'empty');
   await expect(items(page)).toHaveCount(0);
 });
@@ -72,20 +76,29 @@ test('password: wrong password shows the message, the right one unlocks, merge s
   const locked = item(page, 'encrypted_userpw_1234.pdf');
   await expect(locked.getByText('이 파일은 비밀번호로 보호되어 있습니다')).toBeVisible();
   await expectInspected(page, 'kr_law_form.pdf', 7);
-  await expect(page.getByRole('button', { name: 'PDF 합치기' })).toBeDisabled();
+  await expect(runButton(page)).toBeDisabled();
 
-  const field = locked.getByLabel('이 파일은 비밀번호로 보호되어 있습니다');
+  const field = locked.getByLabel('비밀번호', { exact: true });
+  // The state sentence describes the field (Polish P.17); the toggle shows the typed password.
+  await expect(field).toHaveAccessibleDescription(/이 파일은 비밀번호로 보호되어 있습니다\./);
+  const toggle = locked.getByRole('button', { name: '비밀번호 보기' });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  await expect(field).toHaveAttribute('type', 'text');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click();
+  await expect(field).toHaveAttribute('type', 'password');
   await field.fill('0000');
   await locked.getByRole('button', { name: /비밀번호 확인/ }).click();
   await expect(locked.locator('.pw-error')).toHaveText('비밀번호가 맞지 않습니다.');
-  await expect(page.getByRole('button', { name: 'PDF 합치기' })).toBeDisabled();
+  await expect(runButton(page)).toBeDisabled();
 
   await field.fill('1234');
   await field.press('Enter');
   await expectInspected(page, 'encrypted_userpw_1234.pdf', 7);
-  await expect(page.getByRole('button', { name: 'PDF 합치기' })).toBeEnabled();
+  await expect(runButton(page)).toBeEnabled();
 
-  await page.getByRole('button', { name: 'PDF 합치기' }).click();
+  await runButton(page).click();
   await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'done');
   await expect(page.locator('#merge-summary')).toContainText('14쪽');
   await expect(page.locator('#merge-notes')).toContainText('합친 파일에는 비밀번호가 걸려 있지 않습니다.');
@@ -93,25 +106,25 @@ test('password: wrong password shows the message, the right one unlocks, merge s
   expect(page.url()).not.toContain('1234');
 });
 
-test('bad inputs: not-PDF and corrupt files are reported, other files are kept', async ({ page }) => {
+test('bad inputs: a not-PDF never enters the list (one alert), a corrupt file is reported, other files are kept', async ({ page }) => {
   await open(page);
   await add(page, [runtimePath('not_a_pdf'), LAW, runtimePath('truncated'), FW9]);
-  await expect(item(page, 'not_a_pdf.pdf').locator('.file-error')).toHaveText(
-    'PDF 파일이 아닙니다. PDF 파일만 합칠 수 있습니다.',
-  );
+  await expect(page.locator('#merge-error')).toHaveText('not_a_pdf.pdf은(는) PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
+  await expect(item(page, 'not_a_pdf.pdf')).toHaveCount(0);
   await expect(item(page, 'truncated.pdf').locator('.file-error')).toHaveText(
-    '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아주세요.',
+    '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아 주세요.',
   );
   await expectInspected(page, 'kr_law_form.pdf', 7);
   await expectInspected(page, 'irs_fw9.pdf', 6);
-  await expect(items(page)).toHaveCount(4);
-  await expect(page.getByRole('button', { name: 'PDF 합치기' })).toBeDisabled();
+  await expect(items(page)).toHaveCount(3);
+  await expect(runButton(page)).toBeDisabled();
   await expect(page.locator('#merge-hint')).toContainText('문제가 있는 파일을 목록에서 삭제하면');
+  // One error card only: no "문제 파일 모두 빼기".
+  await expect(page.getByRole('button', { name: '문제 파일 모두 빼기' })).toBeHidden();
 
-  await page.getByRole('button', { name: 'not_a_pdf.pdf 삭제' }).click();
   await page.getByRole('button', { name: 'truncated.pdf 삭제' }).click();
   await expect(items(page)).toHaveCount(2);
-  await page.getByRole('button', { name: 'PDF 합치기' }).click();
+  await runButton(page).click();
   await expect(page.locator('#merge-summary')).toContainText('13쪽');
 });
 
@@ -128,7 +141,7 @@ test('cancel during a merge returns to the list with the files intact', async ({
     await route.continue().catch(() => undefined);
   });
 
-  await page.getByRole('button', { name: 'PDF 합치기' }).click();
+  await runButton(page).click();
   await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'merging');
   await expect(page.locator('#merge-progress-text')).toContainText('합치는 중…');
   await page.getByRole('button', { name: '취소' }).click();
@@ -138,11 +151,11 @@ test('cancel during a merge returns to the list with the files intact', async ({
   await expect(page.locator('#merge-progress')).toBeHidden();
   await expect(items(page)).toHaveCount(2);
   await expect(page.locator('#merge-status')).toContainText('취소');
-  await expect(page.getByRole('button', { name: 'PDF 합치기' })).toBeEnabled();
+  await expect(runButton(page)).toBeEnabled();
 
   // The list still merges afterwards.
   await context.unroute(/merge\.worker.*\.js/);
-  await page.getByRole('button', { name: 'PDF 합치기' }).click();
+  await runButton(page).click();
   await expect(page.locator('#merge-summary')).toContainText('13쪽');
 });
 
@@ -173,6 +186,10 @@ test('keyboard only: pick, reorder, merge and download', async ({ page, browserN
   await tabTo(`document.activeElement?.id === 'merge-run'`);
   await page.keyboard.press('Enter');
   await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'done');
+  // Focus lands on the headline (Polish P.5 rule); the download is the next stop.
+  await expect(page.locator(':focus')).toHaveId('merge-headline');
+  // The download link has tabindex="0": Safari leaves plain links out of the Tab order by default.
+  await page.keyboard.press('Tab');
   await expect(page.locator(':focus')).toHaveId('merge-download');
   const [download] = await Promise.all([page.waitForEvent('download'), page.keyboard.press('Enter')]);
   const out = await pageTexts(await downloadBytes(download));
@@ -201,7 +218,7 @@ test('mobile soft limit: over 50 MB asks for confirmation before merging', async
   await add(page, [runtimePath('big_51mb'), LAW]);
   await expectInspected(page, 'big_51mb.pdf', 1);
   await expectInspected(page, 'kr_law_form.pdf', 7);
-  await page.getByRole('button', { name: 'PDF 합치기' }).click();
+  await runButton(page).click();
   const confirm = page.locator('#merge-confirm');
   await expect(confirm).toBeVisible();
   await expect(confirm).toContainText('50 MB');
@@ -209,7 +226,7 @@ test('mobile soft limit: over 50 MB asks for confirmation before merging', async
   await expect(confirm).toBeHidden();
   await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'listing');
 
-  await page.getByRole('button', { name: 'PDF 합치기' }).click();
+  await runButton(page).click();
   await page.getByRole('button', { name: '계속 합치기' }).click();
   await expect(page.locator('#merge-summary')).toContainText('8쪽');
 });

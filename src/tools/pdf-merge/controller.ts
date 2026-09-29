@@ -1,11 +1,20 @@
 // PDF 합치기 UI controller. States: empty → listing → merging → done | error.
-// pdf.js (inspect) is loaded on the first added file; @cantoo/pdf-lib only inside the merge worker.
+// pdf.js (inspect) is loaded on the first added file (or preloaded after the first interaction, Polish P.7);
+// @cantoo/pdf-lib only inside the merge worker.
 import type { PdfErrorCode } from '../../lib/pdf/errors';
 import type { MergeReport } from '../../lib/pdf/mergePlus';
 import type { MergeRequest, MergeResponse, WorkerFile } from '../../lib/pdf/merge.worker';
+import { announce, clearAlert } from '../../lib/ui/announce';
+import { reportError } from '../../lib/ui/beacon';
 import { detectDevice } from '../../lib/ui/device';
+import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
+import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
-import { baseName, formatMB, formatPages } from '../../lib/ui/format';
+import { baseName, formatPages, formatSize } from '../../lib/ui/format';
+import { passwordToggle } from '../../lib/ui/password';
+import { nonPdfMessage, splitPdfFiles } from '../../lib/ui/pdf-pick';
+import { schedulePreload, warmWorker } from '../../lib/ui/preload';
+import { startRowDrag } from './drag';
 import { mergedFileName } from './format';
 import { MAX_FILES, checkAddBytes, checkFileCount, checkMerge } from './limits';
 
@@ -20,6 +29,8 @@ interface Entry {
   password?: string;
   locked: boolean;
   inspecting: boolean;
+  /** The inspection could not run because the engine did not load; never a file error. */
+  pending: boolean;
   error: PdfErrorCode | null;
   thumbnail: HTMLCanvasElement | null;
 }
@@ -28,11 +39,22 @@ const MESSAGES: Record<PdfErrorCode, string> = {
   'not-pdf': 'PDF 파일이 아닙니다. PDF 파일만 합칠 수 있습니다.',
   password: '이 파일은 비밀번호로 보호되어 있습니다.',
   'wrong-password': '비밀번호가 맞지 않습니다.',
-  corrupt: '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아주세요.',
+  corrupt: '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아 주세요.',
   oom: '기기 메모리가 부족합니다. 파일 수를 줄여 나눠서 합쳐 주세요.',
   unknown: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
   // Not sent by the merge worker (it maps a failed output check to corrupt); required by the type.
   verify: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
+};
+
+const PREPARING = '처리 도구를 준비하는 중입니다(처음 한 번만).';
+
+// Row icons (24-unit, stroked like the tool icons).
+const ICONS = {
+  up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+  down: '<path d="M12 5v14M5 12l7 7 7-7"/>',
+  remove: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  error: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/>',
 };
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -42,22 +64,39 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return e;
 }
 
+function svgIcon(paths: string): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('class', 'ico');
+  svg.innerHTML = paths;
+  return svg;
+}
+
 function must<T extends HTMLElement>(id: string): T {
   const e = document.getElementById(id);
   if (!e) throw new Error(`#${id} missing`);
   return e as T;
 }
 
+const createMergeWorker = (): Worker => new Worker(new URL('../../lib/pdf/merge.worker.ts', import.meta.url), { type: 'module' });
+const loadInspect = () => withEngineRetry(() => import('../../lib/pdf/inspect'));
+
 export function initMergeTool(): void {
-  const root = document.getElementById('merge-tool');
-  if (!root) return;
+  const found = document.getElementById('merge-tool');
+  if (!found) return;
+  const root: HTMLElement = found;
 
   const input = must<HTMLInputElement>('merge-input');
+  const addInput = must<HTMLInputElement>('merge-add');
   const pick = must<HTMLLabelElement>('merge-pick');
+  const addLabel = must<HTMLLabelElement>('merge-add-label');
   const drop = must<HTMLDivElement>('merge-drop');
   const notice = must<HTMLParagraphElement>('merge-notice');
   const list = must<HTMLOListElement>('merge-list');
   const controls = must<HTMLDivElement>('merge-controls');
+  const actions = must<HTMLDivElement>('merge-actions');
+  const removeBad = must<HTMLButtonElement>('merge-remove-bad');
   const bookmarks = must<HTMLInputElement>('merge-bookmarks');
   const runBtn = must<HTMLButtonElement>('merge-run');
   const hint = must<HTMLParagraphElement>('merge-hint');
@@ -70,12 +109,12 @@ export function initMergeTool(): void {
   const progressBar = must<HTMLProgressElement>('merge-progress-bar');
   const cancelBtn = must<HTMLButtonElement>('merge-cancel');
   const result = must<HTMLDivElement>('merge-result');
+  const headline = must<HTMLParagraphElement>('merge-headline');
   const summary = must<HTMLParagraphElement>('merge-summary');
+  const saveName = must<HTMLParagraphElement>('merge-save-name');
   const notes = must<HTMLUListElement>('merge-notes');
   const download = must<HTMLAnchorElement>('merge-download');
   const resetBtn = must<HTMLButtonElement>('merge-reset');
-  const errorBox = must<HTMLParagraphElement>('merge-error');
-  const status = must<HTMLParagraphElement>('merge-status');
 
   let state: State = 'empty';
   let entries: Entry[] = [];
@@ -86,14 +125,32 @@ export function initMergeTool(): void {
   let blobUrl: string | null = null;
   // Files are inspected one at a time to bound memory.
   let inspectQueue: Promise<void> = Promise.resolve();
+  let engineShown = false;
+  // A row drag holds re-renders: replacing the list would detach the dragged row and its pointer capture.
+  let dragging = false;
+  let renderHeld = false;
 
-  const announce = (msg: string): void => {
-    // Clearing first makes screen readers repeat an identical message.
-    status.textContent = '';
-    requestAnimationFrame(() => {
-      status.textContent = msg;
-    });
-  };
+  const status = (msg: string): void => announce('status', msg, root);
+
+  const preload = schedulePreload(
+    async () => {
+      const m = await loadInspect();
+      await m.preloadPdfJs();
+      await warmWorker(createMergeWorker);
+    },
+    { root, immediate: [pick, input, addLabel, addInput], dropZone: root },
+  );
+
+  /**
+   * Waits for a running preload (the same promise: nothing is fetched twice), saying so once. `claim`: the
+   * real engine load starts here, so a preload that has not started yet is dropped.
+   */
+  async function afterPreload(claim = false): Promise<void> {
+    const p = claim ? preload.claim() : preload.pending();
+    if (!p) return;
+    status(PREPARING);
+    await p;
+  }
 
   const showNotice = (msg: string | null): void => {
     notice.hidden = !msg;
@@ -113,9 +170,11 @@ export function initMergeTool(): void {
 
   const totalBytes = (): number => entries.reduce((a, e) => a + e.file.size, 0);
   const totalPages = (): number => entries.reduce((a, e) => a + (e.pageCount ?? 0), 0);
+  const errorCards = (): Entry[] => entries.filter((e) => e.error !== null);
 
   function blocker(): string | null {
     if (entries.length < 2) return entries.length === 1 ? '파일을 하나 더 추가하면 합칠 수 있습니다.' : null;
+    if (entries.some((e) => e.pending)) return '처리 도구를 불러오지 못해 파일을 확인하지 못했습니다.';
     if (entries.some((e) => e.inspecting)) return '파일을 확인하는 중입니다.';
     if (entries.some((e) => e.error)) return '문제가 있는 파일을 목록에서 삭제하면 합칠 수 있습니다.';
     if (entries.some((e) => e.locked)) return '비밀번호가 걸린 파일의 비밀번호를 입력하면 합칠 수 있습니다.';
@@ -124,19 +183,17 @@ export function initMergeTool(): void {
 
   function setState(next: State): void {
     state = next;
-    root!.dataset.state = next;
+    root.dataset.state = next;
     const hasFiles = entries.length > 0;
     const busy = next === 'merging';
-    drop.hidden = next === 'done' || busy;
-    pick.textContent = hasFiles ? '파일 추가' : 'PDF 파일 선택';
+    if (busy) document.body.dataset.busy = 'merge';
+    else delete document.body.dataset.busy;
+    drop.hidden = hasFiles || next === 'done' || busy;
     list.hidden = !hasFiles || next === 'done';
     controls.hidden = !hasFiles || busy || next === 'done';
+    actions.hidden = !hasFiles || busy || next === 'done';
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
-    if (next !== 'error') {
-      errorBox.hidden = true;
-      errorBox.textContent = '';
-    }
     confirmBox.hidden = true;
     list.querySelectorAll('button, input').forEach((b) => {
       (b as HTMLButtonElement | HTMLInputElement).disabled = busy;
@@ -147,13 +204,19 @@ export function initMergeTool(): void {
 
   function updateRun(): void {
     const why = blocker();
+    runBtn.textContent = `PDF ${entries.length}개 합치기`;
     runBtn.disabled = why !== null || state === 'merging';
     hint.textContent = why ?? '';
+    removeBad.hidden = errorCards().length < 2;
   }
 
   // ---------- file list ----------
 
   function renderList(): void {
+    if (dragging) {
+      renderHeld = true;
+      return;
+    }
     const focusedId = (document.activeElement as HTMLElement | null)?.closest('li')?.dataset.id;
     const focusedRole = (document.activeElement as HTMLElement | null)?.dataset.role;
     list.replaceChildren(...entries.map((e, i) => renderItem(e, i)));
@@ -162,72 +225,89 @@ export function initMergeTool(): void {
     }
   }
 
+  function iconButton(role: string, label: string, icon: string, onClick: () => void, cls = ''): HTMLButtonElement {
+    const b = el('button', `btn small ghost icon-btn ${cls}`.trim());
+    b.type = 'button';
+    b.dataset.role = role;
+    b.setAttribute('aria-label', label);
+    b.append(svgIcon(icon));
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
   function renderItem(e: Entry, i: number): HTMLLIElement {
     const li = el('li', 'file-item');
     li.dataset.id = String(e.id);
     const name = e.file.name;
 
+    // Pointer-only drag handle; the keyboard uses the ↑↓ buttons.
+    const handle = el('span', 'drag-handle');
+    handle.setAttribute('aria-hidden', 'true');
+    handle.tabIndex = -1;
+    handle.textContent = '⋮⋮';
+    handle.addEventListener('pointerdown', (ev) => beginDrag(ev, li, e.id));
+
     const thumb = el('div', 'thumb');
     if (e.thumbnail) thumb.append(e.thumbnail);
-    else thumb.append(el('span', 'thumb-ph', e.locked ? '잠김' : e.inspecting ? '확인 중' : 'PDF'));
+    else thumb.append(el('span', 'thumb-ph', e.locked ? '잠김' : e.inspecting ? '확인 중' : e.pending ? '대기' : 'PDF'));
     thumb.setAttribute('aria-hidden', 'true');
 
     const meta = el('div', 'meta');
-    meta.append(el('p', 'name', name));
-    const info = [e.pageCount !== null ? formatPages(e.pageCount) : null, formatMB(e.file.size)].filter(Boolean).join(' · ');
-    meta.append(el('p', 'info', info));
-    if (e.encrypted === 'owner' && !e.error) {
-      meta.append(el('p', 'note', '보안 설정(편집 제한)이 해제된 사본이 만들어집니다'));
+    const nameEl = el('p', 'name', name);
+    nameEl.title = name;
+    meta.append(nameEl);
+    const info = el('p', 'info');
+    if (e.locked && !e.error) {
+      const s = el('span', 'state-ico');
+      s.append(svgIcon(ICONS.lock), el('span', 'visually-hidden', '잠김'));
+      info.append(s, ' ');
+    } else if (e.error) {
+      const s = el('span', 'state-ico err');
+      s.append(svgIcon(ICONS.error), el('span', 'visually-hidden', '오류'));
+      info.append(s, ' ');
     }
-    if (e.error) meta.append(el('p', 'file-error', MESSAGES[e.error]));
+    info.append([e.pageCount !== null ? formatPages(e.pageCount) : null, formatSize(e.file.size)].filter(Boolean).join(' · '));
+    meta.append(info);
 
-    const actions = el('div', 'actions');
-    const up = el('button', 'btn small ghost', '위로');
-    up.type = 'button';
-    up.dataset.role = 'up';
-    up.setAttribute('aria-label', `${name} 위로 이동`);
+    const act = el('div', 'actions');
+    const up = iconButton('up', `${name} 위로 이동`, ICONS.up, () => reorder(e.id, i - 1, 'up'));
     up.disabled = i === 0;
-    up.addEventListener('click', () => move(e.id, -1));
-    const down = el('button', 'btn small ghost', '아래로');
-    down.type = 'button';
-    down.dataset.role = 'down';
-    down.setAttribute('aria-label', `${name} 아래로 이동`);
+    const down = iconButton('down', `${name} 아래로 이동`, ICONS.down, () => reorder(e.id, i + 1, 'down'));
     down.disabled = i === entries.length - 1;
-    down.addEventListener('click', () => move(e.id, 1));
-    const del = el('button', 'btn small ghost danger', '삭제');
-    del.type = 'button';
-    del.dataset.role = 'remove';
-    del.setAttribute('aria-label', `${name} 삭제`);
-    del.addEventListener('click', () => remove(e.id));
-    actions.append(up, down, del);
+    const del = iconButton('remove', `${name} 삭제`, ICONS.remove, () => remove(e.id), 'danger');
+    act.append(up, down, del);
 
-    li.append(thumb, meta);
+    li.append(handle, thumb, meta, act);
+    // Password and error content expands the row below.
+    if (e.encrypted === 'owner' && !e.error) li.append(el('p', 'row-note', '보안 설정(편집 제한)이 해제된 사본이 만들어집니다'));
+    if (e.error) li.append(el('p', 'row-note file-error', MESSAGES[e.error]));
     if (e.locked && !e.error) li.append(renderPasswordForm(e));
-    li.append(actions);
     return li;
   }
 
   function renderPasswordForm(e: Entry): HTMLFormElement {
-    const form = el('form', 'pw');
+    const form = el('form', 'pw row-note');
     form.noValidate = true;
     const fieldId = `pw-${e.id}`;
-    const label = el('label', 'pw-label', '이 파일은 비밀번호로 보호되어 있습니다');
+    const stateLine = el('p', 'pw-state', '이 파일은 비밀번호로 보호되어 있습니다.');
+    stateLine.id = `${fieldId}-state`;
+    const label = el('label', 'pw-label', '비밀번호');
     label.htmlFor = fieldId;
-    const row = el('div', 'row');
+    const row = el('div', 'row pw-row');
     const pw = el('input', 'pw-input');
     pw.type = 'password';
     pw.id = fieldId;
     pw.autocomplete = 'off';
     pw.dataset.role = 'password';
-    pw.setAttribute('aria-describedby', `${fieldId}-err`);
+    pw.setAttribute('aria-describedby', `${fieldId}-state ${fieldId}-err`);
     const ok = el('button', 'btn small primary', '확인');
     ok.type = 'submit';
     ok.dataset.role = 'unlock';
     ok.setAttribute('aria-label', `${e.file.name} 비밀번호 확인`);
-    row.append(pw, ok);
+    row.append(pw, passwordToggle(pw), ok);
     const err = el('p', 'pw-error');
     err.id = `${fieldId}-err`;
-    form.append(label, row, err);
+    form.append(stateLine, label, row, err);
     form.addEventListener('submit', (ev) => {
       ev.preventDefault();
       void unlock(e.id, pw.value, err, pw);
@@ -235,19 +315,37 @@ export function initMergeTool(): void {
     return form;
   }
 
-  function move(id: number, delta: -1 | 1): void {
+  /** The one reorder path: the ↑↓ buttons and a drag drop both end here (same announcement). */
+  function reorder(id: number, to: number, focusRole?: 'up' | 'down'): void {
     const i = entries.findIndex((e) => e.id === id);
-    const j = i + delta;
-    if (i < 0 || j < 0 || j >= entries.length) return;
+    const j = Math.max(0, Math.min(entries.length - 1, to));
+    if (i < 0 || i === j) return;
     const [item] = entries.splice(i, 1);
     entries.splice(j, 0, item!);
     goListing();
-    // Focus follows the moved item; if its button is now disabled (top/bottom), use the other one.
-    const li = list.querySelector<HTMLElement>(`li[data-id="${id}"]`);
-    const same = li?.querySelector<HTMLButtonElement>(`[data-role="${delta < 0 ? 'up' : 'down'}"]`);
-    const other = li?.querySelector<HTMLButtonElement>(`[data-role="${delta < 0 ? 'down' : 'up'}"]`);
-    (same && !same.disabled ? same : other)?.focus();
-    announce(`${item!.file.name}: ${entries.length}개 중 ${j + 1}번째로 옮겼습니다.`);
+    if (focusRole) {
+      // Focus follows the moved item; if its button is now disabled (top/bottom), use the other one.
+      const li = list.querySelector<HTMLElement>(`li[data-id="${id}"]`);
+      const same = li?.querySelector<HTMLButtonElement>(`[data-role="${focusRole}"]`);
+      const other = li?.querySelector<HTMLButtonElement>(`[data-role="${focusRole === 'up' ? 'down' : 'up'}"]`);
+      (same && !same.disabled ? same : other)?.focus();
+    }
+    status(`${item!.file.name}: ${entries.length}개 중 ${j + 1}번째로 옮겼습니다.`);
+  }
+
+  function beginDrag(ev: PointerEvent, li: HTMLLIElement, id: number): void {
+    if (state !== 'listing' || ev.button > 0 || entries.length < 2) return;
+    ev.preventDefault();
+    dragging = true;
+    renderHeld = false;
+    startRowDrag(ev, li, list, (to) => {
+      dragging = false;
+      const held = renderHeld;
+      renderHeld = false;
+      // reorder() re-renders; otherwise catch up once with what changed during the drag (e.g. an inspection).
+      if (to !== null) reorder(id, to);
+      else if (held) renderList();
+    });
   }
 
   function remove(id: number): void {
@@ -264,18 +362,46 @@ export function initMergeTool(): void {
       const next = entries[Math.min(i, entries.length - 1)]!;
       list.querySelector<HTMLElement>(`li[data-id="${next.id}"] [data-role="remove"]`)?.focus();
     }
-    announce(`${gone!.file.name} 파일을 목록에서 뺐습니다. ${entries.length}개 남았습니다.`);
+    status(`${gone!.file.name} 파일을 목록에서 뺐습니다. ${entries.length}개 남았습니다.`);
+  }
+
+  function removeProblemFiles(): void {
+    const bad = errorCards();
+    if (bad.length < 2) return;
+    entries = entries.filter((e) => e.error === null);
+    showNotice(null);
+    if (!entries.length) {
+      setState('empty');
+      input.focus();
+    } else {
+      goListing();
+      (runBtn.disabled ? addInput : runBtn).focus();
+    }
+    status(`문제 파일 ${bad.length}개를 목록에서 뺐습니다. ${entries.length}개 남았습니다.`);
   }
 
   function goListing(): void {
     setState(entries.length ? 'listing' : 'empty');
   }
 
+  // ---------- engine ----------
+
+  /** The engine did not load: files stay un-marked (대기), the page-level panel offers 새로고침. */
+  function engineFailure(phase: 'load' | 'process'): void {
+    reportError({ tool: 'pdf-merge', phase, code: 'engine' });
+    if (engineShown) return;
+    engineShown = true;
+    void showEngineError();
+  }
+
   // ---------- adding & inspecting ----------
 
-  async function addFiles(files: File[]): Promise<void> {
-    if (!files.length || state === 'merging') return;
+  async function addFiles(picked: File[]): Promise<void> {
+    if (!picked.length || state === 'merging') return;
     if (state === 'done') resetAll(false);
+    clearAlert(root);
+    const { pdfs, rejected } = await splitPdfFiles(picked);
+    let files = pdfs;
     loadDynamicFont();
     const device = detectDevice();
     const messages: string[] = [];
@@ -300,6 +426,7 @@ export function initMergeTool(): void {
         encrypted: 'none',
         locked: false,
         inspecting: true,
+        pending: false,
         error: null,
         thumbnail: null,
       });
@@ -309,14 +436,21 @@ export function initMergeTool(): void {
       if (r.level !== 'ok') messages.push(r.message);
     }
     showNotice(messages.length ? messages.join(' ') : null);
+    if (rejected.length) announce('alert', nonPdfMessage(rejected.map((f) => f.name)), root);
     if (!accepted.length) {
-      if (messages.length) announce(messages.join(' '));
+      if (messages.length && !rejected.length) status(messages.join(' '));
       return;
+    }
+    // Files an earlier engine failure left un-inspected get another try with the new ones.
+    const retry = entries.filter((e) => e.pending);
+    for (const e of retry) {
+      e.pending = false;
+      e.inspecting = true;
     }
     entries.push(...accepted);
     goListing();
-    announce(`파일 ${accepted.length}개를 추가했습니다. 모두 ${entries.length}개입니다.`);
-    for (const e of accepted) {
+    if (!rejected.length) status(`파일 ${accepted.length}개를 추가했습니다. 모두 ${entries.length}개입니다.`);
+    for (const e of [...retry, ...accepted]) {
       inspectQueue = inspectQueue.then(() => inspectEntry(e)).catch(() => undefined);
     }
     await inspectQueue;
@@ -326,24 +460,32 @@ export function initMergeTool(): void {
     if (!entries.includes(e)) return;
     try {
       const bytes = new Uint8Array(await e.file.arrayBuffer());
-      const { inspect } = await import('../../lib/pdf/inspect');
+      await afterPreload();
+      const { inspect } = await loadInspect();
       const r = await inspect(bytes, password);
       e.encrypted = r.encrypted;
       e.pageCount = r.pageCount;
       e.thumbnail = r.thumbnail;
       e.locked = r.pageCount === null;
       e.error = null;
+      e.pending = false;
     } catch (err) {
       const code = (err as { code?: PdfErrorCode }).code;
       if (code === 'wrong-password') throw err;
-      e.error = code === 'not-pdf' ? 'not-pdf' : code === 'oom' ? 'oom' : 'corrupt';
+      if (isEngineLoadFailure(err)) {
+        e.pending = true;
+        engineFailure('load');
+      } else {
+        e.error = code === 'not-pdf' ? 'not-pdf' : code === 'oom' ? 'oom' : 'corrupt';
+        if (e.error === 'oom') reportError({ tool: 'pdf-merge', phase: 'parse', code: 'oom' });
+      }
     } finally {
       e.inspecting = false;
     }
     if (entries.includes(e) && state !== 'merging') {
       renderList();
       updateRun();
-      if (e.error) announce(`${e.file.name}: ${MESSAGES[e.error]}`);
+      if (e.error) status(`${e.file.name}: ${MESSAGES[e.error]}`);
     }
   }
 
@@ -361,15 +503,15 @@ export function initMergeTool(): void {
     } catch {
       e.inspecting = false;
       errEl.textContent = MESSAGES['wrong-password'];
-      announce(`${e.file.name}: ${MESSAGES['wrong-password']}`);
+      status(`${e.file.name}: ${MESSAGES['wrong-password']}`);
       field.value = '';
       field.focus();
       updateRun();
       return;
     }
-    if (!e.locked && !e.error) {
+    if (!e.locked && !e.error && !e.pending) {
       e.password = pw;
-      announce(`${e.file.name}의 잠금을 풀었습니다.`);
+      status(`${e.file.name}의 잠금을 풀었습니다.`);
       list.querySelector<HTMLElement>(`li[data-id="${e.id}"] [data-role="remove"]`)?.focus();
     }
   }
@@ -381,14 +523,14 @@ export function initMergeTool(): void {
     const check = checkMerge(totalBytes(), totalPages(), detectDevice());
     if (check.level === 'hard') {
       showNotice(check.message);
-      announce(check.message);
+      status(check.message);
       return;
     }
     if (check.level === 'soft') {
       confirmText.textContent = check.message;
       confirmBox.hidden = false;
       confirmYes.focus();
-      announce(check.message);
+      status(check.message);
       return;
     }
     void runMerge();
@@ -398,12 +540,13 @@ export function initMergeTool(): void {
     const run = ++runId;
     confirmBox.hidden = true;
     showNotice(null);
+    clearAlert(root);
     const snapshot = entries.slice();
     setState('merging');
     progressBar.max = snapshot.length;
     progressBar.value = 0;
     progressText.textContent = `합치는 중… (0/${snapshot.length})`;
-    announce('합치는 중입니다.');
+    status('합치는 중입니다.');
     cancelBtn.focus();
 
     let files: WorkerFile[];
@@ -411,16 +554,20 @@ export function initMergeTool(): void {
       files = await Promise.all(
         snapshot.map(async (e) => ({ buffer: await e.file.arrayBuffer(), password: e.password, title: baseName(e.file.name) })),
       );
+      await afterPreload(true);
     } catch {
       if (run === runId) fail('unknown');
       return;
     }
     if (run !== runId || state !== 'merging') return; // cancelled or restarted while reading
 
-    const w = new Worker(new URL('../../lib/pdf/merge.worker.ts', import.meta.url), { type: 'module' });
+    const w = createMergeWorker();
     worker = w;
+    // An `error` before the worker's first message means its script did not load (engine), not a file problem.
+    let answered = false;
     w.onmessage = (ev: MessageEvent<MergeResponse>) => {
       if (worker !== w) return;
+      answered = true;
       const msg = ev.data;
       if (msg.type === 'progress') {
         progressBar.value = msg.done;
@@ -428,16 +575,18 @@ export function initMergeTool(): void {
       } else if (msg.type === 'done') {
         stopWorker();
         finish(msg.bytes, msg.report, snapshot);
-      } else {
+      } else if (msg.type === 'error') {
         stopWorker();
-        fail(msg.code, msg.fileIndex === undefined ? undefined : snapshot[msg.fileIndex]);
+        if (msg.code === 'engine') engineStop();
+        else fail(msg.code, msg.fileIndex === undefined ? undefined : snapshot[msg.fileIndex]);
       }
     };
     w.onerror = (ev) => {
       ev.preventDefault();
       if (worker !== w) return;
       stopWorker();
-      fail('unknown');
+      if (!answered) engineStop();
+      else fail('unknown');
     };
     const req: MergeRequest = { type: 'merge', files, addFileBookmarks: bookmarks.checked };
     w.postMessage(
@@ -446,13 +595,22 @@ export function initMergeTool(): void {
     );
   }
 
+  /** The merge engine did not load: back to the list, nothing marked, the engine panel. */
+  function engineStop(): void {
+    runId++;
+    stopWorker();
+    goListing();
+    engineShown = false;
+    engineFailure('process');
+  }
+
   function cancel(): void {
     if (state !== 'merging') return;
     runId++;
     stopWorker();
     goListing();
     runBtn.focus();
-    announce('합치기를 취소했습니다. 파일 목록은 그대로 있습니다.');
+    status('합치기를 취소했습니다. 파일 목록은 그대로 있습니다.');
   }
 
   function finish(bytes: Uint8Array, report: MergeReport, snapshot: Entry[]): void {
@@ -461,7 +619,8 @@ export function initMergeTool(): void {
     blobUrl = URL.createObjectURL(blob);
     download.href = blobUrl;
     download.download = mergedFileName(snapshot[0]!.file.name, snapshot.length);
-    summary.textContent = `${formatPages(report.pageCount)} · ${formatMB(blob.size)}`;
+    summary.textContent = `${formatPages(report.pageCount)} · ${formatSize(blob.size)}`;
+    saveName.textContent = `저장될 이름: ${download.download}`;
     const n: string[] = [];
     if (snapshot.some((e) => e.encrypted === 'user')) n.push('합친 파일에는 비밀번호가 걸려 있지 않습니다.');
     if (report.renamedFields > 0) {
@@ -469,8 +628,9 @@ export function initMergeTool(): void {
     }
     notes.replaceChildren(...n.map((t) => el('li', undefined, t)));
     setState('done');
-    download.focus();
-    announce(`합치기를 마쳤습니다. ${summary.textContent}. ${n.join(' ')}`.trim());
+    result.scrollIntoView({ block: 'start' });
+    headline.focus({ preventScroll: true });
+    status(`합치기를 마쳤습니다. ${summary.textContent}. ${n.join(' ')}`.trim());
   }
 
   function fail(code: PdfErrorCode, entry?: Entry): void {
@@ -479,10 +639,10 @@ export function initMergeTool(): void {
       entry.locked = true;
       entry.password = undefined;
     }
+    if (code === 'oom' || code === 'unknown' || code === 'verify') reportError({ tool: 'pdf-merge', phase: 'process', code });
     const msg = entry ? `${entry.file.name}: ${MESSAGES[code]}` : MESSAGES[code];
     setState('error');
-    errorBox.textContent = msg;
-    errorBox.hidden = false;
+    announce('alert', msg, root);
     runBtn.focus();
   }
 
@@ -493,37 +653,48 @@ export function initMergeTool(): void {
     for (const e of entries) e.password = undefined;
     entries = [];
     input.value = '';
+    addInput.value = '';
     showNotice(null);
+    clearAlert(root);
+    hideEngineError();
+    engineShown = false;
     notes.replaceChildren();
     setState('empty');
     if (focus) {
       input.focus();
-      announce('처음 상태로 돌아왔습니다.');
+      status('처음 상태로 돌아왔습니다.');
     }
   }
 
   // ---------- wiring ----------
 
-  input.addEventListener('change', () => {
-    const files = Array.from(input.files ?? []);
-    input.value = '';
-    void addFiles(files);
-  });
+  for (const inp of [input, addInput]) {
+    inp.addEventListener('change', () => {
+      const files = Array.from(inp.files ?? []);
+      inp.value = '';
+      void addFiles(files);
+    });
+  }
 
-  drop.addEventListener('dragover', (ev) => {
-    if (!ev.dataTransfer?.types.includes('Files')) return;
+  // The whole tool is a drop target (the drop zone is hidden once files are listed).
+  root.addEventListener('dragover', (ev) => {
+    if (!ev.dataTransfer?.types.includes('Files') || state === 'merging') return;
     ev.preventDefault();
     ev.dataTransfer.dropEffect = 'copy';
     drop.classList.add('over');
   });
-  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-  drop.addEventListener('drop', (ev) => {
+  root.addEventListener('dragleave', (ev) => {
+    if (!root.contains(ev.relatedTarget as Node | null)) drop.classList.remove('over');
+  });
+  root.addEventListener('drop', (ev) => {
+    if (!ev.dataTransfer?.types.includes('Files')) return;
     ev.preventDefault();
     drop.classList.remove('over');
     void addFiles(Array.from(ev.dataTransfer?.files ?? []));
   });
 
   runBtn.addEventListener('click', requestMerge);
+  removeBad.addEventListener('click', removeProblemFiles);
   confirmYes.addEventListener('click', () => void runMerge());
   confirmNo.addEventListener('click', () => {
     confirmBox.hidden = true;

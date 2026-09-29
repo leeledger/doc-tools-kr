@@ -4,13 +4,18 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const SRC = join(__dirname, '..', '..', 'src');
-const FORBIDDEN = ['sendBeacon', 'XMLHttpRequest', 'WebSocket', 'EventSource'];
+const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
 /**
- * Files allowed to call fetch( — only for our own static assets (versioned same-origin GETs, no file data).
+ * Files allowed to call fetch( — only same-origin GETs of our own static files, never file data.
  * - lib/codecs/wasm-browser.ts: the jSquash codec loads (MozJPEG, resize, WebP) shared by both workers.
  * - lib/pdf/compress/wasm-browser.ts: the compress worker's qpdf load (a same-origin module import).
+ * - lib/ui/engine-load.ts: GET /deploy-manifest.json for the engine-panel copy (Polish P.1).
+ * - sw/sw.ts: the service worker's allowlisted same-origin GETs (Polish P.11; it never reads a body).
+ * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
-const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/pdf/compress/wasm-browser.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/pdf/compress/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts'];
+/** sendBeacon only in the error-beacon stub, which is off (and dropped from the bundle) unless configured. */
+const BEACON_ALLOWLIST: string[] = ['lib/ui/beacon.ts'];
 
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
@@ -32,13 +37,17 @@ describe('no network APIs in src/', () => {
     expect(hits).toEqual([]);
   });
 
-  it('uses fetch( only in allowlisted files, and the allowlist names exactly the two wasm loaders', () => {
+  it('uses fetch( only in allowlisted files', () => {
     const hits = all
       .filter((f) => /\bfetch\s*\(/.test(readFileSync(f, 'utf8')))
       .map((f) => relative(SRC, f).split('\\').join('/'));
     expect(hits.length).toBeGreaterThan(0);
     for (const h of hits) expect(FETCH_ALLOWLIST, h).toContain(h);
-    expect(FETCH_ALLOWLIST).toEqual(['lib/codecs/wasm-browser.ts', 'lib/pdf/compress/wasm-browser.ts']);
+  });
+
+  it('uses sendBeacon only in the beacon stub', () => {
+    const hits = all.filter((f) => readFileSync(f, 'utf8').includes('sendBeacon')).map((f) => relative(SRC, f).split('\\').join('/'));
+    expect(hits).toEqual(BEACON_ALLOWLIST);
   });
 
   it('never imports the original pdf-lib', () => {

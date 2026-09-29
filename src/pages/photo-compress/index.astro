@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 
@@ -18,9 +19,9 @@ const targets = [
   { value: 'custom', label: '직접 입력' },
 ];
 const percents = [
-  { value: '70', label: '70 %' },
-  { value: '50', label: '50 %' },
-  { value: '30', label: '30 %' },
+  { value: '70', label: '70%' },
+  { value: '50', label: '50%' },
+  { value: '30', label: '30%' },
   { value: 'custom', label: '직접 입력' },
 ];
 const edges = [
@@ -50,6 +51,7 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
           <input id="ph-input" class="file-input" type="file" multiple accept={accept}>
           <label class="btn primary" for="ph-input" id="ph-pick">사진 선택</label>
           <p class="drop-hint">또는 여기에 사진을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱이나 다운로드 폴더에서 고를 수 있습니다.</p>
           <p class="privacy-note">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
         </div>
 
@@ -62,16 +64,16 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
           <button type="button" class="btn ghost" id="ph-cancel">취소</button>
         </div>
 
-        <div class="error-box ph-engine-error" id="ph-engine-error" role="alert" hidden></div>
+        <EngineError />
 
         <div class="ph-done-bar" id="ph-done-bar" hidden>
           <p class="result-title" id="ph-headline"></p>
           <div class="row">
             <button type="button" class="btn primary" id="ph-zip" hidden>모두 내려받기 (ZIP)</button>
             <button type="button" class="btn ghost" id="ph-again">이 설정으로 다시 줄이기</button>
-            <button type="button" class="btn ghost" id="ph-reset">처음부터</button>
+            <button type="button" class="btn ghost" id="ph-reset">다른 사진 처리하기</button>
           </div>
-          <p class="error-box" id="ph-zip-error" role="alert" hidden></p>
+          <p class="error-box" id="ph-zip-error" role="alert" data-live="alert" hidden></p>
         </div>
 
         <div id="ph-list-box" hidden>
@@ -196,7 +198,7 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
           <p class="hint" id="ph-hint"></p>
         </div>
 
-        <p class="visually-hidden" id="ph-status" aria-live="polite"></p>
+        <p class="visually-hidden" id="ph-status" aria-live="polite" data-live="status"></p>
       </div>
       <AdSlot id="photo-compress-result" size="rect" />
     </div>

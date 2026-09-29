@@ -1,5 +1,6 @@
 // Module worker: runs mergePlus off the main thread. @cantoo/pdf-lib is only ever loaded here.
-import { PdfError, errorCode, type PdfErrorCode } from './errors';
+import { isEngineLoadFailure } from '../ui/engine-load';
+import { PdfError, errorCode, type WorkerErrorCode } from './errors';
 import { mergePlus, type MergeReport } from './mergePlus';
 import { verifyOutput } from './verify';
 
@@ -9,16 +10,20 @@ export interface WorkerFile {
   title: string;
 }
 
-export interface MergeRequest {
-  type: 'merge';
-  files: WorkerFile[];
-  addFileBookmarks: boolean;
-}
+export type MergeRequest =
+  | {
+      type: 'merge';
+      files: WorkerFile[];
+      addFileBookmarks: boolean;
+    }
+  /** Preload (Polish P.7): the worker script and its imports are loaded by now; nothing else is lazy. */
+  | { type: 'warm' };
 
 export type MergeResponse =
   | { type: 'progress'; done: number; total: number }
   | { type: 'done'; bytes: Uint8Array; report: MergeReport }
-  | { type: 'error'; code: PdfErrorCode; fileIndex?: number };
+  | { type: 'error'; code: WorkerErrorCode; fileIndex?: number }
+  | { type: 'warm-done' };
 
 /** The parts of DedicatedWorkerGlobalScope we use (the project compiles against the DOM lib). */
 interface WorkerScope {
@@ -31,6 +36,10 @@ const post = (msg: MergeResponse, transfer: Transferable[] = []): void => scope.
 
 scope.onmessage = async (ev) => {
   const req = ev.data;
+  if (req?.type === 'warm') {
+    post({ type: 'warm-done' });
+    return;
+  }
   if (req?.type !== 'merge') return;
   try {
     const { bytes, report } = await mergePlus(
@@ -44,6 +53,7 @@ scope.onmessage = async (ev) => {
     post({ type: 'done', bytes, report }, [bytes.buffer]);
   } catch (err) {
     const fileIndex = err instanceof PdfError ? err.fileIndex : undefined;
-    post(fileIndex === undefined ? { type: 'error', code: errorCode(err) } : { type: 'error', code: errorCode(err), fileIndex });
+    const code: WorkerErrorCode = isEngineLoadFailure(err) ? 'engine' : errorCode(err);
+    post(fileIndex === undefined ? { type: 'error', code } : { type: 'error', code, fileIndex });
   }
 };

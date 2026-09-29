@@ -78,7 +78,7 @@
       "version": "12.2.0",
       "license": "Apache-2.0",
       "homepage": "https://github.com/qpdf/qpdf",
-      "use": "PDF 용량 줄이기: PDF 구조 정리·암호 해제·압축 (@neslinesli93/qpdf-wasm에 포함)",
+      "use": "PDF 용량 줄이기: PDF 분석·암호 해제·압축 (@neslinesli93/qpdf-wasm에 포함)",
       "localFiles": [
         "licenses/third-party/qpdf-12.2.0/LICENSE.txt",
         "licenses/third-party/qpdf-12.2.0/NOTICE.md"

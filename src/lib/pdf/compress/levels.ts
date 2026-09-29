@@ -28,6 +28,30 @@ export const LEVELS: Record<LevelName, Level> = {
   strong: { triggerPpi: 130, targetPpi: 110, q: 55, minSsim: 0.85, ...COMMON },
 };
 
+/** Extra rungs reachable only from 목표 용량 mode (Polish P.13). */
+export type TargetRungName = 'target-1' | 'target-2';
+/** Anything the engine can run: a level or a target rung. */
+export type RungName = LevelName | TargetRungName;
+
+/**
+ * 목표 용량 rungs below 강력. Floors (never lower): 96 ppi, q 45, SSIM 0.80 — the readability floor for
+ * scanned text. They share COMMON (minBytes, minPixels, minGain) with the levels.
+ */
+export const TARGET_LADDER: Record<TargetRungName, Level> = {
+  'target-1': { triggerPpi: 110, targetPpi: 96, q: 50, minSsim: 0.82, ...COMMON },
+  'target-2': { triggerPpi: 96, targetPpi: 96, q: 45, minSsim: 0.8, ...COMMON },
+};
+export const TARGET_FLOORS = { ppi: 96, q: 45, minSsim: 0.8 } as const;
+
+/** The 목표 용량 search order: the highest quality first. */
+export const TARGET_SEARCH: readonly RungName[] = ['high', 'recommended', 'strong', 'target-1', 'target-2'];
+
+export const isPlainLevel = (r: RungName): r is LevelName => r in LEVELS;
+export const rungLevel = (r: RungName): Level => (isPlainLevel(r) ? LEVELS[r] : TARGET_LADDER[r]);
+
+/** 목표 용량 is entered in MB; 1 MB = 1,000,000 bytes, so the result fits under both conventions. */
+export const TARGET_MB_BYTES = 1_000_000;
+
 /** "이미지로 변환": every page rendered at 150 dpi (long side capped) and stored as JPEG q70. */
 export const RASTER = { dpi: 150, q: 70, maxLongPx: 3000 } as const;
 

@@ -7,6 +7,22 @@ export function formatMB(bytes: number): string {
   return `${v.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`;
 }
 
+const KIB = 1024;
+
+/**
+ * Every file-size display (UX-AUDIT-1 P1-5). Below 1 MiB in KB, 1024-based and rounded up (Step 3 rule:
+ * never smaller than Windows Explorer shows): one decimal below 10 KB (at least 0.1 KB), whole numbers from
+ * 10 KB. From 1 MiB the formatMB rule. Limit messages keep formatMB.
+ */
+export function formatSize(bytes: number): string {
+  if (bytes <= 0) return '0 KB';
+  if (bytes >= MB) return formatMB(bytes);
+  const kb = bytes / KIB;
+  const tenth = Math.max(Math.ceil(kb * 10 - 1e-9) / 10, 0.1);
+  if (tenth < 10) return `${tenth.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KB`;
+  return `${Math.ceil(kb - 1e-9).toLocaleString('ko-KR')} KB`;
+}
+
 export function formatPages(n: number): string {
   return `${n.toLocaleString('ko-KR')}쪽`;
 }

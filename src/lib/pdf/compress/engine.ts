@@ -9,12 +9,13 @@ import { PdfCorruptError, PdfError, PdfPasswordRequiredError, PdfWrongPasswordEr
 import type { CompressDeps, QpdfResult } from './deps';
 import { dedupeStreams } from './dedupe';
 import { recompressImages, type ImagePassHooks } from './images';
-import { FLATE6_ABOVE, KEEP_ORIGINAL_RATIO, LEVELS, type LevelName } from './levels';
+import { FLATE6_ABOVE, KEEP_ORIGINAL_RATIO, rungLevel, type RungName } from './levels';
 import type { CompressReport, Phase, Progress } from './report';
 import { hasSignature } from './signature';
 
 export interface CompressOptions {
-  level: LevelName;
+  /** A level, or a 목표 용량 rung (target mode only). */
+  level: RungName;
   /** The user password, only when the user gave one. Used for the qpdf call only. */
   password?: string;
   /** Page count from the pdf.js inspection of the input. The output must have exactly this many. */
@@ -84,7 +85,7 @@ async function loadLenient(bytes: Uint8Array): Promise<PDFDocument> {
 
 export async function compressPdf(input: Uint8Array, opts: CompressOptions, deps: CompressDeps): Promise<CompressResult> {
   assertPdfHeader(input);
-  const level = LEVELS[opts.level];
+  const level = rungLevel(opts.level);
   const progress = (phase: Phase, done = 0, total = 1): void => opts.onProgress?.({ phase, done, total });
   const passwordGiven = Boolean(opts.password);
   const report: CompressReport = {

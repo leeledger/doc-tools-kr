@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 
@@ -25,14 +26,17 @@ const jsonLd = toolJsonLd(tool, Astro.site);
           <input id="merge-input" class="file-input" type="file" accept="application/pdf,.pdf" multiple>
           <label class="btn primary" for="merge-input" id="merge-pick">PDF 파일 선택</label>
           <p class="drop-hint">또는 여기에 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱이나 다운로드 폴더에서 고를 수 있습니다.</p>
           <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
         </div>
 
         <p class="notice" id="merge-notice" hidden></p>
+        <EngineError />
 
         <ol class="file-list" id="merge-list" aria-label="합칠 파일 목록" hidden></ol>
 
         <div class="merge-controls" id="merge-controls" hidden>
+          <button type="button" class="btn ghost danger" id="merge-remove-bad" hidden>문제 파일 모두 빼기</button>
           <label class="check">
             <input type="checkbox" id="merge-bookmarks" checked>
             <span>파일마다 책갈피 추가</span>
@@ -44,10 +48,13 @@ const jsonLd = toolJsonLd(tool, Astro.site);
               <button type="button" class="btn ghost" id="merge-confirm-no">취소</button>
             </div>
           </div>
-          <div class="row">
-            <button type="button" class="btn primary" id="merge-run" disabled>PDF 합치기</button>
-          </div>
           <p class="hint" id="merge-hint"></p>
+        </div>
+
+        <div class="row merge-actions" id="merge-actions" hidden>
+          <button type="button" class="btn primary" id="merge-run" disabled>PDF 합치기</button>
+          <input id="merge-add" class="file-input" type="file" accept="application/pdf,.pdf" multiple>
+          <label class="btn ghost" for="merge-add" id="merge-add-label">파일 추가</label>
         </div>
 
         <div class="progress-box" id="merge-progress" hidden>
@@ -57,18 +64,19 @@ const jsonLd = toolJsonLd(tool, Astro.site);
         </div>
 
         <div class="result" id="merge-result" hidden>
-          <p class="result-title">합친 파일이 준비되었습니다</p>
+          <p class="result-title" id="merge-headline" tabindex="-1">합친 파일이 준비되었습니다</p>
           <p class="result-summary" id="merge-summary"></p>
-          <ul class="result-notes" id="merge-notes"></ul>
           <div class="row">
-            <a class="btn primary" id="merge-download" href="#" download>내려받기</a>
-            <button type="button" class="btn ghost" id="merge-reset">처음부터</button>
+            <a class="btn primary" id="merge-download" href="#" download tabindex="0">내려받기</a>
+            <button type="button" class="btn ghost" id="merge-reset">다른 파일 처리하기</button>
           </div>
+          <p class="save-name" id="merge-save-name"></p>
+          <ul class="result-notes" id="merge-notes"></ul>
           <p class="related-line">합친 파일의 용량이 크다면 <a href="/pdf-compress/">PDF 용량 줄이기</a>에서 줄일 수 있습니다.</p>
         </div>
 
-        <p class="error-box" id="merge-error" role="alert" hidden></p>
-        <p class="visually-hidden" id="merge-status" aria-live="polite"></p>
+        <p class="error-box" id="merge-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="merge-status" aria-live="polite" data-live="status"></p>
       </div>
       <AdSlot id="pdf-merge-result" size="rect" />
     </div>
@@ -79,8 +87,8 @@ const jsonLd = toolJsonLd(tool, Astro.site);
       <h2 id="howto-title">사용 방법</h2>
       <ol class="steps">
         <li><strong>PDF 파일 선택</strong><span>합칠 PDF 파일을 두 개 이상 고르거나 끌어다 놓습니다.</span></li>
-        <li><strong>순서 정하기</strong><span>위로·아래로 버튼으로 파일 순서를 정합니다. 비밀번호가 걸린 파일은 비밀번호를 입력합니다.</span></li>
-        <li><strong>합치고 내려받기</strong><span>PDF 합치기를 누른 뒤 내려받기로 저장합니다.</span></li>
+        <li><strong>순서 정하기</strong><span>위로·아래로 버튼이나 왼쪽 손잡이를 끌어서 파일 순서를 정합니다. 비밀번호가 걸린 파일은 비밀번호를 입력합니다.</span></li>
+        <li><strong>합치고 내려받기</strong><span>합치기 버튼을 누른 뒤 내려받기로 저장합니다.</span></li>
       </ol>
     </div>
   </section>
@@ -90,7 +98,7 @@ const jsonLd = toolJsonLd(tool, Astro.site);
       <h2 id="why-title">안전한 이유</h2>
       <ul class="points">
         <li><strong>업로드하지 않습니다</strong><span>합치는 작업은 이 브라우저 안에서 실행됩니다. 파일 내용은 네트워크로 전송되지 않습니다.</span></li>
-        <li><strong>남기지 않습니다</strong><span>파일과 비밀번호는 이 화면의 메모리에만 머무르고, 처음부터를 누르거나 창을 닫으면 사라집니다.</span></li>
+        <li><strong>남기지 않습니다</strong><span>파일과 비밀번호는 이 화면의 메모리에만 머무르고, 다른 파일 처리하기를 누르거나 창을 닫으면 사라집니다.</span></li>
         <li><strong>직접 확인할 수 있습니다</strong><span>브라우저 개발자 도구의 네트워크 탭을 열어 두고 합쳐 보면 파일이 전송되지 않는 것을 볼 수 있습니다.</span></li>
       </ul>
     </div>

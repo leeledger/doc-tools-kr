@@ -13,11 +13,62 @@
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
-/* footer links */
-.foot .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; justify-content: space-between; }
-.foot-links { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+/* footer: operator and contact, legal links, copyright (Polish P.4) */
+.foot-inner { display: grid; gap: 2px; }
+.foot-op a { color: var(--muted); display: inline-block; min-height: 24px; }
+/* The links' own padding is pulled back so every footer line starts at the same edge (UX-AUDIT-1 §4). */
+.foot-links { display: flex; flex-wrap: wrap; gap: 0 8px; margin-left: -6px; }
 .foot-links a { color: var(--muted); display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
-.foot-links a:hover { color: var(--text); }
+.foot-links a:hover, .foot-op a:hover { color: var(--text); }
+
+/* header tools menu (Polish P.9) */
+.menu { position: relative; }
+button.menu-toggle { border: 0; background: none; font: inherit; font-size: 15px; cursor: pointer; }
+button.menu-toggle::after {
+  content: ""; width: 6px; height: 6px; margin-left: 8px; border: solid currentColor; border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-2px) rotate(45deg);
+}
+button.menu-toggle[aria-expanded="true"]::after { transform: translateY(2px) rotate(-135deg); }
+.menu-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 6; min-width: 260px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / .14);
+}
+.menu-panel ul { list-style: none; margin: 0; padding: 0; }
+.menu-panel a {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px;
+  text-decoration: none; color: var(--text); font-size: 15.5px;
+}
+.menu-panel a:hover { background: var(--brand-soft); }
+.menu-panel a[aria-current="page"] { color: var(--brand); font-weight: 700; }
+.menu-panel svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--brand); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.menu-sep { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+@media (max-width: 640px) {
+  /* A full-width sheet under the sticky header, with larger items. */
+  .menu { position: static; }
+  .menu-panel { position: absolute; top: 100%; left: 0; right: 0; min-width: 0; border-radius: 0 0 12px 12px; border-width: 0 0 1px; padding: 8px 12px 12px; }
+  .menu-panel a { min-height: 48px; }
+}
+
+/* home: soon tools, names only (Polish P.6) */
+.soon { margin-top: 28px; }
+.soon h3 { margin: 0 0 10px; font-size: 17px; color: var(--muted); }
+.soon-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.soon-list li { color: var(--muted); font-size: 15px; padding: 4px 12px; border: 1px dashed var(--line); border-radius: 999px; }
+.nf-tools { margin: 0 0 24px; padding-left: 20px; }
+.nf-tools a { color: var(--brand); display: inline-block; min-height: 24px; }
+
+/* service-worker update bar (Polish P.11) */
+.sw-bar {
+  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; max-width: calc(100vw - 24px);
+  background: var(--text); color: var(--bg); border-radius: 12px; box-shadow: 0 8px 24px rgb(0 0 0 / .2);
+}
+.sw-bar .btn { flex: none; }
+
+/* icons inside buttons */
+.ico { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn.icon-btn { width: 44px; padding: 0; flex: none; }
 
 /* live tool card: whole card is the link target */
 .card.live { border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
@@ -44,7 +95,7 @@
 .faq { border-top: 1px solid var(--line); }
 
 .prose { padding: 56px 0 72px; }
-.prose h1 { font-size: clamp(28px, 4vw, 38px); letter-spacing: -0.02em; line-height: 1.3; margin: 0 0 12px; }
+.prose h1 { font-size: clamp(28px, 4vw, 38px); letter-spacing: -0.02em; line-height: 1.3; margin: 0 0 12px; font-weight: 800; }
 .prose h2 { font-size: 21px; margin: 36px 0 8px; }
 .prose p, .prose li { color: var(--text); }
 .prose .meta-line { color: var(--muted); margin: 0 0 24px; }
@@ -75,7 +126,13 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .drop .btn { cursor: pointer; }
 .file-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 .file-input:focus-visible + label { outline: 3px solid var(--brand); outline-offset: 3px; }
-.drop-hint { margin: 6px 0 0; color: var(--muted); }
+.drop-hint, .drop-hint-touch { margin: 6px 0 0; color: var(--muted); }
+.drop-hint-touch { display: none; }
+/* Touch devices cannot drag files: the file-app hint replaces the drop hint (Polish P.17). */
+@media (pointer: coarse) {
+  .drop-hint { display: none; }
+  .drop-hint-touch { display: block; }
+}
 .privacy-note { margin: 4px 0 0; font-size: 14.5px; color: var(--muted); }
 .privacy-note a { color: var(--brand); display: inline-block; min-height: 24px; }
 
@@ -107,14 +164,58 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .actions { grid-area: actions; display: flex; flex-wrap: wrap; gap: 8px; align-self: end; }
 
 .pw { grid-area: pw; display: grid; gap: 6px; min-width: 0; }
-.pw-label { font-size: 15px; }
+.pw-state { margin: 0; font-size: 15px; }
+.pw-label { font-size: 15px; font-weight: 700; }
+.pw-row { gap: 8px; }
+.pw-row .btn { flex: none; }
 .pw-input {
   min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--muted); background: var(--bg); color: var(--text);
   font: inherit; flex: 1 1 140px; min-width: 0;
 }
 .pw-error { margin: 0; color: var(--danger); font-size: 15px; min-height: 1.4em; }
 
-.merge-controls { margin-top: 20px; display: grid; gap: 12px; }
+.merge-controls { margin-top: 16px; display: grid; gap: 12px; }
+.merge-controls > .btn { justify-self: start; }
+.merge-actions { position: relative; margin-top: 12px; }
+
+/* merge list: compact rows (Polish P.16) */
+.file-list { gap: 8px; }
+.file-list > .file-item {
+  grid-template-columns: 44px 48px minmax(0, 1fr) auto; grid-template-rows: auto;
+  grid-template-areas: "handle thumb meta actions"; align-items: center; gap: 0 8px; padding: 5px 8px;
+}
+.file-list > .file-item > .row-note { grid-column: 1 / -1; margin: 4px 0; }
+.file-list > .file-item > .pw { grid-area: auto; grid-column: 1 / -1; padding-bottom: 4px; }
+.file-list .thumb { width: 48px; height: 64px; border-radius: 6px; }
+.file-list .thumb-ph { font-size: 12px; text-align: center; line-height: 1.2; }
+.file-list .meta .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-list .meta .info { font-size: 14.5px; }
+.file-list .actions { gap: 4px; align-self: center; flex-wrap: nowrap; }
+.file-list p.row-note { font-size: 14.5px; color: var(--muted); }
+.file-list p.row-note.file-error { color: var(--danger); }
+.drag-handle {
+  grid-area: handle; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 8px;
+  color: var(--muted); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; letter-spacing: -2px;
+}
+.drag-handle:hover { background: var(--brand-soft); color: var(--text); }
+.file-item.dragging { cursor: grabbing; box-shadow: 0 10px 28px rgb(0 0 0 / .18); }
+.drag-placeholder { border: 2px dashed var(--brand); border-radius: var(--radius); background: var(--brand-soft); }
+.state-ico { display: inline-flex; vertical-align: -3px; color: var(--muted); }
+.state-ico .ico { width: 16px; height: 16px; }
+.state-ico.err { color: var(--danger); }
+@media (max-width: 400px) {
+  /* At phone widths the name needs the room more than the thumbnail does. */
+  .file-list > .file-item { grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "handle meta actions"; }
+  .file-list .thumb { display: none; }
+}
+@media (max-width: 640px) {
+  /* The actions bar stays in reach while the list scrolls; focused rows are never covered (WCAG 2.4.11). */
+  .merge-actions {
+    position: sticky; bottom: 0; z-index: 4; background: var(--bg); margin-top: 8px;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line);
+  }
+  html:has(#merge-tool[data-state="listing"]), html:has(#merge-tool[data-state="error"]) { scroll-padding-bottom: 96px; }
+}
 .check { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: var(--brand); }
 .hint { margin: 0; color: var(--muted); font-size: 15px; min-height: 1.5em; }
@@ -127,11 +228,22 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .result { margin-top: 20px; padding: 20px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--brand-soft); }
 .result-title { margin: 0; font-weight: 800; font-size: 19px; }
 .result-summary { margin: 4px 0 8px; color: var(--muted); }
+.save-name { margin: 10px 0 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+.target-chip {
+  display: inline-block; margin: 0 0 12px; padding: 4px 12px; border-radius: 999px;
+  background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 15px;
+}
+.engine-error .engine-title { font-weight: 800; }
+.engine-error p { margin: 0 0 10px; }
 .result-notes { margin: 0 0 12px; padding-left: 20px; }
 
 /* ---------- PDF 용량 줄이기 ---------- */
 .file-card { margin-top: 20px; }
 .cmp-controls { margin-top: 20px; display: grid; gap: 12px; }
+.modes { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; gap: 0 24px; }
+.target-box { display: grid; gap: 10px; padding: 12px 16px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.target-label { margin: 0; font-weight: 800; }
+.target-box .level-desc { margin: 0; }
 .levels { margin: 0; padding: 12px 16px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); min-width: 0; }
 .levels legend { font-weight: 800; padding: 0 6px; }
 .level { display: grid; gap: 0; }
@@ -145,12 +257,18 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .more summary::after { top: 9px; }
 .warn-box { margin: 8px 0 0; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--warn); background: var(--bg); font-size: 15px; }
 .previews { display: grid; grid-template-columns: repeat(2, minmax(0, 240px)); gap: 16px; margin: 12px 0; }
+/* Desktop shows the previews as before; at phone widths they sit side by side in a collapsible "미리보기". */
+.pv-details { border: 0; padding: 0; margin-top: 8px; }
+.pv-details > summary { padding: 10px 32px 10px 0; min-height: 44px; }
+.pv-details > summary::after { top: 7px; }
+@media (min-width: 641px) { .pv-details > summary { display: none; } }
+@media (max-width: 640px) { .previews { grid-template-columns: repeat(2, minmax(0, 45vw)); gap: 10px; margin-top: 4px; } }
 .pv { margin: 0; display: grid; gap: 6px; }
 .pv-box { width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .pv-box canvas { display: block; width: 100%; height: auto; }
 .pv figcaption { color: var(--muted); font-size: 14.5px; text-align: center; }
 /* Result panels are scrolled into view below the sticky header (60 px + border). */
-#cmp-result, #cmp-kept { scroll-margin-top: 76px; }
+#cmp-result, #cmp-kept, #merge-result { scroll-margin-top: 76px; }
 .kept { margin-top: 20px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
 .kept p { margin: 0 0 8px; }
 .kept .row { margin-top: 12px; }
@@ -189,10 +307,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .ph-add-row label.btn { cursor: pointer; }
 .ph-done-bar { margin-top: 20px; display: grid; gap: 12px; scroll-margin-top: 76px; }
 .ph-done-bar .result-title { margin: 0; }
-.ph-engine-error p { margin: 0 0 10px; }
 .file-input:disabled + label.btn { opacity: .45; cursor: not-allowed; }
-/* Touch devices cannot drag files: no drop hint there. */
-@media (pointer: coarse) { #ph-drop .drop-hint { display: none; } }
 .ph-controls { margin-top: 20px; display: grid; gap: 14px; }
 .ph-sub { margin: 0 0 4px 32px; display: grid; gap: 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -249,9 +364,6 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .pc-zooms { border: 0; margin: 0; padding: 0; display: flex; gap: 8px; align-items: center; min-width: 0; }
 .pc-zooms legend { float: left; font-weight: 700; margin-right: 8px; }
 
-@media (max-width: 480px) {
-  .previews { grid-template-columns: minmax(0, 240px); }
-}
 
 .ad-slot { margin: 32px auto; display: block; }
 .ad-rect { width: 300px; min-height: 250px; }
@@ -262,9 +374,9 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 }
 
 @media (max-width: 520px) {
-  .file-item { grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "thumb meta" "pw pw" "actions actions"; }
-  .thumb { width: 96px; height: 136px; }
-  .actions .btn { flex: 1 1 0; }
+  .file-card { grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "thumb meta" "pw pw" "actions actions"; }
+  .file-card .thumb { width: 96px; height: 136px; }
+  .photo-row .actions .btn { flex: 1 1 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

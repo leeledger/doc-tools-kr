@@ -2,6 +2,8 @@
 // Shared by the browser worker and the Node deps.
 // The qpdf-wasm 0.3.0 build binds console.log / console.error for its output when the factory runs
 // (its INCOMING_MODULE_JS_API has no print/printErr), so the run captures them around that call.
+import { EngineLoadError } from '../../ui/engine-load';
+import { isOutOfMemory } from '../errors';
 import type { QpdfResult } from './deps';
 
 export interface QpdfModule {
@@ -30,7 +32,15 @@ export async function runQpdf(factory: QpdfFactory, locateFile: ((file: string) 
     console.log = log;
     console.error = error;
   }
-  const m = await pending;
+  let m: QpdfModule;
+  try {
+    m = await pending;
+  } catch (err) {
+    // The module never started: its wasm did not arrive or did not compile (the glue aborts with the
+    // fetch or XHR error). That is the engine, never the file (Polish P.1).
+    if (isOutOfMemory(err)) throw err;
+    throw new EngineLoadError('qpdf module did not start', { cause: err });
+  }
   m.FS.writeFile('/in.pdf', input);
   let code: number;
   try {

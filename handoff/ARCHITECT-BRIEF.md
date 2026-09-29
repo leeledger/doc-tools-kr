@@ -152,7 +152,7 @@ Any new dependency must first be logged in BUILD-LOG with its license.
    - `@lhci/cli`, mobile preset, on `/` and on each tool page before any file is picked.
    - Scores: Performance ≥ 95, Accessibility = 100, Best Practices ≥ 95, SEO = 100.
    - CLS ≤ 0.01 and LCP ≤ 2.0 s.
-   - Initial JS ≤ 30 KB gzip per page. Engines load only after a file is picked.
+   - Initial JS ≤ 30 KB gzip per page. Engines load only after a file is picked, or after the first interaction plus idle (Polish P.7 preload; Lighthouse never interacts).
 9. **License gate.**
    - `npm run check:licenses` walks `npm ls --omit=dev --all --json` and reads each `license` field.
    - It fails on anything outside the §0 allowlist, and on any match for `/GPL|MPL/i`.

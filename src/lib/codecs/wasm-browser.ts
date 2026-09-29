@@ -9,15 +9,32 @@ import initResize, { resize as wasmResize } from '@jsquash/resize/lib/resize/pkg
 import resizeWasmUrl from '@jsquash/resize/lib/resize/pkg/squoosh_resize_bg.wasm?url';
 import webpEncUrl from '@jsquash/webp/codec/enc/webp_enc.wasm?url';
 import webpEncSimdUrl from '@jsquash/webp/codec/enc/webp_enc_simd.wasm?url';
+import { EngineLoadError } from '../ui/engine-load';
 
-/** Streaming compile; falls back to an ArrayBuffer compile if the server sent the wrong MIME type. */
+/**
+ * Streaming compile; falls back to an ArrayBuffer compile if the server sent the wrong MIME type. A fetch
+ * failure, a non-OK response or a compile error is an EngineLoadError (Polish P.1): never the file's fault.
+ */
 export async function compileWasm(url: string): Promise<WebAssembly.Module> {
   try {
     return await WebAssembly.compileStreaming(fetch(url));
   } catch {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`wasm ${res.status}`);
-    return WebAssembly.compile(await res.arrayBuffer());
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`wasm ${res.status}`);
+      return await WebAssembly.compile(await res.arrayBuffer());
+    } catch (err) {
+      throw new EngineLoadError(`wasm did not load: ${url}`, { cause: err });
+    }
+  }
+}
+
+/** A lazily imported codec module that did not arrive is an engine failure too. */
+async function importCodec<T>(load: () => Promise<T>): Promise<T> {
+  try {
+    return await load();
+  } catch (err) {
+    throw new EngineLoadError('codec module did not load', { cause: err });
   }
 }
 
@@ -55,7 +72,7 @@ export const loadResize = once(async (): Promise<WasmResize> => {
  * `simd()`; the same check picks the wasm compiled here, so both always match.
  */
 export const loadWebpEncoder = once(async (): Promise<WebpEncode> => {
-  const [{ simd }, webp] = await Promise.all([import('wasm-feature-detect'), import('@jsquash/webp/encode.js')]);
+  const [{ simd }, webp] = await importCodec(() => Promise.all([import('wasm-feature-detect'), import('@jsquash/webp/encode.js')]));
   const module = await compileWasm((await simd()) ? webpEncSimdUrl : webpEncUrl);
   await webp.init(module);
   return webp.default;

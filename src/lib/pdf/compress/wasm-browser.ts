@@ -2,6 +2,7 @@
 // (network-guard allowlist: both only ever GET our own versioned static assets; no file data is sent
 // anywhere). Loaded only inside the worker, which is created when "PDF 용량 줄이기" is pressed.
 import { loadMozjpegDecoder, loadMozjpegEncoder, loadResize } from '../../codecs/wasm-browser';
+import { EngineLoadError } from '../../ui/engine-load';
 import { codecDeps, type CompressDeps } from './deps';
 import { runQpdf, type QpdfFactory } from './qpdf-run';
 
@@ -29,8 +30,29 @@ let qpdfFactory: Promise<QpdfFactory> | null = null;
  * `locateFile` from the same immutable, versioned URL (served from the HTTP cache after the first run).
  */
 export function loadQpdf(): CompressDeps['qpdf'] {
-  return async (args, input) => {
-    qpdfFactory ??= import(/* @vite-ignore */ QPDF_MJS_URL).then((m: { default: QpdfFactory }) => m.default);
-    return runQpdf(await qpdfFactory, () => QPDF_WASM_URL, args, input);
-  };
+  // A module instance that cannot start (its wasm fetch through locateFile failed) is an EngineLoadError
+  // from runQpdf (Polish P.1).
+  return async (args, input) => runQpdf(await qpdfModule(), () => QPDF_WASM_URL, args, input);
+}
+
+/** The qpdf glue module; a failed import is an EngineLoadError and is not cached. */
+function qpdfModule(): Promise<QpdfFactory> {
+  qpdfFactory ??= import(/* @vite-ignore */ QPDF_MJS_URL).then(
+    (m: { default: QpdfFactory }) => m.default,
+    (err: unknown) => {
+      qpdfFactory = null;
+      throw new EngineLoadError('qpdf module did not load', { cause: err });
+    },
+  );
+  return qpdfFactory;
+}
+
+/** Preload (Polish P.7): the glue module and one module instance, which fetches and compiles qpdf.wasm. */
+export async function warmQpdf(): Promise<void> {
+  const factory = await qpdfModule();
+  try {
+    await factory({ noInitialRun: true, locateFile: () => QPDF_WASM_URL });
+  } catch (err) {
+    throw new EngineLoadError('qpdf wasm did not load', { cause: err });
+  }
 }

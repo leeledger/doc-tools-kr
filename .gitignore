@@ -12,3 +12,5 @@ regress-out/
 .lighthouseci/
 # 품질 스파이크: 대용량 코퍼스·결과물은 저장소에 넣지 않는다
 spikes/
+public/brand/
+public/favicon.ico

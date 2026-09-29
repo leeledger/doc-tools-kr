@@ -1,6 +1,7 @@
 // Main-thread inspection of one PDF with pdf.js: page count, encryption status, page-1 thumbnail.
 // pdf.js is imported dynamically the first time a file is inspected, so it is not part of the initial page JS.
 // openPdf / renderPageCanvas are shared with PDF 용량 줄이기 (result check, previews, raster rendering).
+import { EngineLoadError, isEngineLoadFailure, withEngineRetry } from '../ui/engine-load';
 import { PdfCorruptError, PdfWrongPasswordError, assertPdfHeader } from './errors';
 
 type PdfJs = typeof import('pdfjs-dist');
@@ -20,15 +21,40 @@ export const THUMB_WIDTH = 160;
 
 let pdfjsPromise: Promise<{ lib: PdfJs; worker: InstanceType<PdfJs['PDFWorker']>; base: string }> | null = null;
 
+/** pdf.js and its shared worker. A load failure is an EngineLoadError and is not cached (the next call retries). */
 function loadPdfJs() {
-  pdfjsPromise ??= import('pdfjs-dist').then((lib) => {
+  pdfjsPromise ??= withEngineRetry(() => import('pdfjs-dist')).then((lib) => {
     const base = `/vendor/pdfjs/${lib.version}/`;
     lib.GlobalWorkerOptions.workerSrc = `${base}pdf.worker.min.mjs`;
     // One shared pdf.js worker for every opened file.
     const worker = new lib.PDFWorker();
     return { lib, worker, base };
   });
+  pdfjsPromise.catch(() => {
+    pdfjsPromise = null;
+  });
   return pdfjsPromise;
+}
+
+/** Drops a pdf.js worker that failed to start, so the next attempt creates a fresh one instead of leaking it. */
+function resetPdfJs(worker: { destroy(): void }): void {
+  try {
+    worker.destroy();
+  } catch {
+    // Already gone.
+  }
+  pdfjsPromise = null;
+}
+
+/** Preload (Polish P.7): pdf.js and its worker script, ready before the first file is picked. */
+export async function preloadPdfJs(): Promise<void> {
+  const { worker } = await loadPdfJs();
+  try {
+    await worker.promise;
+  } catch (err) {
+    resetPdfJs(worker);
+    throw new EngineLoadError('pdf.js worker did not start', { cause: err });
+  }
 }
 
 function isPasswordError(lib: PdfJs, err: unknown): err is { code: number } {
@@ -63,6 +89,11 @@ export async function openPdf(bytes: Uint8Array, password?: string): Promise<Ope
     return { doc, close: () => task.destroy() };
   } catch (err) {
     await task.destroy().catch(() => undefined);
+    // The pdf.js worker (or its fake-worker fallback) did not load: never the file's fault.
+    if (isEngineLoadFailure(err)) {
+      resetPdfJs(worker);
+      throw new EngineLoadError('pdf.js worker failed', { cause: err });
+    }
     if (isPasswordError(lib, err)) {
       if (err.code === lib.PasswordResponses.INCORRECT_PASSWORD) throw new PdfWrongPasswordError();
       return null;

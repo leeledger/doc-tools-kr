@@ -1,6 +1,6 @@
 // What a compression run reports to the UI. No file names, no passwords, no qpdf logs.
 import type { SkipReason } from './images';
-import type { LevelName } from './levels';
+import type { RungName } from './levels';
 
 export type Phase = 'normalize' | 'images' | 'optimize' | 'verify';
 
@@ -11,7 +11,7 @@ export interface Progress {
 }
 
 export interface CompressReport {
-  level: LevelName | 'raster';
+  level: RungName | 'raster';
   inBytes: number;
   outBytes: number;
   keptOriginal: boolean;

@@ -64,9 +64,12 @@ a { color: inherit; }
 .top-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; font-size: 19px; color: var(--brand); }
 .brand span { color: var(--text); }
-.top nav { display: flex; gap: 4px; }
-.top nav a { text-decoration: none; color: var(--muted); font-size: 15px; padding: 8px 10px; border-radius: 8px; }
-.top nav a:hover { color: var(--text); background: var(--brand-soft); }
+.top-nav { display: flex; gap: 4px; align-items: center; }
+.top-nav > a, .menu-toggle {
+  display: inline-flex; align-items: center; min-height: 44px;
+  text-decoration: none; color: var(--muted); font-size: 15px; padding: 0 10px; border-radius: 8px;
+}
+.top-nav > a:hover, .menu-toggle:hover, .menu-toggle[aria-expanded="true"] { color: var(--text); background: var(--brand-soft); }
 
 /* hero */
 .hero { padding: 88px 0 72px; }
@@ -132,7 +135,7 @@ details p { margin: 0 0 18px; color: var(--muted); }
   body { font-size: 16px; }
   .hero { padding: 56px 0 48px; }
   .hero h1 br { display: none; }
-  .top nav a:not(:first-child) { display: none; }
+  .nav-extra { display: none !important; }
   .two-col { grid-template-columns: 1fr; gap: 28px; }
   .tools, .privacy, .faq { padding-top: 48px; padding-bottom: 56px; }
   .btn { flex: 1 1 auto; }

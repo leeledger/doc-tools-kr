@@ -6,12 +6,16 @@ import type { PhotoReport } from '../../lib/image/report';
 import { HEAD_BYTES, TAIL_BYTES, orientedSize, sniffImage, type Sniff } from '../../lib/image/sniff';
 import type { PhotoRequest, PhotoResponse } from '../../lib/image/photo.worker';
 import { detectDevice, type Device } from '../../lib/ui/device';
+import { announce as live, clearStatus } from '../../lib/ui/announce';
+import { reportError } from '../../lib/ui/beacon';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
+import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
-import { safeFileName } from '../../lib/ui/format';
+import { formatSize, safeFileName } from '../../lib/ui/format';
+import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { initCompare } from './compare';
 import { checkCount, checkDims, checkFileBytes, checkRun } from './limits';
-import { DEFAULT_FORM, KB_BYTES, formatSize, parseOptions, rangeMessage, reductionPercent, type FieldName, type FormState, type Parsed } from './options';
+import { DEFAULT_FORM, KB_BYTES, parseOptions, rangeMessage, reductionPercent, type FieldName, type FormState, type Parsed } from './options';
 import { cancelRun, crash, startRun, summary, type RowState } from './queue';
 
 type State = 'empty' | 'ready' | 'working' | 'done';
@@ -87,11 +91,13 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 }
 
 const dimsText = (w: number, h: number): string => `${w}×${h}`;
+const createPhotoWorker = (): Worker => new Worker(new URL('../../lib/image/photo.worker.ts', import.meta.url), { type: 'module' });
 const stem = (name: string): string => name.replace(/\.[^./\\]+$/, '');
 
 export function initPhotoTool(): void {
-  const root = document.getElementById('photo-tool');
-  if (!root) return;
+  const found = document.getElementById('photo-tool');
+  if (!found) return;
+  const root: HTMLElement = found;
 
   const input = must<HTMLInputElement>('ph-input');
   const addInput = must<HTMLInputElement>('ph-add');
@@ -116,10 +122,8 @@ export function initPhotoTool(): void {
   const zipBtn = must<HTMLButtonElement>('ph-zip');
   const zipError = must<HTMLParagraphElement>('ph-zip-error');
   const headline = must<HTMLParagraphElement>('ph-headline');
-  const engineBox = must<HTMLDivElement>('ph-engine-error');
   const againBtn = must<HTMLButtonElement>('ph-again');
   const resetBtn = must<HTMLButtonElement>('ph-reset');
-  const status = must<HTMLParagraphElement>('ph-status');
   const compareRoot = must<HTMLElement>('ph-compare');
   const formatSummary = must<HTMLElement>('ph-format-summary');
   const fast = must<HTMLInputElement>('ph-fast');
@@ -151,12 +155,13 @@ export function initPhotoTool(): void {
   let zipUrl: string | null = null;
   let device: Device = detectDevice();
 
-  const announce = (msg: string): void => {
-    status.textContent = '';
-    requestAnimationFrame(() => {
-      status.textContent = msg;
-    });
-  };
+  const announce = (msg: string): void => live('status', msg, root);
+  // Preload (Polish P.7): the worker with MozJPEG and resize (no WebP), after the first interaction. Never
+  // where the tool cannot run (no OffscreenCanvas): the page shows its notice instead.
+  const preload = schedulePreload(
+    () => (supported ? warmWorker(createPhotoWorker) : Promise.resolve()),
+    { root, immediate: [must('ph-pick'), input], dropZone: root },
+  );
   const showNotice = (msg: string | null): void => {
     notice.hidden = !msg;
     notice.textContent = msg ?? '';
@@ -217,7 +222,9 @@ export function initPhotoTool(): void {
 
   function setState(next: State): void {
     state = next;
-    root!.dataset.state = next;
+    root.dataset.state = next;
+    if (next === 'working') document.body.dataset.busy = 'photo';
+    else delete document.body.dataset.busy;
     const has = rows.length > 0;
     drop.hidden = has || next === 'working';
     listBox.hidden = !has;
@@ -270,7 +277,7 @@ export function initPhotoTool(): void {
         meta.append(el('p', 'ph-size', NOTES.grown(formatSize(rep.inBytes), formatSize(rep.outBytes), res.hasTarget, rep.resaved)));
       } else {
         meta.append(el('p', 'ph-size', `${formatSize(rep.inBytes)} → ${formatSize(rep.outBytes)}`));
-        meta.append(el('p', 'ph-pct', `${reductionPercent(rep.inBytes, rep.outBytes)} % 줄었습니다`));
+        meta.append(el('p', 'ph-pct', `${reductionPercent(rep.inBytes, rep.outBytes)}% 줄었습니다`));
       }
       if (rep.outW !== rep.inW || rep.outH !== rep.inH) meta.append(el('p', 'ph-dims', `${dimsText(rep.inW, rep.inH)} → ${dimsText(rep.outW, rep.outH)}`));
     }
@@ -498,17 +505,24 @@ export function initPhotoTool(): void {
     runIds = startRun(rows);
     runTarget = { kb: parsed.targetKb, parsed };
     showNotice(null);
-    hideEngineError(engineBox);
-    status.textContent = '';
+    hideEngineError();
+    clearStatus(root);
     setState('working');
     setProgress();
     cancelBtn.focus();
     announce(`사진 ${runIds.length}장을 줄이는 중입니다.`);
-    spawn(run, runIds);
+    void spawn(run, runIds);
   }
 
-  function spawn(run: number, ids: number[]): void {
-    const w = new Worker(new URL('../../lib/image/photo.worker.ts', import.meta.url), { type: 'module' });
+  async function spawn(run: number, ids: number[]): Promise<void> {
+    // A running preload is awaited (the same promise: nothing is fetched twice).
+    const warming = preload.claim();
+    if (warming) {
+      announce('처리 도구를 준비하는 중입니다(처음 한 번만).');
+      await warming;
+      if (run !== runId) return;
+    }
+    const w = createPhotoWorker();
     worker = w;
     let answered = false;
     w.onmessage = (ev: MessageEvent<PhotoResponse>) => {
@@ -528,7 +542,8 @@ export function initPhotoTool(): void {
       const { failed, rest } = crash(rows, runIds);
       const row = rows.find((r) => r.id === failed);
       if (row) row.error = ERRORS.oom;
-      if (rest.length) spawn(run, rest);
+      reportError({ tool: 'photo-compress', phase: 'process', code: 'oom' });
+      if (rest.length) void spawn(run, rest);
       else finish();
       setProgress();
       for (const r of rows) renderRow(r);
@@ -601,6 +616,7 @@ export function initPhotoTool(): void {
       }
       r.state = 'error';
       r.error = rowError(r, msg.code, msg);
+      if (msg.code === 'oom' || msg.code === 'unknown' || msg.code === 'verify') reportError({ tool: 'photo-compress', phase: 'process', code: msg.code });
     }
     if (run === runId) {
       setProgress();
@@ -633,16 +649,15 @@ export function initPhotoTool(): void {
     headline.textContent = done.length ? `${summaryText} ${formatSize(before)} → ${formatSize(after)}` : summaryText;
   }
 
-  /** The worker or a codec did not load. Rows go back to 대기 (never a file error); the banner offers 새로고침. */
+  /** The worker or a codec did not load. Rows go back to 대기 (never a file error); the panel offers 새로고침. */
   function engineFailure(): void {
     runId++;
     stopWorker();
     const { anyFinished } = cancelRun(rows);
     setState(anyFinished ? 'done' : 'ready');
     if (anyFinished) renderHeadline(`${summary(rows).total}장 중 ${summary(rows).done}장을 줄였습니다.`);
-    const msg = showEngineError(engineBox);
-    announce(msg);
-    engineBox.querySelector('button')?.focus();
+    reportError({ tool: 'photo-compress', phase: 'load', code: 'engine' });
+    void showEngineError();
   }
 
   function cancel(): void {
@@ -664,9 +679,10 @@ export function initPhotoTool(): void {
     zipError.hidden = true;
     let buildZip: (typeof import('./zip'))['buildZip'];
     try {
-      ({ buildZip } = await import('./zip'));
+      ({ buildZip } = await withEngineRetry(() => import('./zip')));
     } catch {
-      announce(showEngineError(engineBox));
+      reportError({ tool: 'photo-compress', phase: 'save', code: 'engine' });
+      void showEngineError();
       return;
     }
     try {
@@ -677,13 +693,11 @@ export function initPhotoTool(): void {
       a.href = zipUrl;
       a.download = `사진_압축_${done.length}장.zip`;
       a.hidden = true;
-      root!.append(a);
+      root.append(a);
       a.click();
       a.remove();
     } catch {
-      zipError.textContent = ERRORS.zip;
-      zipError.hidden = false;
-      announce(ERRORS.zip);
+      live('alert', ERRORS.zip, root);
     }
   }
 
@@ -699,8 +713,8 @@ export function initPhotoTool(): void {
     input.value = '';
     addInput.value = '';
     showNotice(null);
-    hideEngineError(engineBox);
-    status.textContent = '';
+    hideEngineError();
+    clearStatus(root);
     setState('empty');
     if (focus) {
       input.focus();
