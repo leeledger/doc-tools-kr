@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { makeBigFixture, makeRuntimeFixtures, makeScanMultiFixture } from '../fixtures/build.mjs';
 import { makePhotoRuntimeFixtures } from '../fixtures/build-photo.mjs';
 import { PHOTO_RUNTIME_DIR, RUNTIME_DIR } from './paths';
+import { makeHwpRuntimeFixtures } from './hwp-fixtures';
 
 export default async function globalSetup(): Promise<void> {
   if (!existsSync(join(process.cwd(), 'dist', 'index.html'))) {
@@ -17,4 +18,5 @@ export default async function globalSetup(): Promise<void> {
   // A text file for the non-PDF checks (Polish P.15).
   writeFileSync(join(RUNTIME_DIR, 'notes.txt'), '회의 메모: PDF가 아닌 파일입니다.\n');
   await makePhotoRuntimeFixtures(PHOTO_RUNTIME_DIR);
+  makeHwpRuntimeFixtures();
 }

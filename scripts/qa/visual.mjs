@@ -30,6 +30,7 @@ const PAGES = [
   ['merge', '/pdf-merge/'],
   ['compress', '/pdf-compress/'],
   ['photo', '/photo-compress/'],
+  ['hwp', '/hwp-to-pdf/'],
   ['privacy', '/privacy/'],
   ['terms', '/terms/'],
   ['licenses', '/licenses/'],

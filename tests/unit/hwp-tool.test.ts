@@ -45,6 +45,13 @@ describe('svg-string: pick() (spike §4 table) and rewriteFonts', () => {
     const out = rewriteFonts('<text font-family="\'HY헤드라인M\',sans-serif">A</text><text font-family="\'바탕\',serif">B</text>');
     expect(out).toBe(`<text font-family="${SANS}" font-weight="700">A</text><text font-family="${S}">B</text>`);
   });
+  it('a HEAVY face on an element that already has font-weight gets one font-weight="700", never two (XML error)', () => {
+    const out = rewriteFonts(`<text x="1" font-family="'HY헤드라인M',sans-serif" font-size="20" font-weight="bold" fill="#000">A</text>`);
+    expect(out.match(/font-weight=/g)).toHaveLength(1);
+    expect(out).toContain('font-weight="700"');
+    const plain = rewriteFonts(`<text font-family="'바탕',serif" font-weight="bold">B</text>`);
+    expect(plain).toContain('font-weight="bold"');
+  });
 });
 
 describe('svg-string: scopeIds', () => {
@@ -265,5 +272,24 @@ describe('fixtures and site data', () => {
     const ld = faqJsonLd(t) as { '@type': string; mainEntity: unknown[] };
     expect(ld['@type']).toBe('FAQPage');
     expect(ld.mainEntity).toHaveLength(8);
+  });
+});
+
+describe('service worker and carry-forward cover the HWP assets (cache on use, never precached)', () => {
+  it('SW routes /vendor/rhwp/ and /fonts/hwp/ as runtime (cache-first on use)', async () => {
+    const { route: swRoute } = await import('../../src/sw/sw');
+    const origin = 'https://doc-tools-kr.pages.dev';
+    const req = (path: string) => ({ method: 'GET', url: `${origin}${path}`, mode: 'cors' });
+    expect(swRoute(req('/vendor/rhwp/0.8.6/rhwp_bg.wasm'), origin)).toBe('runtime');
+    expect(swRoute(req('/fonts/hwp/noto-serif-kr@5.3.0/noto-serif-kr-0-400-normal.woff2'), origin)).toBe('runtime');
+    expect(swRoute(req('/fonts/hwp/hwp-fonts.0123456789.css'), origin)).toBe('runtime');
+  });
+
+  it('carry-forward treats both folders as immutable', async () => {
+    const { IMMUTABLE, safePath } = await import('../../scripts/carry-assets.mjs');
+    for (const p of ['vendor/rhwp/0.8.6/rhwp_bg.wasm', 'fonts/hwp/nanum-gothic@5.3.0/nanum-gothic-0-700-normal.woff2', 'fonts/hwp/fallback@noto-sans-cjk-kr-2.004/anolim-hwp-fallback.woff2']) {
+      expect(IMMUTABLE.test(p)).toBe(true);
+      expect(safePath(p)).toBe(true);
+    }
   });
 });

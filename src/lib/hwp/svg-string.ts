@@ -33,10 +33,22 @@ export function pick(chain: string): Pick {
   return { family: serif ? chainOf(FAMILY.serif, 'serif') : chainOf(FAMILY.sans, 'sans-serif'), bold: false };
 }
 
+/**
+ * Maps every font-family attribute. A HEAVY face also gets font-weight="700"; when the element already has a
+ * font-weight (rhwp writes font-weight="bold" after font-family) that value is replaced, never duplicated: a
+ * repeated attribute is an XML error, so DOMParser would reject the whole page. (The spike used innerHTML,
+ * whose HTML parser keeps the first of two attributes: our inserted 700. Same result.)
+ */
 export function rewriteFonts(svg: string): string {
-  return svg.replace(/font-family="([^"]*)"/g, (_m, chain: string) => {
-    const p = pick(chain);
-    return `font-family="${p.family}"${p.bold ? ' font-weight="700"' : ''}`;
+  return svg.replace(/<[A-Za-z][^<>]*\sfont-family="[^"]*"[^<>]*>/g, (tag) => {
+    let bold = false;
+    let out = tag.replace(/font-family="([^"]*)"/g, (_m, chain: string) => {
+      const p = pick(chain);
+      bold ||= p.bold;
+      return `font-family="${p.family}"`;
+    });
+    if (bold) out = /\sfont-weight="[^"]*"/.test(out) ? out.replace(/(\s)font-weight="[^"]*"/, '$1font-weight="700"') : out.replace(/(\sfont-family="[^"]*")/, '$1 font-weight="700"');
+    return out;
   });
 }
 

@@ -21,7 +21,7 @@ export type HwpResponse =
   | { type: 'progress'; phase: 'parse' }
   | { type: 'scanned'; format: Features['format']; equations: number; textboxes: number; imageBytes: number; distribution: boolean }
   | { type: 'parsed'; pages: number; pageInfos: PageInfo[]; wasmBytes: number; measureCalls: number }
-  | { type: 'page'; i: number; svg: string; runs: TextRun[]; failed: boolean; measureCalls: number }
+  | { type: 'page'; i: number; svg: string; runs: TextRun[]; failed: boolean; measureCalls: number; ms: number }
   | { type: 'error'; code: HwpErrorCode }
   | { type: 'warm-done' };
 
@@ -89,11 +89,12 @@ async function open(buffer: ArrayBuffer): Promise<void> {
 
 function render(i: number): void {
   if (!doc) return;
+  const t0 = performance.now();
   try {
     const p = renderPage(doc, i);
-    post({ type: 'page', i, svg: p.svg, runs: p.runs, failed: false, measureCalls });
+    post({ type: 'page', i, svg: p.svg, runs: p.runs, failed: false, measureCalls, ms: performance.now() - t0 });
   } catch {
-    post({ type: 'page', i, svg: '', runs: [], failed: true, measureCalls });
+    post({ type: 'page', i, svg: '', runs: [], failed: true, measureCalls, ms: performance.now() - t0 });
   }
 }
 

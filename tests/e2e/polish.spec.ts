@@ -122,7 +122,7 @@ test.describe('engine load failure (P.1)', () => {
 
 // ---------- P.4 operator, contact, 이용약관 ----------
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/hwp-to-pdf/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
   test(`footer on ${path}: operator, contact (준비 중), 이용약관·개인정보·라이선스 links`, async ({ page }) => {
     await gotoReady(page, path);
     const foot = page.locator('footer');

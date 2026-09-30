@@ -63,6 +63,7 @@ for (const [path, name] of [
   ['/pdf-merge/', 'PDF 합치기'],
   ['/pdf-compress/', 'PDF 용량 줄이기'],
   ['/photo-compress/', '사진 용량 줄이기'],
+  ['/hwp-to-pdf/', 'HWP PDF 변환'],
 ] as const) {
   test(`tool page JSON-LD, title and description on ${path}`, async ({ page }) => {
     await gotoReady(page, path);
@@ -77,31 +78,34 @@ for (const [path, name] of [
     expect(data.some((d: { '@type': string }) => d['@type'] === 'BreadcrumbList')).toBe(true);
     await expect(page).toHaveTitle(`${name} — 업로드 없이 브라우저에서 무료로 | 안올림`);
     const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
-    expect(desc).toContain(name);
+    expect(desc.toLowerCase()).toContain(name.toLowerCase());
     expect([...desc].length).toBeGreaterThanOrEqual(80);
     expect([...desc].length).toBeLessThanOrEqual(120);
   });
 }
 
-test('related tools: each tool page links to the other live tools', async ({ page }) => {
+test('related tools: each tool page links to the other live tools (HWP PDF 변환: the two PDF tools only)', async ({ page }) => {
   const tools = [
     ['/pdf-merge/', 'PDF 합치기'],
     ['/pdf-compress/', 'PDF 용량 줄이기'],
     ['/photo-compress/', '사진 용량 줄이기'],
+    ['/hwp-to-pdf/', 'HWP PDF 변환'],
   ] as const;
+  const related: Record<string, string[]> = { '/hwp-to-pdf/': ['/pdf-merge/', '/pdf-compress/'] };
   for (const [path] of tools) {
     await gotoReady(page, path);
-    for (const [other, name] of tools.filter(([p]) => p !== path)) {
+    const others = tools.filter(([p]) => p !== path && (!related[path] || related[path].includes(p)));
+    for (const [other, name] of others) {
       await expect(page.locator('.related').getByRole('link', { name })).toHaveAttribute('href', other);
     }
-    await expect(page.locator('.related a')).toHaveCount(2);
+    await expect(page.locator('.related a')).toHaveCount(others.length);
   }
 });
 
 test('sitemap lists exactly the live pages; robots points to it', async ({ request }) => {
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
-  expect(locs.sort()).toEqual(['/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
+  expect(locs.sort()).toEqual(['/', '/hwp-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
   const robots = await (await request.get('/robots.txt')).text();
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
 });
@@ -125,15 +129,16 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(3);
+  await expect(cards).toHaveCount(4);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 용량 줄이기' })).toHaveAttribute('href', '/photo-compress/');
-  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기', '사용하기']);
-  await expect(page.locator('.card')).toHaveCount(3);
+  await expect(cards.getByRole('link', { name: 'HWP PDF 변환' })).toHaveAttribute('href', '/hwp-to-pdf/');
+  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기', '사용하기', '사용하기']);
+  await expect(page.locator('.card')).toHaveCount(4);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
   await expect(page.locator('.soon h3')).toHaveText('준비 중');
-  await expect(page.locator('.soon-list li')).toHaveText(['여권·증명사진 규격 맞추기', '한글(HWP) → PDF 변환']);
+  await expect(page.locator('.soon-list li')).toHaveText(['여권·증명사진 규격 맞추기']);
   await expect(page.locator('.soon a')).toHaveCount(0);
   await expect(page.locator('footer').getByRole('link', { name: '이용약관' })).toHaveAttribute('href', '/terms/');
   await expect(page.locator('footer').getByRole('link', { name: '개인정보 처리방침' })).toHaveAttribute('href', '/privacy/');

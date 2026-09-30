@@ -1,0 +1,41 @@
+/* HWP PDF 변환: tool styles and the print CSS (brief Step 5 §3.2). Imported by the page and by the regress:hwp
+   harness, so the harness prints with the production rules. */
+.hwp .hw-result { margin-top: 20px; display: grid; gap: 12px; }
+.hwp .hw-result .result-title { margin: 0; overflow-wrap: anywhere; }
+.hwp .hw-actions { flex-wrap: wrap; }
+.hwp .notice.warn { border-color: var(--warn); }
+.hw-guide { padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.hw-guide ol { margin: 6px 0 8px; padding-left: 22px; }
+.hw-guide-title { margin: 8px 0 0; font-weight: 700; }
+.hw-preview { max-height: 80vh; overflow: auto; padding: 12px; border-radius: var(--radius); background: #e5e7eb; }
+.hw-preview.hw-building { display: none; }
+.hw-preview:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.hw-preview .page { width: 100%; margin: 0 auto 12px; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .18); overflow: hidden; }
+.hw-preview .page svg { display: block; width: 100%; height: auto; }
+.hw-preview .page-failed { margin: 0; padding: 24px; color: #444; text-align: center; }
+.help h3 { margin: 20px 0 8px; font-size: 17px; }
+.help details { margin: 6px 0; }
+.help ol, .help ul { padding-left: 22px; }
+.tool-legal { margin-top: 12px; color: var(--muted); font-size: 14px; }
+.tool-legal p { margin: 4px 0; }
+
+/* Print (brief Step 5 §3.2): a finished document prints its pages only, one named @page per size (the
+   sizes come from print.ts at runtime); viewer-only prints a one-line notice, never partial pages. */
+@media print {
+  @page { margin: 0; }
+  body.hwp-printable *:not(:has(#hwp-print-root)):not(#hwp-print-root):not(#hwp-print-root *) { display: none !important; }
+  body.hwp-printable :has(#hwp-print-root) {
+    display: block !important; margin: 0 !important; padding: 0 !important; border: 0 !important;
+    max-width: none !important; width: auto !important; background: none !important; box-shadow: none !important;
+  }
+  body.hwp-printable #hwp-print-root { display: block; max-height: none; overflow: visible; padding: 0; margin: 0; background: none; border-radius: 0; }
+  body.hwp-printable #hwp-print-root .page {
+    max-width: none !important; aspect-ratio: auto !important; margin: 0; box-shadow: none;
+    break-after: page; overflow: hidden; print-color-adjust: exact; -webkit-print-color-adjust: exact;
+  }
+  body.hwp-printable #hwp-print-root .page:last-child { break-after: auto; }
+  body.hwp-printable #hwp-print-root .page svg { width: 100%; height: 100%; }
+  body.hwp-viewer-only > *, body.hwp-not-ready > * { display: none !important; }
+  body.hwp-viewer-only::before { content: "이 문서는 보기 전용입니다"; display: block; padding: 20mm; font-size: 16pt; }
+  body.hwp-not-ready::before { content: "「그래도 PDF로 저장」을 누른 뒤 저장해 주세요"; display: block; padding: 20mm; font-size: 16pt; }
+}

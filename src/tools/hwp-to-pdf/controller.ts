@@ -15,10 +15,10 @@ import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { safeFileName } from '../../lib/ui/format';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
-import hwpFonts from '../../generated/hwp-fonts.json';
 import { detectBrowser, orderedGuides } from './guidance';
 import { LIMITS, overHardLimit, route, type Mode, type RouteResult } from './limits';
 import { COPY, ERRORS, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from './messages';
+import { hwpFontsReady, loadHwpFonts } from './fonts';
 import { createWatchdog } from './watchdog';
 
 type State = 'empty' | 'loading' | Mode | 'rendering' | 'error';
@@ -30,7 +30,6 @@ type Parsed = Extract<HwpResponse, { type: 'parsed' }>;
 
 export const INFLIGHT_KEY = 'hwp-inflight';
 const PROGRESS_INTERVAL_MS = 250;
-const FONT_LINK_ID = 'hwp-fonts';
 
 const createWorker = (): Worker => new Worker(new URL('../../lib/hwp/hwp.worker.ts', import.meta.url), { type: 'module' });
 const stem = (name: string): string => name.replace(/\.[^./\\]+$/, '');
@@ -60,16 +59,6 @@ function setInflight(bytes: number | null): void {
   } catch {
     // Storage blocked: the tab-kill notice is best effort.
   }
-}
-
-/** The document faces: one CSS file, requested with the first page. */
-function loadHwpFonts(): void {
-  if (document.getElementById(FONT_LINK_ID)) return;
-  const link = document.createElement('link');
-  link.id = FONT_LINK_ID;
-  link.rel = 'stylesheet';
-  link.href = hwpFonts.css;
-  document.head.append(link);
 }
 
 function list(steps: string[]): HTMLOListElement {
@@ -124,7 +113,13 @@ export function initHwpTool(): void {
   let file: File | null = null;
   let device: Device = detectDevice();
   let lastProgress = 0;
-  const waiters = new Map<number, (m: PageMsg) => void>();
+  /** Pages the full render awaits; a cancel or a reset answers them with null so the render unwinds. */
+  const waiters = new Map<number, (m: PageMsg | null) => void>();
+  const releaseWaiters = (): void => {
+    const all = [...waiters.values()];
+    waiters.clear();
+    for (const w of all) w(null);
+  };
   const pending = new Set<number>();
   const watchdog = createWatchdog(() => fail('timeout'));
 
@@ -166,7 +161,7 @@ export function initHwpTool(): void {
   function stopWorker(): void {
     watchdog.stop();
     pending.clear();
-    waiters.clear();
+    releaseWaiters();
     if (worker) {
       worker.onmessage = null;
       worker.onerror = null;
@@ -183,6 +178,7 @@ export function initHwpTool(): void {
   }
 
   function clearDocument(): void {
+    preview.classList.remove('hw-building');
     viewer?.destroy();
     viewer = null;
     lazy?.removePageStyle();
@@ -256,7 +252,7 @@ export function initHwpTool(): void {
 
   function onPage(msg: PageMsg): void {
     pending.delete(msg.i);
-    loadHwpFonts();
+    void loadHwpFonts();
     const w = waiters.get(msg.i);
     if (w) {
       waiters.delete(msg.i);
@@ -272,7 +268,7 @@ export function initHwpTool(): void {
     send({ type: 'render', i });
   }
 
-  function awaitPage(i: number): Promise<PageMsg> {
+  function awaitPage(i: number): Promise<PageMsg | null> {
     return new Promise((resolve) => {
       waiters.set(i, resolve);
       pending.add(i);
@@ -314,7 +310,12 @@ export function initHwpTool(): void {
     fileName.focus();
   }
 
-  /** Renders every page in order (convert, or 그래도 PDF로 저장), frees the engine and prepares printing. */
+  /**
+   * Renders every page in order (convert, or 그래도 PDF로 저장), frees the engine and prepares printing.
+   * The preview is hidden while pages arrive: with ~860 unicode-range faces, every font slice that lands
+   * re-lays out all the text already shown, so a visible build is quadratic (adm28: 20 s instead of 5 s).
+   * Downscaling needs layout, so it runs once the pages are shown and the fonts are in.
+   */
   async function fullRender(id: number, run: number, forced: boolean): Promise<void> {
     const v = viewer;
     const lz = lazy;
@@ -324,29 +325,34 @@ export function initHwpTool(): void {
     v.setLazy(false);
     setState(forced ? 'rendering' : 'loading');
     progress(COPY.pages(0, n), 0, true);
-    for (let i = 0; i < n; i++) {
-      if (!v.isRendered(i)) {
-        const msg = await awaitPage(i);
+    preview.classList.add('hw-building');
+    try {
+      for (let i = 0; i < n; i++) {
+        if (!v.isRendered(i)) {
+          const msg = await awaitPage(i);
+          if (!live() || !msg) return;
+          v.insert(i, msg.svg, msg.runs, msg.failed);
+        }
+        progress(COPY.pages(i + 1, n), (i + 1) / n, i === n - 1);
+        await tick();
         if (!live()) return;
-        v.insert(i, msg.svg, msg.runs, msg.failed);
       }
-      await v.downscale(i);
-      if (!live()) return;
-      progress(COPY.pages(i + 1, n), (i + 1) / n, i === n - 1);
-      await tick();
-      if (!live()) return;
+    } finally {
+      preview.classList.remove('hw-building');
     }
     // Free the WASM before print doubles the peak.
     send({ type: 'close' });
     stopWorker();
     lz.installPageStyle(infos);
     renderGuide();
-    setInflight(null);
     setState('convert');
     saveBtn.disabled = true;
     announce(`${COPY.ready(n)} ${COPY.fonts}`);
+    await hwpFontsReady();
+    for (let i = 0; i < n && live(); i++) await v.downscale(i);
     await document.fonts.ready;
     if (!live()) return;
+    setInflight(null);
     saveBtn.disabled = false;
     announce(COPY.ready(n));
     if (forced) await save();
@@ -454,7 +460,7 @@ export function initHwpTool(): void {
     }
     // Back to viewer-first; the worker still holds the document and the lazy window takes over again.
     renderRun++;
-    waiters.clear();
+    releaseWaiters();
     pending.clear();
     watchdog.stop();
     setState('viewer-first');

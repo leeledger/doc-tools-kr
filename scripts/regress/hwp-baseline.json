@@ -1,0 +1,1205 @@
+{
+ "source": "spikes/hwp/results {run,recall2,compare}.bundled.json + features.json (Corpus v2, rhwp 0.8.6); ink re-measured with scripts/regress/hwp-ink.mjs on the spike PDFs",
+ "files": {
+  "adm01": {
+   "pages": 10,
+   "recall": 1,
+   "inkMean": 0.734,
+   "inkMin": 0.232,
+   "inkMeanPyMuPDF": 0.708,
+   "ms": 905,
+   "pdfBytes": 169708,
+   "guard": false
+  },
+  "adm02": {
+   "pages": 9,
+   "recall": 1,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": 0.486,
+   "ms": 873,
+   "pdfBytes": 158280,
+   "guard": false
+  },
+  "adm03": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.894,
+   "inkMin": 0.842,
+   "inkMeanPyMuPDF": 0.886,
+   "ms": 526,
+   "pdfBytes": 82319,
+   "guard": false
+  },
+  "adm04": {
+   "pages": 151,
+   "recall": 0.9997,
+   "inkMean": 0.775,
+   "inkMin": 0.324,
+   "inkMeanPyMuPDF": 0.748,
+   "ms": 9880,
+   "pdfBytes": 16120074,
+   "guard": true
+  },
+  "adm05": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.86,
+   "inkMin": 0.856,
+   "inkMeanPyMuPDF": 0.804,
+   "ms": 439,
+   "pdfBytes": 68398,
+   "guard": false
+  },
+  "adm06": {
+   "pages": 19,
+   "recall": 0.9956,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": 0.53,
+   "ms": 1364,
+   "pdfBytes": 308026,
+   "guard": false
+  },
+  "adm07": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.887,
+   "inkMin": 0.881,
+   "inkMeanPyMuPDF": 0.836,
+   "ms": 536,
+   "pdfBytes": 90825,
+   "guard": true
+  },
+  "adm08": {
+   "pages": 8,
+   "recall": 1,
+   "inkMean": 0.917,
+   "inkMin": 0.885,
+   "inkMeanPyMuPDF": 0.86,
+   "ms": 889,
+   "pdfBytes": 185466,
+   "guard": false
+  },
+  "adm09": {
+   "pages": 32,
+   "recall": 1,
+   "inkMean": 0.859,
+   "inkMin": 0.679,
+   "inkMeanPyMuPDF": 0.837,
+   "ms": 1319,
+   "pdfBytes": 318990,
+   "guard": false
+  },
+  "adm10": {
+   "pages": 6,
+   "recall": 0.9993,
+   "inkMean": 0.865,
+   "inkMin": 0.55,
+   "inkMeanPyMuPDF": 0.821,
+   "ms": 825,
+   "pdfBytes": 209210,
+   "guard": false
+  },
+  "adm11": {
+   "pages": 130,
+   "recall": 1,
+   "inkMean": 0.679,
+   "inkMin": 0.38,
+   "inkMeanPyMuPDF": 0.688,
+   "ms": 9498,
+   "pdfBytes": 2670119,
+   "guard": true
+  },
+  "adm12": {
+   "pages": 5,
+   "recall": 1,
+   "inkMean": 0.847,
+   "inkMin": 0.828,
+   "inkMeanPyMuPDF": 0.845,
+   "ms": 743,
+   "pdfBytes": 121176,
+   "guard": false
+  },
+  "adm13": {
+   "pages": 7,
+   "recall": 1,
+   "inkMean": 0.909,
+   "inkMin": 0.866,
+   "inkMeanPyMuPDF": 0.863,
+   "ms": 836,
+   "pdfBytes": 135939,
+   "guard": false
+  },
+  "adm14": {
+   "pages": 11,
+   "recall": 1,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": 0.273,
+   "ms": 797,
+   "pdfBytes": 119709,
+   "guard": false
+  },
+  "adm15": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.852,
+   "inkMin": 0.842,
+   "inkMeanPyMuPDF": 0.831,
+   "ms": 575,
+   "pdfBytes": 57791,
+   "guard": false
+  },
+  "adm16": {
+   "pages": 411,
+   "recall": 1,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": 0.559,
+   "ms": 106473,
+   "pdfBytes": 4182226,
+   "guard": true
+  },
+  "adm17": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.889,
+   "inkMin": 0.883,
+   "inkMeanPyMuPDF": 0.868,
+   "ms": 585,
+   "pdfBytes": 67927,
+   "guard": false
+  },
+  "adm18": {
+   "pages": 32,
+   "recall": 1,
+   "inkMean": 0.798,
+   "inkMin": 0.415,
+   "inkMeanPyMuPDF": 0.717,
+   "ms": 2160,
+   "pdfBytes": 1140908,
+   "guard": false
+  },
+  "adm19": {
+   "pages": 29,
+   "recall": 1,
+   "inkMean": 0.807,
+   "inkMin": 0.393,
+   "inkMeanPyMuPDF": 0.829,
+   "ms": 2397,
+   "pdfBytes": 1237333,
+   "guard": true
+  },
+  "adm20": {
+   "pages": 9,
+   "recall": 1,
+   "inkMean": 0.848,
+   "inkMin": 0.341,
+   "inkMeanPyMuPDF": 0.809,
+   "ms": 785,
+   "pdfBytes": 237748,
+   "guard": false
+  },
+  "adm21": {
+   "pages": 13,
+   "recall": 0.9984,
+   "inkMean": 0.844,
+   "inkMin": 0.78,
+   "inkMeanPyMuPDF": 0.795,
+   "ms": 1070,
+   "pdfBytes": 222155,
+   "guard": false
+  },
+  "adm22": {
+   "pages": 16,
+   "recall": 1,
+   "inkMean": 0.832,
+   "inkMin": 0.206,
+   "inkMeanPyMuPDF": 0.825,
+   "ms": 1353,
+   "pdfBytes": 322254,
+   "guard": false
+  },
+  "adm23": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.905,
+   "inkMin": 0.865,
+   "inkMeanPyMuPDF": 0.88,
+   "ms": 624,
+   "pdfBytes": 71690,
+   "guard": false
+  },
+  "adm24": {
+   "pages": 4,
+   "recall": 1,
+   "inkMean": 0.832,
+   "inkMin": 0.794,
+   "inkMeanPyMuPDF": 0.833,
+   "ms": 752,
+   "pdfBytes": 90891,
+   "guard": false
+  },
+  "adm25": {
+   "pages": 5,
+   "recall": 1,
+   "inkMean": 0.869,
+   "inkMin": 0.839,
+   "inkMeanPyMuPDF": 0.863,
+   "ms": 547,
+   "pdfBytes": 95905,
+   "guard": false
+  },
+  "adm26": {
+   "pages": 5,
+   "recall": 1,
+   "inkMean": 0.861,
+   "inkMin": 0.842,
+   "inkMeanPyMuPDF": 0.849,
+   "ms": 864,
+   "pdfBytes": 137819,
+   "guard": false
+  },
+  "adm27": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.851,
+   "inkMin": 0.834,
+   "inkMeanPyMuPDF": 0.8,
+   "ms": 445,
+   "pdfBytes": 65243,
+   "guard": false
+  },
+  "adm28": {
+   "pages": 128,
+   "recall": 0.9999,
+   "inkMean": 0.792,
+   "inkMin": 0.186,
+   "inkMeanPyMuPDF": 0.759,
+   "ms": 4591,
+   "pdfBytes": 3271627,
+   "guard": true
+  },
+  "adm29": {
+   "pages": 188,
+   "recall": 1,
+   "inkMean": 0.851,
+   "inkMin": 0,
+   "inkMeanPyMuPDF": 0.846,
+   "ms": 8128,
+   "pdfBytes": 4475508,
+   "guard": true
+  },
+  "adm30": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.662,
+   "inkMin": 0.662,
+   "inkMeanPyMuPDF": 0.622,
+   "ms": 389,
+   "pdfBytes": 35033,
+   "guard": true
+  },
+  "adm31": {
+   "pages": 16,
+   "recall": 1,
+   "inkMean": 0.865,
+   "inkMin": 0.696,
+   "inkMeanPyMuPDF": 0.843,
+   "ms": 1290,
+   "pdfBytes": 283101,
+   "guard": false
+  },
+  "kr01": {
+   "pages": 6,
+   "recall": 1,
+   "inkMean": 0.9,
+   "inkMin": 0.85,
+   "inkMeanPyMuPDF": 0.821,
+   "ms": 10147,
+   "pdfBytes": 40018594,
+   "guard": false
+  },
+  "kr02": {
+   "pages": 5,
+   "recall": 1,
+   "inkMean": 0.923,
+   "inkMin": 0.872,
+   "inkMeanPyMuPDF": 0.864,
+   "ms": 807,
+   "pdfBytes": 3999565,
+   "guard": false
+  },
+  "kr03": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.899,
+   "inkMin": 0.863,
+   "inkMeanPyMuPDF": 0.864,
+   "ms": 614,
+   "pdfBytes": 291519,
+   "guard": false
+  },
+  "kr04": {
+   "pages": 4,
+   "recall": 1,
+   "inkMean": 0.818,
+   "inkMin": 0.584,
+   "inkMeanPyMuPDF": 0.794,
+   "ms": 735,
+   "pdfBytes": 312306,
+   "guard": false
+  },
+  "kr05": {
+   "pages": 5,
+   "recall": 1,
+   "inkMean": 0.886,
+   "inkMin": 0.813,
+   "inkMeanPyMuPDF": 0.856,
+   "ms": 885,
+   "pdfBytes": 1189976,
+   "guard": false
+  },
+  "kr06": {
+   "pages": 4,
+   "recall": 1,
+   "inkMean": 0.903,
+   "inkMin": 0.817,
+   "inkMeanPyMuPDF": 0.846,
+   "ms": 685,
+   "pdfBytes": 314750,
+   "guard": false
+  },
+  "kr07": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.847,
+   "inkMin": 0.682,
+   "inkMeanPyMuPDF": 0.778,
+   "ms": 682,
+   "pdfBytes": 228876,
+   "guard": false
+  },
+  "kr08": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.938,
+   "inkMin": 0.907,
+   "inkMeanPyMuPDF": 0.859,
+   "ms": 687,
+   "pdfBytes": 3329124,
+   "guard": false
+  },
+  "kr09": {
+   "pages": 3,
+   "recall": 0.9961,
+   "inkMean": 0.941,
+   "inkMin": 0.923,
+   "inkMeanPyMuPDF": 0.823,
+   "ms": 684,
+   "pdfBytes": 6528323,
+   "guard": false
+  },
+  "kr10": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.833,
+   "inkMin": 0.686,
+   "inkMeanPyMuPDF": 0.862,
+   "ms": 649,
+   "pdfBytes": 341692,
+   "guard": false
+  },
+  "kr11": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.928,
+   "inkMin": 0.928,
+   "inkMeanPyMuPDF": 0.78,
+   "ms": 426,
+   "pdfBytes": 174974,
+   "guard": false
+  },
+  "kr12": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.923,
+   "inkMin": 0.923,
+   "inkMeanPyMuPDF": 0.82,
+   "ms": 457,
+   "pdfBytes": 167932,
+   "guard": false
+  },
+  "kr13": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.926,
+   "inkMin": 0.926,
+   "inkMeanPyMuPDF": 0.79,
+   "ms": 563,
+   "pdfBytes": 297201,
+   "guard": false
+  },
+  "kr15": {
+   "pages": 5,
+   "recall": 0.9988,
+   "inkMean": 0.849,
+   "inkMin": 0.769,
+   "inkMeanPyMuPDF": 0.853,
+   "ms": 942,
+   "pdfBytes": 2068272,
+   "guard": false
+  },
+  "kr16": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.913,
+   "inkMin": 0.891,
+   "inkMeanPyMuPDF": 0.838,
+   "ms": 516,
+   "pdfBytes": 127188,
+   "guard": false
+  },
+  "kr17": {
+   "pages": 6,
+   "recall": 0.9994,
+   "inkMean": 0.862,
+   "inkMin": 0.786,
+   "inkMeanPyMuPDF": 0.814,
+   "ms": 1498,
+   "pdfBytes": 24069509,
+   "guard": false
+  },
+  "kr18": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.949,
+   "inkMin": 0.922,
+   "inkMeanPyMuPDF": 0.872,
+   "ms": 816,
+   "pdfBytes": 10411671,
+   "guard": false
+  },
+  "kr19": {
+   "pages": 4,
+   "recall": 1,
+   "inkMean": 0.81,
+   "inkMin": 0.468,
+   "inkMeanPyMuPDF": 0.74,
+   "ms": 1044,
+   "pdfBytes": 10517850,
+   "guard": false
+  },
+  "kr20": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.873,
+   "inkMin": 0.813,
+   "inkMeanPyMuPDF": 0.795,
+   "ms": 1009,
+   "pdfBytes": 3638889,
+   "guard": false
+  },
+  "kr21": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.946,
+   "inkMin": 0.917,
+   "inkMeanPyMuPDF": 0.894,
+   "ms": 638,
+   "pdfBytes": 4017460,
+   "guard": false
+  },
+  "kr22": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.94,
+   "inkMin": 0.925,
+   "inkMeanPyMuPDF": 0.847,
+   "ms": 584,
+   "pdfBytes": 392458,
+   "guard": false
+  },
+  "kr23": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.911,
+   "inkMin": 0.879,
+   "inkMeanPyMuPDF": 0.886,
+   "ms": 689,
+   "pdfBytes": 266030,
+   "guard": false
+  },
+  "kr24": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.859,
+   "inkMin": 0.827,
+   "inkMeanPyMuPDF": 0.764,
+   "ms": 503,
+   "pdfBytes": 255791,
+   "guard": false
+  },
+  "kr25": {
+   "pages": 4,
+   "recall": 0.9992,
+   "inkMean": 0.865,
+   "inkMin": 0.646,
+   "inkMeanPyMuPDF": 0.827,
+   "ms": 731,
+   "pdfBytes": 338868,
+   "guard": false
+  },
+  "kr26": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.877,
+   "inkMin": 0.877,
+   "inkMeanPyMuPDF": 0.803,
+   "ms": 612,
+   "pdfBytes": 166658,
+   "guard": false
+  },
+  "kr27": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.78,
+   "inkMin": 0.63,
+   "inkMeanPyMuPDF": 0.727,
+   "ms": 610,
+   "pdfBytes": 602450,
+   "guard": false
+  },
+  "kr28": {
+   "pages": 6,
+   "recall": 1,
+   "inkMean": 0.923,
+   "inkMin": 0.912,
+   "inkMeanPyMuPDF": 0.852,
+   "ms": 957,
+   "pdfBytes": 383450,
+   "guard": false
+  },
+  "kr29": {
+   "pages": 5,
+   "recall": 0.9991,
+   "inkMean": 0.88,
+   "inkMin": 0.789,
+   "inkMeanPyMuPDF": 0.834,
+   "ms": 780,
+   "pdfBytes": 222078,
+   "guard": false
+  },
+  "kr30": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.909,
+   "inkMin": 0.903,
+   "inkMeanPyMuPDF": 0.825,
+   "ms": 665,
+   "pdfBytes": 146781,
+   "guard": false
+  },
+  "kr31": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.944,
+   "inkMin": 0.936,
+   "inkMeanPyMuPDF": 0.894,
+   "ms": 750,
+   "pdfBytes": 299264,
+   "guard": false
+  },
+  "kr32": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.915,
+   "inkMin": 0.913,
+   "inkMeanPyMuPDF": 0.835,
+   "ms": 642,
+   "pdfBytes": 318164,
+   "guard": false
+  },
+  "kr33": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.698,
+   "inkMin": 0.499,
+   "inkMeanPyMuPDF": 0.583,
+   "ms": 649,
+   "pdfBytes": 184897,
+   "guard": false
+  },
+  "kr34": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.943,
+   "inkMin": 0.943,
+   "inkMeanPyMuPDF": 0.897,
+   "ms": 558,
+   "pdfBytes": 155153,
+   "guard": false
+  },
+  "kr35": {
+   "pages": 4,
+   "recall": 0.9991,
+   "inkMean": 0.683,
+   "inkMin": 0.567,
+   "inkMeanPyMuPDF": 0.702,
+   "ms": 793,
+   "pdfBytes": 277618,
+   "guard": false
+  },
+  "kr36": {
+   "pages": 6,
+   "recall": 1,
+   "inkMean": 0.929,
+   "inkMin": 0.892,
+   "inkMeanPyMuPDF": 0.845,
+   "ms": 805,
+   "pdfBytes": 1181740,
+   "guard": false
+  },
+  "kr37": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.932,
+   "inkMin": 0.892,
+   "inkMeanPyMuPDF": 0.893,
+   "ms": 593,
+   "pdfBytes": 227761,
+   "guard": false
+  },
+  "kr38": {
+   "pages": 5,
+   "recall": 1,
+   "inkMean": 0.864,
+   "inkMin": 0.654,
+   "inkMeanPyMuPDF": 0.829,
+   "ms": 879,
+   "pdfBytes": 1538388,
+   "guard": false
+  },
+  "kr39": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.936,
+   "inkMin": 0.936,
+   "inkMeanPyMuPDF": 0.844,
+   "ms": 510,
+   "pdfBytes": 98762,
+   "guard": false
+  },
+  "kr40": {
+   "pages": 2,
+   "recall": 0.9971,
+   "inkMean": 0.892,
+   "inkMin": 0.878,
+   "inkMeanPyMuPDF": 0.766,
+   "ms": 597,
+   "pdfBytes": 146695,
+   "guard": false
+  },
+  "kr41": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.906,
+   "inkMin": 0.869,
+   "inkMeanPyMuPDF": 0.87,
+   "ms": 855,
+   "pdfBytes": 478596,
+   "guard": false
+  },
+  "kr42": {
+   "pages": 5,
+   "recall": 1,
+   "inkMean": 0.916,
+   "inkMin": 0.846,
+   "inkMeanPyMuPDF": 0.829,
+   "ms": 947,
+   "pdfBytes": 434506,
+   "guard": false
+  },
+  "kr43": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.888,
+   "inkMin": 0.888,
+   "inkMeanPyMuPDF": 0.685,
+   "ms": 497,
+   "pdfBytes": 203348,
+   "guard": false
+  },
+  "kr44": {
+   "pages": 4,
+   "recall": 1,
+   "inkMean": 0.465,
+   "inkMin": 0.41,
+   "inkMeanPyMuPDF": 0.448,
+   "ms": 922,
+   "pdfBytes": 389754,
+   "guard": false
+  },
+  "kr45": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.595,
+   "inkMin": 0.405,
+   "inkMeanPyMuPDF": 0.597,
+   "ms": 717,
+   "pdfBytes": 1476804,
+   "guard": false
+  },
+  "kr46": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.919,
+   "inkMin": 0.909,
+   "inkMeanPyMuPDF": 0.854,
+   "ms": 587,
+   "pdfBytes": 169037,
+   "guard": false
+  },
+  "kr47": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.923,
+   "inkMin": 0.923,
+   "inkMeanPyMuPDF": 0.768,
+   "ms": 508,
+   "pdfBytes": 76103,
+   "guard": false
+  },
+  "kr48": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.924,
+   "inkMin": 0.924,
+   "inkMeanPyMuPDF": 0.899,
+   "ms": 524,
+   "pdfBytes": 172489,
+   "guard": false
+  },
+  "law01": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.816,
+   "inkMin": 0.816,
+   "inkMeanPyMuPDF": 0.734,
+   "ms": 341,
+   "pdfBytes": 49703,
+   "guard": false
+  },
+  "law02": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.735,
+   "inkMin": 0.735,
+   "inkMeanPyMuPDF": 0.695,
+   "ms": 404,
+   "pdfBytes": 44796,
+   "guard": false
+  },
+  "law03": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.803,
+   "inkMin": 0.803,
+   "inkMeanPyMuPDF": 0.786,
+   "ms": 355,
+   "pdfBytes": 46533,
+   "guard": false
+  },
+  "law04": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.654,
+   "inkMin": 0.654,
+   "inkMeanPyMuPDF": 0.668,
+   "ms": 482,
+   "pdfBytes": 56730,
+   "guard": false
+  },
+  "law05": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.94,
+   "inkMin": 0.94,
+   "inkMeanPyMuPDF": 0.871,
+   "ms": 322,
+   "pdfBytes": 32693,
+   "guard": false
+  },
+  "law06": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.603,
+   "inkMin": 0.603,
+   "inkMeanPyMuPDF": 0.606,
+   "ms": 350,
+   "pdfBytes": 46025,
+   "guard": false
+  },
+  "law07": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.854,
+   "inkMin": 0.854,
+   "inkMeanPyMuPDF": 0.812,
+   "ms": 447,
+   "pdfBytes": 54401,
+   "guard": false
+  },
+  "law08": {
+   "pages": 6,
+   "recall": 1,
+   "inkMean": 0.77,
+   "inkMin": 0.596,
+   "inkMeanPyMuPDF": 0.781,
+   "ms": 516,
+   "pdfBytes": 80621,
+   "guard": false
+  },
+  "law09": {
+   "pages": 20,
+   "recall": 1,
+   "inkMean": 0.826,
+   "inkMin": 0.799,
+   "inkMeanPyMuPDF": 0.817,
+   "ms": 1305,
+   "pdfBytes": 260938,
+   "guard": true
+  },
+  "law10": {
+   "pages": 26,
+   "recall": 1,
+   "inkMean": 0.939,
+   "inkMin": 0.722,
+   "inkMeanPyMuPDF": 0.757,
+   "ms": 1507,
+   "pdfBytes": 302735,
+   "guard": false
+  },
+  "law11": {
+   "pages": 28,
+   "recall": 0.9986,
+   "inkMean": 0.855,
+   "inkMin": 0.661,
+   "inkMeanPyMuPDF": 0.797,
+   "ms": 2432,
+   "pdfBytes": 717411,
+   "guard": false
+  },
+  "law12": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.743,
+   "inkMin": 0.743,
+   "inkMeanPyMuPDF": 0.582,
+   "ms": 278,
+   "pdfBytes": 22942,
+   "guard": false
+  },
+  "law13": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.917,
+   "inkMin": 0.917,
+   "inkMeanPyMuPDF": 0.795,
+   "ms": 326,
+   "pdfBytes": 24380,
+   "guard": false
+  },
+  "law14": {
+   "pages": 2,
+   "recall": 1,
+   "inkMean": 0.813,
+   "inkMin": 0.812,
+   "inkMeanPyMuPDF": 0.766,
+   "ms": 451,
+   "pdfBytes": 69379,
+   "guard": true
+  },
+  "law15": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.946,
+   "inkMin": 0.946,
+   "inkMeanPyMuPDF": 0.896,
+   "ms": 437,
+   "pdfBytes": 71377,
+   "guard": false
+  },
+  "law16": {
+   "pages": 20,
+   "recall": 1,
+   "inkMean": 0.826,
+   "inkMin": 0.799,
+   "inkMeanPyMuPDF": 0.817,
+   "ms": 1298,
+   "pdfBytes": 260938,
+   "guard": true
+  },
+  "law17": {
+   "pages": 2,
+   "recall": 0.9937,
+   "inkMean": 0.544,
+   "inkMin": 0.279,
+   "inkMeanPyMuPDF": 0.478,
+   "ms": 558,
+   "pdfBytes": 70545,
+   "guard": true
+  },
+  "law18": {
+   "pages": 9,
+   "recall": 1,
+   "inkMean": 0.745,
+   "inkMin": 0.458,
+   "inkMeanPyMuPDF": 0.626,
+   "ms": 757,
+   "pdfBytes": 132923,
+   "guard": false
+  },
+  "law19": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.83,
+   "inkMin": 0.83,
+   "inkMeanPyMuPDF": 0.525,
+   "ms": 330,
+   "pdfBytes": 33392,
+   "guard": true
+  },
+  "law20": {
+   "pages": 3,
+   "recall": 1,
+   "inkMean": 0.472,
+   "inkMin": 0.24,
+   "inkMeanPyMuPDF": 0.459,
+   "ms": 463,
+   "pdfBytes": 269802,
+   "guard": true
+  },
+  "law21": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.848,
+   "inkMin": 0.848,
+   "inkMeanPyMuPDF": 0.827,
+   "ms": 483,
+   "pdfBytes": 178233,
+   "guard": true
+  },
+  "law22": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.706,
+   "inkMin": 0.706,
+   "inkMeanPyMuPDF": 0.794,
+   "ms": 249,
+   "pdfBytes": 239409,
+   "guard": false
+  },
+  "law23": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.798,
+   "inkMin": 0.798,
+   "inkMeanPyMuPDF": 0.716,
+   "ms": 243,
+   "pdfBytes": 244021,
+   "guard": false
+  },
+  "law24": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.543,
+   "inkMin": 0.543,
+   "inkMeanPyMuPDF": 0.547,
+   "ms": 244,
+   "pdfBytes": 246881,
+   "guard": false
+  },
+  "law25": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": 0.57,
+   "ms": 564,
+   "pdfBytes": 2116719,
+   "guard": false
+  },
+  "na01": {
+   "pages": 1,
+   "recall": 1,
+   "inkMean": 0.891,
+   "inkMin": 0.891,
+   "inkMeanPyMuPDF": 0.744,
+   "ms": 444,
+   "pdfBytes": 44587,
+   "guard": false
+  },
+  "na02": {
+   "pages": 18,
+   "recall": 0.9999,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": 0.755,
+   "ms": 1002,
+   "pdfBytes": 202638,
+   "guard": false
+  },
+  "na03": {
+   "pages": 5,
+   "recall": 1,
+   "inkMean": 0.82,
+   "inkMin": 0.59,
+   "inkMeanPyMuPDF": 0.8,
+   "ms": 502,
+   "pdfBytes": 68032,
+   "guard": false
+  },
+  "na04": {
+   "pages": 11,
+   "recall": 0.9997,
+   "inkMean": 0.639,
+   "inkMin": 0.322,
+   "inkMeanPyMuPDF": 0.616,
+   "ms": 847,
+   "pdfBytes": 154852,
+   "guard": false
+  },
+  "na05": {
+   "pages": 7,
+   "recall": 1,
+   "inkMean": 0.698,
+   "inkMin": 0.358,
+   "inkMeanPyMuPDF": 0.675,
+   "ms": 636,
+   "pdfBytes": 110415,
+   "guard": false
+  },
+  "na06": {
+   "pages": 4,
+   "recall": 0.9993,
+   "inkMean": 0.7,
+   "inkMin": 0.376,
+   "inkMeanPyMuPDF": 0.666,
+   "ms": 562,
+   "pdfBytes": 86869,
+   "guard": false
+  },
+  "na07": {
+   "pages": 15,
+   "recall": 1,
+   "inkMean": 0.712,
+   "inkMin": 0.471,
+   "inkMeanPyMuPDF": 0.669,
+   "ms": 896,
+   "pdfBytes": 154915,
+   "guard": false
+  },
+  "na08": {
+   "pages": 14,
+   "recall": 0.9998,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": 0.491,
+   "ms": 944,
+   "pdfBytes": 167506,
+   "guard": false
+  },
+  "nt01": {
+   "pages": 245,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 6127,
+   "pdfBytes": 1619425,
+   "guard": true
+  },
+  "nt02": {
+   "pages": 241,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 13025,
+   "pdfBytes": 2830677,
+   "guard": true
+  },
+  "nt03": {
+   "pages": 105,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 6102,
+   "pdfBytes": 2178645,
+   "guard": true
+  },
+  "nt04": {
+   "pages": 50,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 2183,
+   "pdfBytes": 779165,
+   "guard": true
+  },
+  "nt05": {
+   "pages": 3,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 673,
+   "pdfBytes": 167583,
+   "guard": false
+  },
+  "nt06": {
+   "pages": 7,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 696,
+   "pdfBytes": 425700,
+   "guard": false
+  },
+  "nt07": {
+   "pages": 5,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 643,
+   "pdfBytes": 145424,
+   "guard": false
+  },
+  "nt08": {
+   "pages": 2,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 400,
+   "pdfBytes": 35538,
+   "guard": false
+  },
+  "nt09": {
+   "pages": 6,
+   "recall": null,
+   "inkMean": null,
+   "inkMin": null,
+   "inkMeanPyMuPDF": null,
+   "ms": 1445,
+   "pdfBytes": 238466,
+   "guard": false
+  }
+ }
+}
