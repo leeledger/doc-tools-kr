@@ -209,7 +209,7 @@ test('stripped original: a 60 KB JPEG at 100 KB keeps its pixels and loses its E
   await chooseTarget(page, '100 KB');
   await run(page);
   const r = row(page, 'small_60k.jpg');
-  await expect(r.getByRole('note')).toContainText('이미 목표보다 작아 화질은 그대로 두고 사진 정보(EXIF)만 지웠습니다.');
+  await expect(r.getByRole('note')).toContainText('이미 목표보다 작아 화질은 그대로 두고 촬영 위치 같은 사진 정보만 지웠습니다.');
   const { bytes } = await download(page, r);
   expect(bytes.length).toBeLessThanOrEqual(input.length);
   expect(has(bytes, 'Exif')).toBe(false);
@@ -341,7 +341,8 @@ test('batch + ZIP: 3 of 4 finish, the summary is announced, the ZIP has 3 dedupe
   await chooseTarget(page, '200 KB');
   await run(page);
   await expect(rows(page).filter({ has: page.getByRole('link', { name: /내려받기$/ }) })).toHaveCount(3);
-  await expect(page.locator('#ph-status')).toHaveText('4장 중 3장을 줄였습니다. 1장은 줄이지 못했습니다.');
+  // 200 KB target: one of the three results is a re-saved file that grew; it is counted as 늘어남, never 줄임.
+  await expect(page.locator('#ph-status')).toHaveText('사진 4장: 줄임 2장 · 늘어남 1장 · 못 줄임 1장');
   expect(network.requests.map((r) => r.url()).filter((u) => ZIP_CHUNK.test(u))).toEqual([]);
   const [d] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '모두 내려받기 (ZIP)' }).click()]);
   expect(network.requests.map((r) => r.url()).filter((u) => ZIP_CHUNK.test(u)).length).toBe(1);
@@ -358,10 +359,10 @@ test('bad inputs: HEIC guidance, animated GIF, truncated JPEG, text and a 0-byte
   await expect(err('anim.gif')).toHaveText('움직이는 이미지(GIF·WebP·PNG)는 아직 줄일 수 없습니다. 움직이지 않는 사진 파일을 선택해 주세요.');
   await expect(err('truncated.jpg')).toHaveText(/^파일이 중간에 끊겨 있습니다\. /);
   await expect(err('not_image.txt')).toHaveText('사진 파일이 아닙니다. JPG·PNG·WebP 파일을 선택해 주세요.');
-  await expect(err('zero.jpg')).toHaveText('사진 파일이 아닙니다. JPG·PNG·WebP 파일을 선택해 주세요.');
+  await expect(err('zero.jpg')).toHaveText('빈 파일입니다. 원본을 다시 저장해 선택해 주세요.');
   await run(page);
-  await expect(err('fake.heic')).toHaveText(/^아이폰 사진 형식\(HEIC\)은 이 브라우저에서 열 수 없습니다\./);
-  await expect(page.locator('#ph-status')).toHaveText('5장 중 0장을 줄였습니다. 5장은 줄이지 못했습니다.');
+  await expect(err('fake.heic')).toHaveText(/^아이폰 사진 형식\(HEIC\)은 지금 쓰는 앱에서 열 수 없습니다\./);
+  await expect(page.locator('#ph-status')).toHaveText('사진 5장: 못 줄임 5장');
 });
 
 test('limits: a 20,000 × 1,000 panorama works on PC and is refused on a phone', async ({ page, isMobile }) => {
@@ -369,7 +370,7 @@ test('limits: a 20,000 × 1,000 panorama works on PC and is refused on a phone',
   await pick(page, [photoRuntime('pano_20000x1000.jpg')]);
   const r = row(page, 'pano_20000x1000.jpg');
   if (isMobile) {
-    await expect(r.locator('.file-error')).toHaveText('휴대폰에서는 긴 변이 16,384 px 이하인 사진만 줄일 수 있습니다. 휴대폰 브라우저가 그릴 수 있는 최대 크기이기 때문입니다.');
+    await expect(r.locator('.file-error')).toHaveText('휴대폰에서는 긴 변이 16,384픽셀 이하인 사진만 줄일 수 있습니다. 휴대폰에서 한 번에 그릴 수 있는 가장 큰 크기이기 때문입니다.');
     await expect(page.getByRole('button', { name: '사진 용량 줄이기', exact: true })).toBeDisabled();
     return;
   }
@@ -385,7 +386,7 @@ test('limits: a 5000 × 3750 photo on a phone is processed at 4,096 px with the 
   await chooseMode(page, '화질');
   await run(page);
   const r = row(page, 'big_5000x3750.jpg');
-  await expect(r.getByRole('note')).toContainText('휴대폰에서는 긴 변 4,096 px까지 줄여서 처리합니다.');
+  await expect(r.getByRole('note')).toContainText('휴대폰에서는 긴 변 4,096픽셀까지 줄여서 처리합니다.');
   const img = await (await nodeCodecs()).decodeJpeg((await download(page, r)).bytes);
   expect(Math.max(img.width, img.height)).toBeLessThanOrEqual(4096);
   await expect(page.locator('#ph-compare .pc-caption')).toHaveText('원본(휴대폰에서 줄여 불러온 사진)');
@@ -425,9 +426,10 @@ test('worker crash on item 2: that row fails, a fresh worker finishes rows 3 and
   await chooseTarget(page, '200 KB');
   await patchWorker(page, `{ const post = self.postMessage.bind(self); self.postMessage = (m, t) => { if (m && m.id === 2) { if (m.type === 'item-phase') setTimeout(() => { throw new Error('simulated crash'); }); return; } post(m, t); }; }`);
   await run(page);
-  await expect(row(page, 'scene_cc0.jpg').locator('.file-error')).toHaveText(/기기 메모리가 부족합니다|처리 중 문제가 생겼습니다/);
+  await expect(row(page, 'scene_cc0.jpg').locator('.file-error')).toHaveText(/이 기기에서 한 번에 처리할 수 있는 양을 넘었습니다|처리 중 문제가 생겼습니다/);
   for (const name of ['portrait_pd.jpg', 'opaque_rgba.png', 'exif6_gps.jpg']) await expect(row(page, name).getByRole('link', { name: /내려받기$/ })).toBeVisible();
-  await expect(page.locator('#ph-status')).toHaveText('4장 중 3장을 줄였습니다. 1장은 줄이지 못했습니다.');
+  // Default 500 KB target: two of the three finished photos were re-saved larger (privacy / JPG conversion).
+  await expect(page.locator('#ph-status')).toHaveText('사진 4장: 줄임 1장 · 늘어남 2장 · 못 줄임 1장');
 });
 
 test('keyboard only: pick, compress, download, then the compare slider, zoom and pan keys', async ({ page, browserName, isMobile }) => {
@@ -496,7 +498,7 @@ test('axe: empty, ready (details open, 직접 입력) and done (compare visible)
 
 test('SEO and wiring: title, description, JSON-LD, the pdf-compress link back here', async ({ page }) => {
   await gotoReady(page, '/photo-compress/');
-  await expect(page).toHaveTitle('사진 용량 줄이기 — 업로드 없이 브라우저에서 무료로 | 안올림');
+  await expect(page).toHaveTitle('사진 용량 줄이기 — 파일을 보내지 않고 무료로 | 문서딱');
   await expect(page.locator('h1')).toHaveText('사진 용량 줄이기');
   await expect(page.locator('.related').getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(page.locator('.related').getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
@@ -530,7 +532,7 @@ test('engine load failure: its own message with 새로고침, rows back to 대�
   await chooseTarget(page, '200 KB');
   await run(page);
   await expect(banner).toBeHidden();
-  await expect(page.locator('#ph-status')).toHaveText('2장 중 2장을 줄였습니다.');
+  await expect(page.locator('#ph-status')).toHaveText('사진 2장을 모두 줄였습니다.');
 });
 
 test('done on a phone: the headline and the first download are in view and focused; no drop hint on touch', async ({ page, isMobile }) => {
@@ -540,7 +542,7 @@ test('done on a phone: the headline and the first download are in view and focus
   await pick(page, [PORTRAIT]);
   await chooseTarget(page, '200 KB');
   await run(page);
-  await expect(page.locator('#ph-headline')).toHaveText(/^1장 중 1장을 줄였습니다\. [\d.,]+ KB → [\d.,]+ KB$/);
+  await expect(page.locator('#ph-headline')).toHaveText(/^사진을 줄였습니다\. [\d.,]+ KB → [\d.,]+ KB$/);
   await expect(page.locator('#ph-headline')).toBeInViewport();
   const dl = row(page, 'portrait_pd.jpg').getByRole('link', { name: /내려받기$/ });
   await expect(dl).toBeFocused();
@@ -556,7 +558,7 @@ test('unsupported browser: without OffscreenCanvas the notice shows and the pick
     return;
   }
   await expect(notice).toBeVisible();
-  await expect(notice).toHaveText('이 브라우저에서는 사진 줄이기를 쓸 수 없습니다. Safari 16.4 이상, Chrome, Edge, Firefox 최신 버전에서 이용해 주세요.');
+  await expect(notice).toHaveText('지금 쓰는 앱에서는 사진 줄이기가 안 됩니다. 아이폰은 iOS 16.4 이상으로 업데이트하거나, Chrome·Safari·삼성 인터넷 등 다른 앱으로 이 페이지를 열어 주세요.');
   await expect(page.locator('#ph-input')).toBeDisabled();
   await page.locator('#ph-pick').click({ force: true });
   await expect(rows(page)).toHaveCount(0);
@@ -565,13 +567,18 @@ test('unsupported browser: without OffscreenCanvas the notice shows and the pick
   expect(network.requests.map((r) => r.url()).filter((u) => ENGINE.test(u))).toEqual([]);
 });
 
-test('target mode, already small: nothing to remove keeps the original; re-saved for EXIF/orientation with the note, ≤ target', async ({ page }) => {
+test('target mode, already small: nothing to remove offers the original as is; re-saved for EXIF/orientation with the note, ≤ target', async ({ page }) => {
   await open(page);
   await pick(page, [PORTRAIT, photoFixture('exif6_gps.jpg')]);
   await run(page);
   const p = row(page, 'portrait_pd.jpg');
-  await expect(p.getByRole('note')).toHaveText('더 줄일 수 없는 사진입니다. 원본을 그대로 쓰세요.');
-  await expect(p.getByRole('link', { name: /내려받기$/ })).toHaveCount(0);
+  await expect(p.getByRole('note')).toHaveText('이미 목표보다 작아요. 원본 그대로 받으셔도 돼요.');
+  // Polish Q: always a download; here the original itself, byte for byte, under its own name.
+  const orig = await download(page, p);
+  expect(orig.name).toBe('portrait_pd.jpg');
+  expect(Buffer.from(orig.bytes).equals(readFileSync(PORTRAIT))).toBe(true);
+  // The summary counts 그대로 and 늘어남 apart and never says 줄였습니다.
+  await expect(page.locator('#ph-headline')).toHaveText('사진 2장: 그대로 1장 · 늘어남 1장');
   const e = row(page, 'exif6_gps.jpg');
   // The re-saved file grew (25 KB → ~86 KB): the size line says so and why; never "0 % 줄었습니다".
   await expect(e.locator('.ph-size')).toHaveText(
@@ -593,7 +600,7 @@ test('quality mode, privacy first: a rotated photo with GPS and no size gain is 
   await page.getByLabel('화질 값').fill('95');
   await run(page);
   const e = row(page, 'exif6_gps.jpg');
-  await expect(e.getByText('원본을 그대로 쓰세요')).toHaveCount(0);
+  await expect(e.getByText('원본 그대로 받으셔도')).toHaveCount(0);
   await expect(e.locator('.ph-size')).toHaveText(/\(늘어남\) — 위치 정보 등 개인정보를 지우고 방향을 바로잡느라 다시 저장했습니다\.$/);
   const { bytes } = await download(page, e);
   expectCleanBaselineJpeg(bytes);

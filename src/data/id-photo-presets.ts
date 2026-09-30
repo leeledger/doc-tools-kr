@@ -163,7 +163,7 @@ export const PRESETS: readonly IdPreset[] = [
     status: 'arithmetic',
     sourceUrls: [],
     retrieved: RETRIEVED,
-    note: '3 cm × 300 dpi ÷ 2.54 = 354 px (계산값)',
+    note: '3 cm를 해상도 300으로 계산한 크기: 354×472픽셀 (계산값)',
   },
 ];
 

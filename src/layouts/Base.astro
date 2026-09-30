@@ -2,7 +2,7 @@
 import '../generated/anolim-ui.css';
 import '../styles/global.css';
 import '../styles/app.css';
-import { BIZ_REG_NO, OPERATOR_LABEL, SITE, VERIFICATION, contactLine, defaultDescription } from '../data/site';
+import { SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } from '../data/site';
 import { BUILD_ID } from '../data/build';
 import { LIVE_TOOLS } from '../data/tools';
 // Preloaded UI weights (Polish P.12): 400 (body) and 800 (every H1, the LCP element). 600 and 700 load on demand.
@@ -12,7 +12,6 @@ import uiFont800 from '../generated/anolim-ui-800.woff2?url';
 interface Props {
   title?: string;
   description?: string;
-  ogDescription?: string;
   /** Id the skip link jumps to. */
   skipTarget?: string;
   isHome?: boolean;
@@ -22,17 +21,16 @@ interface Props {
 const {
   title = SITE.defaultTitle,
   description = defaultDescription(),
-  ogDescription = description,
   skipTarget = 'main',
   isHome = false,
   noindex = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const ogImage = new URL('/brand/og.png', Astro.site).href;
-const ogAlt = `${SITE.name} — ${SITE.tagline}`;
+const share = sharePreview(Astro.url.pathname, Astro.site!);
 const nav = isHome ? '' : '/';
 const path = Astro.url.pathname;
+const footOp = footerContact();
 const favicon =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M10 9h8l4 4v10H10z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M13 18l2.5 2.5L20 16' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 ---
@@ -51,13 +49,18 @@ const favicon =
 <meta property="og:locale" content={SITE.locale}>
 <meta property="og:site_name" content={SITE.name}>
 <meta property="og:title" content={title}>
-<meta property="og:description" content={ogDescription}>
+<meta property="og:description" content={share.description}>
 <meta property="og:url" content={canonical}>
-<meta property="og:image" content={ogImage}>
+<meta property="og:image" content={share.image}>
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content={ogAlt}>
+<meta property="og:image:alt" content={share.alt}>
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content={title}>
+<meta name="twitter:description" content={share.description}>
+<meta name="twitter:image" content={share.image}>
+<meta name="twitter:image:alt" content={share.alt}>
 {VERIFICATION.naver && <meta name="naver-site-verification" content={VERIFICATION.naver}>}
 {VERIFICATION.google && <meta name="google-site-verification" content={VERIFICATION.google}>}
 <link rel="icon" href={favicon} type="image/svg+xml">
@@ -73,9 +76,9 @@ const favicon =
 
 <header class="top">
   <div class="wrap top-inner">
-    <a class="brand" href="/" aria-label="안올림 홈">
+    <a class="brand" href="/" aria-label={`${SITE.name} 홈`}>
       <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M10 9h8l4 4v10H10z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M13 18l2.5 2.5L20 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>안올림</span>
+      <span>{SITE.name}</span>
     </a>
     <nav aria-label="주요 메뉴" class="top-nav">
       <div class="menu" data-menu>
@@ -108,13 +111,13 @@ const favicon =
 
 <footer class="foot">
   <div class="wrap foot-inner">
-    <p class="foot-op">운영: {OPERATOR_LABEL} · <Fragment set:html={contactLine()} />{BIZ_REG_NO && ` · 사업자등록번호 ${BIZ_REG_NO}`}</p>
+    {footOp && <p class="foot-op" set:html={footOp} />}
     <nav class="foot-links" aria-label="사이트 정보">
       <a href="/terms/">이용약관</a>
       <a href="/privacy/">개인정보 처리방침</a>
       <a href="/licenses/">오픈소스 라이선스</a>
     </nav>
-    <p class="foot-copy">© 2026 안올림 · 파일을 올리지 않는 서류 도구</p>
+    <p class="foot-copy">© 2026 {SITE.name} · {SITE.tagline}</p>
   </div>
 </footer>
 <script>

@@ -3,13 +3,12 @@
 // Output is deterministic (fixed canvas sizes, no timestamps) and git-ignored: public/favicon.ico and
 // public/brand/*. A canvas that fails to load fails the build: the site never ships without icons.
 import { createCanvas, GlobalFonts, Path2D } from '@napi-rs/canvas';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const BRAND = '#0f766e';
-export const OG_ALT = '안올림 — 파일을 올리지 않는 서류 도구';
 
 const FONT_DIR = join(root, 'node_modules', 'pretendard', 'dist', 'public', 'static');
 const FAMILY_BOLD = 'AnolimBrandBold';
@@ -73,24 +72,96 @@ function maskable(size) {
   return png(c);
 }
 
-/** 1200×630: logo, "안올림" and the tagline on the brand colour (the design of the old og.png). */
-function og() {
+/** The share-preview copy (src/data/og.json): one image per entry in `images`. */
+export const OG = JSON.parse(readFileSync(join(root, 'src', 'data', 'og.json'), 'utf8'));
+export const BRAND_NAME = '문서딱';
+const OG_W = 1200;
+const OG_H = 630;
+/**
+ * The central safe area: KakaoTalk crops a large preview to about 1:1 (the middle 630 px) or 2:1, so the
+ * name, the title and the line all stay inside x 285–915 (a 600 px column with a small margin).
+ */
+export const OG_SAFE = { left: 300, right: 900 };
+
+/** The domain printed on the images: PUBLIC_SITE_URL's host unless it is a preview host, else og.json's. */
+export function ogDomain(siteUrl = process.env.PUBLIC_SITE_URL) {
+  try {
+    const host = siteUrl ? new URL(siteUrl).host : '';
+    return host && !host.endsWith('.pages.dev') ? host : OG.domain;
+  } catch {
+    return OG.domain;
+  }
+}
+
+/** Splits `text` into lines no wider than `max` at spaces (keep-all), shrinking the font down to `minPx`. */
+function fitLines(ctx, text, family, startPx, minPx, max, maxLines) {
+  for (let px = startPx; px >= minPx; px -= 2) {
+    ctx.font = `${px}px ${family}`;
+    const words = text.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+      const next = cur ? `${cur} ${w}` : w;
+      if (ctx.measureText(next).width <= max || !cur) cur = next;
+      else {
+        lines.push(cur);
+        cur = w;
+      }
+    }
+    lines.push(cur);
+    if (lines.length <= maxLines && lines.every((l) => ctx.measureText(l).width <= max)) return { px, lines };
+  }
+  throw new Error(`gen-brand: "${text}" does not fit ${max} px in ${maxLines} line(s)`);
+}
+
+/** 1200×630 share image: the 문서딱 wordmark and icon, a large title, the plain line, the domain. All centred. */
+function og(image, domain) {
   registerFonts();
-  const c = createCanvas(1200, 630);
+  const c = createCanvas(OG_W, OG_H);
   const ctx = c.getContext('2d');
   ctx.fillStyle = BRAND;
-  ctx.fillRect(0, 0, 1200, 630);
-  const left = 96;
-  const top = 196;
-  drawLogo(ctx, left, top, 120, '#ffffff', BRAND);
+  ctx.fillRect(0, 0, OG_W, OG_H);
+  const cx = OG_W / 2;
+  const max = OG_SAFE.right - OG_SAFE.left;
   ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `132px ${FAMILY_XBOLD}`;
-  ctx.fillText('안올림', left + 120 + 28, top + 60);
-  ctx.textBaseline = 'alphabetic';
-  ctx.font = `52px ${FAMILY_BOLD}`;
+
+  // Wordmark: icon + 문서딱, centred as a group.
+  ctx.font = `56px ${FAMILY_XBOLD}`;
+  const nameW = ctx.measureText(BRAND_NAME).width;
+  const icon = 64;
+  const gap = 16;
+  const groupLeft = cx - (icon + gap + nameW) / 2;
+  drawLogo(ctx, groupLeft, 58, icon, '#ffffff', BRAND);
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'left';
+  ctx.fillText(BRAND_NAME, groupLeft + icon + gap, 58 + icon / 2 + 2);
+  ctx.textAlign = 'center';
+
+  // Title: up to two lines, 88 px down to 60 px.
+  const title = fitLines(ctx, image.title, FAMILY_XBOLD, 88, 60, max, 2);
+  const titleLead = title.px * 1.2;
+  const titleTop = 250 - ((title.lines.length - 1) * titleLead) / 2;
+  ctx.font = `${title.px}px ${FAMILY_XBOLD}`;
+  title.lines.forEach((l, i) => ctx.fillText(l, cx, titleTop + i * titleLead));
+
+  // The plain line: split at " — " into its two halves, each fitted.
+  const parts = image.line.split(' — ');
   ctx.globalAlpha = 0.95;
-  ctx.fillText('파일을 올리지 않는 서류 도구', left, top + 120 + 40 + 52);
+  let y = titleTop + (title.lines.length - 1) * titleLead + title.px * 0.6 + 58;
+  for (const part of parts) {
+    const f = fitLines(ctx, part, FAMILY_BOLD, 36, 28, max, 1);
+    ctx.font = `${f.px}px ${FAMILY_BOLD}`;
+    ctx.fillText(f.lines[0], cx, y);
+    y += 50;
+  }
+
+  // Domain, small, at the bottom.
+  ctx.globalAlpha = 0.85;
+  ctx.font = `30px ${FAMILY_BOLD}`;
+  ctx.fillText(domain, cx, 578);
+  ctx.globalAlpha = 1;
   return png(c);
 }
 
@@ -117,14 +188,15 @@ export function buildIco(pngs) {
 }
 
 /** Every output, keyed by its path under public/. */
-export function renderBrand() {
+export function renderBrand(domain = ogDomain()) {
+  const ogImages = Object.fromEntries(Object.entries(OG.images).map(([name, image]) => [`brand/og-${name}.png`, og(image, domain)]));
   return {
     'favicon.ico': buildIco([16, 32, 48].map((size) => ({ size, data: icon(size) }))),
     'brand/apple-touch-icon.png': icon(180),
     'brand/icon-192.png': icon(192),
     'brand/icon-512.png': icon(512),
     'brand/icon-maskable-512.png': maskable(512),
-    'brand/og.png': og(),
+    ...ogImages,
   };
 }
 
@@ -132,6 +204,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const pub = join(root, 'public');
   mkdirSync(join(pub, 'brand'), { recursive: true });
   const out = renderBrand();
+  // A share image whose page entry was removed (or the old single og.png) must not ship.
+  for (const f of readdirSync(join(pub, 'brand'))) if (/^og.*\.png$/.test(f) && !(`brand/${f}` in out)) rmSync(join(pub, 'brand', f));
   for (const [path, data] of Object.entries(out)) writeFileSync(join(pub, path), data);
   console.log(`gen-brand: ${Object.entries(out).map(([p, d]) => `${p} ${(d.length / 1024).toFixed(1)} KiB`).join(', ')}`);
 }

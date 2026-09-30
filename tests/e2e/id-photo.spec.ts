@@ -26,7 +26,7 @@ const NOTICES = [
   '배경을 흰색으로 바꾸거나 지우지 않습니다. 배경이 흰색이 아니면 흰 배경에서 다시 찍어 주세요.',
   '머리 길이는 추정값입니다. 머리카락에 가려진 정수리 위치는 사진으로 정확히 알 수 없으니 안내선을 보고 직접 확인하세요.',
   '최종 적합 여부는 접수 기관 심사로 결정되며, 이 도구는 통과를 보장하지 않습니다.',
-  '여권 사진은 제출 전에 외교부 「온라인 여권 사진 검증」에서 한 번 더 확인할 수 있습니다. (외교부 사이트로 이동하며, 그곳에서는 사진을 외교부 서버에 올립니다.) 온라인 여권 사진 검증 (새 창)',
+  '여권 사진은 제출 전에 외교부 「온라인 여권 사진 검증」에서 한 번 더 확인할 수 있습니다. (외교부 사이트로 이동하며, 그곳에서는 사진을 외교부로 보냅니다.) 온라인 여권 사진 검증 (새 창)',
 ];
 const CONFIRM = '규격 확인은 제출처 기준을 따릅니다. 정수리(머리카락 제외)와 턱 위치를 안내선에서 직접 확인했습니다.';
 
@@ -179,8 +179,8 @@ test('happy path: passport from portrait_pd — overlay, readout in band, save g
   const { bytes, name } = await save(page);
   expect(name).toBe('passport_413x531.jpg');
   expectSpec(bytes, 413, 531, 500_000, 300);
-  await expect(page.locator('#idp-headline')).toHaveText(/^413×531 px · [\d.]+ KB · 300 dpi · 여권 \(온라인 신청·정부24\)$/);
-  await expect(page.locator('#idp-chips')).toContainText('500 KB 이하');
+  await expect(page.locator('#idp-headline')).toHaveText(/^규격에 맞췄습니다 · [\d.]+ KB$/);
+  await expect(page.locator('#idp-chips li')).toHaveText(['여권 (온라인 신청·정부24)', '413×531픽셀', '500 KB 이하', '촬영 위치 등 사진 정보 없음']);
 });
 
 // ---------- 3 every preset ----------
@@ -213,11 +213,11 @@ test('custom size: invalid input (49 px, "abc") disables save and shows the mess
   await pick(page, PORTRAIT);
   await choosePreset(page, 'custom');
   await page.fill('#idp-w', '49');
-  await expect(page.locator('#idp-custom-error')).toHaveText('가로와 세로는 50–2,000 px 사이의 정수로 입력해 주세요.');
+  await expect(page.locator('#idp-custom-error')).toHaveText('가로와 세로는 50–2,000픽셀 사이의 정수로 입력해 주세요.');
   await expect(page.locator('#idp-w')).toHaveAttribute('aria-invalid', 'true');
   await page.locator('#idp-confirm').check();
   await expect(page.locator('#idp-save')).toBeDisabled();
-  await expect(page.locator('#idp-checklist')).toContainText('가로와 세로는 50–2,000 px');
+  await expect(page.locator('#idp-checklist')).toContainText('가로와 세로는 50–2,000픽셀');
   await page.fill('#idp-w', '200');
   await page.fill('#idp-kb', 'abc');
   await expect(page.locator('#idp-custom-error')).toHaveText('용량 한도는 10–10,000 KB 사이의 정수로 입력하거나 비워 두세요.');
@@ -307,7 +307,7 @@ test('outside: zoomed out and moved to an edge, the outside block shows and save
 test('lowres: a 300 × 375 photo for passport is blocked; no download', async ({ page, network }) => {
   await open(page);
   await pick(page, photoRuntime('lowres_300x375.jpg'), /^blocked$/);
-  await expect(page.locator('#idp-checklist .block')).toHaveText(/사진 해상도가 낮아 413×531 px로 만들 수 없습니다\./);
+  await expect(page.locator('#idp-checklist .block')).toHaveText(/사진 해상도가 낮아 413×531픽셀로 만들 수 없습니다\./);
   await page.locator('#idp-confirm').check();
   await expect(page.locator('#idp-save')).toBeDisabled();
   expect(network.requests.map((r) => r.url()).some((u) => ENCODE.test(u))).toBe(false);
@@ -427,8 +427,9 @@ test.describe('warnings', () => {
 // ---------- 9 bad inputs, 10 orientation ----------
 
 for (const [file, text] of [
-  [photoRuntime('fake.heic'), '아이폰 사진 형식(HEIC)은 이 브라우저에서 열 수 없습니다.'],
-  [photoFixture('anim.gif'), '움직이는 이미지'],
+  [photoRuntime('fake.heic'), '아이폰 사진 형식(HEIC)은 지금 쓰는 앱에서 열 수 없습니다.'],
+  // UX-AUDIT-2 §7.3: this tool does not compress, so never "줄일 수 없습니다".
+  [photoFixture('anim.gif'), '움직이는 이미지는 여권·증명사진으로 쓸 수 없습니다. 사진 파일을 선택해 주세요.'],
   [photoRuntime('truncated.jpg'), '파일이 중간에 끊겨 있습니다.'],
   [photoRuntime('not_image.txt'), '사진 파일이 아닙니다.'],
 ] as const) {
@@ -505,6 +506,30 @@ test.describe('kill switch', () => {
   });
 });
 
+// ---------- done state below the sticky header (Polish Q, UX-AUDIT-2 P1-1) ----------
+
+test('done: the headline, the chips and 내려받기 are fully below the sticky header and inside the viewport (390/360, 768, 200 %)', async ({ page, isMobile }) => {
+  // Phones: the device size and 360 × 740. Desktop engines: a tablet (768 × 1024) and a 1440 px window at 200 % (720 × 450).
+  const sizes = isMobile ? [page.viewportSize()!, { width: 360, height: 740 }] : [{ width: 768, height: 1024 }, { width: 720, height: 450 }];
+  for (const size of sizes) {
+    await page.setViewportSize(size);
+    await open(page);
+    await pick(page, PORTRAIT);
+    await page.locator('#idp-confirm').check();
+    await page.locator('#idp-save').click();
+    await expect(tool(page)).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+    await expect(page.locator('#idp-headline')).toBeFocused();
+    const box = await page.evaluate(() => {
+      const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+      return { header: r('header.top').bottom, headline: r('#idp-headline'), chips: r('#idp-chips'), download: r('#idp-download'), vh: innerHeight };
+    });
+    for (const key of ['headline', 'chips', 'download'] as const) {
+      expect(box[key].top, `${size.width}×${size.height} ${key} top`).toBeGreaterThanOrEqual(box.header - 0.5);
+      expect(box[key].bottom, `${size.width}×${size.height} ${key} bottom`).toBeLessThanOrEqual(box.vh + 0.5);
+    }
+  }
+});
+
 // ---------- 13 keyboard only ----------
 
 test('keyboard only: preset, file, adjust, confirm, save, download', async ({ page, isMobile }) => {
@@ -573,10 +598,10 @@ test('mobile at 360 px: no horizontal scroll; stage buttons, sliders and the che
 
 test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedTools; the photo-compress FAQ link', async ({ page }) => {
   await open(page);
-  await expect(page).toHaveTitle('여권사진 규격 맞추기 — 업로드 없이 브라우저에서 무료로 | 안올림');
+  await expect(page).toHaveTitle('여권·증명사진 규격 맞추기 — 파일을 보내지 않고 무료로 | 문서딱');
   const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
-  expect(desc).toBe('여권사진 규격(413×531 픽셀, 500KB 이하)과 공무원 시험·Q-Net·이력서 증명사진 사이즈에 맞춰 사진을 자르고 용량을 맞춥니다. 업로드 없이 브라우저에서 처리하며 보정하지 않습니다.');
-  await expect(page.locator('h1')).toHaveText('여권사진 규격 맞추기');
+  expect(desc).toBe('여권사진 규격(413×531 픽셀, 500KB 이하)과 공무원 시험·Q-Net·이력서 증명사진 사이즈에 맞춰 사진을 자르고 용량을 맞춥니다. 사진은 내 폰·컴퓨터 밖으로 보내지 않고, 보정하지 않습니다.');
+  await expect(page.locator('h1')).toHaveText('여권·증명사진 규격 맞추기');
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute('href'))!).pathname).toBe('/id-photo/');
   const data = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap((j) => JSON.parse(j));
   expect(data.find((d: { '@type': string }) => d['@type'] === 'WebApplication')).toMatchObject({ applicationCategory: 'UtilitiesApplication', inLanguage: 'ko' });
@@ -587,7 +612,7 @@ test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedToo
   const body = (await page.locator('main').textContent()) ?? '';
   if (isManualBuild()) {
     for (const phrase of ['자동으로 잡아', '자동으로 맞춘', '자동 맞춤', '건너뛰고 직접 맞추기', '6 MB의 프로그램']) expect(body, phrase).not.toContain(phrase);
-    await expect(page.locator('.lead')).toHaveText('여권사진과 증명사진 사이즈를 제출처 규격에 맞춥니다. 안내선을 보며 사진 위치를 직접 맞춘 뒤 정확한 픽셀 크기와 용량의 JPG로 저장합니다.');
+    await expect(page.locator('.lead')).toHaveText('여권사진과 증명사진 사이즈를 제출처 규격에 맞춥니다. 안내선을 보며 사진 위치를 직접 맞춘 뒤 제출처가 요구하는 크기와 용량의 사진 파일로 저장합니다.');
     expect(body).toContain('안내선이 나타나면 끌어서 옮기고 확대·축소해 정수리와 턱을 안내선에 맞춥니다.');
     expect(body).toContain('최종 적합 여부는 접수 기관 심사로 결정됩니다. 안내선을 보고 정수리와 턱 위치를 직접 확인해야 저장할 수 있습니다.');
   } else {
@@ -598,7 +623,7 @@ test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedToo
   await expect(page.locator('.card.live').getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
   await gotoReady(page, '/photo-compress/');
   await page.getByText('증명사진 용량 줄이기에도 쓸 수 있나요?').click();
-  await expect(page.locator('.faq').getByRole('link', { name: '여권사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
+  await expect(page.locator('.faq').getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
   await gotoReady(page, '/licenses/');
   const lic = (await page.locator('main').textContent()) ?? '';
   for (const s of ['@mediapipe/tasks-vision', 'Model%20Card%20MediaPipe%20Face%20Mesh%20V2.pdf', 'Eigen', 'MPL-2.0', 'Mozilla Public License Version 2.0', 'https://gitlab.com/libeigen/eigen/-/tree/dcbaf2d608f306450f1e74949eb87e9a22a7ef4b', 'XNNPACK', 'Protocol Buffers']) {

@@ -109,7 +109,7 @@ test('password: wrong password shows the message, the right one unlocks, merge s
 test('bad inputs: a not-PDF never enters the list (one alert), a corrupt file is reported, other files are kept', async ({ page }) => {
   await open(page);
   await add(page, [runtimePath('not_a_pdf'), LAW, runtimePath('truncated'), FW9]);
-  await expect(page.locator('#merge-error')).toHaveText('not_a_pdf.pdf은(는) PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
+  await expect(page.locator('#merge-error')).toHaveText('not_a_pdf.pdf는 PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
   await expect(item(page, 'not_a_pdf.pdf')).toHaveCount(0);
   await expect(item(page, 'truncated.pdf').locator('.file-error')).toHaveText(
     '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아 주세요.',

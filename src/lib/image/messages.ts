@@ -1,6 +1,7 @@
 // Error codes and the user-facing copy of 사진 용량 줄이기 (brief Step 3 §3.2). Step 4 reuses the heic,
 // corrupt and animated copy.
 import { isEngineLoadFailure } from '../ui/engine-load';
+import { josa } from '../ui/josa';
 
 export type PhotoErrorCode =
   | 'heic'
@@ -38,12 +39,13 @@ export function photoErrorCode(err: unknown): PhotoErrorCode {
 }
 
 export const ERRORS = {
-  heic: '아이폰 사진 형식(HEIC)은 이 브라우저에서 열 수 없습니다. 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 고르거나 사진을 JPG로 내보낸 뒤 다시 선택해 주세요.',
+  heic: '아이폰 사진 형식(HEIC)은 지금 쓰는 앱에서 열 수 없습니다. 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 고르거나 사진을 JPG로 내보낸 뒤 다시 선택해 주세요.',
   animated: '움직이는 이미지(GIF·WebP·PNG)는 아직 줄일 수 없습니다. 움직이지 않는 사진 파일을 선택해 주세요.',
   'not-image': '사진 파일이 아닙니다. JPG·PNG·WebP 파일을 선택해 주세요.',
+  empty: '빈 파일입니다. 원본을 다시 저장해 선택해 주세요.',
   corrupt: '사진 파일을 열 수 없습니다. 파일이 손상되었을 수 있으니 원본을 다시 저장해 선택해 주세요.',
   truncated: '파일이 중간에 끊겨 있습니다. 사진 파일을 열 수 없습니다. 파일이 손상되었을 수 있으니 원본을 다시 저장해 선택해 주세요.',
-  oom: '기기 메모리가 부족합니다. 더 작은 사진으로 시도하거나 PC에서 이용해 주세요.',
+  oom: '이 기기에서 한 번에 처리할 수 있는 양을 넘었습니다. 더 작은 사진으로 시도하거나 PC에서 이용해 주세요.',
   unknown: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
   verify: '결과 사진을 검증하지 못해 내려받기를 막았습니다. 다른 설정으로 다시 시도해 주세요.',
   zip: 'ZIP 파일을 만들지 못했습니다. 한 장씩 내려받아 주세요.',
@@ -60,13 +62,16 @@ export function unreachableMessage(targetKb: number): string {
 }
 
 export const NOTES = {
-  scaled: (w: number, h: number) => `목표 용량에 맞추려고 크기를 ${w}×${h}으로 줄였습니다.`,
+  scaled: (w: number, h: number) => `목표 용량에 맞추려고 크기를 ${josa(`${w}×${h}`, '으로/로')} 줄였습니다.`,
   flattened: '투명한 부분은 흰색으로 채웠습니다. 투명 배경이 필요하면 저장 형식에서 WebP를 고르세요.',
   cmyk: '인쇄용 색상(CMYK) 사진을 화면용 색상으로 바꿨습니다. 색이 조금 달라 보일 수 있습니다.',
-  stripped: '이미 목표보다 작아 화질은 그대로 두고 사진 정보(EXIF)만 지웠습니다.',
-  mobileCapped: '휴대폰에서는 긴 변 4,096 px까지 줄여서 처리합니다.',
+  stripped: '이미 목표보다 작아 화질은 그대로 두고 촬영 위치 같은 사진 정보만 지웠습니다.',
+  mobileCapped: '휴대폰에서는 긴 변 4,096픽셀까지 줄여서 처리합니다.',
   mozjpegFallback: '빠른 방식으로 처리했습니다. 같은 용량에서 화질이 조금 낮을 수 있습니다.',
-  kept: '더 줄일 수 없는 사진입니다. 원본을 그대로 쓰세요.',
+  /** Target mode: the original already fits and has nothing private; it is offered as is (Polish Q). */
+  keptSmall: '이미 목표보다 작아요. 원본 그대로 받으셔도 돼요.',
+  /** Percent and quality modes: re-saving would not make it smaller; the original is offered as is. */
+  keptNoGain: '다시 저장해도 더 작아지지 않아요. 원본 그대로 받으셔도 돼요.',
   resaved: '위치 정보 등 개인정보를 지우고 방향을 바로잡느라 파일을 다시 저장했습니다.',
   /**
    * A result larger than its input replaces the size and percent lines (never "0 % 줄었습니다"). The reason

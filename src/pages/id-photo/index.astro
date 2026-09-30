@@ -34,8 +34,8 @@ const nudges = [
       <h1 id="tool-title">{tool.h1}</h1>
       {/* Manual-only builds (PUBLIC_ID_PHOTO_AUTOFRAME=0) never mention auto-framing (Step 4 round 2; wording accepted by Arch). */}
       <p class="lead">{autoframe
-        ? '여권사진과 증명사진 사이즈를 제출처 규격에 맞춥니다. 얼굴 위치를 자동으로 잡아 드리고, 안내선을 보며 직접 맞춘 뒤 정확한 픽셀 크기와 용량의 JPG로 저장합니다.'
-        : '여권사진과 증명사진 사이즈를 제출처 규격에 맞춥니다. 안내선을 보며 사진 위치를 직접 맞춘 뒤 정확한 픽셀 크기와 용량의 JPG로 저장합니다.'}</p>
+        ? '여권사진과 증명사진 사이즈를 제출처 규격에 맞춥니다. 얼굴 위치를 자동으로 잡아 드리고, 안내선을 보며 직접 맞춘 뒤 제출처가 요구하는 크기와 용량의 사진 파일로 저장합니다.'
+        : '여권사진과 증명사진 사이즈를 제출처 규격에 맞춥니다. 안내선을 보며 사진 위치를 직접 맞춘 뒤 제출처가 요구하는 크기와 용량의 사진 파일로 저장합니다.'}</p>
     </div>
   </section>
 
@@ -52,19 +52,19 @@ const nudges = [
             <div class="ph-custom">
               <label for="idp-w">가로</label>
               <input class="num-input" id="idp-w" type="text" inputmode="numeric" autocomplete="off" value="413" aria-describedby="idp-custom-error">
-              <span>px</span>
+              <span>픽셀</span>
             </div>
             <div class="ph-custom">
               <label for="idp-h">세로</label>
               <input class="num-input" id="idp-h" type="text" inputmode="numeric" autocomplete="off" value="531" aria-describedby="idp-custom-error">
-              <span>px</span>
+              <span>픽셀</span>
             </div>
             <div class="ph-custom">
               <label for="idp-kb">용량 한도 (선택)</label>
               <input class="num-input" id="idp-kb" type="text" inputmode="numeric" autocomplete="off" aria-describedby="idp-custom-error">
               <span>KB 이하</span>
             </div>
-            <p class="level-desc">가로·세로 {CUSTOM_BOUNDS.minPx}–{CUSTOM_BOUNDS.maxPx.toLocaleString('ko-KR')} px, 용량 {CUSTOM_BOUNDS.minKb}–{CUSTOM_BOUNDS.maxKb.toLocaleString('ko-KR')} KB로 입력합니다.</p>
+            <p class="level-desc">가로·세로 {CUSTOM_BOUNDS.minPx}–{CUSTOM_BOUNDS.maxPx.toLocaleString('ko-KR')} 픽셀(px), 용량 {CUSTOM_BOUNDS.minKb}–{CUSTOM_BOUNDS.maxKb.toLocaleString('ko-KR')} KB로 입력합니다.</p>
             <p class="field-error" id="idp-custom-error"></p>
           </div>
           <p class="level-desc idp-source" id="idp-source">기준일 {RETRIEVED} · 출처: <a href={PRESETS[0]!.sourceUrls[0]} rel="noopener noreferrer" target="_blank">{PRESETS[0]!.source} (새 창)</a></p>
@@ -134,7 +134,7 @@ const nudges = [
                 ),
               )}
               <li>
-                여권 사진은 제출 전에 외교부 「온라인 여권 사진 검증」에서 한 번 더 확인할 수 있습니다. (외교부 사이트로 이동하며, 그곳에서는 사진을 외교부 서버에 올립니다.){' '}
+                여권 사진은 제출 전에 외교부 「온라인 여권 사진 검증」에서 한 번 더 확인할 수 있습니다. (외교부 사이트로 이동하며, 그곳에서는 사진을 외교부로 보냅니다.){' '}
                 <a id="idp-verify-link" href={PASSPORT_CHECK_URL} rel="noopener noreferrer" target="_blank">온라인 여권 사진 검증 (새 창)</a>
               </li>
             </ol>
@@ -183,7 +183,7 @@ const nudges = [
       <ol class="steps">
         <li><strong>제출처와 사진 고르기</strong><span>여권, 공무원 시험, Q-Net, 이력서 중 제출처를 고르고 사진 한 장을 선택합니다. 목록에 없으면 직접 입력으로 픽셀과 용량을 넣습니다.</span></li>
         <li><strong>안내선에 맞춰 위치 확인</strong><span>{autoframe ? '얼굴 위치를 자동으로 맞춘 뒤 안내선이 나타납니다. 끌어서 옮기고 확대·축소해 정수리와 턱을 안내선에 맞춥니다.' : '안내선이 나타나면 끌어서 옮기고 확대·축소해 정수리와 턱을 안내선에 맞춥니다.'}</span></li>
-        <li><strong>규격 확인 후 저장</strong><span>확인 목록을 읽고 확인란에 체크한 뒤 저장하면, 정확한 픽셀 크기와 용량의 JPG를 내려받을 수 있습니다.</span></li>
+        <li><strong>규격 확인 후 저장</strong><span>확인 목록을 읽고 확인란에 체크한 뒤 저장하면, 제출처가 요구하는 크기와 용량의 사진 파일을 내려받을 수 있습니다.</span></li>
       </ol>
     </div>
   </section>
@@ -192,8 +192,8 @@ const nudges = [
     <div class="wrap narrow">
       <h2 id="why-title">안전한 이유</h2>
       <ul class="points">
-        <li><strong>업로드하지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 전송되지 않습니다.</span></li>
-        <li><strong>위치 정보를 남기지 않습니다</strong><span>사진 정보(EXIF)와 위치 정보는 결과 파일에 남지 않습니다.</span></li>
+        <li><strong>밖으로 보내지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 보내지지 않습니다.</span></li>
+        <li><strong>위치 정보를 남기지 않습니다</strong><span>사진에 저장된 촬영 위치, 찍은 기기와 날짜 같은 정보는 결과 파일에 남지 않습니다.</span></li>
         <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
       </ul>
     </div>

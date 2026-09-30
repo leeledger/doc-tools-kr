@@ -270,7 +270,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .pv-box canvas { display: block; width: 100%; height: auto; }
 .pv figcaption { color: var(--muted); font-size: 14.5px; text-align: center; }
 /* Result panels are scrolled into view below the sticky header (60 px + border). */
-#cmp-result, #cmp-kept, #merge-result { scroll-margin-top: 76px; }
+#cmp-result, #cmp-kept, #merge-result, #idp-headline { scroll-margin-top: 76px; }
 .kept { margin-top: 20px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
 .kept p { margin: 0 0 8px; }
 .kept .row { margin-top: 12px; }

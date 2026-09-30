@@ -1,52 +1,47 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { OPERATOR_LABEL, PRIVACY_OFFICER, contactLine } from '../../data/site';
+import { SITE } from '../../data/site';
+import { josa } from '../../lib/ui/josa';
 import { PRIVACY_REVISED } from '../../data/legal';
 import { BEACON_ENABLED } from '../../lib/ui/beacon';
 
-// The anonymous error statistics section exists only while the beacon is on, so the policy and the code
-// cannot drift apart (Polish P.18).
+// Owner decision (Polish Q): a short, plain statement. No contact, operator or privacy-officer details while
+// the site takes no personal data; ads or the error beacon need a full policy first (check-dist enforces a
+// contact address for both). The anonymous error statistics section exists only while the beacon is on, so
+// the policy and the code cannot drift apart (Polish P.18).
 const n = (base: number): number => (BEACON_ENABLED && base >= 5 ? base + 1 : base);
 ---
 <Base
-  title="개인정보 처리방침 | 안올림"
-  description="안올림 개인정보 처리방침입니다. 파일과 그 내용은 수집·저장·전송하지 않으며 모든 처리는 이용자의 브라우저 안에서 이루어집니다."
+  title={`개인정보 처리방침 | ${SITE.name}`}
+  description={`${SITE.name} 개인정보 처리방침입니다. 회원가입이 없고 개인정보를 받지 않으며, 파일은 내 폰·컴퓨터 안에서만 처리해 어디로도 보내지 않아요.`}
 >
   <div class="prose">
     <div class="wrap narrow">
       <h1>개인정보 처리방침</h1>
       <p class="meta-line">시행일: {PRIVACY_REVISED}</p>
 
-      <h2>1. 파일과 파일 내용</h2>
-      <p>안올림은 이용자가 선택한 파일과 그 내용을 수집하거나 저장하거나 전송하지 않습니다. 파일 처리는 처리 코드를 이용자의 브라우저로 내려받아 이용자의 기기 안에서 실행하는 방식으로 이루어집니다. PDF 비밀번호도 처리하는 동안 브라우저 메모리에만 머무르며 저장하거나 전송하지 않습니다.</p>
+      <h2>1. 받는 개인정보가 없어요</h2>
+      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. 쿠키와 방문 분석 도구도 쓰지 않아요.</p>
 
-      <h2>2. 회원가입, 쿠키, 분석 도구</h2>
-      <p>안올림은 회원가입을 받지 않으며, 현재 쿠키와 방문 분석 도구를 사용하지 않습니다.</p>
+      <h2>2. 파일은 어디로도 보내지 않아요</h2>
+      <p>고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요. 운영자나 다른 곳으로 보내지 않고, 저장하지도 않아요. PDF 비밀번호도 처리하는 동안에만 쓰고 저장하거나 보내지 않아요. 창을 닫으면 모두 사라져요.</p>
 
-      <h2>3. 호스팅 업체의 접속 기록</h2>
-      <p>이 사이트는 Cloudflare Pages에서 제공됩니다. Cloudflare는 보안과 서비스 운영을 위해 접속 기록(IP 주소, 브라우저 정보(User-Agent) 등)을 처리할 수 있습니다. 자세한 내용은 <a href="https://www.cloudflare.com/ko-kr/privacypolicy/" rel="noopener">Cloudflare 개인정보 처리방침</a>을 참고해 주세요.</p>
+      <h2>3. 사이트를 여는 기록</h2>
+      <p>이 사이트는 호스팅 업체 Cloudflare를 통해 제공돼요. 사이트를 여는 기록(접속 기록: IP 주소, 쓰는 기기와 앱의 종류 등)은 Cloudflare가 보안과 운영을 위해 잠시 보관할 수 있어요. 자세한 내용은 <a href="https://www.cloudflare.com/ko-kr/privacypolicy/" rel="noopener">Cloudflare 개인정보 처리방침</a>을 참고해 주세요.</p>
 
       <h2>4. 광고</h2>
-      <p>현재 광고를 게재하지 않습니다. 앞으로 광고(Google AdSense 등)를 게재하게 되면, 그 전에 이 방침을 개정하고 필요한 동의 절차를 먼저 마련합니다.</p>
+      <p>지금은 광고가 없어요. 광고(Google AdSense 등)를 싣게 되면, 그 전에 이 방침을 고치고 필요한 동의 절차를 먼저 마련할게요.</p>
 
       {BEACON_ENABLED && (
         <>
           <h2>5. 익명 오류 통계</h2>
-          <p>도구가 처리 도중 실패하면(처리 도구를 불러오지 못함, 메모리 부족 등) 열 번에 한 번꼴로 익명 오류 기록을 이 사이트로 보냅니다. 기록에는 도구 이름, 실패한 단계, 오류 종류, 브라우저 종류와 주 버전, 기기 종류(휴대폰 또는 PC), 사이트 버전만 담깁니다. 파일 이름, 크기, 내용과 IP 주소는 담지 않습니다.</p>
+          <p>도구가 처리 도중 실패하면(처리 도구를 불러오지 못했거나 처리할 양이 너무 많은 경우 등) 열 번에 한 번꼴로 익명 오류 기록을 이 사이트로 보내요. 기록에는 도구 이름, 실패한 단계, 오류 종류, 쓰는 앱의 종류와 버전, 기기 종류(휴대폰 또는 PC), 사이트 버전만 담겨요. 파일 이름, 크기, 내용과 IP 주소는 담지 않아요.</p>
         </>
       )}
 
-      <h2>{n(5)}. 운영자와 문의처</h2>
+      <h2>{n(5)}. 변경 이력</h2>
       <ul>
-        <li>운영자: {OPERATOR_LABEL}</li>
-        <li>개인정보 보호책임자: {PRIVACY_OFFICER}</li>
-        <li><Fragment set:html={contactLine('준비 중입니다. 연락처가 정해지면 이 페이지와 모든 페이지 하단에 표시합니다.')} /></li>
-      </ul>
-      <p>문의 메일은 답변에만 쓰고, 문의가 끝나면 지웁니다.</p>
-
-      <h2>{n(6)}. 변경 이력</h2>
-      <ul>
-        <li>{PRIVACY_REVISED}: 운영자·문의처 항목 추가, 이용약관 신설</li>
+        <li>{PRIVACY_REVISED}: 쉬운 말로 다시 쓰고 서비스 이름을 {josa(SITE.name, '으로/로')} 바꿈, 이용약관 신설</li>
         <li>2026년 9월 29일: 처음 제정</li>
       </ul>
     </div>

@@ -26,11 +26,11 @@ const percents = [
 ];
 const edges = [
   { value: 'keep', label: '원본 크기 유지' },
-  { value: '3840', label: '3840 px' },
-  { value: '2560', label: '2560 px' },
-  { value: '1920', label: '1920 px' },
-  { value: '1280', label: '1280 px' },
-  { value: '800', label: '800 px' },
+  { value: '3840', label: '3840픽셀' },
+  { value: '2560', label: '2560픽셀' },
+  { value: '1920', label: '1920픽셀' },
+  { value: '1280', label: '1280픽셀' },
+  { value: '800', label: '800픽셀' },
   { value: 'custom', label: '직접 입력' },
 ];
 const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif';
@@ -40,7 +40,7 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
   <section class="tool-hero" aria-labelledby="tool-title">
     <div class="wrap narrow">
       <h1 id="tool-title">{tool.h1}</h1>
-      <p class="lead">사진과 이미지 용량을 원하는 KB 이하로 줄입니다. 화질은 최대한 지키고 위치 정보(EXIF)는 지우며, 사진은 서버로 전송되지 않습니다.</p>
+      <p class="lead">사진과 이미지 용량을 원하는 KB 이하로 줄입니다. 화질은 최대한 지키고 사진에 저장된 촬영 위치 등 개인정보는 지우며, 사진은 이 기기 밖으로 나가지 않습니다.</p>
     </div>
   </section>
 
@@ -55,7 +55,7 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
           <p class="privacy-note">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
         </div>
 
-        <p class="error-box" id="ph-unsupported" role="alert" hidden>이 브라우저에서는 사진 줄이기를 쓸 수 없습니다. Safari 16.4 이상, Chrome, Edge, Firefox 최신 버전에서 이용해 주세요.</p>
+        <p class="error-box" id="ph-unsupported" role="alert" hidden>지금 쓰는 앱에서는 사진 줄이기가 안 됩니다. 아이폰은 iOS 16.4 이상으로 업데이트하거나, Chrome·Safari·삼성 인터넷 등 다른 앱으로 이 페이지를 열어 주세요.</p>
         <p class="notice" id="ph-notice" hidden></p>
 
         <div class="progress-box" id="ph-progress" hidden>
@@ -161,12 +161,12 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
               {edges.map((e) => <option value={e.value} selected={e.value === 'keep'}>{e.label}</option>)}
             </select>
             <div class="ph-custom" id="ph-edge-custom-box" hidden>
-              <label for="ph-edge-px">긴 변 (px)</label>
+              <label for="ph-edge-px">긴 변 (픽셀)</label>
               <input class="num-input" id="ph-edge-px" type="text" inputmode="numeric" autocomplete="off" aria-describedby="ph-edge-px-error">
-              <span>px</span>
+              <span>픽셀</span>
               <p class="field-error" id="ph-edge-px-error"></p>
             </div>
-            <p class="level-desc" id="ph-help-edge">사진이 이보다 크면 비율을 유지하며 줄입니다. 키우지는 않습니다.</p>
+            <p class="level-desc" id="ph-help-edge">사진의 긴 변이 이 픽셀(px) 수보다 크면 비율을 유지하며 줄입니다. 키우지는 않습니다.</p>
           </div>
 
           <details class="more" id="ph-format-box">
@@ -219,8 +219,8 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
     <div class="wrap narrow">
       <h2 id="why-title">안전한 이유</h2>
       <ul class="points">
-        <li><strong>업로드하지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 전송되지 않습니다.</span></li>
-        <li><strong>위치 정보를 지웁니다</strong><span>촬영 위치(GPS) 같은 사진 정보(EXIF)는 결과 파일에서 지워집니다.</span></li>
+        <li><strong>밖으로 보내지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 보내지지 않습니다.</span></li>
+        <li><strong>위치 정보를 지웁니다</strong><span>사진에 저장된 촬영 위치, 찍은 기기와 날짜 같은 정보는 결과 파일에서 지워집니다.</span></li>
         <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
       </ul>
     </div>

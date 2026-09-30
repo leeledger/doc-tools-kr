@@ -48,7 +48,7 @@ export interface MergeOptions {
   onProgress?: (done: number, total: number) => void;
 }
 
-export const PRODUCER = '안올림 (doc-tools-kr)';
+export const PRODUCER = '문서딱 (doc-tools-kr)';
 
 interface OutlineItem {
   title: string;

@@ -128,7 +128,7 @@ test('owner-restricted file shows the notice', async ({ page }) => {
 test('bad inputs: a not-PDF is rejected before the card, a truncated file is reported; the status never keeps stale text', async ({ page }) => {
   await open(page);
   await pick(page, runtimePath('not_a_pdf'));
-  await expect(page.locator('#cmp-error')).toHaveText('not_a_pdf.pdf은(는) PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
+  await expect(page.locator('#cmp-error')).toHaveText('not_a_pdf.pdf는 PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
   await expect(page.locator('#cmp-file')).toBeHidden();
   await expect(page.locator('#cmp-status')).toHaveText('');
   await pick(page, runtimePath('truncated'));

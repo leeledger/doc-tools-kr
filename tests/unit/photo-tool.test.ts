@@ -7,7 +7,8 @@ import { NOTES } from '../../src/lib/image/messages';
 import { LIMITS, checkCount, checkDims, checkFileBytes, checkRun } from '../../src/tools/photo-compress/limits';
 import { formatSize } from '../../src/lib/ui/format';
 import { DEFAULT_FORM, parseOptions, parseWhole, reductionPercent, type FormState } from '../../src/tools/photo-compress/options';
-import { cancelRun, crash, currentRow, startRun, summary, type QueueRow } from '../../src/tools/photo-compress/queue';
+import { cancelRun, crash, currentRow, startRun, type QueueRow } from '../../src/tools/photo-compress/queue';
+import { doneSummary, outcomeOf, type OutcomeRow } from '../../src/tools/photo-compress/headline';
 import { buildZip, dedupeNames } from '../../src/tools/photo-compress/zip';
 
 const MB = 1024 * 1024;
@@ -91,13 +92,13 @@ describe('limits (brief §3.4)', () => {
     expect(checkDims(8000, 8000, 'mobile')).toEqual({ level: 'ok' });
     expect(checkDims(8000, 8001, 'mobile')).toMatchObject({
       level: 'hard',
-      message: '휴대폰에서는 6,400만 화소(64 MP)까지 줄일 수 있습니다. 기기 메모리가 부족해 브라우저가 멈출 수 있기 때문입니다.',
+      message: '휴대폰에서는 6,400만 화소(64 MP)까지 줄일 수 있습니다. 더 큰 사진은 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다.',
     });
   });
   it('long side: > 32,767 px on PC, > 16,384 px on a phone (the 20,000 × 1,000 panorama)', () => {
     expect(checkDims(20000, 1000, 'desktop')).toEqual({ level: 'ok' });
-    expect(checkDims(32768, 100, 'desktop')).toMatchObject({ level: 'hard', message: expect.stringContaining('32,767 px') });
-    expect(checkDims(20000, 1000, 'mobile')).toMatchObject({ level: 'hard', message: expect.stringContaining('16,384 px') });
+    expect(checkDims(32768, 100, 'desktop')).toMatchObject({ level: 'hard', message: expect.stringContaining('32,767픽셀') });
+    expect(checkDims(20000, 1000, 'mobile')).toMatchObject({ level: 'hard', message: expect.stringContaining('16,384픽셀') });
   });
   it('working long edge: none on PC, 4,096 px on a phone; the cap keeps the aspect', () => {
     expect(LIMITS.desktop.workingLongEdge).toBeNull();
@@ -132,8 +133,34 @@ describe('queue', () => {
     expect(r.map((x) => x.state)).toEqual(['done', 'pending', 'pending', 'invalid']);
     expect(cancelRun(rows('decode', 'pending'))).toEqual({ anyFinished: false });
   });
-  it('the summary counts every listed row', () => {
-    expect(summary(rows('done', 'done', 'kept', 'invalid'))).toEqual({ total: 4, done: 2, failed: 2 });
+});
+
+describe('done summary (Polish Q: 줄임 / 그대로 / 늘어남 apart; never "줄였습니다" for a grown photo)', () => {
+  const kb = (b: number): string => `${Math.round(b / 1000)} KB`;
+  const res = (inBytes: number, outBytes: number): OutcomeRow => ({ outcome: outcomeOf('done', { inBytes, outBytes }), inBytes, outBytes });
+  it('outcomes from the row state and the result sizes', () => {
+    expect(outcomeOf('done', { inBytes: 10, outBytes: 5 })).toBe('reduced');
+    expect(outcomeOf('done', { inBytes: 10, outBytes: 12 })).toBe('grown');
+    expect(outcomeOf('done', { inBytes: 10, outBytes: 10 })).toBe('same');
+    expect(outcomeOf('kept', null)).toBe('same');
+    expect(outcomeOf('pending', null)).toBe('waiting');
+    for (const st of ['error', 'invalid']) expect(outcomeOf(st, null)).toBe('failed');
+  });
+  it('one photo: its own sentence, never "1장 중 1장"', () => {
+    expect(doneSummary([res(3_600_000, 192_000)], kb)).toEqual({ text: '사진을 줄였습니다.', sizes: '3600 KB → 192 KB' });
+    expect(doneSummary([res(26_000, 87_000)], kb)).toEqual({ text: '다시 저장해 용량이 조금 늘었습니다.', sizes: '26 KB → 87 KB' });
+    expect(doneSummary([{ outcome: 'same' }], kb).text).toBe('이미 충분히 작아서 그대로 두었어요. 원본을 받으셔도 됩니다.');
+    expect(doneSummary([{ outcome: 'failed' }], kb)).toEqual({ text: '사진을 줄이지 못했습니다.', sizes: null });
+  });
+  it('the audit case (281 KB and 340 KB kept, 26 KB grown): no "줄였습니다", no total', () => {
+    const s = doneSummary([{ outcome: 'same' }, { outcome: 'same' }, res(26_000, 87_000)], kb);
+    expect(s).toEqual({ text: '사진 3장: 그대로 2장 · 늘어남 1장', sizes: null });
+    expect(s.text).not.toContain('줄였');
+  });
+  it('mixed: counts apart; the total covers the reduced photos only', () => {
+    const s = doneSummary([res(1_000_000, 200_000), res(500_000, 100_000), res(26_000, 87_000), { outcome: 'failed' }, { outcome: 'waiting' }], kb);
+    expect(s).toEqual({ text: '사진 5장: 줄임 2장 · 늘어남 1장 · 못 줄임 1장 · 대기 1장', sizes: '(줄인 사진 1500 KB → 300 KB)' });
+    expect(doneSummary([res(1_000_000, 200_000), res(500_000, 100_000)], kb)).toEqual({ text: '사진 2장을 모두 줄였습니다.', sizes: '1500 KB → 300 KB' });
   });
 });
 

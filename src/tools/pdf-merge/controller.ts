@@ -40,7 +40,7 @@ const MESSAGES: Record<PdfErrorCode, string> = {
   password: '이 파일은 비밀번호로 보호되어 있습니다.',
   'wrong-password': '비밀번호가 맞지 않습니다.',
   corrupt: '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아 주세요.',
-  oom: '기기 메모리가 부족합니다. 파일 수를 줄여 나눠서 합쳐 주세요.',
+  oom: '이 기기에서 한 번에 처리할 수 있는 양을 넘었습니다. 파일 수를 줄여 나눠서 합쳐 주세요.',
   unknown: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
   // Not sent by the merge worker (it maps a failed output check to corrupt); required by the type.
   verify: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
