@@ -229,7 +229,8 @@ test('home, meta, og and JSON-LD name every live tool and no soon tool; the soon
   await expect(page.locator('.soon a')).toHaveCount(0);
   const logo = JSON.parse((await page.locator('script[type="application/ld+json"]').first().textContent())!).find((d: { '@type': string }) => d['@type'] === 'Organization').logo;
   expect(logo).toMatch(/\/brand\/icon-512\.png$/);
-  await expect(page.getByText('모든 기능을 무료로 쓸 수 있습니다. 운영비는 광고로 충당할 예정입니다.')).toBeAttached();
+  await expect(page.getByText('파일은 지금 쓰는 PC나 휴대폰 안에서만 처리되고, 창을 닫으면 사라집니다.')).toBeAttached();
+  await expect(page.locator('#faq')).not.toContainText(/광고|품질 검증|언제 사용/);
 });
 
 test('404 lists the live tools', async ({ page }) => {
