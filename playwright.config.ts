@@ -1,6 +1,14 @@
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
+/**
+ * The shipping configuration of /id-photo/ (PUBLIC_ID_PHOTO_AUTOFRAME=0, built into dist-noauto/): the id-photo
+ * suite runs against it as its own project, manual flow end to end (Step 4 round 2, Arch). Only when the
+ * folder exists (the gate run builds it).
+ */
+const MANUAL_PORT = 4181;
+const MANUAL = existsSync('dist-noauto/id-photo/index.html');
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -28,11 +36,19 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
     { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
+    ...(MANUAL
+      ? [{ name: 'manual-chromium', testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } }]
+      : []),
   ],
-  webServer: {
-    command: 'node tests/e2e/serve.mjs',
-    url: `http://127.0.0.1:${PORT}/`,
-    reuseExistingServer: !process.env.CI,
-    env: { PORT: String(PORT) },
-  },
+  webServer: [
+    {
+      command: 'node tests/e2e/serve.mjs',
+      url: `http://127.0.0.1:${PORT}/`,
+      reuseExistingServer: !process.env.CI,
+      env: { PORT: String(PORT) },
+    },
+    ...(MANUAL
+      ? [{ command: 'node tests/e2e/serve.mjs', url: `http://127.0.0.1:${MANUAL_PORT}/`, reuseExistingServer: !process.env.CI, env: { PORT: String(MANUAL_PORT), DIST: 'dist-noauto' } }]
+      : []),
+  ],
 });

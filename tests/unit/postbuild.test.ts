@@ -2,7 +2,7 @@
 // headers, brand assets, UI font instances, check-dist and the built output (copy and custom domain).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import fontverter from 'fontverter';
@@ -355,18 +355,21 @@ describe('built output', () => {
   const walk = (dir: string, re: RegExp): string[] =>
     readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name), re) : re.test(e.name) ? [join(dir, e.name)] : []));
 
+  /** The env of the build under test: dist/ has MediaPipe only when it was built with auto-framing on (Step 4). */
+  const buildEnv = (): NodeJS.ProcessEnv => ({ ...process.env, PUBLIC_ID_PHOTO_AUTOFRAME: existsSync(join(DIST, 'vendor', 'mediapipe')) ? '1' : '0' });
+
   it('an invalid PUBLIC_CONTACT_EMAIL fails the build (check-dist)', () => {
     need();
-    const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...process.env, PUBLIC_CONTACT_EMAIL: 'not-an-email' }, encoding: 'utf8' });
+    const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_CONTACT_EMAIL: 'not-an-email' }, encoding: 'utf8' });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('PUBLIC_CONTACT_EMAIL "not-an-email" is not an email address');
-    const ok = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...process.env, PUBLIC_CONTACT_EMAIL: 'help@example.kr' }, encoding: 'utf8' });
+    const ok = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_CONTACT_EMAIL: 'help@example.kr' }, encoding: 'utf8' });
     expect(ok.status).toBe(0);
   });
 
   it('the error beacon without PUBLIC_CONTACT_EMAIL fails the build (Arch, round 2); unset contact alone does not', () => {
     need();
-    const base = { ...process.env };
+    const base = buildEnv();
     delete base.PUBLIC_CONTACT_EMAIL;
     const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...base, PUBLIC_ERROR_BEACON_PATH: '/api/e' }, encoding: 'utf8' });
     expect(r.status).toBe(1);
@@ -382,6 +385,11 @@ describe('built output', () => {
     const { urls } = precacheList(DIST);
     expect(urls).toContain('/offline/');
     expect(urls).not.toContain('/404.html');
+    // Step 4: /licenses/ (its texts alone are ~half the budget) is not precached; every tool page is.
+    expect(urls).not.toContain('/licenses/');
+    for (const tool of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/']) expect(urls).toContain(tool);
+    // Round 2: the lazily imported /id-photo/ controller is precached too (offline first use).
+    expect(urls.some((u: string) => /^\/_astro\/controller\.[\w-]+\.js$/.test(u))).toBe(true);
     expect(KILL_SWITCH).toContain('registration.unregister()');
     expect(KILL_SWITCH).not.toMatch(/navigate|matchAll/);
     const offline = readFileSync(join(DIST, 'offline', 'index.html'), 'utf8');
@@ -393,8 +401,9 @@ describe('built output', () => {
     need();
     const files = [...walk(DIST, /\.html$/), ...walk(join(DIST, '_astro'), /\.js$/)];
     const text = files.map((f) => readFileSync(f, 'utf8')).join('\n');
+    // "300 dpi" is the photo density on /id-photo/ only (Step 4 brief; docs/COPY.md): every other page keeps ppi.
     const visible = files
-      .filter((f) => f.endsWith('.html'))
+      .filter((f) => f.endsWith('.html') && !f.split(/[\\/]/).includes('id-photo'))
       .map((f) => readFileSync(f, 'utf8').replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/g, ' '))
       .join('\n');
     for (const bad of ['구조 정리', '처음부터', '받아주세요', '결과 확인 중']) expect(text, bad).not.toContain(bad);
@@ -405,12 +414,20 @@ describe('built output', () => {
     for (const good of ['다른 파일 처리하기', '파일 분석 중…', '마무리하는 중…', '% 줄었습니다', '인쇄용 선명도 (약 200 ppi)', '저장될 이름: ']) expect(text, good).toContain(good);
   });
 
+  it('/id-photo/ mentions auto-framing only in a build that has it (Step 4 round 2)', () => {
+    need();
+    const html = readFileSync(join(DIST, 'id-photo', 'index.html'), 'utf8');
+    const on = existsSync(join(DIST, 'vendor', 'mediapipe'));
+    for (const phrase of ['자동으로 잡아', '자동으로 맞춘', '자동 맞춤', '건너뛰고 직접 맞추기', '6 MB의 프로그램']) expect(html.includes(phrase), phrase).toBe(on);
+    expect(html).toContain(on ? '얼굴 위치를 자동으로 잡아 드리고' : '안내선을 보며 사진 위치를 직접 맞춘 뒤');
+  });
+
   it('meta, og and JSON-LD of the home page name the live tools only (built HTML)', () => {
     need();
     const html = readFileSync(join(DIST, 'index.html'), 'utf8');
     const head = html.slice(0, html.indexOf('</head>'));
-    for (const name of ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기']) expect(head).toContain(name);
-    for (const name of ['여권·증명사진 규격 맞추기', '한글(HWP) → PDF 변환', '여권', 'HWP']) expect(head).not.toContain(name);
+    for (const name of ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기', '여권·증명사진 규격 맞추기']) expect(head).toContain(name);
+    for (const name of ['한글(HWP) → PDF 변환', 'HWP']) expect(head).not.toContain(name);
   });
 });
 

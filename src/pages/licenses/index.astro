@@ -8,7 +8,8 @@ interface LicenseEntry {
   license: string;
   use: string;
   homepage: string | null;
-  texts: { file: string; text: string }[];
+  /** `sameAs`: the same file is printed in full under an earlier entry (gen-licenses dedupes). */
+  texts: { file: string; text?: string; sameAs?: string }[];
 }
 const list = licenses as LicenseEntry[];
 ---
@@ -36,7 +37,7 @@ const list = licenses as LicenseEntry[];
           {p.texts.map((t) => (
             <>
               <h3>{t.file}</h3>
-              <pre>{t.text}</pre>
+              {t.sameAs ? <p>전문은 위 「{t.sameAs}」 항목에 있습니다.</p> : <pre>{t.text}</pre>}
             </>
           ))}
         </details>

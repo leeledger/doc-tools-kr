@@ -13,8 +13,8 @@ const SCAN = fixturePath('gen_scan_a6.pdf');
 const SMALL = fixturePath('gen_already_small.pdf');
 const NOTES = join(RUNTIME_DIR, 'notes.txt');
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-const LIVE = ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기'];
-const SOON = ['여권·증명사진 규격 맞추기', '한글(HWP) → PDF 변환'];
+const LIVE = ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기', '여권·증명사진 규격 맞추기'];
+const SOON = ['한글(HWP) → PDF 변환'];
 
 const serious = async (page: Page): Promise<string[]> =>
   (await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()).violations
@@ -122,7 +122,7 @@ test.describe('engine load failure (P.1)', () => {
 
 // ---------- P.4 operator, contact, 이용약관 ----------
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
   test(`footer on ${path}: operator, contact (준비 중), 이용약관·개인정보·라이선스 links`, async ({ page }) => {
     await gotoReady(page, path);
     const foot = page.locator('footer');
@@ -220,7 +220,7 @@ test('home, meta, og and JSON-LD name every live tool and no soon tool; the soon
   for (const text of [lead, desc, og, ld]) {
     for (const name of LIVE) expect(text).toContain(name);
     for (const name of SOON) expect(text).not.toContain(name);
-    expect(text).not.toMatch(/여권|HWP|한글 파일/);
+    expect(text).not.toMatch(/HWP|한글 파일/);
   }
   expect(lead.startsWith('지금 쓸 수 있는 도구: ')).toBe(true);
   expect([...desc].length).toBeGreaterThanOrEqual(80);
@@ -578,7 +578,9 @@ test.describe('header tools menu (P.9)', () => {
     await btn.focus();
     await page.keyboard.press('Enter');
     await expect(panel).toBeVisible();
-    for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
+    // One Tab per menu item, then one more leaves the menu (Step 4 added a tool, so count them).
+    const items = await panel.locator('a').count();
+    for (let i = 0; i <= items; i++) await page.keyboard.press('Tab');
     await expect(panel).toBeHidden();
   });
 

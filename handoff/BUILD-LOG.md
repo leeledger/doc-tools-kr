@@ -502,3 +502,101 @@
 - **DONE.** check 0/0/0; unit 309/309; build and budgets OK (UI fonts 169.4 / 180 KB; precache 405.4 / 450 KB); licences OK (25); e2e 5 projects 516 passed / 0 failed / 4 flaky (the Firefox `goto` race) / 105 skipped; smoke:assets OK (332 URLs); qa:visual 176 PNGs, 0 hard failures. Nothing committed.
 
 - Known Gap (Polish P, Richard r2): carry-assets reads a live manifest without Content-Length in full before the 1 MB check; bounded only by the 60 s timeout; source is our own origin. Low risk, deferred.
+
+## Step 4 build notes (Bob, 2026-09-30)
+
+### Step 0 — pre-build checks (written before any code)
+
+**0.1 Presets.** Every shipped source re-fetched today (curl, raw HTML; Q-Net decoded from EUC-KR). All values match the brief table; no preset Flag.
+- passport_online, menuPos=12: "파일 크기 500KB 이하, 파일 형식 JPG/JPEG 가로 413 픽셀(pixel), 세로 531 픽셀 사이즈 권장(가로 395~431 픽셀, 세로 507~550 픽셀 이내만 업로드 가능) 해상도는 300dpi 권장".
+- passport rule, menuPos=32: "머리 길이는 정수리(머리카락을 제외한 머리 최상부)부터 턱까지 3.2~3.6cm 사이인 사진을 제출해야 함"; "사진 편집 프로그램, 사진 필터 기능 등을 사용하여 임의로 보정된 사진(AI를 활용한 편집·가공·합성·창조 제작물 포함)은 허용 불가함".
+- gov.kr 126200000030: "413 x 531 pixel 권장, 가로 395~431 pixel, 세로 507~550 pixel 이내 범위 사진만 신청 가능".
+- gosi: "응시원서 등록용 사진파일(JPG, PNG) 규격 크기 3.5cm x 4.5cm(137 x 177 pixel) 기준 파일용량 350KB 미만(중증장애인 선발시험 제외)".
+- qnet: "파일형식 : *.JPG 또는 *.JPEG · 파일용량 : 200KB 이하".
+- saramin: "1. 용량 : 10MB 2. 파일형태 : .jpg .gif 3. 권장 크기 : 100 x 140 픽셀".
+- jobkorea FAQ: "1. 이미지 사이즈가 150px * 210px 초과하는 경우 … 업로드 파일 확장자 : gif, jpg, jpeg, png - 업로드 용량은 5MB 이내".
+- 외교부 checker menuPos=33: "※ 해당 프로그램은 참고용일 뿐이며 실제 심사결과와 다를 수 있습니다." (link verified, 200).
+- **Flag Q1 answered (raw HTML, EUC-KR):** Q-Net STEP 01 reads "1. 증명사진(2.5X3.5) 또는 반명함판(3X4) 사진 을 준비하시기 바랍니다." Q-Net therefore names no 3.5×4.5 size. The qnet preset ships with no physical size (`mm` absent, band in %), 413×531 px and 300 dpi as in the table; label copy is Arch's.
+- Dropped presets, tried once: resident_id (gov.kr popup, EUC-KR decoded) still gives only "픽셀 가로 H:336/세로 V:자동값" and no KB → stays dropped. driver_license (safedriving) still gives only "규격 3.5cm*4.5cm, 여권용", no px or KB → stays dropped. toeic/work24/local_gosi not re-tried (no official page in the spike).
+
+**0.2 Licenses of the MediaPipe path.** Result: **FLAG — `EIGEN_MPL2_ONLY` cannot be shown. Per the brief the build ships with `PUBLIC_ID_PHOTO_AUTOFRAME=0` (manual-only) until Arch decides.**
+- tasks-vision 1.0.1 (npm, published 2026-07-31T21:03Z) has no git tag or branch upstream (tags stop at v1.0.0; branch `1.0.0` = 6d31f1e). The wasm strings name its own origin: `//depot/branches/odml.mediapipe_tasks_release_branch/957258227.1/google3` (an internal release branch). Pinned reference used: google-ai-edge/mediapipe master **bdddcbd09ea1588825d35fe7b715d1a14789a85a** (2026-07-31T02:23Z, the last commit before the 1.0.1 publish). Its `LICENSE` is the Apache-2.0 text (committed under `licenses/third-party/mediapipe/`).
+- TensorFlow pinned by that WORKSPACE: `_TENSORFLOW_GIT_COMMIT = "a481b10260dfdf833a1b16007eead49c1d7febf3"`.
+- Eigen is pulled twice: MediaPipe's own `eigen` repo (`EIGEN_COMMIT = "ea13a98decd497a8c5588fb5de71b57bcf10d864"`, BUILD `third_party/eigen.BUILD`) and TensorFlow/XLA's `eigen_archive` (`EIGEN_COMMIT = "dcbaf2d608f306450f1e74949eb87e9a22a7ef4b"`, `third_party/xla/third_party/eigen3/eigen_archive.BUILD`). Both tarballs downloaded; their SHA-256 match the pins (35c6126e… and a71517b3…).
+- **Neither BUILD file defines `EIGEN_MPL2_ONLY`.** Both `defines` lists are exactly `EIGEN_MAX_ALIGN_BYTES=64`, `EIGEN_ALLOW_UNALIGNED_SCALARS`, `EIGEN_USE_AVX512_GEMM_KERNELS=0`. Neither .bazelrc (MediaPipe, TF) sets it either.
+- Mitigating evidence for Arch: at both Eigen commits no header under `Eigen/` or `unsupported/` references `EIGEN_MPL2_ONLY` at all (the guard no longer exists; only CHANGELOG.md mentions it), there is no COPYING.LGPL, and the one "LGPL" mention (IncompleteLUT.h) says the code was relicensed to MPL2. COPYING.README at dcbaf2d: "Some files contain third-party code under BSD or other MPL2-compatible licenses". So the macro is a no-op today and no LGPL Eigen file exists at the pinned commits; the literal gate still fails.
+- Wasm string probe (both wasm builds, ≥5-char ASCII runs): MediaPipe (mediapipe::, drishti::), TensorFlow Lite (tflite, 588 hits), Eigen (72, EigenForTFLite 31), OpenCV core/imgproc (build-info string "OpenCV 4.13.0"; WORKSPACE says 3.4.11 for the open-source build), XNNPACK (xnn_, 150), abseil (absl), protobuf (google/protobuf), ruy, gemmlowp, flatbuffers, fft2d (TFLite rfft2d kernel), ml_drift/gloop (Google GPU inference, part of LiteRT), tcmalloc (malloc_hook.cc), Emscripten runtime. No hit for ffmpeg/avcodec, libtiff, libwebp, openjpeg, openblas, libpng, libjpeg outside OpenCV's static build-information text (a desktop build description that also lists CUDA; none of those symbols exist in the wasm).
+- Licences: MediaPipe, TFLite, OpenCV ≥4.5, abseil, ruy, gemmlowp, flatbuffers, tcmalloc Apache-2.0; XNNPACK, protobuf BSD-3-Clause; pthreadpool BSD-2-Clause, FP16/FXdiv MIT (XNNPACK build deps, listed conservatively; no strings); Emscripten MIT, libc++/libc++abi Apache-2.0 WITH LLVM-exception, musl MIT; Eigen MPL-2.0 (the exception); **fft2d (Takuya Ooura, pinned by TF workspace2.bzl: petewarden/OouraFFT v1.0) carries TF's `third_party/fft2d/LICENSE`: "You may use, copy, modify this code for any purpose and without fee. You may distribute this ORIGINAL package." (TF BUILD: `licenses(["notice"])`, "Unrestricted use; can only distribute original package"). It is not in the §0 allowlist and its "ORIGINAL package" clause is unclear for a compiled binary — second Flag item for Arch.** Its presence is inferred from TFLite's rfft2d kernel strings (`third_party/tensorflow/lite/kernels/rfft2d.cc`), not from Ooura symbol names (the wasm has no name section). No GPL/LGPL/AGPL; no MPL outside Eigen.
+- Model: `face_landmarker.task` float16 v1, 3,758,596 B, SHA-256 64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff (identical to the official storage.googleapis.com file). Contents: face_detector.tflite b4578f35…, face_landmarks_detector.tflite c7d54204…, face_blendshapes.tflite 4f36dded…, geometry_pipeline_metadata_landmarks.binarypb bdbcda96…. The three model-card URLs return 200.
+- **New finding (Flag, handled): tasks-vision 1.0.1 has always-on usage telemetry.** `vision_bundle.mjs` creates a logger in every task (`t.m=new Dh(...)`) that queues init/latency metrics and POSTs them every 60 s and on close() to `https://odml.pa.googleapis.com/v1/log` with an API key from the wasm (`_mediapipeLoggerGetEncodedApiKey`). The MediaPipe privacy notice (developers.google.com, "MediaPipe Tasks Privacy Notice", modified 2026-06-05) confirms: "MediaPipe Tasks APIs send metrics about the performance and utilization of the APIs in your app to Google … You are responsible for obtaining informed consent". No image data is in it, but it contradicts our no-tracking promise and would raise a CSP violation. Handling: `landmarker.ts` detaches the logger right after creation (clears its 60 s timer, empties its queue, marks it failed so flush never sends), a unit test pins the exact bundle patterns it relies on (an upgrade fails the test), CSP `connect-src 'self'` still blocks it, and an e2e fast-forwards the clock 5 minutes and requires no request off-origin and zero CSP violations.
+
+**0.3 Real iPhone check.** Not recorded in BUILD-LOG (Step 3 Known Gap: "A real-iPhone check (FAQ 4 sentence) and Gate 11 are still owed"). The HEIC copy and FAQ 6 therefore reuse the Step 3 conditional wording.
+
+### Dependencies (exact pins; logged before use)
+- Runtime: `@mediapipe/tasks-vision@1.0.1` (Apache-2.0; no npm dependencies). `vision_bundle.mjs` is code-split by Vite (chunk `vision_bundle*.js`, 43.9 KB gzip); `wasm/vision_wasm_internal.{js,wasm}` and `wasm/vision_wasm_nosimd_internal.{js,wasm}` are copied to `public/vendor/mediapipe/1.0.1/` by copy-vendor (the `module_internal` variant is not shipped). Its package has no LICENSE file: the Apache-2.0 text of google-ai-edge/mediapipe at bdddcbd is committed as `licenses/third-party/mediapipe/LICENSE` (SOURCES.md).
+- Model: `vendor-assets/mediapipe/face_landmarker.task` (committed, 3,758,596 B) with `SHA256SUMS`; copy-vendor verifies the hash and writes `public/vendor/mediapipe/models/face_landmarker-64184e22.task`. Never fetched at build time. `.gitattributes` marks `*.task` binary.
+- Wasm components, license texts committed under `licenses/third-party/` (SOURCES.md has every URL): Eigen (COPYING.MPL2/BSD/README at dcbaf2d), XNNPACK (53a1797), protobuf (v31.1), pthreadpool (0246058), FP16, FXdiv, fft2d (TF a481b10 third_party/fft2d/LICENSE), Emscripten (4.0.0 LICENSE; the build says only "stable"), libc++ (LLVM LICENSE.TXT from emscripten 4.0.0), musl (COPYRIGHT). MediaPipe, TFLite, OpenCV 4.x, abseil, ruy, gemmlowp, flatbuffers, tcmalloc and ML Drift share the Apache-2.0 text.
+- No new dev dependency. Pillow 12.2.0 (already recorded, dev only) downscaled the committed test corpus.
+
+### Decisions (reasonable calls under "never stop"; each is in REVIEW-REQUEST)
+- **Shipping default is manual-only** (`scripts/lib/autoframe.mjs` DEFAULT = "0") because of the 0.2 Flag. The whole auto-framing path is built and tested with `PUBLIC_ID_PHOTO_AUTOFRAME=1`; Arch lifts the Flag by changing DEFAULT to "1" (or setting the env var on Cloudflare). The flag feeds a Vite `define` (`__ID_PHOTO_AUTOFRAME__`, like the beacon path), copy-vendor, gen-licenses (MediaPipe entries marked `"autoframe": true`), check-licenses and check-dist. Flag 0: no vision_bundle chunk, no autoframe chunk, no vendor/mediapipe, no MediaPipe entry on /licenses/, the 6 MB line hidden (check-dist asserts the first three plus no `FaceLandmarker`/`odml` string in any JS).
+- **Telemetry** (0.2 finding): `detachTelemetry()` in `src/lib/face/landmarker.ts`; if the bundle shape is not the pinned one, `createLandmarker` throws and the page falls back to manual (no silent telemetry). Unit test pins the minified code; e2e (chromium) fast-forwards 5 minutes with `page.clock` and sees no off-origin request and no CSP event.
+- **check-licenses** now also judges the manifest's compiled-in `component` entries (not only npm packages), with the one-entry `EXCEPTIONS` list (Eigen MPL-2.0, scope vendor/mediapipe wasm). `X WITH LLVM-exception` is allowed when X is (an exception only adds permissions). fft2d's `LicenseRef-Ooura` fails the gate when auto-framing is on: that is the second Flag item, deliberately left failing.
+- **/licenses/ dedupes repeated license files** (`sameAs`: "전문은 위 「…」 항목에 있습니다."): the shared Apache-2.0 text prints once.
+- **Service-worker precache drops /licenses/** (`NOT_PRECACHED` in gen-sw): with the MediaPipe texts the page is 218 KB and the precache was 542 KB (> 450). Now 298.4 KB (flag 1) / 297.5 KB (flag 0). MediaPipe files are never precached; they are runtime-cached on use (cache-first under /vendor/, immutable), like the other engines.
+- **UI font subset ignores code comments** (`stripComments` in gen-ui-font): the new page's copy took the four faces to 182.7 KB (> 180). Characters that only appear in comments never render. Now 179.1 KB (flag 1) / 178.0 KB (flag 0). Headroom is ~1 KB again: the next tool's copy will need a decision.
+- **"처음부터" → "다른 사진 처리하기"**: docs/COPY.md and the dist copy test ban "처음부터" (Polish, later than the Step 4 brief); same label as photo-compress.
+- **"dpi" on /id-photo/ only**: COPY.md now allows "300 dpi" for the file density on this tool (the brief asks for it); the dist copy test excludes /id-photo/ from the dpi ban.
+- **Qnet (Flag Q1)**: no `mm` → head band shown in % ("참고 범위(71–80%)"), 300 dpi kept.
+- **Main-thread canvases** fall back to a DOM canvas where OffscreenCanvas is missing (render.ts, landmarker.ts), so Playwright WebKit on Windows runs the whole tool, MediaPipe included. The encode worker's canvas fallback still needs OffscreenCanvas (e2e skips that one case there with the reason).
+- **HEIC**: face assets are requested in parallel with the decode, except for a HEIC sniff, which waits for the decode (no 6 MB download for a photo the browser cannot open).
+- **Low resolution** is a per-photo, per-preset block (`blocked` state): the auto frame needs s > 1 or the whole photo is smaller than the output. A smaller preset can still be chosen.
+- **Announcement**: the "자동 맞춤을 쓰지 못해 직접 맞추기로 바꿨습니다" note is announced together with the first checklist summary (a separate message was replaced at once); not for the skip button (the user chose it).
+- **Face oval / nudges**: nudge buttons move 5 output px (brief gives no number; keys are 1/10). Zoom slider is logarithmic between the zoom-out floor (whole photo in half the frame) and s = 1.
+- **network-guard**: exact allowlist now; the stale `lib/pdf/compress/wasm-browser.ts` entry (no fetch since Step 3) removed, `lib/face/assets.ts` added.
+- **UX-AUDIT-1 §11 vs brief** (brief followed, logged): §11.6 camera button (`capture="user"`) and `accept="image/*"` — camera capture is an explicit brief Flag item and out of scope; accept stays the brief list. §11.2 editable file name — the ASCII tag name is shown, not editable (P2 download-rename Known Gap). §11.3 resident/driver presets — dropped (unverified). §11.8 privacy badge and §11.9 "no retouch" on the result screen — done.
+
+### Known Gaps (Step 4)
+- **Calibration refit not done**: no ≥ 8 neutral, closed-mouth, skull-visible heads from the allowed sources were added (the committed corpus is spike p01–p12, all smiling). K 0.88 / C 1.68 stay provisional (brief fallback). Committed corpus composition: 12 US-government portraits (House, NASA), 8 annotated heads, 5 in the calibration set (2 bald/shaved, 3 short hair; 4 male, 1 female).
+- The e2e "wasm downloaded twice" check runs on Chromium only (CDP).
+- MediaPipe prints its own log lines to the console (GL/TFLite info, one as console.error) after a photo is chosen; harmless, not controllable from the API.
+- The Emscripten runtime inside the existing qpdf and MozJPEG wasm was never inventoried (only MediaPipe's, this step).
+- Real iPhone (Safari photo library → passport export) and Gate 11 are still owed.
+- **Lazy controller** (`src/tools/id-photo/entry.ts`): the page script only waits for the first interaction (pointerdown, keydown, focusin, touchstart, change, dragover/drop) and then imports the controller; the controller reads the native controls' state and any file already picked or dropped. Measured cause: with a 20 KB initial script Lighthouse LCP was 1.96–2.04 s (median 2.04, over the 2.0 s gate); without it 1.80 s. Initial JS is now 4.8 KB. A controller chunk that cannot load shows the engine panel (e2e). The controller chunk is runtime-cached by the SW after the first use, not precached (offline first use of /id-photo/ gets the engine panel with the offline copy).
+- **`manualChunks: ui-shared`** (astro.config): sharing sniff/format/engine-error with a lazily imported controller split the common UI modules into three extra chunks on every tool page, and pdf-merge / pdf-compress / photo-compress went from LCP 1.95 s (HEAD built on this machine, measured) to 2.04 s on all three runs. Putting announce, beacon, device, engine-error, engine-load, font, format, preload, pdf/errors and Vite's preload helper in one named chunk restores the HEAD structure (pdf-merge 4 files, 12.1 KB; photo-compress 4 files, 16.2 KB; sniff stays a separate shared chunk) and LCP 1.95–1.96 s.
+- **MediaPipe glue logs**: a pre-set global `Module` with no-op `print`/`printErr` reaches the wasm factory (pinned in the unit test), so the "INFO: Created TensorFlow Lite XNNPACK delegate" console.error line is gone (qa:visual treats console errors as hard failures). glog warnings still go to console.warn.
+- **`src/generated/mediapipe.json`** holds full file URLs (smoke:assets checks every "/vendor/…" literal; a bare directory literal was a 404).
+- **Test harness notes**: check-dist spawns in postbuild.test.ts now follow the built flag (dist has vendor/mediapipe or not). tsconfig excludes `dist-noauto/` (the kill-switch build the e2e serves on port 4180).
+- **Incident (fixed)**: removing a temporary git worktree used for the Lighthouse baseline (its node_modules was a junction) deleted the repo's node_modules. Restored with `npm ci` from the unchanged lockfile; build, check, unit, licences and the chromium e2e re-run green afterwards. No source file was affected.
+
+### Step 4 status (Bob)
+- **DONE_WITH_CONCERNS** — the build ships manual-only (flag default 0) pending Arch on the license Flag; everything else is green except one regress check.
+- check 0/0/0; unit 393/393; licences OK with flag 0 (26 packages, 3 components) and, with flag 1, FAIL on fft2d only (Eigen exception used, as designed); budgets OK (flag 1 and flag 0 + `--no-mediapipe`).
+- e2e 5 projects: 668 passed / 0 failed / 6 flaky (all the Firefox `goto` race) / 131 skipped (stated reasons); id-photo spec after the last change: 134 passed / 26 skipped on all 5 projects.
+- Lighthouse (6 URLs, 3 runs): all assertions pass; /id-photo/ Perf 99, A11y 100, BP 100, SEO 100, LCP 1.80 s, CLS 0.0020.
+- regress:idphoto (chromium, committed + full-res): 13/14 — landmark chin on p07 −1.11 mm (committed) / −1.01 mm (full-res) against ≤ 1.0 mm (Blocked for Arch). Firefox 9/11 (also p07; PSNR min 37.50 dB < 38), WebKit 10/11 (p07). regress:merge 5/5, regress:compress 122/122, regress:photo 85/85 + 24/24 (unchanged).
+- smoke:assets OK (344 URLs); qa:visual 198 PNGs, 0 hard failures. Nothing committed.
+
+### Step 4 — Arch/orchestrator decisions (2026-09-30)
+- Ship /id-photo/ MANUAL-ONLY (PUBLIC_ID_PHOTO_AUTOFRAME default "0"). Auto-frame stays built and tested behind the flag; enabling it is blocked on (1) proving Eigen MPL2-only or accepting a documented exception and (2) an fft2d (Ooura) license decision. Known Gap.
+- regress:idphoto p07 chin error (−1.11 mm vs ≤ 1.0 mm) applies only to auto-frame (off). Known Gap tied to the flag, not a ship blocker for manual-only.
+- Firefox export PSNR floor: 37.0 dB on Firefox only (its canvas resampler differs); Chromium/WebKit stay at 38.0 dB. Rationale: 37.5 dB is visually lossless at 413×531; the spec output (pixels, bytes, JFIF dpi) is exact in every browser.
+- MediaPipe telemetry detach + CSP block: accepted; keep the pinned-bundle unit test.
+- Precache without /licenses/, UI-font comment exclusion, lazy controller, ui-shared chunk: accepted.
+
+## Step 4 round 2 (Bob, 2026-09-30, after Richard's review)
+- **Must Fix:** the auto-frame copy is gated on `__ID_PHOTO_AUTOFRAME__`: the lead, 사용 방법 2, FAQ 2, the reset label and the skip button. The manual wording is Richard's, accepted by Arch. check-dist fails a flag-off build whose /id-photo/ contains an auto-frame phrase.
+- **Should Fix:**
+  - The crash flag is cleared when init ends after a skip or timeout (with a unit test).
+  - The Firefox PSNR floor in regress:idphoto is 37.0 dB (Arch); other browsers keep 38.0.
+  - `calt` is off on file-name lines.
+  - The lazily imported /id-photo/ controller is precached.
+- **Arch:**
+  - The UI font budget is 190 KB (was 180).
+  - Playwright project `manual-chromium` runs the id-photo suite against dist-noauto (the shipping configuration). Gate order: build dist-noauto with the flag off first, then dist with the flag on.
+- **Status:** DONE_WITH_CONCERNS (license Flags 1–2 and the p07 regress miss stand).
+  - check 0/0/0; unit 397/397; both builds green.
+  - id-photo e2e on 5 projects + manual: all green after one test fix. That fix was in the manual keyboard test, not the product.
+  - regress:idphoto: Chromium 13/14, Firefox 10/11.
+
+- Follow-ups (Step 4 r2 review, for Final polish): manual-start readout hint "먼저 확대한 뒤 위치를 옮기세요"; CI must build dist-noauto before e2e so manual-chromium never silently skips.

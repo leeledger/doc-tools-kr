@@ -1,0 +1,170 @@
+{
+ "_note": "Source px of the committed (downscaled) files. Ported from spikes/photo/results/gt-manual.json (manual annotation on labelled grid sheets), scaled. skull = top of skull excluding hair (외교부 definition), null where not observable. conf high = skull visible, med = hair <= 1 cm, low = not observable. expr/pose from the spike notes; expectWarn = checklist warnings that must fire (regress:idphoto check 5).",
+ "p01": {
+  "w": 960,
+  "h": 1200,
+  "scale": 0.3,
+  "eye": 377.4,
+  "chin": 627.9,
+  "skull": null,
+  "conf": "low",
+  "expr": "smile",
+  "pose": "frontal",
+  "expectWarn": [
+   "expression"
+  ],
+  "note": "open smile"
+ },
+ "p02": {
+  "w": 961,
+  "h": 1200,
+  "scale": 0.286738,
+  "eye": 442.4,
+  "chin": 694.5,
+  "skull": 221.4,
+  "conf": "high",
+  "expr": "smile",
+  "pose": "frontal",
+  "expectWarn": [
+   "expression"
+  ],
+  "note": "open smile, bald"
+ },
+ "p03": {
+  "w": 960,
+  "h": 1200,
+  "scale": 0.285714,
+  "eye": 432.9,
+  "chin": 692.0,
+  "skull": null,
+  "conf": "low",
+  "expr": "neutral",
+  "pose": "frontal",
+  "expectWarn": [],
+  "note": "closed smile"
+ },
+ "p04": {
+  "w": 960,
+  "h": 1200,
+  "scale": 0.285714,
+  "eye": null,
+  "chin": null,
+  "skull": null,
+  "conf": null,
+  "expr": null,
+  "pose": "frontal",
+  "expectWarn": [],
+  "note": null
+ },
+ "p05": {
+  "w": 960,
+  "h": 1200,
+  "scale": 0.461538,
+  "eye": null,
+  "chin": null,
+  "skull": null,
+  "conf": null,
+  "expr": null,
+  "pose": "frontal",
+  "expectWarn": [],
+  "note": null
+ },
+ "p06": {
+  "w": 960,
+  "h": 1200,
+  "scale": 0.585938,
+  "eye": 402.5,
+  "chin": 638.7,
+  "skull": 175.8,
+  "conf": "med",
+  "expr": "neutral",
+  "pose": "frontal",
+  "expectWarn": [],
+  "note": "closed smile, glasses"
+ },
+ "p07": {
+  "w": 900,
+  "h": 1200,
+  "scale": 0.3663,
+  "eye": 235.9,
+  "chin": 430.4,
+  "skull": 76.6,
+  "conf": "high",
+  "expr": "smile",
+  "pose": "yaw",
+  "expectWarn": [
+   "yaw",
+   "expression"
+  ],
+  "note": "open smile, yaw ~25deg, shaved"
+ },
+ "p08": {
+  "w": 900,
+  "h": 1200,
+  "scale": 0.351597,
+  "eye": 268.3,
+  "chin": 478.2,
+  "skull": 96.0,
+  "conf": "med",
+  "expr": "smile",
+  "pose": "frontal",
+  "expectWarn": [
+   "expression"
+  ],
+  "note": "wide open smile"
+ },
+ "p09": {
+  "w": 900,
+  "h": 1200,
+  "scale": 0.572246,
+  "eye": null,
+  "chin": null,
+  "skull": null,
+  "conf": null,
+  "expr": null,
+  "pose": "frontal",
+  "expectWarn": [],
+  "note": null
+ },
+ "p10": {
+  "w": 800,
+  "h": 1200,
+  "scale": 0.3663,
+  "eye": 314.3,
+  "chin": 536.3,
+  "skull": 100.0,
+  "conf": "med",
+  "expr": "smile",
+  "pose": "pitch",
+  "expectWarn": [
+   "pitch"
+  ],
+  "note": "slight open smile, hair tied back"
+ },
+ "p11": {
+  "w": 960,
+  "h": 1200,
+  "scale": 0.25,
+  "eye": 282.0,
+  "chin": 497.5,
+  "skull": 108.8,
+  "conf": "low",
+  "expr": "smile",
+  "pose": "frontal",
+  "expectWarn": [],
+  "note": "open smile, short spiky hair ~1.5cm"
+ },
+ "p12": {
+  "w": 1097,
+  "h": 1200,
+  "scale": 0.685714,
+  "eye": null,
+  "chin": null,
+  "skull": null,
+  "conf": null,
+  "expr": null,
+  "pose": "frontal",
+  "expectWarn": [],
+  "note": null
+ }
+}

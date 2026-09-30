@@ -233,6 +233,7 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
         <details>
           <summary>{f.q}</summary>
           <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
         </details>
       ))}
     </div>

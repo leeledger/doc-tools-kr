@@ -1,5 +1,5 @@
 {
-  "$comment": "Everything shipped to the browser. gen-licenses.mjs embeds these files into /licenses/ and fails the build if one is missing. `files` are paths inside the npm package; `localFiles` are paths relative to the repo root (license texts the package does not ship, see licenses/third-party/SOURCES.md). Entries with `component` instead of `name` describe code compiled into a package (no npm package of their own).",
+  "$comment": "Everything shipped to the browser. gen-licenses.mjs embeds these files into /licenses/ and fails the build if one is missing. `files` are paths inside the npm package; `localFiles` are paths relative to the repo root (license texts the package does not ship, see licenses/third-party/SOURCES.md). Entries with `component` instead of `name` describe code compiled into a package (no npm package of their own). Entries with \"autoframe\": true ship only when PUBLIC_ID_PHOTO_AUTOFRAME is on (scripts/lib/autoframe.mjs); gen-licenses drops them otherwise.",
   "packages": [
     {
       "name": "@cantoo/pdf-lib",
@@ -137,6 +137,183 @@
       "use": "@jsquash/webp 의존성 (WebAssembly SIMD 지원 확인)",
       "files": [
         "LICENSE"
+      ]
+    },
+    {
+      "name": "@mediapipe/tasks-vision",
+      "autoframe": true,
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 (MediaPipe Face Landmarker, 사진을 올린 뒤에만 내려받음)",
+      "files": [],
+      "localFiles": [
+        "licenses/third-party/mediapipe/LICENSE"
+      ],
+      "homepage": "https://github.com/google-ai-edge/mediapipe"
+    },
+    {
+      "component": "MediaPipe Face Landmarker 모델 (face_landmarker.task, float16 v1)",
+      "autoframe": true,
+      "version": "sha256 64184e22",
+      "license": "Apache-2.0",
+      "homepage": "https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Face%20Mesh%20V2.pdf",
+      "use": "여권·증명사진 규격 맞추기: 얼굴·눈·턱 위치 모델. 모델 카드: Face Mesh V2 https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Face%20Mesh%20V2.pdf , Blendshape V2 https://storage.googleapis.com/mediapipe-assets/Model%20Card%20Blendshape%20V2.pdf , BlazeFace (Short Range) https://storage.googleapis.com/mediapipe-assets/MediaPipe%20BlazeFace%20Model%20Card%20(Short%20Range).pdf",
+      "localFiles": [
+        "licenses/third-party/mediapipe/LICENSE"
+      ]
+    },
+    {
+      "component": "TensorFlow Lite",
+      "autoframe": true,
+      "version": "a481b10",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/tensorflow/tensorflow",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함",
+      "localFiles": [
+        "licenses/third-party/mediapipe/LICENSE"
+      ]
+    },
+    {
+      "component": "Eigen",
+      "autoframe": true,
+      "version": "dcbaf2d, ea13a98",
+      "license": "MPL-2.0",
+      "homepage": "https://gitlab.com/libeigen/eigen/-/tree/dcbaf2d608f306450f1e74949eb87e9a22a7ef4b",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함. 수정하지 않은 원본 소스이며, 소스는 https://gitlab.com/libeigen/eigen/-/tree/dcbaf2d608f306450f1e74949eb87e9a22a7ef4b 및 https://gitlab.com/libeigen/eigen/-/tree/ea13a98decd497a8c5588fb5de71b57bcf10d864 에서 받을 수 있습니다",
+      "localFiles": [
+        "licenses/third-party/eigen/COPYING.README",
+        "licenses/third-party/eigen/COPYING.MPL2",
+        "licenses/third-party/eigen/COPYING.BSD"
+      ]
+    },
+    {
+      "component": "OpenCV (core, imgproc)",
+      "autoframe": true,
+      "version": "4.13.0",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/opencv/opencv",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함",
+      "localFiles": [
+        "licenses/third-party/mediapipe/LICENSE"
+      ]
+    },
+    {
+      "component": "XNNPACK",
+      "autoframe": true,
+      "version": "53a1797",
+      "license": "BSD-3-Clause",
+      "homepage": "https://github.com/google/XNNPACK",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함",
+      "localFiles": [
+        "licenses/third-party/xnnpack/LICENSE"
+      ]
+    },
+    {
+      "component": "pthreadpool",
+      "autoframe": true,
+      "version": "0246058",
+      "license": "BSD-2-Clause",
+      "homepage": "https://github.com/google/pthreadpool",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함 (XNNPACK 의존성)",
+      "localFiles": [
+        "licenses/third-party/pthreadpool/LICENSE"
+      ]
+    },
+    {
+      "component": "FP16",
+      "autoframe": true,
+      "version": "-",
+      "license": "MIT",
+      "homepage": "https://github.com/Maratyszcza/FP16",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함 (XNNPACK 의존성)",
+      "localFiles": [
+        "licenses/third-party/fp16/LICENSE"
+      ]
+    },
+    {
+      "component": "FXdiv",
+      "autoframe": true,
+      "version": "-",
+      "license": "MIT",
+      "homepage": "https://github.com/Maratyszcza/FXdiv",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함 (XNNPACK 의존성)",
+      "localFiles": [
+        "licenses/third-party/fxdiv/LICENSE"
+      ]
+    },
+    {
+      "component": "Abseil",
+      "autoframe": true,
+      "version": "-",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/abseil/abseil-cpp",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함",
+      "localFiles": [
+        "licenses/third-party/mediapipe/LICENSE"
+      ]
+    },
+    {
+      "component": "Protocol Buffers",
+      "autoframe": true,
+      "version": "31.1",
+      "license": "BSD-3-Clause",
+      "homepage": "https://github.com/protocolbuffers/protobuf",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함",
+      "localFiles": [
+        "licenses/third-party/protobuf/LICENSE"
+      ]
+    },
+    {
+      "component": "ruy, gemmlowp, FlatBuffers, TCMalloc, ML Drift",
+      "autoframe": true,
+      "version": "-",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/google/ruy",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함",
+      "localFiles": [
+        "licenses/third-party/mediapipe/LICENSE"
+      ]
+    },
+    {
+      "component": "fft2d (Ooura FFT)",
+      "autoframe": true,
+      "version": "OouraFFT 1.0",
+      "license": "LicenseRef-Ooura",
+      "homepage": "https://github.com/petewarden/OouraFFT",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함 (TensorFlow Lite RFFT2D)",
+      "localFiles": [
+        "licenses/third-party/fft2d/LICENSE"
+      ]
+    },
+    {
+      "component": "Emscripten 런타임",
+      "autoframe": true,
+      "version": "stable",
+      "license": "MIT OR NCSA",
+      "homepage": "https://github.com/emscripten-core/emscripten",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함 (웹어셈블리 런타임)",
+      "localFiles": [
+        "licenses/third-party/emscripten/LICENSE"
+      ]
+    },
+    {
+      "component": "libc++, libc++abi",
+      "autoframe": true,
+      "version": "-",
+      "license": "Apache-2.0 WITH LLVM-exception",
+      "homepage": "https://github.com/llvm/llvm-project",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함 (C++ 표준 라이브러리)",
+      "localFiles": [
+        "licenses/third-party/llvm-libcxx/LICENSE.TXT"
+      ]
+    },
+    {
+      "component": "musl libc",
+      "autoframe": true,
+      "version": "-",
+      "license": "MIT",
+      "homepage": "https://musl.libc.org/",
+      "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함 (C 표준 라이브러리)",
+      "localFiles": [
+        "licenses/third-party/musl/COPYRIGHT"
       ]
     }
   ]

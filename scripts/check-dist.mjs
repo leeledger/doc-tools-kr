@@ -1,9 +1,11 @@
 // Dist gate: Cloudflare Pages limits with headroom, no source maps, and the bundle budgets
 // (brief Step 2 §6, Step 3 §4 and Polish P "Budgets"; gzip -9 sizes). Prints the budget table.
 // Runs first in postbuild, before carry-assets, so the budgets judge the fresh build only.
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { autoframeOn } from './lib/autoframe.mjs';
 import { beaconPath } from './lib/beacon-path.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 
@@ -13,10 +15,13 @@ const MAX_FILES = 15000;
 const KB = 1024;
 /** The UI font weights (Polish P.12): one static instance each; no other weight may appear in the CSS. */
 const UI_WEIGHTS = new Set(['400', '600', '700', '800']);
+/** Copy that describes auto-framing; none of it may ship when PUBLIC_ID_PHOTO_AUTOFRAME is off. */
+const AUTOFRAME_PHRASES = ['자동으로 잡아', '자동으로 맞춘', '자동 맞춤', '건너뛰고 직접 맞추기', '6 MB의 프로그램'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const files = walkFiles(dist);
 const errors = [];
+const warnings = [];
 for (const f of files) {
   if (f.size >= MAX_FILE) errors.push(`${f.path} is ${(f.size / 1048576).toFixed(1)} MiB (limit < 24 MiB)`);
   if (f.path.endsWith('.map')) errors.push(`${f.path}: source maps must not ship`);
@@ -69,13 +74,63 @@ for (const glue of match(/^_astro\/webp_enc[^/]*\.js$/)) budget(`WebP glue ${glu
 for (const wasm of match(/^_astro\/webp_enc[^/]*\.wasm$/)) budget(`WebP wasm ${wasm.slice(7)}`, [wasm], 130 * KB);
 budget('fflate chunk (zip*.js)', match(/^_astro\/zip[.-][^/]*\.js$/), 12 * KB);
 
-// UI fonts (Polish P.12): four static instances, ≤ 50 KB each and ≤ 180 KB together; exactly two preloads.
+// 여권·증명사진 (brief Step 4 §4). With PUBLIC_ID_PHOTO_AUTOFRAME off (or --no-mediapipe) not one MediaPipe
+// byte may ship; otherwise the lazy face assets have their budgets and the model its SHA-256 pin.
+const autoframe = autoframeOn(env.PUBLIC_ID_PHOTO_AUTOFRAME) && !process.argv.includes('--no-mediapipe');
+budget('encode.worker*.js (id-photo)', match(/^_astro\/encode\.worker[^/]*\.js$/), 25 * KB);
+if (!autoframe) {
+  for (const f of files) if (/mediapipe|vision_bundle|vision_wasm|face_landmarker/i.test(f.path)) errors.push(`${f.path}: MediaPipe file in a build without auto-framing`);
+  for (const js of match(/\.m?js$/)) if (/FaceLandmarker|odml\.pa\.googleapis/.test(read(js).toString('latin1'))) errors.push(`${js} contains MediaPipe code in a build without auto-framing`);
+  // Step 4 round 2: a manual-only page never promises auto-framing (the lead, 사용 방법, FAQ, buttons).
+  const idp = pageHtml.get('id-photo/index.html') ?? '';
+  for (const phrase of AUTOFRAME_PHRASES) if (idp.includes(phrase)) errors.push(`id-photo/index.html says "${phrase}" in a build without auto-framing`);
+} else {
+  const MP = 'vendor/mediapipe/1.0.1/';
+  const bundle = match(/^_astro\/vision_bundle[^/]*\.js$/);
+  budget('MediaPipe chunk (vision_bundle*.js)', bundle, 50 * KB);
+  budget('vision_wasm_internal.js', match(/^vendor\/mediapipe\/1\.0\.1\/vision_wasm_internal\.js$/), 90 * KB);
+  budget('vision_wasm_nosimd_internal.js', match(/^vendor\/mediapipe\/1\.0\.1\/vision_wasm_nosimd_internal\.js$/), 90 * KB);
+  budget('vision_wasm_internal.wasm (raw)', match(/^vendor\/mediapipe\/1\.0\.1\/vision_wasm_internal\.wasm$/), 12.2 * 1024 * KB, raw, 'raw');
+  budget('vision_wasm_internal.wasm', match(/^vendor\/mediapipe\/1\.0\.1\/vision_wasm_internal\.wasm$/), 3.6 * 1024 * KB);
+  budget('vision_wasm_nosimd_internal.wasm (raw)', match(/^vendor\/mediapipe\/1\.0\.1\/vision_wasm_nosimd_internal\.wasm$/), 11.4 * 1024 * KB, raw, 'raw');
+  const models = match(/^vendor\/mediapipe\/models\/face_landmarker-[0-9a-f]{8}\.task$/);
+  const pin = readFileSync(join(import.meta.dirname, '..', 'vendor-assets', 'mediapipe', 'SHA256SUMS'), 'utf8').match(/^([0-9a-f]{64})/m)?.[1];
+  if (models.length !== 1) errors.push(`face_landmarker-*.task: ${models.length} file(s), expected exactly 1`);
+  for (const m of models) {
+    const sha = createHash('sha256').update(read(m)).digest('hex');
+    if (sha !== pin) errors.push(`${m}: SHA-256 ${sha} does not match the pin ${pin}`);
+    else rows.push({ label: 'face_landmarker-*.task (SHA-256 = pin)', size: raw(m), limit: Math.ceil(raw(m) / KB) * KB, unit: 'raw' });
+  }
+  // The lazy SIMD path a first auto-framing downloads: chunk + loader + wasm + model.
+  budget('lazy total, SIMD path (chunk+loader+wasm+model)', [...bundle, `${MP}vision_wasm_internal.js`, `${MP}vision_wasm_internal.wasm`, ...models], 7.2 * 1024 * KB);
+  if (files.some((f) => f.path.includes('vision_wasm_module_internal'))) errors.push('vision_wasm_module_internal.* must not ship');
+}
+// Test inputs never ship: no tests/ path and no file named like a committed corpus photo.
+const corpusDir = join(import.meta.dirname, '..', 'tests', 'corpus', 'id-photo');
+let corpusNames = [];
+try {
+  corpusNames = readdirSync(corpusDir).filter((f) => /\.(jpe?g|png)$/i.test(f));
+} catch {
+  // No corpus checked out.
+}
+for (const f of files) {
+  if (/(^|\/)tests\//.test(f.path) || corpusNames.includes(f.path.split('/').pop())) errors.push(`${f.path}: test input in dist/`);
+}
+// Preset sources (brief Step 4 "Failure modes"): a warning, not a failure, when the check date is > 180 days old.
+const retrieved = readFileSync(join(import.meta.dirname, '..', 'src', 'data', 'id-photo-presets.ts'), 'utf8').match(/export const RETRIEVED = '(\d{4}-\d{2}-\d{2})'/)?.[1];
+if (!retrieved) errors.push('src/data/id-photo-presets.ts: RETRIEVED not found');
+else {
+  const age = Math.floor((Date.now() - Date.parse(`${retrieved}T00:00:00Z`)) / 86_400_000);
+  if (age > 180) warnings.push(`id-photo presets were last checked ${retrieved} (${age} days ago): re-verify every source`);
+}
+
+// UI fonts (Polish P.12): four static instances, ≤ 50 KB each and ≤ 190 KB together; exactly two preloads.
 const uiFonts = match(/^_astro\/anolim-ui-\d+[^/]*\.woff2$/);
 if (uiFonts.length !== 4) errors.push(`UI fonts: ${uiFonts.length} file(s), expected 4 (400, 600, 700, 800)`);
 for (const f of uiFonts) budget(`UI font ${f.slice(7)}`, [f], 50 * KB, raw, 'raw');
-// 180 KB (Arch, round 2; was 170): the four faces were 169.4 KB, so the next copy change with new Hangul
-// syllables would have failed the build.
-budget('UI fonts total', uiFonts, 180 * KB, raw, 'raw');
+// 190 KB (Arch, Step 4 round 2; was 180, and 170 before Polish round 2): with the /id-photo/ copy the four
+// faces are 179.1 KB, ~1 KB under 180, so the next tool's copy would have failed the build.
+budget('UI fonts total', uiFonts, 190 * KB, raw, 'raw');
 for (const [path, html] of pageHtml) {
   const preloads = [...html.matchAll(/<link rel="preload"[^>]*as="font"[^>]*>/g)].length;
   if (preloads !== 2) errors.push(`${path}: ${preloads} font preload(s), expected exactly 2 (400 and 800)`);
@@ -112,6 +167,7 @@ count(/^_astro\/webp_enc_simd-[^/]*\.wasm$/, 1, 'webp_enc_simd*.wasm');
 console.log('check-dist: budgets');
 for (const r of rows) console.log(`  ${r.label.padEnd(44)} ${(r.size / KB).toFixed(1).padStart(7)} KB  / ${r.limit / KB} KB ${r.unit}`);
 
+for (const w of warnings) console.warn(`check-dist: WARNING ${w}`);
 const largest = files.reduce((a, f) => (f.size > a.size ? f : a), { path: '-', size: 0 });
 if (errors.length) {
   console.error(`check-dist: FAIL\n  ${errors.join('\n  ')}`);

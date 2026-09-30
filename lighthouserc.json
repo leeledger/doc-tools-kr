@@ -8,6 +8,7 @@
         "http://127.0.0.1:4173/pdf-merge/",
         "http://127.0.0.1:4173/pdf-compress/",
         "http://127.0.0.1:4173/photo-compress/",
+        "http://127.0.0.1:4173/id-photo/",
         "http://127.0.0.1:4173/terms/"
       ],
       "numberOfRuns": 3,

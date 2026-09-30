@@ -9,7 +9,7 @@ export const BEACON_PATH: string = __ERROR_BEACON_PATH__;
 export const BEACON_ENABLED = __ERROR_BEACON_PATH__ !== '';
 export const SAMPLE_RATE = 0.1;
 
-export type BeaconTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress';
+export type BeaconTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo';
 export type BeaconPhase = 'load' | 'parse' | 'process' | 'save';
 
 export interface BeaconInput {

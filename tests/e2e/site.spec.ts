@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, gotoReady, test } from './no-upload';
 import { fixturePath, photoFixture, runtimePath } from './paths';
 
-const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
+const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 for (const path of PAGES) {
@@ -39,7 +39,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   expect(await serious()).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/privacy/', '/terms/', '/licenses/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/privacy/', '/terms/', '/licenses/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -88,20 +88,21 @@ test('related tools: each tool page links to the other live tools', async ({ pag
     ['/pdf-merge/', 'PDF 합치기'],
     ['/pdf-compress/', 'PDF 용량 줄이기'],
     ['/photo-compress/', '사진 용량 줄이기'],
+    ['/id-photo/', '여권·증명사진 규격 맞추기'],
   ] as const;
   for (const [path] of tools) {
     await gotoReady(page, path);
     for (const [other, name] of tools.filter(([p]) => p !== path)) {
       await expect(page.locator('.related').getByRole('link', { name })).toHaveAttribute('href', other);
     }
-    await expect(page.locator('.related a')).toHaveCount(2);
+    await expect(page.locator('.related a')).toHaveCount(3);
   }
 });
 
 test('sitemap lists exactly the live pages; robots points to it', async ({ request }) => {
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
-  expect(locs.sort()).toEqual(['/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
+  expect(locs.sort()).toEqual(['/', '/id-photo/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
   const robots = await (await request.get('/robots.txt')).text();
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
 });
@@ -125,15 +126,16 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(3);
+  await expect(cards).toHaveCount(4);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 용량 줄이기' })).toHaveAttribute('href', '/photo-compress/');
-  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기', '사용하기']);
-  await expect(page.locator('.card')).toHaveCount(3);
+  await expect(cards.getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
+  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기', '사용하기', '사용하기']);
+  await expect(page.locator('.card')).toHaveCount(4);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
   await expect(page.locator('.soon h3')).toHaveText('준비 중');
-  await expect(page.locator('.soon-list li')).toHaveText(['여권·증명사진 규격 맞추기', '한글(HWP) → PDF 변환']);
+  await expect(page.locator('.soon-list li')).toHaveText(['한글(HWP) → PDF 변환']);
   await expect(page.locator('.soon a')).toHaveCount(0);
   await expect(page.locator('footer').getByRole('link', { name: '이용약관' })).toHaveAttribute('href', '/terms/');
   await expect(page.locator('footer').getByRole('link', { name: '개인정보 처리방침' })).toHaveAttribute('href', '/privacy/');
@@ -160,7 +162,7 @@ test('licenses page lists the shipped packages and their texts', async ({ page }
 test.describe('mobile layout', () => {
   test.use({ viewport: { width: 360, height: 780 } });
 
-  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/privacy/', '/terms/', '/licenses/']) {
+  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/privacy/', '/terms/', '/licenses/']) {
     test(`no horizontal scroll at 360 px on ${path}`, async ({ page }) => {
       await gotoReady(page, path);
       const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);

@@ -8,12 +8,13 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
 /**
  * Files allowed to call fetch( — only same-origin GETs of our own static files, never file data.
  * - lib/codecs/wasm-browser.ts: the jSquash codec loads (MozJPEG, resize, WebP) shared by both workers.
- * - lib/pdf/compress/wasm-browser.ts: the compress worker's qpdf load (a same-origin module import).
  * - lib/ui/engine-load.ts: GET /deploy-manifest.json for the engine-panel copy (Polish P.1).
  * - sw/sw.ts: the service worker's allowlisted same-origin GETs (Polish P.11; it never reads a body).
+ * - lib/face/assets.ts: GETs of the versioned /vendor/mediapipe/ model, wasm and loader (Step 4; the photo
+ *   never leaves the page: MediaPipe gets the pixels in memory).
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
-const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/pdf/compress/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts'];
 /** sendBeacon only in the error-beacon stub, which is off (and dropped from the bundle) unless configured. */
 const BEACON_ALLOWLIST: string[] = ['lib/ui/beacon.ts'];
 
@@ -43,6 +44,8 @@ describe('no network APIs in src/', () => {
       .map((f) => relative(SRC, f).split('\\').join('/'));
     expect(hits.length).toBeGreaterThan(0);
     for (const h of hits) expect(FETCH_ALLOWLIST, h).toContain(h);
+    // Exactly the allowlist: a stale entry is removed, not kept.
+    expect([...hits].sort()).toEqual([...FETCH_ALLOWLIST].sort());
   });
 
   it('uses sendBeacon only in the beacon stub', () => {
