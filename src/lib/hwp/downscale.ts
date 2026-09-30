@@ -4,6 +4,11 @@
 // Blob → createImageBitmap, no fetch), draw on an HTMLCanvasElement (no OffscreenCanvas: WebKit on Windows),
 // encode JPEG q 0.85 (JPEG source, or no alpha below 255) else PNG, keep the smaller, and swap the href to a
 // blob: URL the caller tracks and revokes. SVG sources are left alone; BMP is treated like PNG.
+// Arch F2 (Step 5 round 2): a PNG/BMP over 100 KB that is NOT oversized is re-encoded as JPEG q 0.85 at the
+// same pixel size when it is a photo: fully opaque and not line art (line art = at most 64 distinct colours,
+// or at least 85 % of pixels equal to their left neighbour, which catches text, diagrams and screenshots;
+// infographics with photos on flat backgrounds measure ~0.74 (kr36, kr38) and are re-encoded).
+// Kept only when the JPEG is smaller.
 
 export const TARGET_DPI = 200;
 export const CSS_DPI = 96;
@@ -72,6 +77,27 @@ function hasAlpha(ctx: CanvasRenderingContext2D, w: number, h: number): boolean 
   return false;
 }
 
+export const LINE_ART_MAX_COLOURS = 64;
+export const LINE_ART_FLAT_SHARE = 0.85;
+
+/**
+ * Photo test for RGBA pixels (row-major, `w` wide): false when any alpha < 255, when there are at most 64
+ * distinct colours, or when ≥ 85 % of pixels equal their left neighbour (flat areas: text, diagrams).
+ */
+export function isOpaquePhoto(data: Uint8ClampedArray | Uint8Array, w: number): boolean {
+  const colours = new Set<number>();
+  let flat = 0;
+  const n = data.length >> 2;
+  for (let p = 0; p < n; p++) {
+    const i = p << 2;
+    if (data[i + 3] < 255) return false;
+    const c = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+    if (colours.size <= LINE_ART_MAX_COLOURS) colours.add(c);
+    if (p % w !== 0 && data[i] === data[i - 4] && data[i + 1] === data[i - 3] && data[i + 2] === data[i - 2]) flat++;
+  }
+  return colours.size > LINE_ART_MAX_COLOURS && flat / Math.max(1, n - Math.ceil(n / w)) < LINE_ART_FLAT_SHARE;
+}
+
 const toBlob = (c: HTMLCanvasElement, type: string, q?: number): Promise<Blob | null> => new Promise((resolve) => c.toBlob(resolve, type, q));
 
 export async function downscaleImages(svg: SVGSVGElement, doc: Document = document): Promise<DownscaleResult> {
@@ -90,17 +116,24 @@ export async function downscaleImages(svg: SVGSVGElement, doc: Document = docume
     try {
       bitmap = await createImageBitmap(new Blob([parsed.bytes], { type: parsed.mime }));
       const natural = { w: bitmap.width, h: bitmap.height };
-      if (!needsDownscale(natural, target)) continue;
-      // Keep the aspect ratio; reach the target in both directions (never upscale).
-      const s = Math.min(1, Math.max(target.w / natural.w, target.h / natural.h));
+      const oversize = needsDownscale(natural, target);
+      const jpegSource = parsed.mime === 'image/jpeg' || parsed.mime === 'image/jpg';
+      if (!oversize && jpegSource) continue;
+      // Keep the aspect ratio; reach the target in both directions (never upscale). Not oversized: same size.
+      const s = oversize ? Math.min(1, Math.max(target.w / natural.w, target.h / natural.h)) : 1;
       canvas.width = Math.max(1, Math.round(natural.w * s));
       canvas.height = Math.max(1, Math.round(natural.h * s));
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) continue;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      const jpeg = parsed.mime === 'image/jpeg' || parsed.mime === 'image/jpg' || !hasAlpha(ctx, canvas.width, canvas.height);
+      let jpeg: boolean;
+      if (oversize) jpeg = jpegSource || !hasAlpha(ctx, canvas.width, canvas.height);
+      else {
+        if (!isOpaquePhoto(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width)) continue;
+        jpeg = true;
+      }
       const blob = jpeg ? await toBlob(canvas, 'image/jpeg', JPEG_QUALITY) : await toBlob(canvas, 'image/png');
       if (!blob || blob.size >= parsed.bytes.length) continue;
       const url = URL.createObjectURL(blob);

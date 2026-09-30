@@ -44,6 +44,30 @@ export async function fontsSettled(): Promise<void> {
   }
 }
 
+/**
+ * Starts the downloads of every face and slice the pages under `root` use, while they are still hidden:
+ * one document.fonts.load() per (family chain, weight) with that family's characters. Slices then arrive in
+ * parallel instead of one layout round at a time after the pages are shown.
+ */
+export async function preloadFacesFor(root: ParentNode): Promise<void> {
+  await loadHwpFonts();
+  const wanted = new Map<string, Set<string>>();
+  for (const t of Array.from(root.querySelectorAll('text'))) {
+    const family = t.getAttribute('font-family');
+    if (!family) continue;
+    const key = `${t.getAttribute('font-weight') === '700' || t.getAttribute('font-weight') === 'bold' ? 700 : 400}|${family}`;
+    let set = wanted.get(key);
+    if (!set) wanted.set(key, (set = new Set()));
+    for (const ch of t.textContent ?? '') set.add(ch);
+  }
+  await Promise.all(
+    [...wanted].map(([key, chars]) => {
+      const [weight, family] = key.split('|');
+      return document.fonts.load(`${weight} 16px ${family}`, [...chars].join('')).catch(() => []);
+    }),
+  );
+}
+
 export async function hwpFontsReady(): Promise<void> {
   await loadHwpFonts();
   await fontsSettled();

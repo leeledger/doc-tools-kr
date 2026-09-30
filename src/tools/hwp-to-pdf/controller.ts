@@ -19,7 +19,7 @@ import { safeFileName } from '../../lib/ui/format';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { LIMITS, overHardLimit, route, type Mode, type RouteResult } from './limits';
 import { COPY, ERRORS, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from './messages';
-import { fontsSettled, hwpFontsReady, loadHwpFonts } from './fonts';
+import { fontsSettled, hwpFontsReady, loadHwpFonts, preloadFacesFor } from './fonts';
 import { createWatchdog } from './watchdog';
 
 type State = 'empty' | 'loading' | Mode | 'rendering' | 'error';
@@ -338,6 +338,8 @@ export function initHwpTool(): void {
         await tick();
         if (!live()) return;
       }
+      await preloadFacesFor(preview);
+      if (!live()) return;
     } finally {
       preview.classList.remove('hw-building');
     }

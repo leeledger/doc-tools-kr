@@ -536,3 +536,14 @@
 - Error beacon not wired for hwp-to-pdf.
 - Precache is at 448.0 / 450 KB; the Step 4 merge adds a page and will need Arch's call (raise the budget or drop /licenses/ from the precache).
 - Opaque PNG photos that are not oversized stay PNG (see the regress rule-5 Flag).
+
+## Step 5 decisions, round 2 (Arch, 2026-09-30, on the Step 5 Flags)
+- **F1 accepted:** kr01 viewer-only by the desktop image cap is correct. Rule 2 is now: the routed set = the 19 guard keys + every cap-routed file, each listed with its reason (guard parity checked on the guard reasons).
+- **F2 build the fix:** before printing, opaque PNG/BMP images over 100 KB are re-encoded as JPEG (q 0.85, same pixel size) when smaller; PNG is kept for alpha and for line art or text-like images (Bob's call below). Rerun rule 5 and report any of kr21/kr38/kr45 still over.
+- **F3:** stop precaching /licenses/ (Step 4 on main already did; arrives with the merge).
+- **F4 accepted:** HWP font CSS budget 31 KB. Reason: 865 unicode-range faces; the unique range lists alone are 22.4 KB gzip, and the sorted CSS is 30.3 KB.
+- **Merge:** main (Step 4, ee507ab) merged into step5; both tools, both BUILD-LOG sections, UI font budget 190 KB (main), Step 4's manual-chromium project plus E2E_PORT.
+
+## Step 5 round 2 build notes (Bob, 2026-09-30)
+- **F2 line-art rule:** keep PNG when any alpha < 255, when ≤ 64 distinct colours, or when ≥ 85 % of pixels equal their left neighbour. Measured: kr38 p5 (poster with photos) 77,936 colours / 0.745 flat, kr36 p4 19,655 / 0.738, so 0.70 would have kept them PNG; 0.85 re-encodes them while text screenshots and diagrams (flat share > 0.85) stay PNG. Unit-tested (`isOpaquePhoto`).
+- **Font preload while hidden:** after the build, `preloadFacesFor()` calls `document.fonts.load()` once per (family, weight) with that family's characters before the pages are shown, so slices download in parallel. `fontsSettled()` (added in round 1 for WebKit) had pushed law10 render-to-ready to 3.0–3.7 s; with the preload it is 2.3–2.6 s (adm28 5.5 s).

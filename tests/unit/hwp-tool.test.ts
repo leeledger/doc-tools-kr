@@ -293,3 +293,21 @@ describe('service worker and carry-forward cover the HWP assets (cache on use, n
     }
   });
 });
+
+describe('downscale: photo vs line art (Arch F2)', () => {
+  const img = (w: number, h: number, px: (x: number, y: number) => [number, number, number, number]): Uint8ClampedArray => {
+    const d = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) d.set(px(x, y), (y * w + x) * 4);
+    return d;
+  };
+  it('noise is a photo; alpha, ≤ 64 colours or mostly flat rows are not', async () => {
+    const { isOpaquePhoto } = await import('../../src/lib/hwp/downscale');
+    let seed = 7;
+    const rnd = (): number => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) & 255;
+    expect(isOpaquePhoto(img(64, 64, () => [rnd(), rnd(), rnd(), 255]), 64)).toBe(true);
+    expect(isOpaquePhoto(img(64, 64, () => [rnd(), rnd(), rnd(), 254]), 64)).toBe(false);
+    expect(isOpaquePhoto(img(64, 64, (x) => [x % 2 ? 0 : 255, 0, 0, 255]), 64)).toBe(false);
+    // 128 rows of one colour each: 128 distinct colours (over 64) but 100 % flat, so line art.
+    expect(isOpaquePhoto(img(64, 128, (_x, y) => [y * 2, y, 255 - y, 255]), 64)).toBe(false);
+  });
+});

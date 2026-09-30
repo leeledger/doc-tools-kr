@@ -8,7 +8,7 @@ import { danglingRefs, parsePageSvg } from '../../../src/lib/hwp/svg-dom';
 import { route } from '../../../src/lib/hwp/route';
 import { createViewer } from '../../../src/tools/hwp-to-pdf/viewer';
 import { installPageStyle } from '../../../src/tools/hwp-to-pdf/print';
-import { hwpFontsReady, loadHwpFonts } from '../../../src/tools/hwp-to-pdf/fonts';
+import { hwpFontsReady, loadHwpFonts, preloadFacesFor } from '../../../src/tools/hwp-to-pdf/fonts';
 
 type Msg = HwpResponse;
 
@@ -110,6 +110,7 @@ async function run(url: string): Promise<Result> {
       await new Promise((r) => setTimeout(r, 0));
     }
     w.terminate();
+    await preloadFacesFor(root);
     root.classList.remove('hw-building');
     installPageStyle(parsed.pageInfos);
     document.body.classList.add('hwp-printable');
