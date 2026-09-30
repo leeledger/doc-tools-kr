@@ -847,3 +847,8 @@ Published: passport-photo, id-photo-size, id-photo-kb, photo-kb, pdf-compress, p
 - /id-photo/?preset= is applied by a module script, which runs after parsing: the select can show the passport preset for a frame before it switches. The other tools hide their options until a file is picked, so they cannot flash.
 - npm run check:licenses with PUBLIC_ID_PHOTO_AUTOFRAME=1 fails on fft2d (LicenseRef-Ooura): the pre-existing Step 4 license flag (default off). The gate runs flag off and passes.
 - UI font headroom 0.4 KB (flag on), above.
+
+### Merge state and Growth G next steps (cloud session, 2026-09-30)
+- Branch `claude/affectionate-wright-82i7wk` now = hwp-direct (1aa8874) + the precache fix + growth-g-wip merged (only BUILD-LOG conflicted; both sides kept). Gates on the merged tree: astro check 0 errors, unit 587/587 (37 files), both builds (flag off/on) check-dist + gen-sw OK (386 / 388 KB of 450), check:licenses OK.
+- Decision: `hwp-to-pdf` and `hwp-viewer` guides stay `draft: true`. hwp-direct is in, but a guide needs one fetched official quote and hancom.com / tech.hancom.com are blocked by the cloud proxy (search snippets are not verbatim). `tried` URLs recorded in both files. 11 guides are published (target was ≥ 12): publish these two from a PC session with Hancom access, or find another fetchable official source.
+- Still to do: Richard review of hwp-direct + growth-g, /hwp-to-pdf/ share button (Growth G, now unblocked), Lighthouse /hwp-to-pdf/, owner-PC full-corpus regress:hwp, then merge to main per CLOUD-HANDOFF §3.
