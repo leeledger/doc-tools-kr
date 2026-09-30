@@ -54,7 +54,7 @@ const budget = (label, paths, limit, measure = gz, unit = 'gzip') => {
   if (size > limit) errors.push(`${label} (${paths.join(' + ')}) is ${(size / KB).toFixed(1)} KB ${unit}, budget ${limit / KB} KB`);
 };
 
-const pageHtml = new Map(files.filter((f) => f.path.endsWith('.html')).map((f) => [f.path, read(f.path).toString('utf8')]));
+const pageHtml = new Map(files.filter((f) => f.path.endsWith('.html') && !/^(naver|google)[0-9a-f]+.html$/.test(f.path)).map((f) => [f.path, read(f.path).toString('utf8')]));
 const initialJs = (html) => [...new Set(moduleEntries(html).flatMap((e) => staticClosure(dist, e)))];
 
 // Initial JS of each page: its module scripts plus their static imports (dynamic import() is lazy).
