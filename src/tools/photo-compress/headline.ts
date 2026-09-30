@@ -40,7 +40,7 @@ export function doneSummary(rows: readonly OutcomeRow[], size: (bytes: number) =
       case 'grown':
         return { text: '다시 저장해 용량이 조금 늘었습니다.', sizes: arrow([r]) };
       case 'same':
-        return { text: '원본 그대로 두었습니다. 원본을 받으셔도 됩니다.', sizes: null };
+        return { text: '이미 충분히 작아서 그대로 두었어요. 원본을 받으셔도 됩니다.', sizes: null };
       case 'waiting':
         return { text: '줄이기를 취소했습니다.', sizes: null };
       case 'failed':

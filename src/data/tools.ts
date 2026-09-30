@@ -238,3 +238,6 @@ export function getTool(slug: string): Tool {
   if (!t) throw new Error(`unknown tool: ${slug}`);
   return t;
 }
+
+/** Home <title> (Growth: traffic first). Keyword-bearing; kept here so tool names live only in tools.ts. */
+export const HOME_TITLE = 'PDF 합치기·용량 줄이기, 사진 용량·증명사진 규격, 한글 PDF 변환 무료 | 문서딱';

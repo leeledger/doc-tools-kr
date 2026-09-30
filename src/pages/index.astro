@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import JsonLd from '../components/JsonLd.astro';
 import { SITE, defaultDescription, liveNames } from '../data/site';
 import { josa } from '../lib/ui/josa';
-import { LIVE_TOOLS, TOOLS } from '../data/tools';
+import { HOME_TITLE, LIVE_TOOLS, TOOLS } from '../data/tools';
 
 const soon = TOOLS.filter((t) => t.status !== 'live');
 
@@ -27,7 +27,7 @@ const jsonLd = [
   },
 ];
 ---
-<Base isHome skipTarget="tools">
+<Base isHome skipTarget="tools" title={HOME_TITLE}>
   <JsonLd slot="head" data={jsonLd} />
   <section class="hero">
     <div class="wrap">

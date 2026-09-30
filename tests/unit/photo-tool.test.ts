@@ -149,7 +149,7 @@ describe('done summary (Polish Q: 줄임 / 그대로 / 늘어남 apart; never "�
   it('one photo: its own sentence, never "1장 중 1장"', () => {
     expect(doneSummary([res(3_600_000, 192_000)], kb)).toEqual({ text: '사진을 줄였습니다.', sizes: '3600 KB → 192 KB' });
     expect(doneSummary([res(26_000, 87_000)], kb)).toEqual({ text: '다시 저장해 용량이 조금 늘었습니다.', sizes: '26 KB → 87 KB' });
-    expect(doneSummary([{ outcome: 'same' }], kb).text).toBe('원본 그대로 두었습니다. 원본을 받으셔도 됩니다.');
+    expect(doneSummary([{ outcome: 'same' }], kb).text).toBe('이미 충분히 작아서 그대로 두었어요. 원본을 받으셔도 됩니다.');
     expect(doneSummary([{ outcome: 'failed' }], kb)).toEqual({ text: '사진을 줄이지 못했습니다.', sizes: null });
   });
   it('the audit case (281 KB and 340 KB kept, 26 KB grown): no "줄였습니다", no total', () => {

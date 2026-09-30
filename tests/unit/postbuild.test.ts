@@ -481,7 +481,7 @@ describe('built output', () => {
     expect(misnamed).toEqual([]);
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
     expect(home).toContain('<meta property="og:site_name" content="문서딱">');
-    expect(home).toContain('<title>문서딱 — 내야 하는 문서·사진, 용량과 규격에 딱 맞춰 드려요</title>');
+    expect(home).toContain('<title>PDF 합치기·용량 줄이기, 사진 용량·증명사진 규격, 한글 PDF 변환 무료 | 문서딱</title>');
     const manifest = JSON.parse(readFileSync(join(DIST, 'manifest.webmanifest'), 'utf8')) as { name: string; short_name: string };
     expect(manifest.short_name).toBe('문서딱');
     expect(manifest.name.startsWith('문서딱')).toBe(true);

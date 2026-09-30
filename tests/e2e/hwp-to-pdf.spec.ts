@@ -180,7 +180,7 @@ test('print gate: the document is printable only once PDF로 저장 is enabled; 
     (window as unknown as { __printLog: typeof log }).__printLog = log;
     const save = document.getElementById('hw-save') as HTMLButtonElement;
     new MutationObserver(() =>
-      log.push({ printable: document.body.classList.contains('hwp-printable'), preparing: document.body.classList.contains('hwp-preparing'), saveDisabled: save.disabled || save.hidden }),
+      log.push({ printable: document.body.classList.contains('hwp-printable'), preparing: document.body.classList.contains('hwp-preparing'), saveDisabled: save.disabled || save.hidden !== false }),
     ).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   });
   await convertReady(page, fx('law10.hwp'));
