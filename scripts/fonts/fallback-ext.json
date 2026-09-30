@@ -1,0 +1,30 @@
+[
+ {
+  "file": "fb-cjk-1",
+  "range": "U+119E, U+318D, U+2000-206F, U+2190-21FF, U+2200-22FF, U+2300-23FF, U+2460-24FF, U+2500-259F, U+25A0-25FF, U+2600-26FF, U+2700-27BF, U+3000-303F"
+ },
+ {
+  "file": "fb-cjk-2",
+  "range": "U+3200-32FF"
+ },
+ {
+  "file": "fb-cjk-3",
+  "range": "U+FF00-FFEF"
+ },
+ {
+  "file": "fb-math-1",
+  "range": "U+2190-21FF, U+2200-22FF"
+ },
+ {
+  "file": "fb-math-2",
+  "range": "U+2300-23FF, U+25A0-25FF, U+300-36F"
+ },
+ {
+  "file": "fb-sym2",
+  "range": "U+2190-21FF, U+25A0-25FF, U+2600-26FF, U+2700-27BF, U+2B00-2BFF"
+ },
+ {
+  "file": "fb-sans",
+  "range": "U+2000-206F, U+2B0-36F"
+ }
+]

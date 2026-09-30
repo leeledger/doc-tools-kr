@@ -6,8 +6,7 @@ import RelatedTools from '../../components/RelatedTools.astro';
 import EngineError from '../../components/EngineError.astro';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
-import { GUIDES } from '../../tools/hwp-to-pdf/guidance';
-import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-to-pdf/messages';
+import { COPY, HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-to-pdf/messages';
 import '../../tools/hwp-to-pdf/hwp.css';
 
 const tool = getTool('hwp-to-pdf');
@@ -19,7 +18,7 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
   <section class="tool-hero" aria-labelledby="tool-title">
     <div class="wrap narrow">
       <h1 id="tool-title">{tool.h1}</h1>
-      <p class="lead">한글 프로그램 없이 한글파일 PDF로 변환합니다. HWP·HWPX 문서를 고르면 모든 쪽을 미리 보여 드리고, 글자를 선택할 수 있는 PDF로 저장합니다. HWP 뷰어처럼 바로 열어 볼 수도 있습니다.</p>
+      <p class="lead">한글 프로그램 없이 한글 파일을 PDF로 바꿉니다. HWP·HWPX 문서를 고르면 모든 쪽을 미리 보여 드리고, 버튼 한 번에 PDF 파일로 내려받습니다. 한글 뷰어처럼 열어 보기만 해도 됩니다.</p>
     </div>
   </section>
 
@@ -48,17 +47,17 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
           <p class="result-title" id="hw-file-name" tabindex="-1"></p>
           <p class="notice warn" id="hw-banner" role="status" hidden></p>
           <div class="row hw-actions">
-            <button type="button" class="btn primary" id="hw-save" disabled hidden>PDF로 저장</button>
-            <button type="button" class="btn ghost" id="hw-force" hidden>그래도 PDF로 저장</button>
+            <button type="button" class="btn primary" id="hw-save" hidden>PDF 내려받기</button>
+            <button type="button" class="btn ghost" id="hw-force" hidden>그래도 PDF 내려받기</button>
             <button type="button" class="btn ghost" id="hw-reset">다른 문서 열기</button>
           </div>
-          <div class="hw-guide" id="hw-guide" hidden></div>
-          <p class="hint" id="hw-note" hidden>원본 프로그램과 글꼴·줄바꿈이 조금 다를 수 있습니다.</p>
-          <div class="notice" id="hw-after" hidden>
-            <p>PDF 파일이 저장되지 않았다면 인쇄 창에서 PDF로 저장을 골랐는지 확인해 주세요.</p>
-            <p><a href="/pdf-compress/">저장한 PDF가 크면 PDF 용량 줄이기</a></p>
+          <p class="hint" id="hw-eq-note" hidden>{COPY.equations}</p>
+          <p class="hint" id="hw-note" hidden>{COPY.note}</p>
+          <div class="notice hw-done" id="hw-done" hidden>
+            <p id="hw-done-text"></p>
+            <p><a id="hw-again" download>다시 내려받기</a> · <a href="/pdf-compress/">저장한 PDF가 크면 PDF 용량 줄이기</a></p>
           </div>
-          <div class="hw-preview" id="hwp-print-root" tabindex="0" role="region" aria-label="문서 미리보기"></div>
+          <div class="hw-preview" id="hw-preview" tabindex="0" role="region" aria-label="문서 미리보기"></div>
         </div>
 
         <p class="visually-hidden" id="hw-status" aria-live="polite" data-live="status"></p>
@@ -71,9 +70,9 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
     <div class="wrap narrow">
       <h2 id="howto-title">사용 방법</h2>
       <ol class="steps">
-        <li><strong>HWP 파일 선택</strong><span>HWP·HWPX 문서를 고르거나 끌어다 놓습니다. 모든 쪽이 미리보기로 열립니다.</span></li>
-        <li><strong>PDF로 저장 누르기</strong><span>브라우저의 인쇄 창이 열립니다.</span></li>
-        <li><strong>PDF로 저장 고르기</strong><span>인쇄 창에서 「PDF로 저장」을 고르고 저장을 누릅니다.</span></li>
+        <li><strong>HWP 파일 고르기</strong><span>HWP·HWPX 문서를 고르거나 여기에 끌어다 놓습니다.</span></li>
+        <li><strong>미리 보기</strong><span>모든 쪽을 화면에서 넘겨 볼 수 있습니다.</span></li>
+        <li><strong>PDF 내려받기</strong><span>버튼을 누르면 PDF 파일이 「다운로드」 폴더에 바로 저장됩니다.</span></li>
       </ol>
     </div>
   </section>
@@ -82,7 +81,7 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
     <div class="wrap narrow">
       <h2 id="why-title">안전한 이유</h2>
       <ul class="points">
-        <li><strong>업로드하지 않습니다</strong><span>문서는 이 기기 안에서만 처리되고 어디에도 전송되지 않습니다.</span></li>
+        <li><strong>밖으로 보내지 않습니다</strong><span>문서는 이 기기 안에서만 열리고, 인터넷으로 어디에도 보내지지 않습니다.</span></li>
         <li><strong>설치하지 않습니다</strong><span>한글 프로그램이나 다른 프로그램을 설치하지 않아도 됩니다.</span></li>
         <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
       </ul>
@@ -92,20 +91,13 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
   <section class="help" aria-labelledby="help-title">
     <div class="wrap narrow">
       <h2 id="help-title">도움말</h2>
-      <h3>PDF로 저장하는 방법</h3>
-      {GUIDES.map((g) => (
-        <details>
-          <summary>{g.title}</summary>
-          <ol>{g.steps.map((s) => <li>{s}</li>)}</ol>
-        </details>
-      ))}
       <h3>원본과 다를 수 있는 문서</h3>
       <ul>
         <li>수식이 들어 있는 문서는 수식 모양이 원본과 다를 수 있습니다.</li>
         <li>글상자·도형이 많은 문서는 도형의 위치가 원본과 다를 수 있습니다.</li>
         <li>100쪽 이상인 문서는 쪽 나눔이 원본과 다를 수 있습니다.</li>
       </ul>
-      <p>이런 문서는 먼저 미리보기로 보여 드립니다. 확인한 뒤 「그래도 PDF로 저장」을 누르면 저장할 수 있습니다.</p>
+      <p>글상자·도형이 많은 문서와 100쪽 이상인 문서는 먼저 미리보기로 보여 드립니다. 확인한 뒤 「그래도 PDF 내려받기」를 누르면 내려받을 수 있습니다.</p>
       <h3>한글(HWP) 문서 관련 고지</h3>
       <p>{HANCOM_NOTICE}</p>
       <p>{TRADEMARK_NOTICE}</p>

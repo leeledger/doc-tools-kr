@@ -12,10 +12,12 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
  * - sw/sw.ts: the service worker's allowlisted same-origin GETs (Polish P.11; it never reads a body).
  * - lib/face/assets.ts: GETs of the versioned /vendor/mediapipe/ model, wasm and loader (Step 4; the photo
  *   never leaves the page: MediaPipe gets the pixels in memory).
- * - lib/hwp/wasm-browser.ts: rhwp wasm, own origin (Step 5).
+ * - lib/hwp/wasm-browser.ts: rhwp wasm, own origin (Step 5; also its prefetch during the file dialog).
+ * - lib/hwp/pdf/font-source.ts: HWP PDF fonts, own origin: the face list and the .woff slices under
+ *   /fonts/hwp/ (HWP direct). Never file data.
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
-const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts'];
 /** sendBeacon only in the error-beacon stub, which is off (and dropped from the bundle) unless configured. */
 const BEACON_ALLOWLIST: string[] = ['lib/ui/beacon.ts'];
 
@@ -49,11 +51,11 @@ describe('no network APIs in src/', () => {
     expect([...hits].sort()).toEqual([...FETCH_ALLOWLIST].sort());
   });
 
-  it('in the HWP module only wasm-browser.ts calls fetch( (rhwp wasm, own origin)', () => {
+  it('in the HWP module only wasm-browser.ts and pdf/font-source.ts call fetch( (own origin)', () => {
     const hits = all
       .filter((f) => /\bfetch\s*\(/.test(readFileSync(f, 'utf8')))
       .map((f) => relative(SRC, f).split('\\').join('/'));
-    expect(hits.filter((h) => h.startsWith('lib/hwp/'))).toEqual(['lib/hwp/wasm-browser.ts']);
+    expect(hits.filter((h) => h.startsWith('lib/hwp/')).sort()).toEqual(['lib/hwp/pdf/font-source.ts', 'lib/hwp/wasm-browser.ts']);
   });
 
   it('uses sendBeacon only in the beacon stub', () => {

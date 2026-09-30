@@ -1,12 +1,14 @@
 // Routing after the parse (brief Step 5 §3.4). Pure. Caps first (viewer-only), then the guard (viewer-first),
-// else convert. Reasons come in table order: bytes, pages, wasm, images, then equations, textboxes, long.
+// else convert. Reasons come in table order: bytes, pages, wasm, images, then textboxes, long.
+// HWP direct (SPIKE-HWP-DIRECT §6.6, UX-AUDIT-2 item 1): equations no longer trigger the guard (none of corpus
+// v2's 9 equation files is broken by its equations); the page shows a soft note for them instead.
 import type { Device } from '../ui/device';
-import { GUARD_EQUATIONS, GUARD_PAGES, GUARD_TEXTBOXES, LIMITS } from './limits';
+import { GUARD_PAGES, GUARD_TEXTBOXES, LIMITS } from './limits';
 
 export type Mode = 'convert' | 'viewer-first' | 'viewer-only';
 
 export type CapReason = { kind: 'bytes' | 'pages' | 'wasm' | 'images'; limit: number; value: number };
-export type GuardReason = { kind: 'equations' | 'textboxes' | 'long'; value: number };
+export type GuardReason = { kind: 'textboxes' | 'long'; value: number };
 export type Reason = CapReason | GuardReason;
 
 export interface RouteInput {
@@ -15,7 +17,6 @@ export interface RouteInput {
   pages: number;
   wasmBytes: number;
   imageBytes: number;
-  equations: number;
   textboxes: number;
 }
 
@@ -32,7 +33,6 @@ export function route(x: RouteInput): RouteResult {
   if (x.wasmBytes > l.capWasmBytes) caps.push({ kind: 'wasm', limit: l.capWasmBytes, value: x.wasmBytes });
   if (x.imageBytes > l.capImageBytes) caps.push({ kind: 'images', limit: l.capImageBytes, value: x.imageBytes });
   const guard: GuardReason[] = [];
-  if (x.equations >= GUARD_EQUATIONS) guard.push({ kind: 'equations', value: x.equations });
   if (x.textboxes >= GUARD_TEXTBOXES) guard.push({ kind: 'textboxes', value: x.textboxes });
   if (x.pages >= GUARD_PAGES) guard.push({ kind: 'long', value: x.pages });
   if (caps.length) return { mode: 'viewer-only', reasons: [...caps, ...guard] };

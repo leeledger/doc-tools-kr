@@ -1,6 +1,6 @@
 // Device limits and routing thresholds of HWP PDF 변환 (brief Step 5 §3.4). Pure.
 // MB = 1,000,000 bytes; WASM memory is in MiB. "Over" means strictly greater than the limit; the guard
-// thresholds are inclusive (pages ≥ 100, textboxes ≥ 3, equations > 0), exactly as written in the brief.
+// thresholds are inclusive (pages ≥ 100, textboxes ≥ 3), exactly as written in the brief (equations dropped: HWP direct).
 import type { Device } from '../ui/device';
 
 export const MB_DEC = 1_000_000;
@@ -26,7 +26,6 @@ export const LIMITS: Record<Device, DeviceLimits> = {
 /** Guard (viewer-first), the same on every device. */
 export const GUARD_PAGES = 100;
 export const GUARD_TEXTBOXES = 3;
-export const GUARD_EQUATIONS = 1;
 
 /** True when the file is over the hard limit and must not be parsed at all. */
 export function overHardLimit(device: Device, fileBytes: number): boolean {

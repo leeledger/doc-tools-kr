@@ -54,3 +54,29 @@ export function loadRhwpModule(onProgress: Progress = () => undefined): Promise<
   })();
   return cached;
 }
+
+let prefetched: Promise<void> | null = null;
+
+/**
+ * Fetches the wasm bytes to the end without keeping them (SPIKE-HWP-DIRECT §6.7): the HTTP cache and the
+ * service worker's /vendor/rhwp/ cache then serve the worker's own download. Called on the picker's
+ * pointerdown / Enter / Space and the drop zone's dragenter, so the transfer overlaps the file dialog.
+ * Once per page; a failure is silent (the real load reports it).
+ */
+export function prefetchRhwpWasm(): Promise<void> {
+  prefetched ??= (async () => {
+    try {
+      const res = await fetch(RHWP_WASM_URL);
+      if (!res.ok) throw new Error(`wasm ${res.status}`);
+      if (!res.body) {
+        await res.arrayBuffer();
+        return;
+      }
+      const reader = res.body.getReader();
+      while (!(await reader.read()).done);
+    } catch {
+      prefetched = null;
+    }
+  })();
+  return prefetched;
+}

@@ -1,14 +1,12 @@
 // regress:hwp harness page (served by Vite from scripts/regress/hwp.mjs; never part of dist/). Runs the
-// production worker (src/lib/hwp/hwp.worker.ts: scan, rhwp, svg-string), the production viewer (svg-dom:
-// sanitize, ensureViewBox, dropCellClips, fitFillImages, addSpaces; downscale) and the production print CSS
-// and @page rules on one file, always as a full render (routing is recorded, not obeyed).
-import '../../../src/tools/hwp-to-pdf/hwp.css';
+// production worker (src/lib/hwp/hwp.worker.ts: scan, rhwp, svg-string) and the production PDF export
+// (src/lib/hwp/pdf/export.ts: svg-dom post-processing, the vector writer, the raster fallback, the same-origin
+// font source) on one file, always exporting every page (routing is recorded, not obeyed). Returns the PDF as
+// base64 with the export stats; the time `ms.ready` is open → PDF bytes, as the user waits for it.
 import type { HwpResponse } from '../../../src/lib/hwp/hwp.worker';
 import { danglingRefs, parsePageSvg } from '../../../src/lib/hwp/svg-dom';
 import { route } from '../../../src/lib/hwp/route';
-import { createViewer } from '../../../src/tools/hwp-to-pdf/viewer';
-import { installPageStyle } from '../../../src/tools/hwp-to-pdf/print';
-import { hwpFontsReady, loadHwpFonts, preloadFacesFor } from '../../../src/tools/hwp-to-pdf/fonts';
+import { exportPdf } from '../../../src/lib/hwp/pdf/export';
 
 type Msg = HwpResponse;
 
@@ -23,21 +21,29 @@ interface Result {
   wasmBytes?: number;
   measureCalls?: number;
   dangling?: number;
-  sanitizerRemovals?: number;
-  failedPages?: number;
-  spacesAdded?: number;
-  fillFitted?: number;
-  downscaled?: number;
-  screenPages?: number;
   parseErrors?: string[];
+  stats?: Awaited<ReturnType<typeof exportPdf>>['stats'];
+  pdf?: string;
+  heapPeakMB?: number | null;
   route?: { desktop: ReturnType<typeof route>; mobile: ReturnType<typeof route> };
-  ms?: { engine: number; parse: number; render: number; fonts: number; ready: number; worker: number; engineRender: number; insert: number; downscale: number };
+  ms?: { engine: number; parse: number; export: number; ready: number; inspect: number };
 }
 
+const b64 = (bytes: Uint8Array): string => {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+
 async function run(url: string): Promise<Result> {
-  const root = document.getElementById('hwp-print-root') as HTMLDivElement;
   const bytes = await (await fetch(url)).arrayBuffer();
   const fileBytes = bytes.byteLength;
+  let heapPeak = 0;
+  const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+  const sample = (): void => {
+    if (memory) heapPeak = Math.max(heapPeak, memory.usedJSHeapSize);
+  };
+  const timer = setInterval(sample, 100);
   const t0 = performance.now();
   const w = new Worker(new URL('../../../src/lib/hwp/hwp.worker.ts', import.meta.url), { type: 'module' });
   const queue: Msg[] = [];
@@ -82,67 +88,57 @@ async function run(url: string): Promise<Result> {
       }
     }
     const tParse = performance.now();
-    const n = parsed.pages;
-    const viewer = createViewer({ root, infos: parsed.pageInfos, lazy: false, pageFailedText: 'failed' });
     let measureCalls = parsed.measureCalls;
-    void loadHwpFonts();
-    // As the tool does (controller.ts fullRender): build hidden, then show, wait for the fonts, downscale.
-    root.classList.add('hw-building');
-    const parseErrors: string[] = [];
-    const split = { worker: 0, engineRender: 0, insert: 0, downscale: 0 };
-    for (let i = 0; i < n; i++) {
-      const a = performance.now();
-      w.postMessage({ type: 'render', i });
-      const p = await until('page');
-      const b = performance.now();
-      measureCalls = Math.max(measureCalls, p.measureCalls);
-      split.engineRender += p.ms;
-      if (!p.failed && parsePageSvg(p.svg).failed && parseErrors.length < 3) {
-        const d = new DOMParser().parseFromString(p.svg, 'image/svg+xml');
-        const msg = d.getElementsByTagName('parsererror')[0]?.textContent ?? '';
-        const m = /line (\d+) at column (\d+)/.exec(msg);
-        const line = m ? (p.svg.split('\n')[Number(m[1]) - 1] ?? '') : '';
-        parseErrors.push(`p${p.i + 1}: ${msg.slice(0, 160)} :: ${m ? line.slice(Math.max(0, Number(m[2]) - 100), Number(m[2]) + 30) : ''}`);
-      }
-      viewer.insert(p.i, p.svg, p.runs, p.failed);
-      split.worker += b - a;
-      split.insert += performance.now() - b;
-      await new Promise((r) => setTimeout(r, 0));
-    }
-    w.terminate();
-    await preloadFacesFor(root);
-    root.classList.remove('hw-building');
-    installPageStyle(parsed.pageInfos);
-    document.body.classList.add('hwp-printable');
-    const tRender = performance.now();
-    await hwpFontsReady();
-    const c = performance.now();
-    for (let i = 0; i < n; i++) await viewer.downscale(i);
-    split.downscale = performance.now() - c;
-    await document.fonts.ready;
-    const tFonts = performance.now();
     let dangling = 0;
-    for (const svg of Array.from(root.querySelectorAll('.page svg'))) dangling += danglingRefs(svg);
-    const common = { fileBytes, pages: n, wasmBytes: parsed.wasmBytes, imageBytes: scanned.imageBytes, equations: scanned.equations, textboxes: scanned.textboxes };
+    let inspect = 0;
+    const parseErrors: string[] = [];
+    const { blob, stats } = await exportPdf({
+      infos: parsed.pageInfos,
+      getPage: async (i) => {
+        w.postMessage({ type: 'render', i });
+        const p = await until('page');
+        measureCalls = Math.max(measureCalls, p.measureCalls);
+        // Harness-only checks, timed separately (not part of the user's wait).
+        const a = performance.now();
+        if (!p.failed) {
+          const one = parsePageSvg(p.svg);
+          if (one.svg) dangling += danglingRefs(one.svg);
+          else if (parseErrors.length < 3) {
+            const d = new DOMParser().parseFromString(p.svg, 'image/svg+xml');
+            parseErrors.push(`p${p.i + 1}: ${(d.getElementsByTagName('parsererror')[0]?.textContent ?? '').slice(0, 160)}`);
+          }
+        }
+        inspect += performance.now() - a;
+        sample();
+        return p;
+      },
+    });
+    const tDone = performance.now();
+    w.terminate();
+    clearInterval(timer);
+    const out = new Uint8Array(await blob.arrayBuffer());
+    const common = { fileBytes, pages: parsed.pages, wasmBytes: parsed.wasmBytes, imageBytes: scanned.imageBytes, textboxes: scanned.textboxes };
     return {
       ok: true,
       format: scanned.format,
-      pages: n,
+      pages: parsed.pages,
       equations: scanned.equations,
       textboxes: scanned.textboxes,
       imageBytes: scanned.imageBytes,
       wasmBytes: parsed.wasmBytes,
       measureCalls,
       dangling,
-      ...viewer.stats,
-      screenPages: root.querySelectorAll('.page').length,
       parseErrors,
+      stats,
+      pdf: b64(out),
+      heapPeakMB: memory ? heapPeak / 1048576 : null,
       route: { desktop: route({ device: 'desktop', ...common }), mobile: route({ device: 'mobile', ...common }) },
-      ms: { engine: tEngine - t0, parse: tParse - tEngine, render: tRender - tParse, fonts: tFonts - tRender, ready: tFonts - t0, ...split },
+      ms: { engine: tEngine - t0, parse: tParse - tEngine, export: tDone - tParse - inspect, ready: tDone - t0 - inspect, inspect },
     };
   } catch (err) {
+    clearInterval(timer);
     w.terminate();
-    return { ok: false, error: String(err instanceof Error ? err.message : err) };
+    return { ok: false, error: String(err instanceof Error ? `${err.message} ${err.stack?.split('\n').slice(0, 3).join(' | ')}` : err).slice(0, 500) };
   }
 }
 

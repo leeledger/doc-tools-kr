@@ -32,6 +32,26 @@ https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/Korean/NotoSansCJKkr-Reg
 
 Dev-only (never shipped): Noto Sans Symbols 2 2.008 (OFL) was probed as a fallback candidate and covers none of the four code points.
 
+## HWP PDF 내려받기 (HWP direct)
+
+| File | Source |
+|---|---|
+| `noto-fonts/OFL.txt` | The SIL OFL 1.1 text of `noto-sans-cjk/LICENSE`, headed by the copyright lines of the three Noto fonts below as their name tables state them (name ID 0). Their licence URL (name ID 14) is https://scripts.sil.org/OFL; none declares a Reserved Font Name. |
+| `dfa/LICENSE` | `dfa@1.2.0` (a dependency of `@cantoo/fontkit`) ships no licence file; its `package.json` declares `"license": "MIT"` and `"author": "Devon Govett <devongovett@gmail.com>"`. Standard MIT text (as in `restructure`, same author). |
+
+The extended "Anolim HWP Fallback" faces (`scripts/fonts/fb-*.woff2|woff`, `scripts/gen-hwp-fallback.mjs`) are subsets of
+(downloaded 2026-09-30; SHA-256 of the source):
+
+| Source | SHA-256 | Faces |
+|---|---|---|
+| Noto Sans CJK KR Regular 2.004, https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/Korean/NotoSansCJKkr-Regular.otf | 6bcb2a0703aa137e874fc2dffa85f6c21ba9a67fa329e81b8c801663af7e992a | fb-cjk-1..3 (punctuation, arrows, math, technical, enclosed, box drawing, geometric, misc symbols, dingbats, CJK symbols, enclosed CJK, half/full-width) |
+| Noto Sans Math Regular 3.000, https://notofonts.github.io | d51afd5739c7ba6c44fcab35a88160e25dfb69a2d4ad0bd99533f8d894af1f96 | fb-math-1..2 |
+| Noto Sans Symbols 2 Regular 2.008, https://notofonts.github.io | c4a0a80f0041ce4be81e2478faad22776d23edb98ae3f0d19bd37044820ecf9d | fb-sym2 |
+| Noto Sans Regular 2.015, https://notofonts.github.io | 478c558ea716033cd60c03438f628dfa75694dcf6b5f6d505a2f05fd2b4f3823 | fb-sans |
+
+Name tables are unchanged; the family is renamed in CSS and in the PDF face list only. The PDF embeds a subset of
+these faces (only the glyphs the document uses), which OFL 1.1 permits.
+
 ## Dev-only tools (never shipped)
 
 | Tool | Licence | Use |
