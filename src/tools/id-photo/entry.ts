@@ -14,7 +14,7 @@ const drop = document.getElementById('idp-drop');
 if (root && drop) {
   let loading: Promise<Api> | null = null;
   const load = (pending?: File): Promise<Api> =>
-    (loading ??= withEngineRetry(() => import('./controller')).then(
+    (loading ??= withEngineRetry(() => import('./controller').then((c) => ({ initIdPhotoTool: c.initIdPhotoTool }))).then(
       (m) => {
         // From now on the controller's own listeners handle everything.
         for (const ev of EVENTS) root.removeEventListener(ev, start);

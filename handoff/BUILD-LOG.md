@@ -796,3 +796,8 @@ Spec: `SPIKE-HWP-DIRECT.md` ("H": in-page vector PDF writer, per-page raster fal
 - `scripts/gen-hwp-fallback.mjs` needs the four Noto sources, which are not committed (they were in `regress-out/direct/fonts/`). Its outputs in `scripts/fonts/` are committed, so normal builds never need it.
 - `@cantoo/fontkit` must read WOFF, not WOFF2, sources: WOFF2 subsets into broken glyphs (spike bug 1).
 - Scripted edits with backslashes through the Git-Bash tool mangled `\\` once (the download.ts regex); check regexes after scripted edits.
+
+### HWP direct — cloud session update (2026-09-30)
+- **Blocker 1 fixed** (flag-on gen-sw 1,235.5 KB → 372.3 KB / 450). Root cause: `/id-photo/entry.ts` did `import('./controller')` and kept the module namespace; rolldown builds that namespace with its `__export` runtime helper, which it had placed in the largest shared chunk (the HWP PDF writer, `export.*.js`), so the precached controller statically imported it. Fix: unwrap the one function inside the loader (`.then(c => ({ initIdPhotoTool: c.initIdPhotoTool }))`), so no namespace object exists. No bundler config change; the thin-entry idea for export-chunk was tried and is not needed (reverted).
+- Gates on the fix (flag-on build): astro check 0 errors, unit 546/546, check:licenses OK, HWP e2e chromium 17 passed / 4 skipped (includes the adm28 cancel-race fix).
+- Still open: full-corpus regress:hwp (owner PC only), real-device checks, Lighthouse /hwp-to-pdf/, Richard's review.
