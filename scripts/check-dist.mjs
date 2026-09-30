@@ -171,10 +171,15 @@ count(/^_astro\/webp_enc_simd-[^/]*\.wasm$/, 1, 'webp_enc_simd*.wasm');
 // HWP PDF 변환 (brief Step 5 §4).
 budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
 {
-  // The viewer / post-processing / print chunk: lazy*.js plus the chunks it imports that the page does not.
+  // The viewer / post-processing chunk: lazy*.js plus the chunks it imports that the page does not.
   const initial = new Set(initialJs(pageHtml.get('hwp-to-pdf/index.html') ?? ''));
   const lazy = match(/^_astro\/lazy[.-][^/]*\.js$/);
-  budget('hwp viewer + print chunk (lazy*.js)', [...new Set(lazy.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 25 * KB);
+  budget('hwp viewer chunk (lazy*.js)', [...new Set(lazy.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 25 * KB);
+  // HWP direct (SPIKE-HWP-DIRECT §6.10): the PDF export chunk (pdf-lib + fontkit + the writer), loaded on idle
+  // after a document is shown or on the first click; everything it pulls in that the page does not.
+  const exportChunk = match(/^_astro\/export-chunk[.-][^/]*\.js$/);
+  budget('hwp PDF export chunk (export-chunk*.js)', [...new Set(exportChunk.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 360 * KB);
+  for (const js of exportChunk.flatMap((f) => staticClosure(dist, f))) if (read(js).includes('[ReadHuffmanCodeLengths]')) errors.push(`${js}: a Brotli decoder ships in the HWP export chunk (alias brotli/decompress.js)`);
 }
 count(/(^|\/)rhwp_bg[^/]*\.wasm$/, 1, 'rhwp_bg*.wasm');
 budget('vendor/rhwp/*/rhwp_bg.wasm', match(/^vendor\/rhwp\/[^/]+\/rhwp_bg\.wasm$/), 10.5 * 1024 * KB, raw, 'raw');
@@ -184,11 +189,13 @@ for (const w of match(/^vendor\/rhwp\/[^/]+\/rhwp_bg\.wasm$/)) rows.push({ label
 // alone are 22.4 KB gzip; sorted by range the CSS is 30.3 KB.
 budget('HWP font CSS (fonts/hwp/hwp-fonts.*.css)', match(/^fonts\/hwp\/hwp-fonts\.[^/]+\.css$/), 31 * KB);
 {
-  const slices = match(/^fonts\/hwp\/[^/]+@[^/]+\/[^/]+\.woff2$/).filter((f) => !f.includes('/fallback@'));
+  const slices = match(/^fonts\/hwp\/[^/]+@[^/]+\/[^/]+\.woff2$/).filter((f) => !/\/fallback[^/]*@/.test(f));
   const largestSlice = slices.reduce((a, f) => (raw(f) > raw(a) ? f : a), slices[0] ?? '');
   budget(`HWP font slice, largest (${slices.length} files)`, largestSlice ? [largestSlice] : [], 250 * KB, raw, 'raw');
 }
-budget('HWP fallback face', match(/^fonts\/hwp\/fallback@[^/]+\/[^/]+\.woff2$/), 60 * KB, raw, 'raw');
+// Every fallback face file (the base face and the HWP direct extended faces; .woff2 preview, .woff PDF).
+for (const f of match(/^fonts\/hwp\/fallback[^/]*@[^/]+\/[^/]+\.woff2?$/)) budget(`HWP fallback face ${f.split('/').slice(-2).join('/')}`, [f], 60 * KB, raw, 'raw');
+budget('HWP PDF face list (fonts/hwp/hwp-pdf-faces.*.json)', match(/^fonts\/hwp\/hwp-pdf-faces\.[^/]+\.json$/), 48 * KB);
 
 console.log('check-dist: budgets');
 for (const r of rows) console.log(`  ${r.label.padEnd(44)} ${(r.size / KB).toFixed(1).padStart(7)} KB  / ${Number.isFinite(r.limit) ? `${r.limit / KB} KB` : '-'} ${r.unit}`);

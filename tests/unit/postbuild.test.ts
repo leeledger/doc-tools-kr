@@ -428,14 +428,8 @@ describe('built output', () => {
   // Polish Q (owner): ordinary users do not know these words. Where a number must be read or typed, "픽셀(px)"
   // may appear once per page; everything else says 픽셀, 해상도, "이 기기", "밖으로 보내지 않음".
   const JARGON = /업로드|서버|브라우저|네트워크|메모리|개발자 도구|(?<![A-Za-z])(?:px|dpi|exif)(?![A-Za-z])/gi;
-  // /hwp-to-pdf/ is being reworked on the hwp-direct branch (its copy is rewritten there); /licenses/ lists
-  // software as its authors name it. The HWP tool's own strings are recognised by their source files.
-  const COPY_EXEMPT_PAGES = ['licenses', 'hwp-to-pdf'];
-  const hwpSources = (): string =>
-    [join(ROOT, 'src', 'tools', 'hwp-to-pdf'), join(ROOT, 'src', 'lib', 'hwp')]
-      .flatMap((d) => walk(d, /\.ts$/))
-      .map((f) => readFileSync(f, 'utf8'))
-      .join('\n');
+  // /licenses/ lists software as its authors name it. (/hwp-to-pdf/ has no exemption since HWP direct.)
+  const COPY_EXEMPT_PAGES = ['licenses'];
 
   /** What a user reads on a page: the title, the meta/og texts, alt/aria-label/placeholder/title attributes and the body text. */
   const userText = (html: string): string =>
@@ -456,14 +450,11 @@ describe('built output', () => {
       for (const m of text.replace(/픽셀\(px\)/g, '').matchAll(JARGON)) hits.push(`${f}: …${text.slice(Math.max(0, m.index! - 30), m.index! + 20).replace(/\s+/g, ' ')}…`);
     }
     // UI strings in our JS: every quoted run that holds Hangul. Official quotes kept for the preset audit trail
-    // (never shown) and the HWP tool's strings (rewritten on its branch) are exempt.
-    const hwp = hwpSources();
+    // (never shown) are exempt.
     const quotes = new Set(PRESETS.map((p) => p.quote).filter(Boolean));
     for (const f of walk(join(DIST, '_astro'), /\.js$/)) {
       for (const seg of readFileSync(f, 'utf8').match(/[^"'`\n]*[가-힣][^"'`\n]*/g) ?? []) {
         if (!seg.match(JARGON) || quotes.has(seg)) continue;
-        const pieces = seg.split(/\$\{[^}]*\}/).map((p) => p.trim()).filter((p) => /[가-힣]/.test(p));
-        if (pieces.every((p) => hwp.includes(p))) continue;
         for (const m of seg.matchAll(JARGON)) hits.push(`${f.split(/[\\/]/).pop()}: …${seg.slice(Math.max(0, m.index! - 30), m.index! + 20)}…`);
       }
     }

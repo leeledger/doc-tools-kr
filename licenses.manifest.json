@@ -369,6 +369,40 @@
       "localFiles": [
         "licenses/third-party/noto-sans-cjk/LICENSE"
       ]
+    },
+    {
+      "name": "@cantoo/fontkit",
+      "use": "HWP PDF 변환: PDF에 글꼴을 넣기 위한 글꼴 해석·부분 추출 (PDF 내려받기)",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "restructure",
+      "use": "@cantoo/fontkit 의존성 (이진 구조 해석)",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "dfa",
+      "use": "@cantoo/fontkit 의존성 (글자 모양 규칙)",
+      "homepage": "https://github.com/foliojs/dfa",
+      "files": [],
+      "localFiles": [
+        "licenses/third-party/dfa/LICENSE"
+      ]
+    },
+    {
+      "component": "Noto Sans CJK KR, Noto Sans Math, Noto Sans Symbols 2, Noto Sans (부분)",
+      "version": "CJK 2.004, Math 3.000, Symbols 2 2.008, Sans 2.015",
+      "license": "OFL-1.1",
+      "homepage": "https://notofonts.github.io",
+      "use": "HWP PDF 변환: 기호·화살표·도형 글자를 위한 보조 글꼴 \"Anolim HWP Fallback\" 확장(부분). 내려받은 PDF에 필요한 글자만 들어갑니다",
+      "localFiles": [
+        "licenses/third-party/noto-sans-cjk/LICENSE",
+        "licenses/third-party/noto-fonts/OFL.txt"
+      ]
     }
   ]
 }

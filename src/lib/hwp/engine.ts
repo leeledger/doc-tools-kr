@@ -63,8 +63,3 @@ export function renderPage(doc: RhwpDocument, i: number): RenderedPage {
   }
   return { i, svg, runs };
 }
-
-/** The key of a page size for the named @page rules: p{round W}x{round H}. */
-export function sizeKey(p: PageInfo): string {
-  return `p${Math.round(p.w)}x${Math.round(p.h)}`;
-}

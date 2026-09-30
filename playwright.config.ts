@@ -8,7 +8,7 @@ const PORT = Number(process.env.E2E_PORT ?? 4173);
  * suite runs against it as its own project, manual flow end to end (Step 4 round 2, Arch). Only when the
  * folder exists (the gate run builds it).
  */
-const MANUAL_PORT = 4181;
+const MANUAL_PORT = Number(process.env.E2E_MANUAL_PORT ?? 4181);
 const MANUAL = existsSync('dist-noauto/id-photo/index.html');
 
 export default defineConfig({
