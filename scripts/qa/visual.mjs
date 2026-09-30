@@ -31,6 +31,7 @@ const PAGES = [
   ['compress', '/pdf-compress/'],
   ['photo', '/photo-compress/'],
   ['hwp', '/hwp-to-pdf/'],
+  ['idphoto', '/id-photo/'],
   ['privacy', '/privacy/'],
   ['terms', '/terms/'],
   ['licenses', '/licenses/'],
@@ -377,6 +378,25 @@ async function toolStates(browser, f) {
       await engineShown(page, `cmp-${m} stale-chunk`);
       await shot(11, 'stale-chunk');
       await ctx.unroute(/compress\.worker[^/]*\.js/);
+    });
+    // /id-photo/ (Step 4): empty → adjust (overlay, checklist) → done; plus an unreadable file.
+    await stateRun(browser, mode, 'idp', async (page, _ctx, shot) => {
+      await goto(page, '/id-photo/');
+      await shot(1, 'empty');
+      await page.setInputFiles('#idp-input', join(FIX, 'photo', 'portrait_pd.jpg'));
+      await page.locator('#idp-tool[data-state="adjust"]').waitFor({ timeout: 90_000 });
+      await page.locator('#idp-stage').scrollIntoViewIfNeeded();
+      await shot(2, 'adjust');
+      await page.locator('#idp-confirm').check();
+      await page.locator('#idp-save').click();
+      await page.locator('#idp-tool[data-state="done"]').waitFor({ timeout: 60_000 });
+      await shot(3, 'done');
+      const box = await page.locator('#idp-download').boundingBox();
+      if (mode === 'm' && (!box || box.y + box.height > VIEWPORTS.m390.height)) hard('idp-m: the download button is not in the first screen of the done state');
+      await goto(page, '/id-photo/');
+      await page.setInputFiles('#idp-input', join(FIX, 'photo', 'anim.gif'));
+      await page.locator('#idp-error').waitFor({ state: 'visible' });
+      await shot(4, 'error');
     });
     await stateRun(browser, mode, 'cmp', async (page, ctx, shot, m) => {
       await goto(page, '/pdf-compress/');

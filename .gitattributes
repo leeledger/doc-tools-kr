@@ -1,0 +1,2 @@
+# Binary vendor assets (SHA-256 pinned; never touch line endings).
+*.task binary

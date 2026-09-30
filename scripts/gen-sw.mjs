@@ -1,9 +1,11 @@
 // Postbuild, last (brief Polish P.11): builds dist/sw.js from src/sw/sw.ts with typescript.transpileModule
 // (no new dependency) and injects BUILD_ID and the precache list:
-// - the HTML of /, every live tool page, /privacy/, /terms/, /licenses/ (the sitemap) and /offline/, the
+// - the HTML of /, every live tool page, /privacy/, /terms/ (the sitemap, minus /licenses/) and /offline/, the
 //   navigation fallback (not /404.html: Cloudflare Pages redirects *.html, and a redirected response cannot
-//   answer a navigation)
-// - the CSS, the entry JS (with its static imports) and the UI font files those pages preload (400, 800)
+//   answer a navigation). /licenses/ is left out (Step 4): its embedded license texts are ~220 KB with the
+//   MediaPipe components, alone half the budget, and it is not a page anyone needs offline.
+// - the CSS, the entry JS (with its static imports; plus a lazily imported tool controller) and the UI font
+//   files those pages preload (400, 800)
 // - never a worker, wasm or vendor file (those are cached at runtime, on first use)
 // The build fails if the precache is over 450 KB raw or sw.js over 6 KB gzip.
 // Kill switch: PUBLIC_SW=0 emits a self-unregistering worker instead (registration still runs, so an
@@ -28,10 +30,13 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
 })()));
 `;
 
-/** Page paths from dist/sitemap.xml plus the offline fallback page. */
+/** Sitemap pages that are not precached (fetched from the network when visited). */
+export const NOT_PRECACHED = ['/licenses/'];
+
+/** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {
   const xml = readFileSync(join(dist, 'sitemap.xml'), 'utf8');
-  const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+  const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname).filter((p) => !NOT_PRECACHED.includes(p));
   return [...paths, '/offline/'];
 }
 
@@ -45,7 +50,15 @@ export function precacheList(dist) {
     urls.add(page);
     const html = readFileSync(join(dist, htmlFile(page)), 'utf8');
     for (const m of html.matchAll(/<link rel="stylesheet" href="\/(_astro\/[^"]+\.css)"/g)) assets.add(m[1]);
-    for (const e of moduleEntries(html)) for (const js of staticClosure(dist, e)) assets.add(js);
+    for (const e of moduleEntries(html)) {
+      for (const js of staticClosure(dist, e)) {
+        assets.add(js);
+        // A tool controller the page imports on first interaction (/id-photo/, Step 4 round 2): precached too,
+        // so the precached page also works on a first visit while offline.
+        const code = readFileSync(join(dist, js), 'utf8');
+        for (const m of code.matchAll(/["'`](?:\.\/|\/?_astro\/)(controller\.[\w-]+\.js)["'`]/g)) for (const c of staticClosure(dist, `_astro/${m[1]}`)) assets.add(c);
+      }
+    }
     // The UI font files the pages preload (400 and 800). 600 and 700 are cached at runtime on first use:
     // with them the precache would pass its 450 KB budget (the /licenses/ page alone is ~140 KB).
     for (const m of html.matchAll(/<link rel="preload" href="\/(_astro\/[^"]+\.woff2)" as="font"/g)) assets.add(m[1]);

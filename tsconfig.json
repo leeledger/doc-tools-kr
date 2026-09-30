@@ -1,7 +1,7 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "spikes", "node_modules", "regress-out", "public/vendor"],
+  "exclude": ["dist", "dist-noauto", "spikes", "node_modules", "regress-out", "public/vendor"],
   "compilerOptions": {
     "types": ["node"]
   }

@@ -228,7 +228,9 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .result { margin-top: 20px; padding: 20px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--brand-soft); }
 .result-title { margin: 0; font-weight: 800; font-size: 19px; }
 .result-summary { margin: 4px 0 8px; color: var(--muted); }
-.save-name { margin: 10px 0 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+.save-name { margin: 10px 0 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; font-feature-settings: "calt" 0; }
+/* calt off: the UI font turns "413x531" into "413×531"; a file name must show the characters it has. */
+.meta .name, .ph-meta .name { font-feature-settings: "calt" 0; }
 .target-chip {
   display: inline-block; margin: 0 0 12px; padding: 4px 12px; border-radius: 999px;
   background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 15px;
@@ -337,6 +339,45 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .ph-field .level-desc, .ph-controls .level-desc { margin-left: 0; }
 .levels .level > .level-desc { margin-left: 32px; }
 fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; }
+
+/* 여권·증명사진 규격 맞추기 (/id-photo/) */
+.idp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.idp .ph-field, .idp-adjust, .idp-controls { min-width: 0; }
+.idp-preset .select { width: 100%; max-width: 100%; min-width: 0; }
+.idp-custom { display: grid; gap: 8px; margin-top: 4px; }
+.idp-source a { overflow-wrap: anywhere; }
+.idp-privacy { margin: 0 0 12px; padding: 8px 12px; border-radius: 999px; background: var(--brand-soft); color: var(--text); font-weight: 700; }
+.idp-adjust { display: grid; gap: 14px; }
+.idp-stage {
+  position: relative; width: min(100%, 360px); aspect-ratio: var(--idp-ar, 413 / 531); margin-inline: auto;
+  border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: #fff; touch-action: none; cursor: grab; user-select: none;
+}
+.idp-stage:active { cursor: grabbing; }
+.idp-stage:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+.idp-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.idp-readout { margin: 0; text-align: center; font-weight: 700; }
+.idp-controls { display: grid; gap: 8px; }
+.idp-controls .level-desc { margin: 0; }
+.idp-nudges { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.idp-nudge { min-height: 44px; }
+.idp-h2 { margin: 8px 0 0; font-size: 19px; font-weight: 800; }
+.idp-checklist, .idp-chips { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.idp-item, .idp-chip { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; }
+.idp-item svg, .idp-chip svg { margin-top: 3px; }
+.idp-item.ok svg, .idp-chip svg { color: #15803d; }
+.idp-item.warn svg { color: #b45309; }
+.idp-item.block { font-weight: 700; }
+.idp-item.block svg { color: #b91c1c; }
+.idp-notices ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.idp-confirm-label { align-items: flex-start; }
+.idp-confirm-label input { flex: none; margin-top: 2px; }
+.idp-save-row { margin: 0; }
+.idp-done { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--brand-soft); scroll-margin-top: 76px; }
+.idp-done .row { margin: 0; }
+.idp-done .level-desc { margin: 0; }
+.idp-result-box { margin: 0; display: grid; gap: 6px; justify-items: start; overflow-x: auto; }
+.idp-result-box img { display: block; max-width: none; height: auto; border: 1px solid var(--line); background: #fff; image-rendering: auto; }
+.idp-cannot { margin: 12px 0 0; padding-left: 1.3em; display: grid; gap: 4px; }
 
 .ph-compare { margin: 20px 0 0; display: grid; gap: 10px; }
 .pc-stage {

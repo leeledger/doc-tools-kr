@@ -23,7 +23,8 @@
     "regress:merge": "node scripts/regress/merge.mjs",
     "regress:compress": "node scripts/regress/compress.mjs",
     "regress:photo": "node scripts/regress/photo.mjs",
-    "regress:hwp": "node scripts/regress/hwp.mjs"
+    "regress:hwp": "node scripts/regress/hwp.mjs",
+    "regress:idphoto": "node scripts/regress/idphoto.mjs"
   },
   "dependencies": {
     "@cantoo/pdf-lib": "2.11.1",
@@ -34,6 +35,7 @@
     "@jsquash/jpeg": "1.6.0",
     "@jsquash/resize": "2.1.1",
     "@jsquash/webp": "1.5.0",
+    "@mediapipe/tasks-vision": "1.0.1",
     "@neslinesli93/qpdf-wasm": "0.3.0",
     "@rhwp/core": "0.8.6",
     "fflate": "0.8.3",

@@ -1,66 +1,130 @@
-# Review Feedback — Polish P, round 2
+# Review Feedback — Step 4 (여권·증명사진 규격 맞추기, /id-photo/)
 Date: 2026-09-30
-Ready for Builder: YES
+Reviewer: Richard
+Diff: uncommitted working tree against HEAD 9c4e019
+Ready for Builder: YES (round 2, 2026-09-30; round-1 findings below are resolved)
 
-## Verification (current working tree, run by Richard)
-- check 0/0/0; vitest 309/309; build OK (UI fonts 169.4/180 KB, precache 17 URLs 405.4/450 KB incl. /offline/, sw.js 1.5 KB); check-dist OK.
-- Chromium e2e pdf-merge + site + sw + polish: 84 passed, 2 skipped, 0 failed. Drag test on firefox + webkit: 2/2 passed.
-- My own round-1 drag repro (5 PDFs, pdf.js delayed 4 s, drag held at the bottom edge 7 s, release): scrollY 2174 → 2174 over 1.5 s, 0 placeholders, 0 `.dragging` rows, all 5 rows inspected, and the drop committed (kr_law_form.pdf moved to last).
+## What I ran myself
+| Gate | Result |
+|---|---|
+| `npm run check` | 0 errors, 0 warnings, 0 hints (172 files) |
+| `vitest run` | 393/393 (18 files) |
+| `npm run build` (flag default = 0, the shipping build) | green; check-dist OK, 338 files; UI fonts 178.0/180 KB; precache 297.5/450 KB, `/licenses/` not in sw.js; `check-dist --no-mediapipe` OK |
+| grep of the flag-0 dist for `mediapipe`, `FaceLandmarker`, `odml`, `vision_wasm`, `tasks-vision` | no hits. `dist/vendor` holds only pdfjs and qpdf |
+| `check:licenses`, flag 0 | OK: 26 packages, 3 components, 0 exceptions |
+| `PUBLIC_ID_PHOTO_AUTOFRAME=1 npm run build` | green; vision_bundle 43.9/50, loaders 76.2/76.1 of 90, wasm 11,481 KB raw and 3,360 KB gzip, lazy total 6,736.5/7,372.8 KB, fonts 179.1/180, precache 298.4 |
+| `check:licenses`, flag 1 | FAIL on fft2d `LicenseRef-Ooura` only; Eigen exception used. This is expected; the Arch decision keeps it off |
+| e2e id-photo spec: chromium, firefox and webkit (flag-1 dist, plus dist-noauto for the kill switch) | 85 passed, 1 flaky (firefox `page.goto` timeout in `gotoReady`, the known race; passed on retry), 10 skipped (stated reasons), 0 failed |
+| lockfile | `package-lock.json` diff is +7/−0: only `@mediapipe/tasks-vision@1.0.1` with its integrity hash. The repo builds green from the restored node_modules. |
+
+Manual pass on the shipping (flag-0) build in Chromium: desktop 1280, Pixel 7 and dark. I captured screenshots of the empty, adjusting, confirm-unchecked, confirm-checked, done and outside states and looked at them with Read.
+- No off-origin request, no non-GET request, no MediaPipe request, no console error. Horizontal scroll is 0 on all three.
+- **Downloaded files, parsed byte by byte by me (PIL agrees):**
+  - passport 413×531, 72,191 B, SOF0, JFIF units 1 at 300/300, markers e0,db,c0,c4,da (no APP1), EOI present, no "Exif".
+  - From the 3200×4000 spike p01 (prescale path), every preset: gosi 137×177 at 99 dpi, qnet 413×531 at 300, saramin 100×140 at 96, jobkorea 150×210 at 96, halfcard 354×472 at 300. Custom 200×250 with 10 KB gave 8,570 B at 96 dpi.
+  - Rotated +5° after zooming in gave 413×531 with real photo pixels in all four corners (no white fill).
+  - All of them are exact and under their limits.
+- **Confirmation:** save is disabled with the visible reason. The checkbox clears on every adjustment: arrow key, −, [, Home, nudge button, reset, zoom slider, rotate slider, mouse drag and preset change.
+- **Zoom and rotation limits:** zoom-in stops at s = 1 (range 1000/1000). Rotation stops at 5.0°. Zooming out to the minimum shows the hatched area, the outside block and a disabled save.
+- **Download button:** visible in the viewport on the done state at desktop (y 590 of 900) and on mobile (y 550 of 839).
+- **Copy on the page:** the six notices and the confirmation label are verbatim (e2e 11 as well). The checker link has rel noopener noreferrer, target _blank and "(새 창)". The 6 MB line is absent with the flag off.
+
+Not re-run by me: Lighthouse, qa:visual, smoke:assets, the regress suites, mobile projects in e2e. I relied on the numbers Bob reported for those.
 
 ## Must Fix
-None.
+- src/pages/id-photo/index.astro:35, :182 and src/data/tools.ts:160 (confidence: 9/10) — **The shipping build advertises a feature it does not have.** With the Arch decision "ship MANUAL-ONLY", the flag-0 page still says:
+  - lead: "얼굴 위치를 자동으로 잡아 드리고, 안내선을 보며 직접 맞춘 뒤 …"
+  - 사용 방법 2: "얼굴 위치를 자동으로 맞춘 뒤 안내선이 나타납니다."
+  - FAQ 2 (also in the FAQPage JSON-LD): "얼굴 위치 자동 맞춤은 추정값이어서, …"
+  I confirmed all three in the built `dist/id-photo/index.html` of the default build. A user sees no auto frame, only the largest centred crop with "직접 맞추기: 안내선에 정수리와 턱을 맞추세요". This is exactly the kind of claim the owner would have to apologise for.
+  - Fix: gate these three strings on `__ID_PHOTO_AUTOFRAME__`, as the 6 MB line already is (index.astro:13/77). tools.ts needs the same define (vitest.config already has it).
+  - Give each one a manual-mode variant, for example lead "… 안내선을 보며 사진 위치를 직접 맞춘 뒤 …", step 2 "안내선이 나타나면 끌어서 옮기고 확대·축소해 정수리와 턱을 안내선에 맞춥니다.", and FAQ 2 without the 자동 맞춤 sentence ("안내선을 보고 정수리와 턱 위치를 직접 확인해야 저장할 수 있습니다.").
+  - Add a postbuild/e2e assertion: a flag-0 dist contains no "자동으로 잡아", "자동으로 맞춘" or "자동 맞춤은" on /id-photo/.
+  - The exact wording is for Arch to decide (see Escalate); the gating is not optional.
 
-## Round-1 items — status
-- Drag outliving a re-render — FIXED. `renderList()` is held while `dragging` (controller.ts:215-218) and catches up once on end; drag.ts ends on pointerup / pointercancel / lostpointercapture / hidden; no drag starts if capture fails.
-- carry-assets caps — FIXED. `buf.length !== e.bytes` rejects (carry-assets.mjs:144), real bytes count against 60 MB (:145), Content-Length pre-check when not encoded, manifest refused over 1 MB.
-- /404.html precache — FIXED by design change: /offline/ (noindex, not in sitemap) is precached and is the navigation fallback (sw.ts:76); /404.html no longer precached. Still do `curl -sI https://<preview>/offline/` on the first preview deploy (expect a plain 200).
-- Kill switch reload — FIXED. No navigate/matchAll; caches deleted, then unregister.
-- Beacon path — FIXED. scripts/lib/beacon-path.mjs `/^\/(?!\/)/` plus no backslash, used by astro.config and check-dist.
-- Terms §9 — FIXED. 7 days; 30 days for 이용자에게 불리한 변경.
-- pdf.js worker on retry — FIXED. `resetPdfJs` destroys the worker before nulling (inspect.ts:40-47, 55, 94).
-
-## Arch decisions — verified
-- Contact "준비 중" ships; check-dist.mjs:31-34 fails the build when the beacon or `ADS_ENABLED = true` is on without PUBLIC_CONTACT_EMAIL.
-- UI font budget 180 KB (check-dist.mjs:78), reason logged.
-- Legal dates 2026년 9월 30일 in src/data/legal.ts.
-
-## Should Fix (informational, does not block)
-- scripts/carry-assets.mjs:85 (confidence: 5) — a manifest served chunked without Content-Length is still fully buffered before the 1 MB check; only the 60 s timeout bounds it. Streaming with an early abort would close this. Low risk (the source is our own site). Log to BUILD-LOG if not fixed.
-- src/lib/pdf/inspect.ts:94 (confidence: 4) — `resetPdfJs` in openPdf destroys the shared worker even if other documents are open on it at that moment. That only matters when the engine has already failed, so it is acceptable.
+## Should Fix
+- src/tools/id-photo/autoframe.ts:61-64 (confidence: 8/10, flag-1 only, so not shipped today) — **A skip or timeout during model init leaves the crash flag set for the whole session.**
+  - The code is `const lm = await landmarker; const bm = await bitmap; if (done) return;`. This path returns without `clearAttempt(storage)`, although `markAttempt` ran at :49.
+  - After "건너뛰고 직접 맞추기" (or the 60 s timeout) while `createLandmarker` is still running, `idphoto-mp-attempt` stays in sessionStorage. Every later photo in that tab then goes manual, because the guard reads it as a crash.
+  - Fix: call `clearAttempt(storage)` before that early return, since the tab evidently survived init. Add a unit test: skip during init, then resolve init, and the key is gone.
+- scripts/regress/idphoto.mjs:36 (confidence: 9/10) — **The Arch Firefox PSNR floor is not implemented.** The code still has `const PSNR_MIN = 38;` for every browser. Arch decided on 37.0 dB for Firefox only, with Chromium and WebKit kept at 38.0.
+  - The harness still reports Firefox check 6 as a FAIL, so the recorded gate and the decision disagree.
+  - Fix: make PSNR_MIN 37 when the browser is firefox and 38 otherwise, with a comment citing the BUILD-LOG decision. Re-run `regress:idphoto` on firefox and paste the result.
+- src/pages/id-photo/index.astro:158 / the `.save-name` style (confidence: 7/10) — **The file name on screen does not match the real one.** "저장될 이름: passport_413x531.jpg" renders as "passport_413×531.jpg". The UI font contextual alternates turn digit-x-digit into ×, as seen in the desktop and mobile done screenshots.
+  - The DOM text and the real file name are ASCII "x", but a user who types or compares the name sees a character that is not in the file.
+  - Fix: `font-feature-settings: "calt" 0` on `.save-name`. Check the name lines of the other tools too.
+- scripts/gen-sw.mjs (confidence: 7/10) — **Offline first use of /id-photo/ gets the engine panel.** The page is precached but its lazily imported controller chunk is not (open question from Bob).
+  - The controller chunk plus its static imports are a few KB. Adding them to the precache list does not touch LCP, because the SW installs after load, and it makes the precached page actually work offline.
+  - Recommend adding it, or have Arch accept the gap explicitly.
 
 ## Escalate to Architect
-- Unchanged from round 1 and now a logged Known Gap: the owner sets the contact email and the privacy officer's name before ads or analytics go on (개인정보 보호법 제30조). The build now enforces this.
+- **Copy for the manual-only build.** The Must Fix needs flag-0 wording for the lead, step 2 and FAQ 2. The lead in the brief is "verbatim" and assumes auto-framing. I proposed text above; Arch owns the final words.
+- **Offline first use of /id-photo/** (open question from Bob). Precache the controller chunk (my recommendation) or accept the gap.
+- **UI font headroom** is ~1 KB with the flag on (179.1/180) and 2 KB with it off. The next tool with new copy will break the budget; a decision is due before Step 5 merges its copy.
+- **Flag-1 e2e only.** The main id-photo e2e suite assumes flag 1. The shipping flag-0 build is covered by one chromium kill-switch test plus the manual fallback paths that run inside flag 1. My manual pass found the shipping build behaving correctly.
+  - Once the Must Fix gates copy on the flag, consider running the notices, SEO and copy tests against dist-noauto as well, so that the shipped configuration is what gets tested.
 
 ## Cleared
-Every round-1 Must Fix and Should Fix item and the three Arch decisions are verified against the current tree, with gates green. Polish P is clear for the deploy gate.
+The spec output is correct. I checked it by reading the code and by parsing files I downloaded myself from the shipping build:
+- exact pixels per preset, gosi at 349,999 B, and JFIF dpi 300/99/96/96/300/96;
+- the verify-or-discard step, and SOF0 with no APP1;
+- s ≤ 1 with no padding (white fill only within the 0.5 px tolerance), and rotation corners.
+
+Also cleared:
+- The reducer clears the confirmation on every adjustment.
+- The notices are verbatim, the presets are sourced, and the dropped presets are absent.
+- The flag-0 dist carries no MediaPipe byte or string, and the flag-0 license set is clean.
+- Flag-1 telemetry is detached and CSP-blocked (e2e green).
+- The /licenses/ precache removal and the ui-shared chunk behave as Bob reported. The lockfile adds only tasks-vision.
+- check, unit, both builds and the three-browser id-photo e2e are green.
+
+Step 4 clears once the Must Fix lands.
 
 ---
 
-# Review Feedback — Polish P
-Date: 2026-09-30
-Ready for Builder: NO (one Must Fix, then re-review of that item only)
+# Round 2 — Richard, 2026-09-30
+Ready for Builder: YES. **Step 4 is clear.**
 
-Gates re-run by Richard: check 0/0/0; vitest 303/303; build OK (check-dist, gen-headers, carry disabled, gen-sw 17 URLs 404.9/450 KB, sw.js 1.5 KB); check:licenses OK (25); e2e chromium all specs 118 passed / 5 skipped; firefox + webkit on site, sw, polish specs 142 passed / 12 skipped, 0 flaky. dist has no inline executable script (only ld+json), so the CSP holds.
-Manual pass (Chromium, light and dark): home, header menu open (desktop and Pixel 7), merge list on mobile, compress target mode + done panel on mobile (download link and headline in the first viewport, headline focused), engine panel (merge on pick, compress on run, with chunk/vendor requests aborted), /terms/. Nothing broken visually.
+## Gates I ran
+| Gate | Result |
+|---|---|
+| check | 0 / 0 / 0 |
+| unit | 397/397 (19 files); I re-ran it after the builds settled |
+| build, flag off (default, shipping) | check-dist OK, 338 files; fonts 178.0/190; precache 327.5/450, 20 URLs incl. `controller.*.js` |
+| build, flag off into dist-noauto | `check-dist --dist dist-noauto --no-mediapipe` OK |
+| build, flag 1 | check-dist OK, 345 files; fonts 179.1/190; precache 330.1/450 |
+| licenses | flag 0 OK (26, 3, 0 exceptions); flag 1 FAIL on fft2d only (accepted Known Gap) |
+| e2e id-photo, chromium + manual-chromium | 49 passed, 15 skipped, 0 failed, 0 flaky |
 
-## Must Fix
-- src/tools/pdf-merge/drag.ts:67-99 + src/tools/pdf-merge/controller.ts:215,471-472 (confidence: 9) — A drag that is in progress when `renderList()` runs (`list.replaceChildren(...)`, called from `inspectEntry` when a queued inspection finishes) detaches the dragged row and its handle. The handle's `pointerup`/`pointercancel` listeners never fire again, so `end()` never runs: the `requestAnimationFrame(autoScroll)` loop keeps going forever, the capture-phase keydown listener stays, and the placeholder is orphaned. Reproduced: 5 PDFs, pdf.js delayed 4 s, drag the first handle to the bottom edge, inspection finishes, mouse up → `scrollY 1473 → 1743 → 1923` with no pointer down; the page keeps scrolling down until Escape. This is the common path (reorder right after adding files; first inspect is ~4 s on slow 4G). Fix: (a) in startRowDrag listen for `lostpointercapture` on the handle and end(false) on it, and (b) in the controller, do not re-render while a drag is active — keep a `dragging` flag set by beginDrag/cleared in onEnd and run a deferred `renderList()` on end. Add an e2e: drag held while an inspection completes → after mouseup scrollY is stable and no `.drag-placeholder` remains.
+## Verified
+- **Must Fix: resolved.**
+  - A grep of the shipping `dist/id-photo/index.html` (and `dist/index.html`) finds none of "자동으로 잡아", "자동으로 맞춘", "자동 맞춤", "건너뛰고" or "6 MB의".
+  - The lead now reads "…안내선을 보며 사진 위치를 직접 맞춘 뒤…". The skip button is not rendered, and reset reads "처음 위치로".
+  - The flag-off controller chunk still holds `manualSwitch` and `resetAuto` strings. They are unreachable there: `photo.face` and `note = COPY.manualSwitch` are set only inside the `__ID_PHOTO_AUTOFRAME__` branch. Harmless.
+- **Phrase guard, both directions.**
+  - The flag-0 build passes.
+  - Running `PUBLIC_ID_PHOTO_AUTOFRAME=0 node scripts/check-dist.mjs` against the flag-1 dist FAILs, naming all five phrases.
+  - The flag-1 page still carries the auto copy (1 hit for "자동으로 잡아").
+- **Should Fix 1** (autoframe.ts:58-66): `clearAttempt(storage)` now runs on the `done` early return. There is a new unit test for skip and timeout with a late init.
+- **Should Fix 2** (regress/idphoto.mjs:38): `PSNR_MIN = browserName === "firefox" ? 37 : 38`, citing the Arch decision.
+- **Should Fix 3** (app.css:231-233): calt is off on `.save-name` and on the merge/photo name rows.
+- **Should Fix 4** (gen-sw): the lazy controller chunk is precached; I confirmed `controller.*.js` is in the shipping `sw.js`.
+- **Font budget** is 190 KB in check-dist, logged as an Arch decision; usage is 178.0 / 179.1 KB.
+- **manual-chromium** runs the whole id-photo suite against dist-noauto on port 4181. It appears only when dist-noauto exists (see the note below).
+- **Keyboard test (Home instead of ArrowUp in manual mode): a test fix, not a regression.** I checked this on the shipping build.
+  - The manual start frame is the largest centred crop, so there is no margin. ArrowUp moves the frame 1 output px past the photo edge.
+  - The outside block is therefore correct ("never pad"). Save is disabled with the reason "확인 목록에 저장을 막는 항목이 있습니다…".
+  - The checklist and the live region both read "저장할 수 없습니다. 사진 바깥 부분이 들어갑니다. 빈 곳을 채우지 않으니 확대하거나 위치를 옮기고…". That message tells the user exactly what to do.
+  - After 5× "+" then ArrowUp, save is enabled again.
 
-## Should Fix
-- scripts/carry-assets.mjs:115-117 (confidence: 8) — Caps are enforced on the manifest's declared `e.bytes` only: `const buf = Buffer.from(await res.arrayBuffer()); if (sha256(buf) !== e.sha256) ...` never compares `buf.length` with `e.bytes`, and the SHA comes from the same (untrusted) manifest, so a lying manifest bypasses the 60 MB / 25 MiB caps (a >25 MiB file fails the CF deploy). Fix: reject when `buf.length !== e.bytes`; ideally check `content-length` before reading. Same file :80 — `await res.json()` on the live manifest has no size cap; read text, reject over ~2 MB. Low real-world risk (source is our own site), 5-minute fix.
-- src/sw/sw.ts:125 + scripts/gen-sw.mjs pages() (confidence: 6, verify this) — `/404.html` is precached with `cache.addAll`. Cloudflare Pages normally 308-redirects `*.html` to the extensionless path. If it does here, the stored response has `redirected === true` and Chrome rejects it as a navigation response (the offline fallback becomes a network error); if CF answers that path with status 404, `addAll` rejects and the SW never installs anywhere. The local serve.mjs serves it 200, so e2e cannot see this. Verify on the first preview deploy (`curl -sI https://<preview>/404.html`); if it redirects, precache `/404` or re-wrap the response (`new Response(res.body, res)`) before put. Consider adding the check to smoke:assets.
-- scripts/gen-sw.mjs KILL_SWITCH (confidence: 7) — `for (const c of await self.clients.matchAll({ type: 'window' })) c.navigate(c.url);` reloads every controlled tab, including one mid-merge/compress, losing the user's work. The emergency path is legitimate, but it breaks the "never mid-task" rule. Recommend: do not navigate; unregister + delete caches is enough (pages keep working from the network), or leave the reload to the page when not busy.
-- astro.config.mjs:8 (confidence: 8) — `env.PUBLIC_ERROR_BEACON_PATH?.startsWith('/')` accepts `//host/x` (protocol-relative, cross-origin). CSP connect-src 'self' would block it, but the config promise is "same origin". Use `/^\/(?!\/)/`.
-- src/pages/terms/index.astro §9 (confidence: 7) — "시행 7일 전부터 게시" for every change. Korean practice (공정위 표준약관) is 7 days generally and 30 days for changes unfavourable to users. Add the 30-day clause. §7 is sound: the 고의·중대한 과실 carve-out keeps it valid under 약관규제법 제7조 1호; §10 does not fix exclusive jurisdiction at the operator's seat (good under 제14조).
-- src/lib/pdf/inspect.ts:81-85 (confidence: 5) — on an engine failure `pdfjsPromise = null` but the cached `PDFWorker` is not destroyed; a retry creates a second worker. Minor leak; `worker.destroy()` before nulling.
+## Should Fix (informational, does not block)
+- src/tools/id-photo/controller.ts, manual readout (confidence: 5/10). At the manual start, the first natural move (drag the head up to the crown line) blocks at once, and the 1-px hatched sliver is hard to see. The message is clear, so this is UX polish only.
+  - Consider making the manual readout say "먼저 확대한 뒤 끌어서 정수리와 턱을 안내선에 맞추세요". That would be a copy change for Arch.
+- playwright.config.ts (confidence: 6/10). `manual-chromium` exists only when `dist-noauto/` is present, and the folder is git-ignored. A CI run or a fresh clone that builds only `dist/` silently skips the shipping configuration.
+  - The deploy gate should build dist-noauto first, as the REVIEW-REQUEST reproduction note says. Better still, fail loudly in CI (`process.env.CI && !MANUAL`) so it is never skipped quietly.
 
-## Escalate to Architect
-- Launch with "문의: 준비 중" and 개인정보 보호책임자 "사이티드 대표" (no name/department, no contact). 개인정보 보호법 제30조 and 시행령 제31조 require the 보호책임자's name or department and a contact in the 처리방침 once any personal data is processed (Cloudflare access logs are mentioned on the same page). The code works as specified; whether production may ship without PUBLIC_CONTACT_EMAIL set is a legal/product decision. Recommend making PUBLIC_CONTACT_EMAIL mandatory for a CF_PAGES production build.
-- The UI font budget has 0.6 KB headroom (169.4/170 KB). The next copy change with new Hangul syllables will fail the build. Decide now: raise the budget or subset by a fixed syllable list.
-- Legal dates in src/data/legal.ts are placeholders (build date) until the deploy gate — as Bob noted.
+## Still owed (not a code finding)
+- Gate 11 (real Chrome/Firefox/Edge plus one phone) and the real-iPhone check stay with the owner or orchestrator.
+- The p07 chin miss and the license flag are accepted Known Gaps, and apply only with auto-framing on.
 
-## Deviations (all 9 reviewed)
-1-4, 6-9 accepted as reasoned. 5 (`tabindex="0"` on `<a href download>`) is harmless in Chrome/Firefox and fixes Safari's default Tab order. Accepted. Deviation 8 (WebKit "Load failed", Firefox "NetworkError…") only matches when `name === 'TypeError'`. No file-parsing path in the three tools raises a TypeError with that wording, so there is no false engine mapping. Accepted.
-
-## Cleared
-The service worker (GET-only same-origin allowlist, no body reads, no skipWaiting without the bar, busy guard, first-install claim only, one previous generation kept), the carry-forward (path allowlist, SHA check, generation window, fail-open, never overwrites fresh files), smoke:assets, and engine-vs-file mapping in all three tools (verified live: panel shown, rows 대기, no file error). Also cleared: the target search (every rung goes through compressPdf with page-count/text/SSIM checks, floors 96 ppi / q45 / SSIM 0.80, raster never on the ladder, result re-verified in finish()), the CSP and HSTS (custom host only, no preload), the menu disclosure (aria-expanded, Escape returns focus), and the legal pages. All pass apart from the items above.
+Step 4 is clear.

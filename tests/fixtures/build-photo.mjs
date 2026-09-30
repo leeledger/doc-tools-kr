@@ -162,6 +162,28 @@ export async function makePhotoRuntimeFixtures(dir) {
       }
       throw new Error('small_60k: no quality fits');
     },
+    // Step 4 (/id-photo/): a portrait too small for any passport-size output, and two faces side by side.
+    'lowres_300x375.jpg': async () => {
+      const img = await t.c.decodeJpeg(portrait);
+      return t.c.mozjpeg(await t.c.resize(img, 300, 375), 88);
+    },
+    'two_faces.jpg': async () => {
+      const corpus = join(root, 'tests', 'corpus', 'id-photo');
+      const H = 1200;
+      const parts = [];
+      for (const f of ['p02.jpg', 'p06.jpg']) {
+        const img = await t.c.decodeJpeg(new Uint8Array(readFileSync(join(corpus, f))));
+        parts.push(await t.c.resize(img, Math.round((img.width * H) / img.height), H));
+      }
+      const W = parts[0].width + parts[1].width;
+      const out = new ImageData(W, H);
+      for (let y = 0; y < H; y++) {
+        out.data.set(parts[0].data.subarray(y * parts[0].width * 4, (y + 1) * parts[0].width * 4), y * W * 4);
+        out.data.set(parts[1].data.subarray(y * parts[1].width * 4, (y + 1) * parts[1].width * 4), (y * W + parts[0].width) * 4);
+      }
+      return t.c.mozjpeg(out, 88);
+    },
+    'scene_noface.jpg': () => new Uint8Array(readFileSync(join(PHOTO, 'scene_cc0.jpg'))),
   };
   const paths = {};
   for (const [name, make] of Object.entries(files)) {

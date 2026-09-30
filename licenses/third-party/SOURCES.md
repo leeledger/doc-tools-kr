@@ -37,3 +37,25 @@ Dev-only (never shipped): Noto Sans Symbols 2 2.008 (OFL) was probed as a fallba
 | Tool | Licence | Use |
 |---|---|---|
 | Pillow 12.2.0 (Python) | HPND (MIT-CMU) | `tests/fixtures/build-cmyk.py` writes the CMYK JPEG test fixture. Not an npm dependency and not in `dist/`. |
+
+## @mediapipe/tasks-vision 1.0.1 (brief Step 4)
+
+The npm package ships no license file and its version has no upstream tag (tags stop at v1.0.0; the wasm names
+an internal release branch). The pinned reference is google-ai-edge/mediapipe master
+**bdddcbd09ea1588825d35fe7b715d1a14789a85a** (2026-07-31T02:23Z, the last commit before the 1.0.1 publish at
+21:03Z). Component list: that commit's WORKSPACE plus a string probe of both shipped wasm files (BUILD-LOG
+Step 4, 0.2). Retrieved 2026-09-30.
+
+| File | Source |
+|---|---|
+| `mediapipe/LICENSE` | https://raw.githubusercontent.com/google-ai-edge/mediapipe/bdddcbd09ea1588825d35fe7b715d1a14789a85a/LICENSE (Apache-2.0; also the text for TFLite, OpenCV 4.x, abseil, ruy, gemmlowp, FlatBuffers, TCMalloc, ML Drift and the model) |
+| `eigen/COPYING.MPL2`, `COPYING.BSD`, `COPYING.README` | https://gitlab.com/libeigen/eigen/-/archive/dcbaf2d608f306450f1e74949eb87e9a22a7ef4b/ (TF/XLA `eigen_archive`, SHA-256 a71517b3…, matches the pin); MediaPipe's own `eigen` repo is ea13a98decd497a8c5588fb5de71b57bcf10d864 (SHA-256 35c6126e…, same license files) |
+| `xnnpack/LICENSE` | https://raw.githubusercontent.com/google/XNNPACK/53a1797ba4360cbde068f2a984652be0f0b7b6fe/LICENSE |
+| `protobuf/LICENSE` | https://raw.githubusercontent.com/protocolbuffers/protobuf/v31.1/LICENSE |
+| `pthreadpool/LICENSE` | https://raw.githubusercontent.com/google/pthreadpool/02460584c6092e527c8b89f7df4de143d70e801f/LICENSE |
+| `fp16/LICENSE`, `fxdiv/LICENSE` | https://raw.githubusercontent.com/Maratyszcza/FP16/master/LICENSE, https://raw.githubusercontent.com/Maratyszcza/FXdiv/master/LICENSE (XNNPACK build dependencies, listed conservatively) |
+| `fft2d/LICENSE` | https://raw.githubusercontent.com/tensorflow/tensorflow/a481b10260dfdf833a1b16007eead49c1d7febf3/third_party/fft2d/LICENSE (OouraFFT v1.0; Flag for Arch: not an allowlisted license) |
+| `emscripten/LICENSE`, `llvm-libcxx/LICENSE.TXT`, `musl/COPYRIGHT` | https://raw.githubusercontent.com/emscripten-core/emscripten/4.0.0/ (`LICENSE`, `system/lib/libcxx/LICENSE.TXT`, `system/lib/libc/musl/COPYRIGHT`); the wasm names only "emscripten/stable", so 4.0.0 stands for the release line |
+
+Model cards (Apache-2.0): Face Mesh V2, Blendshape V2, BlazeFace (Short Range) under
+https://storage.googleapis.com/mediapipe-assets/ (linked from /licenses/).

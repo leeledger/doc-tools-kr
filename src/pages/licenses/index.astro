@@ -9,20 +9,10 @@ interface LicenseEntry {
   license: string;
   use: string;
   homepage: string | null;
-  texts: { file: string; text: string }[];
+  /** `sameAs`: the same file is printed in full under an earlier entry (gen-licenses dedupes). */
+  texts: { file: string; text?: string; sameAs?: string }[];
 }
 const list = licenses as LicenseEntry[];
-// A text that is byte-identical to one shown earlier (the Apache-2.0 text of several packages, the same OFL
-// file of two font packages) is printed once; later entries point to it. Keeps the precached page small.
-const seen = new Map<string, string>();
-const shown = list.map((p) => ({
-  ...p,
-  texts: p.texts.map((t) => {
-    const first = seen.get(t.text);
-    if (!first) seen.set(t.text, `${p.name} ${t.file}`);
-    return { ...t, sameAs: first ?? null };
-  }),
-}));
 ---
 <Base
   title="오픈소스 라이선스 | 안올림"
@@ -46,14 +36,14 @@ const shown = list.map((p) => ({
         </tbody>
       </table>
       <h2>라이선스 전문</h2>
-      {shown.map((p) => (
+      {list.map((p) => (
         <details class="license">
           <summary>{p.name} {p.version} ({p.license})</summary>
           {p.homepage && <p><a href={p.homepage} rel="noopener">{p.homepage}</a></p>}
           {p.texts.map((t) => (
             <>
               <h3>{t.file}</h3>
-              {t.sameAs ? <p>위 {t.sameAs}와 같은 전문입니다.</p> : <pre>{t.text}</pre>}
+              {t.sameAs ? <p>전문은 위 「{t.sameAs}」 항목에 있습니다.</p> : <pre>{t.text}</pre>}
             </>
           ))}
         </details>

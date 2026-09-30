@@ -21,12 +21,29 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(root, 'src');
 const outDir = join(src, 'generated');
 
+/**
+ * Source text without its comments: a character that only appears in a comment never renders, so it does not
+ * need a glyph (Step 4: every tool's Korean code comments were growing the preloaded faces). Conservative:
+ * block comments that start a line, whole-line `//` comments, `// ` after code, and HTML comments. Strings
+ * such as "https://" are untouched (no space before the slashes).
+ */
+function stripComments(s) {
+  return s
+    .replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/^[ \t]*\/\/.*$/gm, '')
+    .replace(/[ \t]\/\/ .*$/gm, '');
+}
+
 const texts = [];
 const walk = (dir) => {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
     if (e.isDirectory()) walk(p);
-    else if (/\.(astro|ts|json|css)$/.test(e.name)) texts.push(readFileSync(p, 'utf8'));
+    else if (/\.(astro|ts|json|css)$/.test(e.name)) {
+      const t = readFileSync(p, 'utf8');
+      texts.push(e.name.endsWith('.json') ? t : stripComments(t));
+    }
   }
 };
 walk(src);

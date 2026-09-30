@@ -1,0 +1,232 @@
+---
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { CUSTOM_BOUNDS, DEFAULT_PRESET, PASSPORT_CHECK_URL, PASSPORT_RULE_URL, PRESETS, RETRIEVED } from '../../data/id-photo-presets';
+
+const tool = getTool('id-photo');
+const jsonLd = toolJsonLd(tool, Astro.site);
+const autoframe = __ID_PHOTO_AUTOFRAME__;
+const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+const notices = [
+  '이 도구는 자르기·기울기 조정·크기 조정·재압축만 합니다. 얼굴·피부·배경을 수정하지 않습니다.',
+  null,
+  '배경을 흰색으로 바꾸거나 지우지 않습니다. 배경이 흰색이 아니면 흰 배경에서 다시 찍어 주세요.',
+  '머리 길이는 추정값입니다. 머리카락에 가려진 정수리 위치는 사진으로 정확히 알 수 없으니 안내선을 보고 직접 확인하세요.',
+  '최종 적합 여부는 접수 기관 심사로 결정되며, 이 도구는 통과를 보장하지 않습니다.',
+];
+const cannotCheck = ['흰색 배경', '6개월 이내 촬영', '모자 없음', '정면', '입을 다문 무표정(치아 노출 불가)', '안경 빛 반사 없음', '머리카락이 눈을 가리지 않음'];
+const nudges = [
+  { label: '위로 이동', d: '0,-1', path: 'M12 5l-6 7h4v7h4v-7h4z' },
+  { label: '아래로 이동', d: '0,1', path: 'M12 19l6-7h-4V5h-4v7H6z' },
+  { label: '왼쪽으로 이동', d: '-1,0', path: 'M5 12l7-6v4h7v4h-7v4z' },
+  { label: '오른쪽으로 이동', d: '1,0', path: 'M19 12l-7 6v-4H5v-4h7V6z' },
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      {/* Manual-only builds (PUBLIC_ID_PHOTO_AUTOFRAME=0) never mention auto-framing (Step 4 round 2; wording accepted by Arch). */}
+      <p class="lead">{autoframe
+        ? '여권사진과 증명사진 사이즈를 제출처 규격에 맞춥니다. 얼굴 위치를 자동으로 잡아 드리고, 안내선을 보며 직접 맞춘 뒤 정확한 픽셀 크기와 용량의 JPG로 저장합니다.'
+        : '여권사진과 증명사진 사이즈를 제출처 규격에 맞춥니다. 안내선을 보며 사진 위치를 직접 맞춘 뒤 정확한 픽셀 크기와 용량의 JPG로 저장합니다.'}</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="여권·증명사진 규격 맞추기 도구">
+    <div class="wrap narrow">
+      <div id="idp-tool" class="idp" data-state="empty">
+        <div class="ph-field idp-preset">
+          <label for="idp-preset">제출처</label>
+          <select id="idp-preset" class="select" aria-describedby="idp-source">
+            {PRESETS.map((p) => <option value={p.id} selected={p.id === DEFAULT_PRESET}>{p.label}</option>)}
+            <option value="custom">직접 입력</option>
+          </select>
+          <div class="idp-custom" id="idp-custom" hidden>
+            <div class="ph-custom">
+              <label for="idp-w">가로</label>
+              <input class="num-input" id="idp-w" type="text" inputmode="numeric" autocomplete="off" value="413" aria-describedby="idp-custom-error">
+              <span>px</span>
+            </div>
+            <div class="ph-custom">
+              <label for="idp-h">세로</label>
+              <input class="num-input" id="idp-h" type="text" inputmode="numeric" autocomplete="off" value="531" aria-describedby="idp-custom-error">
+              <span>px</span>
+            </div>
+            <div class="ph-custom">
+              <label for="idp-kb">용량 한도 (선택)</label>
+              <input class="num-input" id="idp-kb" type="text" inputmode="numeric" autocomplete="off" aria-describedby="idp-custom-error">
+              <span>KB 이하</span>
+            </div>
+            <p class="level-desc">가로·세로 {CUSTOM_BOUNDS.minPx}–{CUSTOM_BOUNDS.maxPx.toLocaleString('ko-KR')} px, 용량 {CUSTOM_BOUNDS.minKb}–{CUSTOM_BOUNDS.maxKb.toLocaleString('ko-KR')} KB로 입력합니다.</p>
+            <p class="field-error" id="idp-custom-error"></p>
+          </div>
+          <p class="level-desc idp-source" id="idp-source">기준일 {RETRIEVED} · 출처: <a href={PRESETS[0]!.sourceUrls[0]} rel="noopener noreferrer" target="_blank">{PRESETS[0]!.source} (새 창)</a></p>
+          <p class="level-desc">기관 안내가 바뀌었을 수 있습니다. 제출 전에 제출처 안내를 꼭 확인하세요.</p>
+        </div>
+
+        <div class="drop" id="idp-drop">
+          <p class="idp-privacy">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+          <input id="idp-input" class="file-input" type="file" accept={accept}>
+          <label class="btn primary" for="idp-input" id="idp-pick">사진 선택</label>
+          <p class="drop-hint">또는 여기에 사진 한 장을 끌어다 놓으세요 (JPG·PNG·WebP)</p>
+          <p class="drop-hint-touch">휴대폰의 사진 보관함이나 「파일」 앱에서 고를 수 있습니다 (JPG·PNG·WebP).</p>
+          {autoframe && <p class="privacy-note" id="idp-download-note">얼굴 위치 자동 맞춤을 위해 처음 한 번 약 6 MB의 프로그램 파일을 내려받습니다. 사진은 보내지 않습니다.</p>}
+        </div>
+
+        <p class="error-box" id="idp-error" role="alert" data-live="alert" hidden></p>
+
+        <div class="progress-box" id="idp-loading" hidden>
+          <p id="idp-loading-text">사진을 여는 중입니다</p>
+          <progress id="idp-loading-bar" aria-labelledby="idp-loading-text"></progress>
+          {autoframe && <button type="button" class="btn ghost" id="idp-skip" hidden>건너뛰고 직접 맞추기</button>}
+        </div>
+
+        <EngineError />
+
+        <div class="idp-adjust" id="idp-adjust" hidden>
+          <div class="idp-stage" id="idp-stage" tabindex="0" role="group" aria-label="사진 위치 조정. 화살표 키로 이동, +와 −로 확대·축소, [와 ]로 기울기 조정" aria-describedby="idp-readout">
+            <canvas id="idp-photo" aria-hidden="true"></canvas>
+            <canvas id="idp-overlay" aria-hidden="true"></canvas>
+          </div>
+          <p class="idp-readout" id="idp-readout"></p>
+
+          <div class="idp-controls">
+            <div class="ph-range">
+              <label for="idp-zoom">확대·축소</label>
+              <input id="idp-zoom" type="range" min="0" max="1000" step="1" value="500">
+            </div>
+            <div class="ph-range">
+              <label for="idp-rot">기울기</label>
+              <input id="idp-rot" type="range" min="-5" max="5" step="0.5" value="0" aria-describedby="idp-rot-help">
+              <output id="idp-rot-out" for="idp-rot">0.0°</output>
+            </div>
+            <p class="level-desc" id="idp-rot-help">사진 전체가 기울어졌을 때만 쓰세요. 고개가 기울어졌다면 다시 찍는 것이 좋습니다.</p>
+            <div class="idp-nudges" role="group" aria-label="사진 위치 옮기기">
+              {nudges.map((n) => (
+                <button type="button" class="btn ghost icon-btn idp-nudge" data-nudge={n.d} aria-label={n.label}>
+                  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d={n.path} fill="currentColor" /></svg>
+                </button>
+              ))}
+              <button type="button" class="btn ghost" id="idp-reset">{autoframe ? '자동 맞춤으로 되돌리기' : '처음 위치로'}</button>
+            </div>
+          </div>
+
+          <h2 class="idp-h2" id="idp-check-title">확인 목록</h2>
+          <ul class="idp-checklist" id="idp-checklist" aria-labelledby="idp-check-title"></ul>
+
+          <div class="notice idp-notices" role="note" aria-label="꼭 읽어 주세요">
+            <ol>
+              {notices.map((t, i) =>
+                i === 1 ? (
+                  <li>
+                    외교부 안내: 「사진 편집 프로그램, 사진 필터 기능 등을 사용하여 임의로 보정된 사진(AI를 활용한 편집·가공·합성·창조 제작물 포함)은 허용 불가함」{' '}
+                    <a href={PASSPORT_RULE_URL} rel="noopener noreferrer" target="_blank" aria-label={`외교부 여권사진 규격 안내, ${RETRIEVED} 기준 (새 창)`}>({RETRIEVED} 기준)</a>
+                  </li>
+                ) : (
+                  <li>{t}</li>
+                ),
+              )}
+              <li>
+                여권 사진은 제출 전에 외교부 「온라인 여권 사진 검증」에서 한 번 더 확인할 수 있습니다. (외교부 사이트로 이동하며, 그곳에서는 사진을 외교부 서버에 올립니다.){' '}
+                <a id="idp-verify-link" href={PASSPORT_CHECK_URL} rel="noopener noreferrer" target="_blank">온라인 여권 사진 검증 (새 창)</a>
+              </li>
+            </ol>
+          </div>
+
+          <label class="check idp-confirm-label"><input type="checkbox" id="idp-confirm"><span>규격 확인은 제출처 기준을 따릅니다. 정수리(머리카락 제외)와 턱 위치를 안내선에서 직접 확인했습니다.</span></label>
+          <div class="row idp-save-row">
+            <button type="button" class="btn primary" id="idp-save" disabled aria-describedby="idp-save-reason">규격에 맞춰 저장</button>
+          </div>
+          <p class="hint" id="idp-save-reason"></p>
+        </div>
+
+        <div class="progress-box" id="idp-exporting" hidden>
+          <p id="idp-exporting-text">규격에 맞춰 저장하는 중입니다</p>
+          <progress aria-labelledby="idp-exporting-text"></progress>
+        </div>
+
+        <div class="idp-done" id="idp-done" hidden>
+          <p class="result-title" id="idp-headline" tabindex="-1"></p>
+          <ul class="idp-chips" id="idp-chips" aria-label="맞춘 규격"></ul>
+          <div class="row">
+            <a class="btn primary" id="idp-download" tabindex="0">내려받기</a>
+          </div>
+          <p class="save-name" id="idp-save-name"></p>
+          <p class="notice" id="idp-fallback" hidden></p>
+          <div class="row">
+            <button type="button" class="btn ghost" id="idp-again">다른 규격으로 다시 만들기</button>
+            <button type="button" class="btn ghost" id="idp-new">다른 사진 처리하기</button>
+          </div>
+          <p class="level-desc">자르기·기울기 조정·크기 조정·재압축만 했습니다. 얼굴·피부·배경은 그대로입니다.</p>
+          <figure class="idp-result-box">
+            <img id="idp-result" alt="" decoding="async">
+            <figcaption><label class="check"><input type="checkbox" id="idp-zoom2"><span>2배로 보기</span></label></figcaption>
+          </figure>
+        </div>
+
+        <p class="visually-hidden" id="idp-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="id-photo-result" size="rect" />
+    </div>
+  </section>
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>제출처와 사진 고르기</strong><span>여권, 공무원 시험, Q-Net, 이력서 중 제출처를 고르고 사진 한 장을 선택합니다. 목록에 없으면 직접 입력으로 픽셀과 용량을 넣습니다.</span></li>
+        <li><strong>안내선에 맞춰 위치 확인</strong><span>{autoframe ? '얼굴 위치를 자동으로 맞춘 뒤 안내선이 나타납니다. 끌어서 옮기고 확대·축소해 정수리와 턱을 안내선에 맞춥니다.' : '안내선이 나타나면 끌어서 옮기고 확대·축소해 정수리와 턱을 안내선에 맞춥니다.'}</span></li>
+        <li><strong>규격 확인 후 저장</strong><span>확인 목록을 읽고 확인란에 체크한 뒤 저장하면, 정확한 픽셀 크기와 용량의 JPG를 내려받을 수 있습니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">안전한 이유</h2>
+      <ul class="points">
+        <li><strong>업로드하지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 전송되지 않습니다.</span></li>
+        <li><strong>위치 정보를 남기지 않습니다</strong><span>사진 정보(EXIF)와 위치 정보는 결과 파일에 남지 않습니다.</span></li>
+        <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="howto" aria-labelledby="cannot-title">
+    <div class="wrap narrow">
+      <h2 id="cannot-title">이 도구가 확인할 수 없는 조건</h2>
+      <p>외교부 여권사진 규격 가운데 아래 조건은 사진을 찍을 때 지켜야 하며, 이 도구가 대신 확인하거나 고치지 않습니다.</p>
+      <ul class="idp-cannot">
+        {cannotCheck.map((c) => <li>{c}</li>)}
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => (
+            <p><a href={l.href} {...(l.href.startsWith('http') ? { rel: 'noopener noreferrer', target: '_blank' } : {})}>{l.text}</a></p>
+          ))}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} />
+  <div class="wrap narrow"><AdSlot id="id-photo-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import '../../tools/id-photo/entry';
+</script>
