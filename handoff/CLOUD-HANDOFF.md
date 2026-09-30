@@ -15,6 +15,8 @@ Read this first in any new session (local or cloud). It supersedes `SESSION-CHEC
 | `hwp-direct` | HWP → PDF as a **direct download**: in-page vector PDF writer (pdf-lib + @cantoo/fontkit), per-page raster fallback, no print dialog, no page/title swap. Also relaxed equation routing, early engine fetch, plain HWP copy, `.woff` + Noto fallback fonts. | `SPIKE-HWP-DIRECT.md` (on the branch) | Bob mid-build; see BUILD-LOG "HWP direct — WIP state" on the branch |
 | `growth-g` | Traffic step: `/guide/*` pages with official sources, deep links (`?preset=`, `?target=`), share/copy buttons, RSS, IndexNow script, sitemap lastmod, `docs/GROWTH-RUNBOOK.md` | `handoff/ARCHITECT-BRIEF-GROWTH.md` | Bob mid-build; see BUILD-LOG "Growth G — WIP state" on the branch |
 
+**Snapshots pushed 2026-09-30 (uncommitted work at that moment, not reviewed):** `growth-g-wip` (Growth G working tree on top of a01af5e) and `hwp-direct-wip` (HWP direct working tree on top of `hwp-direct` a4f8abd). If `growth-g`/`hwp-direct` later appear with a newer 'WIP state' commit from the builders, prefer those; otherwise continue from the `-wip` snapshots.
+
 **Merge order:**
 1. Finish `hwp-direct`, then Richard review, then merge to main and deploy.
 2. Rebase or merge `growth-g` on the new main, finish it (including the two HWP guides it held back), then Richard review, then merge and deploy.
