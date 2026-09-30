@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const BRAND = '#0f766e';
-export const OG_ALT = '안올림 — 파일을 올리지 않는 서류 도구';
+export const OG_ALT = '문서딱 — 용량·규격에 딱 맞추는 문서 도구';
 
 const FONT_DIR = join(root, 'node_modules', 'pretendard', 'dist', 'public', 'static');
 const FAMILY_BOLD = 'AnolimBrandBold';
@@ -73,7 +73,7 @@ function maskable(size) {
   return png(c);
 }
 
-/** 1200×630: logo, "안올림" and the tagline on the brand colour (the design of the old og.png). */
+/** 1200×630: logo, "문서딱" and the tagline on the brand colour (the design of the old og.png). */
 function og() {
   registerFonts();
   const c = createCanvas(1200, 630);
@@ -86,11 +86,11 @@ function og() {
   ctx.fillStyle = '#ffffff';
   ctx.textBaseline = 'middle';
   ctx.font = `132px ${FAMILY_XBOLD}`;
-  ctx.fillText('안올림', left + 120 + 28, top + 60);
+  ctx.fillText('문서딱', left + 120 + 28, top + 60);
   ctx.textBaseline = 'alphabetic';
   ctx.font = `52px ${FAMILY_BOLD}`;
   ctx.globalAlpha = 0.95;
-  ctx.fillText('파일을 올리지 않는 서류 도구', left, top + 120 + 40 + 52);
+  ctx.fillText('용량·규격에 딱 맞추는 문서 도구', left, top + 120 + 40 + 52);
   return png(c);
 }
 

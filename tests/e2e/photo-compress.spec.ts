@@ -496,7 +496,7 @@ test('axe: empty, ready (details open, 직접 입력) and done (compare visible)
 
 test('SEO and wiring: title, description, JSON-LD, the pdf-compress link back here', async ({ page }) => {
   await gotoReady(page, '/photo-compress/');
-  await expect(page).toHaveTitle('사진 용량 줄이기 — 업로드 없이 브라우저에서 무료로 | 안올림');
+  await expect(page).toHaveTitle('사진 용량 줄이기 — 업로드 없이 브라우저에서 무료로 | 문서딱');
   await expect(page.locator('h1')).toHaveText('사진 용량 줄이기');
   await expect(page.locator('.related').getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(page.locator('.related').getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');

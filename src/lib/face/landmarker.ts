@@ -34,7 +34,7 @@ export function detachTelemetry(task: object): boolean {
   if (q.g !== undefined) clearInterval(q.g);
   q.g = undefined;
   q.h = [];
-  q.error = new Error('telemetry disabled by 안올림');
+  q.error = new Error('telemetry disabled by 문서딱');
   t.m = undefined;
   return true;
 }

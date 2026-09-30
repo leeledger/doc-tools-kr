@@ -251,7 +251,7 @@ test('icons, manifest and OG image are served; the head links them', async ({ pa
   const man = await request.get('/manifest.webmanifest');
   expect(man.status()).toBe(200);
   const m = await man.json();
-  expect(m).toMatchObject({ name: '안올림 — 파일을 올리지 않는 서류 도구', short_name: '안올림', start_url: '/', scope: '/', display: 'standalone', background_color: '#ffffff', theme_color: '#0f766e', lang: 'ko' });
+  expect(m).toMatchObject({ name: '문서딱 — 용량·규격에 딱 맞추는 문서 도구', short_name: '문서딱', start_url: '/', scope: '/', display: 'standalone', background_color: '#ffffff', theme_color: '#0f766e', lang: 'ko' });
   for (const icon of m.icons) expect((await request.get(icon.src)).status()).toBe(200);
   await gotoReady(page, '/pdf-merge/');
   const icons = await page.locator('link[rel="icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href')!.slice(0, 18)));
@@ -259,7 +259,7 @@ test('icons, manifest and OG image are served; the head links them', async ({ pa
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/brand/apple-touch-icon.png');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /^https:\/\/.+\/brand\/og\.png$/);
-  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', '안올림 — 파일을 올리지 않는 서류 도구');
+  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', '문서딱 — 용량·규격에 딱 맞추는 문서 도구');
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
 });
 
@@ -268,8 +268,8 @@ test('icons, manifest and OG image are served; the head links them', async ({ pa
 test('UI font weights: 800 renders bolder than 400 (static instances; the audit WebKit symptom)', async ({ page }) => {
   await gotoReady(page, '/');
   const r = await page.evaluate(async () => {
-    await document.fonts.load('400 32px "Anolim UI Sans"', '서류 파일 안올림');
-    await document.fonts.load('800 32px "Anolim UI Sans"', '서류 파일 안올림');
+    await document.fonts.load('400 32px "Anolim UI Sans"', '서류 파일 문서딱');
+    await document.fonts.load('800 32px "Anolim UI Sans"', '서류 파일 문서딱');
     const probe = (weight: number) => {
       const c = document.createElement('canvas');
       c.width = 400;
@@ -277,11 +277,11 @@ test('UI font weights: 800 renders bolder than 400 (static instances; the audit 
       const ctx = c.getContext('2d')!;
       ctx.font = `${weight} 32px "Anolim UI Sans"`;
       ctx.fillStyle = '#000';
-      ctx.fillText('서류 파일 안올림', 4, 44);
+      ctx.fillText('서류 파일 문서딱', 4, 44);
       const px = ctx.getImageData(0, 0, c.width, c.height).data;
       let ink = 0;
       for (let i = 3; i < px.length; i += 4) ink += px[i]!;
-      return { width: ctx.measureText('서류 파일 안올림').width, ink };
+      return { width: ctx.measureText('서류 파일 문서딱').width, ink };
     };
     return { bold: probe(800), regular: probe(400), check: document.fonts.check('800 16px "Anolim UI Sans"') };
   });

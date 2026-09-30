@@ -1,9 +1,9 @@
 import { LIVE_TOOLS, type Tool } from './tools';
 
 export const SITE = {
-  name: '안올림',
-  tagline: '파일을 올리지 않는 서류 도구',
-  defaultTitle: '안올림 — 파일을 올리지 않는 서류 도구',
+  name: '문서딱',
+  tagline: '용량·규격에 딱 맞추는 문서 도구',
+  defaultTitle: '문서딱 — 용량·규격에 딱 맞추는 문서 도구',
   themeColor: '#0f766e',
   locale: 'ko_KR',
 } as const;
@@ -33,7 +33,7 @@ export const VERIFICATION = {
   google: import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION as string | undefined,
 };
 
-export const TITLE_SUFFIX = '업로드 없이 브라우저에서 무료로 | 안올림';
+export const TITLE_SUFFIX = '업로드 없이 브라우저에서 무료로 | 문서딱';
 
 /** The operator (UX-AUDIT-1 P0-2). */
 export const OPERATOR = { name: '사이티드', nameEn: 'Cited' } as const;

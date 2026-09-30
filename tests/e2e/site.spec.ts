@@ -76,7 +76,7 @@ for (const [path, name] of [
       offers: { price: 0, priceCurrency: 'KRW' },
     });
     expect(data.some((d: { '@type': string }) => d['@type'] === 'BreadcrumbList')).toBe(true);
-    await expect(page).toHaveTitle(`${name} — 업로드 없이 브라우저에서 무료로 | 안올림`);
+    await expect(page).toHaveTitle(`${name} — 업로드 없이 브라우저에서 무료로 | 문서딱`);
     const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
     expect(desc.toLowerCase()).toContain(name.toLowerCase());
     expect([...desc].length).toBeGreaterThanOrEqual(80);
