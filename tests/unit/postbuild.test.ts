@@ -493,7 +493,7 @@ describe('built output', () => {
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
     const site = new URL(home.match(/<link rel="canonical" href="([^"]+)"/)![1]!);
     if (process.env.PUBLIC_SITE_URL) expect(site.origin).toBe(new URL(process.env.PUBLIC_SITE_URL).origin);
-    const pages = walk(DIST, /\.html$/);
+    const pages = walk(DIST, /\.html$/).filter((f) => !/(^|[\\/])(naver|google)[0-9a-f]+\.html$/.test(f));
     expect(pages.length).toBeGreaterThanOrEqual(10);
     const png = (p: string) => {
       const b = readFileSync(p);
