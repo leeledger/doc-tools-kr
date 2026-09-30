@@ -13,7 +13,12 @@ import { buildIco, ogDomain, renderBrand } from '../../scripts/gen-brand.mjs';
 import { domainHeaders } from '../../scripts/gen-headers.mjs';
 import { smokeAssets } from '../../scripts/smoke-assets.mjs';
 import { startServer } from '../e2e/serve.mjs';
-import { PRESETS } from '../../src/data/id-photo-presets';
+import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
+import { parse as parseYaml } from 'yaml';
+import { MAX_SOURCE_AGE_DAYS, publishedGuideSchema } from '../../src/data/guide-schema';
+import { resolveSources, unsourcedFacts } from '../../src/data/guide-facts';
+import { LIVE_TOOLS } from '../../src/data/tools';
+import { parseHref } from '../../src/lib/ui/deeplink';
 
 const ROOT = join(__dirname, '..', '..');
 const DIST = join(ROOT, 'dist');
@@ -497,7 +502,9 @@ describe('built output', () => {
         expect(m, `${f}: ${key}`).not.toBeNull();
         return m![1]!;
       };
-      expect(meta('property', 'og:type')).toBe('website');
+      // Growth G: a guide is an article with its own share image (/og/guide/<slug>.png).
+      const guide = /[\\/]guide[\\/]([a-z0-9-]+)[\\/]index\.html$/.exec(f)?.[1];
+      expect(meta('property', 'og:type')).toBe(guide ? 'article' : 'website');
       expect(meta('property', 'og:site_name')).toBe('문서딱');
       expect(meta('property', 'og:locale')).toBe('ko_KR');
       expect(meta('property', 'og:title')).toBe(html.match(/<title>([^<]*)<\/title>/)![1]);
@@ -518,7 +525,8 @@ describe('built output', () => {
       expect(meta('name', 'twitter:description')).toBe(desc);
       expect(meta('name', 'twitter:image')).toBe(meta('property', 'og:image'));
       const img = new URL(meta('property', 'og:image')).pathname;
-      expect(img, f).toMatch(/^\/brand\/og-[a-z-]+\.png$/);
+      if (guide) expect(img, f).toBe(`/og/guide/${guide}.png`);
+      else expect(img, f).toMatch(/^\/brand\/og-[a-z-]+\.png$/);
       expect(png(join(DIST, img)), `${f}: ${img}`).toMatchObject({ w: 1200, h: 630, png: true });
       expect(png(join(DIST, img)).size).toBeLessThanOrEqual(300 * 1024);
       expect(html, f).not.toContain('안올림');
@@ -544,6 +552,246 @@ describe('built output', () => {
     const head = html.slice(0, html.indexOf('</head>'));
     for (const name of ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기', '여권·증명사진 규격 맞추기', 'HWP PDF 변환']) expect(head).toContain(name);
     for (const name of ['한글(HWP) → PDF 변환']) expect(head).not.toContain(name);
+  });
+
+  // ---------- Growth G (T6–T12): guides, deep links, SEO files, on the built output ----------
+
+  const decode = (s: string): string =>
+    s
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
+      .replace(/&amp;/g, '&');
+  const text = (html: string): string => decode(html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/g, ' ')).replace(/\s+/g, ' ');
+  const GUIDES_DIR = join(ROOT, 'src', 'content', 'guides');
+  const guideSources = () =>
+    readdirSync(GUIDES_DIR)
+      .filter((f) => f.endsWith('.md'))
+      .map((f) => {
+        const raw = readFileSync(join(GUIDES_DIR, f), 'utf8').replace(/\r\n/g, '\n');
+        const fm = /^---\n([\s\S]*?)\n---/.exec(raw)![1]!;
+        return { slug: f.replace(/\.md$/, ''), data: parseYaml(fm) as Record<string, unknown> };
+      });
+  const publishedGuides = () => guideSources().filter((g) => g.data.draft !== true).map((g) => ({ slug: g.slug, data: publishedGuideSchema.parse(g.data) }));
+  const draftSlugs = () => guideSources().filter((g) => g.data.draft === true).map((g) => g.slug);
+  const pageOf = (path: string) => readFileSync(join(DIST, ...path.split('/').filter(Boolean), 'index.html'), 'utf8');
+  const jsonLdOf = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap((m) => {
+      const v = JSON.parse(m[1]!) as Record<string, unknown> | Record<string, unknown>[];
+      return Array.isArray(v) ? v : [v];
+    });
+  const siteOf = () => new URL(readFileSync(join(DIST, 'index.html'), 'utf8').match(/<link rel="canonical" href="([^"]+)"/)![1]!);
+  const indexable = () =>
+    walk(DIST, /\.html$/).filter((f) => {
+      if (/(^|[\\/])(naver|google)[0-9a-f]+\.html$/.test(f)) return false;
+      return !readFileSync(f, 'utf8').includes('<meta name="robots" content="noindex">');
+    });
+  const distPathOf = (url: string): string => {
+    const p = decodeURIComponent(url.split(/[?#]/)[0]!);
+    return join(DIST, ...p.split('/').filter(Boolean), ...(p.endsWith('/') ? ['index.html'] : []));
+  };
+
+  it('Growth T6: every _redirects target exists; robots.txt names each bot and both sitemaps', () => {
+    need();
+    const rules = readFileSync(join(DIST, '_redirects'), 'utf8')
+      .split('\n')
+      .filter((l) => l.trim() && !l.startsWith('#'))
+      .map((l) => l.trim().split(/\s+/));
+    expect(rules.length).toBeGreaterThanOrEqual(4);
+    for (const [from, to, code] of rules) {
+      expect(code, from).toBe('301');
+      expect(existsSync(distPathOf(to!)), `${from} → ${to}`).toBe(true);
+    }
+    for (const from of ['/hwp/', '/hwp-pdf/', '/guides/', '/passport/']) expect(rules.some((r) => r[0] === from), from).toBe(true);
+    const robots = readFileSync(join(DIST, 'robots.txt'), 'utf8');
+    expect(robots).toMatch(/^User-agent: \*\nAllow: \//);
+    for (const bot of ['OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'ClaudeBot', 'Claude-SearchBot', 'Google-Extended', 'Bingbot', 'Yeti', 'Daumoa']) {
+      expect(robots, bot).toContain(`User-agent: ${bot}\nAllow: /`);
+    }
+    expect(robots).not.toMatch(/Disallow/);
+    const site = siteOf();
+    expect(robots).toContain(`Sitemap: ${new URL('/sitemap.xml', site).href}`);
+    expect(robots).toContain(`Sitemap: ${new URL('/guide/rss.xml', site).href}`);
+  });
+
+  it('Growth T7: guides, /guide/, the RSS title, the share-image alt texts and the JSON-LD names say 문서딱', () => {
+    need();
+    const guides = publishedGuides();
+    expect(guides.length).toBeGreaterThanOrEqual(11);
+    for (const path of ['/guide/', ...guides.map((g) => `/guide/${g.slug}/`)]) {
+      const html = pageOf(path);
+      expect(html.match(/<title>([^<]*)<\/title>/)![1], path).toMatch(/ \| 문서딱$/);
+      expect(html.match(/<meta property="og:image:alt" content="([^"]*)"/)![1], path).toMatch(/^문서딱: /);
+      for (const ld of jsonLdOf(html)) {
+        for (const who of [ld.author, ld.publisher] as ({ name?: string } | undefined)[]) if (who) expect(who.name, path).toBe('문서딱');
+        const crumbs = ld.itemListElement as { name: string }[] | undefined;
+        if (ld['@type'] === 'BreadcrumbList') expect(crumbs![0]!.name).toBe('문서딱');
+      }
+    }
+    const rss = readFileSync(join(DIST, 'guide', 'rss.xml'), 'utf8');
+    expect(rss).toContain('<title>문서딱 안내</title>');
+    expect(readFileSync(join(DIST, 'llms.txt'), 'utf8')).toMatch(/^# 문서딱\n/);
+  });
+
+  it('Growth T8: every JSON-LD block parses; a guide has one Article, one BreadcrumbList and a FAQPage equal to its visible FAQ', () => {
+    need();
+    for (const f of walk(DIST, /\.html$/)) expect(() => jsonLdOf(readFileSync(f, 'utf8')), f).not.toThrow();
+    const site = siteOf();
+    for (const g of publishedGuides()) {
+      const html = pageOf(`/guide/${g.slug}/`);
+      const ld = jsonLdOf(html);
+      const articles = ld.filter((x) => x['@type'] === 'Article');
+      expect(articles.length, g.slug).toBe(1);
+      const a = articles[0]!;
+      for (const k of ['headline', 'description', 'datePublished', 'dateModified', 'author', 'publisher', 'image', 'mainEntityOfPage', 'inLanguage', 'citation']) expect(a[k], `${g.slug}: ${k}`).toBeDefined();
+      expect(a.headline).toBe(g.data.title);
+      expect(a.datePublished).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(a.dateModified).toBe(g.data.updated);
+      expect(a.inLanguage).toBe('ko-KR');
+      const img = new URL(String(a.image));
+      expect(img.origin).toBe(site.origin);
+      expect(existsSync(join(DIST, img.pathname)), String(a.image)).toBe(true);
+      expect((a.citation as string[]).every((u) => /^https:\/\//.test(u))).toBe(true);
+      expect(ld.some((x) => x['@type'] === 'HowTo')).toBe(false);
+      const crumbs = ld.filter((x) => x['@type'] === 'BreadcrumbList');
+      expect(crumbs.length).toBe(1);
+      const items = crumbs[0]!.itemListElement as { position: number; item: string; name: string }[];
+      expect(items.map((i) => i.position)).toEqual(items.map((_, i) => i + 1));
+      for (const i of items) expect(new URL(i.item).origin).toBe(site.origin);
+      expect(items.map((i) => i.name)).toEqual(['문서딱', '안내', g.data.title]);
+      const faq = ld.filter((x) => x['@type'] === 'FAQPage');
+      expect(faq.length).toBe(1);
+      const visible = [...html.matchAll(/<div class="guide-qa"[^>]*>\s*<h3[^>]*>([\s\S]*?)<\/h3>\s*<p[^>]*>([\s\S]*?)<\/p>/g)].map((m) => ({ q: decode(m[1]!), a: decode(m[2]!) }));
+      const data = (faq[0]!.mainEntity as { name: string; acceptedAnswer: { text: string } }[]).map((e) => ({ q: e.name, a: e.acceptedAnswer.text }));
+      expect(visible.length, g.slug).toBeGreaterThanOrEqual(3);
+      expect(data).toEqual(visible);
+    }
+  });
+
+  it('Growth T9: answer, source link and date on every guide; every number with a unit is sourced; no quote is rendered', () => {
+    need();
+    const site = siteOf();
+    for (const g of publishedGuides()) {
+      const html = pageOf(`/guide/${g.slug}/`);
+      expect(html, g.slug).toMatch(/<p class="guide-answer"[^>]*>/);
+      expect(html).toMatch(/<time datetime="\d{4}-\d{2}-\d{2}"/);
+      const external = [...html.matchAll(/<a href="(https:\/\/[^"]+)"/g)].map((m) => new URL(decode(m[1]!))).filter((u) => u.host !== site.host);
+      expect(external.length, g.slug).toBeGreaterThan(0);
+      const article = html.match(/<article[\s\S]*?<\/article>/)![0];
+      expect(unsourcedFacts(g.data, text(article)), g.slug).toEqual([]);
+      for (const s of resolveSources(g.data.sources)) {
+        expect((Date.now() - Date.parse(`${s.retrieved}T00:00:00Z`)) / 86_400_000, `${g.slug}: ${s.url}`).toBeLessThanOrEqual(MAX_SOURCE_AGE_DAYS);
+      }
+      const page = text(html);
+      const quotes = [
+        ...g.data.sources.flatMap((s) => ('quote' in s ? [s.quote] : [])),
+        ...g.data.sources.flatMap((s) => ('preset' in s ? [getPreset(s.preset)?.quote ?? ''] : [])),
+      ].filter(Boolean);
+      for (const q of quotes) expect(page.includes(q.replace(/\s+/g, ' ')), `${g.slug}: quote rendered`).toBe(false);
+    }
+  });
+
+  it('Growth T10: unique titles and descriptions; path-only canonicals; sitemap, RSS and precache match the published guides', async () => {
+    need();
+    const titles = new Map<string, string>();
+    const descs = new Map<string, string>();
+    for (const f of indexable()) {
+      const html = readFileSync(f, 'utf8');
+      const t = html.match(/<title>([^<]*)<\/title>/)![1]!;
+      const d = html.match(/<meta name="description" content="([^"]*)"/)![1]!;
+      expect(titles.get(t), `${f} and ${titles.get(t)} share the title`).toBeUndefined();
+      expect(descs.get(d), `${f} and ${descs.get(d)} share the description`).toBeUndefined();
+      titles.set(t, f);
+      descs.set(d, f);
+      const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
+      expect(canonical, f).toBeDefined();
+      expect(canonical, f).not.toContain('?');
+    }
+    const guides = publishedGuides();
+    for (const g of guides) {
+      const html = pageOf(`/guide/${g.slug}/`);
+      const t = decode(html.match(/<title>([^<]*)<\/title>/)![1]!).replace(/ \| 문서딱$/, '');
+      expect([...t].length).toBeLessThanOrEqual(40);
+      const d = [...decode(html.match(/<meta name="description" content="([^"]*)"/)![1]!)].length;
+      expect(d).toBeGreaterThanOrEqual(50);
+      expect(d).toBeLessThanOrEqual(110);
+    }
+    const sitemap = readFileSync(join(DIST, 'sitemap.xml'), 'utf8');
+    const locs = [...sitemap.matchAll(/<url><loc>([^<]+)<\/loc><lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod><\/url>/g)].map((m) => new URL(m[1]!).pathname);
+    expect(locs.length).toBe([...sitemap.matchAll(/<url>/g)].length);
+    for (const g of guides) expect(locs, g.slug).toContain(`/guide/${g.slug}/`);
+    for (const d of draftSlugs()) expect(locs).not.toContain(`/guide/${d}/`);
+    expect(sitemap).not.toMatch(/<loc>[^<]*[?]/);
+    const rss = readFileSync(join(DIST, 'guide', 'rss.xml'), 'utf8');
+    // Well-formed XML: one declaration, balanced elements, no raw "<" or bare "&" in text.
+    const body = rss.replace(/^<\?xml version="1\.0" encoding="UTF-8"\?>\n/, '');
+    const stack: string[] = [];
+    for (const m of body.matchAll(/<(\/?)([A-Za-z][\w:-]*)(?:\s[^<>]*)?>|([^<]+)/g)) {
+      if (m[3] !== undefined) {
+        expect(m[3], 'bare & in the feed').not.toMatch(/&(?!(?:amp|lt|gt|quot|apos);)/);
+        continue;
+      }
+      if (m[1]) expect(stack.pop(), `closing ${m[2]}`).toBe(m[2]);
+      else stack.push(m[2]!);
+    }
+    expect(stack).toEqual([]);
+    const items = [...rss.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => m[1]!);
+    const links = items.map((i) => new URL(decode(i.match(/<link>([^<]+)<\/link>/)![1]!)).pathname).sort();
+    expect(links).toEqual(guides.map((g) => `/guide/${g.slug}/`).sort());
+    for (const i of items) expect(i.match(/<pubDate>([^<]+)<\/pubDate>/)![1]).toMatch(/^\w{3}, \d{2} \w{3} \d{4} 09:00:00 \+0900$/);
+    const sw = readFileSync(join(DIST, 'sw.js'), 'utf8');
+    const precache = JSON.parse(sw.match(/const __PRECACHE__ = (\[[^\n]*\]);/)![1]!) as string[];
+    expect(precache.filter((p) => p.startsWith('/guide/') || p.startsWith('/og/'))).toEqual([]);
+    for (const g of guides) {
+      const html = pageOf(`/guide/${g.slug}/`);
+      expect(html).toContain(`<meta property="og:image" content="${new URL(`/og/guide/${g.slug}.png`, siteOf()).href}">`);
+    }
+  });
+
+  it('Growth T11: internal links resolve; queries only as valid tool deep links; guides link out and are listed', () => {
+    need();
+    const live = LIVE_TOOLS.map((t) => t.slug);
+    const broken: string[] = [];
+    for (const f of walk(DIST, /\.html$/)) {
+      const html = readFileSync(f, 'utf8');
+      for (const m of html.matchAll(/\s(?:href|src)="(\/(?!\/)[^"]*)"/g)) {
+        const url = decode(m[1]!);
+        if (!existsSync(distPathOf(url))) broken.push(`${f}: ${url}`);
+        const q = url.split('#')[0]!.split('?')[1];
+        if (q !== undefined && !parseHref(url.split('#')[0]!, live)) broken.push(`${f}: query on a non-tool or invalid link ${url}`);
+      }
+    }
+    expect(broken).toEqual([]);
+    const index = pageOf('/guide/');
+    for (const g of publishedGuides()) {
+      const html = pageOf(`/guide/${g.slug}/`);
+      const more = html.match(/<aside[\s\S]*?<\/aside>/)![0];
+      const guideLinks = new Set([...more.matchAll(/href="\/guide\/([a-z0-9-]+)\/"/g)].map((m) => m[1]));
+      const toolLinks = new Set([...html.matchAll(/href="\/([a-z0-9-]+)\/(?:\?[^"]*)?"/g)].map((m) => m[1]).filter((s) => live.includes(s!)));
+      expect(guideLinks.size, `${g.slug}: guide links`).toBeGreaterThanOrEqual(2);
+      expect(toolLinks.size, `${g.slug}: tool links`).toBeGreaterThanOrEqual(1);
+      expect(index, g.slug).toContain(`href="/guide/${g.slug}/"`);
+    }
+    for (const d of draftSlugs()) expect(existsSync(join(DIST, 'guide', d)), d).toBe(false);
+  });
+
+  it('Growth T12: plain language also in the RSS text, llms.txt and the share-image alt texts; the check catches 업로드', () => {
+    need();
+    const hits = (s: string) => [...s.replace(/픽셀\(px\)/g, '').matchAll(JARGON)].map((m) => m[0]);
+    const rss = decode(readFileSync(join(DIST, 'guide', 'rss.xml'), 'utf8').replace(/<[^>]+>/g, ' '));
+    expect(hits(rss)).toEqual([]);
+    expect(hits(readFileSync(join(DIST, 'llms.txt'), 'utf8'))).toEqual([]);
+    for (const g of publishedGuides()) {
+      const text = userText(pageOf(`/guide/${g.slug}/`));
+      expect(hits(text), g.slug).toEqual([]);
+      expect((text.match(/픽셀\(px\)/g) ?? []).length).toBeLessThanOrEqual(1);
+    }
+    // Negative fixture: a guide that says 업로드 fails the same check.
+    const fixture = '<title>사진 올리기 | 문서딱</title><article class="guide"><p class="guide-answer">사진을 업로드하면 돼요.</p></article>';
+    expect(hits(userText(fixture))).toEqual(['업로드']);
   });
 });
 

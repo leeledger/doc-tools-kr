@@ -1,0 +1,22 @@
+---
+import { render } from 'astro:content';
+import Guide from '../../layouts/Guide.astro';
+import { publishedGuides } from '../../data/guides';
+import { unsourcedFacts } from '../../data/guide-facts';
+
+export async function getStaticPaths() {
+  const guides = await publishedGuides();
+  return guides.map((guide) => ({ params: { slug: guide.id }, props: { guide } }));
+}
+
+const { guide } = Astro.props;
+const g = guide.data;
+// The fact check (Growth G.1): a number with a unit that no source, preset or tool fact backs fails the build.
+const text = [g.title, g.description, g.ogDescription, g.answer, g.og.title, g.og.line, g.cta.label, guide.body ?? '', ...g.faq.flatMap((f) => [f.q, f.a])].join('\n');
+const unsourced = unsourcedFacts(g, text);
+if (unsourced.length) throw new Error(`guide "${guide.id}": numbers without a source: ${unsourced.join(', ')}`);
+const { Content } = await render(guide);
+---
+<Guide guide={guide}>
+  <Content />
+</Guide>

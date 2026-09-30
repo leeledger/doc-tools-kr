@@ -19,6 +19,7 @@
     "check:licenses": "node scripts/check-licenses.mjs",
     "lhci": "lhci autorun",
     "smoke:assets": "node scripts/smoke-assets.mjs",
+    "ping:indexnow": "node scripts/indexnow.mjs",
     "qa:visual": "node scripts/qa/visual.mjs",
     "regress:merge": "node scripts/regress/merge.mjs",
     "regress:compress": "node scripts/regress/compress.mjs",

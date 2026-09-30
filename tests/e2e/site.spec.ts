@@ -106,7 +106,13 @@ test('related tools: each tool page links to the other live tools (HWP PDF ë³€í™
 test('sitemap lists exactly the live pages; robots points to it', async ({ request }) => {
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
-  expect(locs.sort()).toEqual(['/', '/hwp-to-pdf/', '/id-photo/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
+  const pages = locs.filter((p) => !p.startsWith('/guide/'));
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/id-photo/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
+  // Growth G: /guide/ and every published guide (drafts never).
+  const guides = locs.filter((p) => p.startsWith('/guide/'));
+  expect(guides).toContain('/guide/');
+  expect(guides.length).toBeGreaterThanOrEqual(12);
+  for (const draft of ['/guide/hwp-to-pdf/', '/guide/kakao-photo/']) expect(guides).not.toContain(draft);
   const robots = await (await request.get('/robots.txt')).text();
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
 });

@@ -21,6 +21,8 @@ import { checkResult, type TextDoc } from './check';
 import { compressedFileName, reductionPercent, sizeChange } from './format';
 import { checkFileBytes, checkPages, checkRun } from './limits';
 import { TARGET_COPY, TARGET_RANGE_MESSAGE, parseTargetMb, targetBytes, targetLabel } from './target';
+import { bindQuickLinks, readUrl, writeUrl } from '../../lib/ui/quicklinks';
+import type { DeepState } from '../../lib/ui/deeplink';
 
 type State = 'empty' | 'ready' | 'working' | 'done' | 'kept' | 'error';
 type Choice = LevelName | 'raster';
@@ -196,6 +198,27 @@ export function initCompressTool(): void {
   };
   /** Target mode runs the search unless 이미지로 변환 was chosen (raster is never part of the search). */
   const searching = (): boolean => mode() === 'target' && choice() !== 'raster';
+
+  // ---------- deep links (Growth G.5, G.6) ----------
+
+  /** ?target=<MB>: 목표 용량 mode with that chip, or 직접 입력 with the value. False while a run is working. */
+  function applyDeep(s: DeepState): boolean {
+    if (s.target === undefined || state === 'working') return false;
+    for (const r of modeRadios) r.checked = r.value === 'target';
+    const chip = targetRadios.find((r) => r.value === String(s.target));
+    for (const r of targetRadios) r.checked = chip ? r === chip : r.value === 'custom';
+    if (!chip) targetInput.value = String(s.target);
+    confirmBox.hidden = true;
+    updateMode();
+    updateRun();
+    return true;
+  }
+
+  /** The option in the address bar: the target MB in 목표 용량 mode, else nothing. */
+  function syncUrl(): void {
+    const mb = mode() === 'target' ? targetMb() : null;
+    writeUrl('pdf-compress', mb === null ? null : { target: mb });
+  }
 
   function blocker(): string | null {
     if (!file) return null;
@@ -782,12 +805,15 @@ export function initCompressTool(): void {
       updateMode();
       updateRun();
       if (r.name === 'cmp-target' && r.value === 'custom' && r.checked) targetInput.focus();
+      syncUrl();
     });
   }
   targetInput.addEventListener('input', () => {
     updateMode();
     updateRun();
+    syncUrl();
   });
+  bindQuickLinks('pdf-compress', applyDeep, root);
   more.addEventListener('toggle', () => {
     // A closed "더 줄여야 하나요?" never hides the selected option.
     if (!more.open && choice() === 'raster') {
@@ -820,6 +846,9 @@ export function initCompressTool(): void {
     if (ev.persisted && (state === 'done' || state === 'working')) backToReady();
   });
 
+  // A deep link applies before the first render of the form (the options are hidden until a file is picked).
+  const deep = readUrl('pdf-compress');
+  if (deep) applyDeep(deep);
   updateMode();
   setState('empty');
 }

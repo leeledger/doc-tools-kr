@@ -1,0 +1,51 @@
+---
+// /guide/ (Growth G.2): every published guide, grouped by category, with its one-sentence answer.
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../data/site';
+import { breadcrumbs } from '../../data/jsonld';
+import { CATEGORY_ORDER, guidePath, publishedGuides } from '../../data/guides';
+
+const guides = await publishedGuides();
+const groups = CATEGORY_ORDER.map((c) => ({ category: c, items: guides.filter((g) => g.data.category === c) })).filter((g) => g.items.length);
+const title = '문서·사진 규격과 용량 안내';
+const description = '여권사진·증명사진 규격, 사진과 PDF 용량 줄이기, 메일 첨부 한도를 기관 안내를 확인해 정리했어요. 확인일과 출처를 함께 적어 두었어요.';
+const url = new URL('/guide/', Astro.site).href;
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${title} | ${SITE.name}`,
+    url,
+    description,
+    inLanguage: 'ko-KR',
+    isPartOf: { '@type': 'WebSite', name: SITE.name, url: new URL('/', Astro.site).href },
+    hasPart: guides.map((g) => ({ '@type': 'Article', headline: g.data.title, url: new URL(guidePath(g.id), Astro.site).href })),
+  },
+  breadcrumbs(Astro.site, [
+    [SITE.name, '/'],
+    ['안내', '/guide/'],
+  ]),
+];
+---
+<Base title={`${title} | ${SITE.name}`} description={description} jsonLd={jsonLd} rss>
+  <div class="prose guide-index">
+    <div class="wrap narrow">
+      <h1>문서·사진 제출 안내</h1>
+      <p class="meta-line">기관 안내를 직접 확인하고 정리했어요. 각 안내에 확인일과 원문 링크가 있어요.</p>
+      {groups.map((grp) => (
+        <section aria-labelledby={`cat-${grp.category}`}>
+          <h2 id={`cat-${grp.category}`}>{grp.category}</h2>
+          <ul class="related-list">
+            {grp.items.map((g) => (
+              <li>
+                <a href={guidePath(g.id)}>{g.data.title}</a>
+                <span>{g.data.answer}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      <p class="guide-feed"><a href="/guide/rss.xml">새 안내 받아 보기 (RSS)</a></p>
+    </div>
+  </div>
+</Base>

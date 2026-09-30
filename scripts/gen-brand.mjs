@@ -3,11 +3,14 @@
 // Output is deterministic (fixed canvas sizes, no timestamps) and git-ignored: public/favicon.ico and
 // public/brand/*. A canvas that fails to load fails the build: the site never ships without icons.
 import { createCanvas, GlobalFonts, Path2D } from '@napi-rs/canvas';
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+// The repository root. When the guide share images import these helpers, Astro bundles this file into
+// dist/.prerender, where the relative path no longer points at the repository: the build runs from the root.
+const here = join(dirname(fileURLToPath(import.meta.url)), '..');
+const root = existsSync(join(here, 'src', 'data', 'og.json')) ? here : process.cwd();
 export const BRAND = '#0f766e';
 
 const FONT_DIR = join(root, 'node_modules', 'pretendard', 'dist', 'public', 'static');
@@ -114,8 +117,36 @@ function fitLines(ctx, text, family, startPx, minPx, max, maxLines) {
   throw new Error(`gen-brand: "${text}" does not fit ${max} px in ${maxLines} line(s)`);
 }
 
-/** 1200×630 share image: the 문서딱 wordmark and icon, a large title, the plain line, the domain. All centred. */
-function og(image, domain) {
+/**
+ * The plain line: one row if it fits at 28 px or more; else (guides only) two rows split at the " · " that
+ * balances them best, or at spaces when there is no such separator.
+ */
+function fitLine(ctx, text, max, maxLines) {
+  try {
+    return fitLines(ctx, text, FAMILY_BOLD, 36, 28, max, 1);
+  } catch (err) {
+    if (maxLines < 2) throw err;
+  }
+  const segs = text.split(' · ');
+  if (segs.length < 2) return fitLines(ctx, text, FAMILY_BOLD, 36, 28, max, maxLines);
+  for (let px = 36; px >= 28; px -= 2) {
+    ctx.font = `${px}px ${FAMILY_BOLD}`;
+    let best = null;
+    for (let i = 1; i < segs.length; i++) {
+      const lines = [segs.slice(0, i).join(' · '), segs.slice(i).join(' · ')];
+      const w = Math.max(...lines.map((l) => ctx.measureText(l).width));
+      if (w <= max && (!best || w < best.w)) best = { w, lines };
+    }
+    if (best) return { px, lines: best.lines };
+  }
+  throw new Error(`gen-brand: "${text}" does not fit ${max} px in ${maxLines} line(s)`);
+}
+
+/**
+ * 1200×630 share image: the 문서딱 wordmark and icon, a large title, the plain line, the domain. All centred.
+ * Exported for the guide images (src/pages/og/guide/[slug].png.ts, Growth G.1): their line may take two rows.
+ */
+export function ogImage(image, domain, { lineMaxLines = 1 } = {}) {
   registerFonts();
   const c = createCanvas(OG_W, OG_H);
   const ctx = c.getContext('2d');
@@ -151,10 +182,12 @@ function og(image, domain) {
   ctx.globalAlpha = 0.95;
   let y = titleTop + (title.lines.length - 1) * titleLead + title.px * 0.6 + 58;
   for (const part of parts) {
-    const f = fitLines(ctx, part, FAMILY_BOLD, 36, 28, max, 1);
+    const f = fitLine(ctx, part, max, lineMaxLines);
     ctx.font = `${f.px}px ${FAMILY_BOLD}`;
-    ctx.fillText(f.lines[0], cx, y);
-    y += 50;
+    for (const l of f.lines) {
+      ctx.fillText(l, cx, y);
+      y += 50;
+    }
   }
 
   // Domain, small, at the bottom.
@@ -189,7 +222,7 @@ export function buildIco(pngs) {
 
 /** Every output, keyed by its path under public/. */
 export function renderBrand(domain = ogDomain()) {
-  const ogImages = Object.fromEntries(Object.entries(OG.images).map(([name, image]) => [`brand/og-${name}.png`, og(image, domain)]));
+  const ogImages = Object.fromEntries(Object.entries(OG.images).map(([name, image]) => [`brand/og-${name}.png`, ogImage(image, domain)]));
   return {
     'favicon.ico': buildIco([16, 32, 48].map((size) => ({ size, data: icon(size) }))),
     'brand/apple-touch-icon.png': icon(180),

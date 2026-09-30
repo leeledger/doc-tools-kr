@@ -17,6 +17,8 @@ import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { initCompare } from './compare';
 import { checkCount, checkDims, checkFileBytes, checkRun } from './limits';
 import { DEFAULT_FORM, KB_BYTES, parseOptions, rangeMessage, reductionPercent, type FieldName, type FormState, type Parsed } from './options';
+import { bindQuickLinks, readUrl, writeUrl } from '../../lib/ui/quicklinks';
+import type { DeepState } from '../../lib/ui/deeplink';
 import { doneSummary, outcomeOf } from './headline';
 import { cancelRun, crash, startRun, type RowState } from './queue';
 
@@ -207,6 +209,27 @@ export function initPhotoTool(): void {
       if (fld.error) fld.error.textContent = bad ? rangeMessage(name) : '';
     }
     return parsed;
+  }
+
+  // ---------- deep links (Growth G.5, G.6) ----------
+
+  /** ?target=<KB>: 목표 용량 mode with that chip, or 직접 입력 with the value. False while a run is working. */
+  function applyDeep(s: DeepState): boolean {
+    if (s.target === undefined || state === 'working') return false;
+    for (const r of radios('ph-mode')) r.checked = r.value === 'target';
+    const chip = radios('ph-target').find((r) => r.value === String(s.target));
+    for (const r of radios('ph-target')) r.checked = chip ? r === chip : r.value === 'custom';
+    if (!chip) fields.targetCustom.input.value = String(s.target);
+    confirmBox.hidden = true;
+    runRow.hidden = state === 'done';
+    update();
+    return true;
+  }
+
+  /** The option in the address bar: the target KB in 목표 용량 mode, else nothing. */
+  function syncUrl(): void {
+    const parsed = parseOptions(form());
+    writeUrl('photo-compress', parsed.ok && parsed.targetKb !== null ? { target: parsed.targetKb } : null);
   }
 
   function blocker(parsed: Parsed): string | null {
@@ -771,7 +794,12 @@ export function initPhotoTool(): void {
     runRow.hidden = state === 'done';
     update();
   });
-  controls.addEventListener('change', () => update());
+  controls.addEventListener('change', () => {
+    update();
+    syncUrl();
+  });
+  controls.addEventListener('input', syncUrl);
+  bindQuickLinks('photo-compress', applyDeep, root);
   runBtn.addEventListener('click', requestRun);
   againBtn.addEventListener('click', requestRun);
   confirmYes.addEventListener('click', () => {
@@ -797,6 +825,9 @@ export function initPhotoTool(): void {
     if (ev.persisted && rows.length) resetAll(false);
   });
 
+  // A deep link applies before the first render of the form (the options are hidden until a photo is picked).
+  const deep = readUrl('photo-compress');
+  if (deep) applyDeep(deep);
   setState('empty');
   if (!supported) {
     must<HTMLParagraphElement>('ph-unsupported').hidden = false;

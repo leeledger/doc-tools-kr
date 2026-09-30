@@ -8,10 +8,9 @@ import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:z
 import { autoframeOn } from './lib/autoframe.mjs';
 import { beaconPath } from './lib/beacon-path.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
+import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
 
 const dist = distDir();
-const MAX_FILE = 24 * 1024 * 1024;
-const MAX_FILES = 15000;
 const KB = 1024;
 /** The UI font weights (Polish P.12): one static instance each; no other weight may appear in the CSS. */
 const UI_WEIGHTS = new Set(['400', '600', '700', '800']);
@@ -27,6 +26,7 @@ for (const f of files) {
   if (f.path.endsWith('.map')) errors.push(`${f.path}: source maps must not ship`);
 }
 if (files.length > MAX_FILES) errors.push(`${files.length} files (limit ${MAX_FILES})`);
+else if (files.length > WARN_FILES) warnings.push(`${files.length} files: above ${WARN_FILES.toLocaleString('en-US')}, the guard fails at ${MAX_FILES.toLocaleString('en-US')} (Cloudflare ${CF_MAX_FILES.toLocaleString('en-US')})`);
 
 // Operator contact (Polish P.4): an invalid PUBLIC_CONTACT_EMAIL never ships.
 const env = publicEnv();
@@ -168,6 +168,20 @@ count(/^_astro\/mozjpeg_enc[^/]*\.wasm$/, 1, 'mozjpeg_enc*.wasm');
 count(/^_astro\/webp_enc-[^/]*\.wasm$/, 1, 'webp_enc*.wasm');
 count(/^_astro\/webp_enc_simd-[^/]*\.wasm$/, 1, 'webp_enc_simd*.wasm');
 
+// Guides (Growth G.3): little JS, small pages, share images ≤ 80 KB.
+for (const [path, html] of pageHtml) {
+  if (!/^guide\/[^/]+\/index\.html$/.test(path)) continue;
+  budget(`guide HTML /${path.replace(/index\.html$/, '')}`, [path], 30 * KB);
+  budget(`guide initial JS /${path.replace(/index\.html$/, '')}`, initialJs(html), 4 * KB);
+}
+if (![...pageHtml.keys()].some((p) => /^guide\/[^/]+\/index\.html$/.test(p))) errors.push('no guide page in dist/guide/');
+for (const img of match(/^og\/guide\/[^/]+\.png$/)) budget(img, [img], 80 * KB, raw, 'raw');
+{
+  // The 404 suggestion script: the 404 page's JS minus the shared site script, ≤ 1 KB gzip.
+  const site = new Set(initialJs(pageHtml.get('index.html') ?? ''));
+  budget('404 suggestion script', initialJs(pageHtml.get('404.html') ?? '').filter((f) => !site.has(f)), 1 * KB);
+}
+
 // HWP PDF 변환 (brief Step 5 §4).
 budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
 {
@@ -197,8 +211,12 @@ budget('HWP font CSS (fonts/hwp/hwp-fonts.*.css)', match(/^fonts\/hwp\/hwp-fonts
 for (const f of match(/^fonts\/hwp\/fallback[^/]*@[^/]+\/[^/]+\.woff2?$/)) budget(`HWP fallback face ${f.split('/').slice(-2).join('/')}`, [f], 60 * KB, raw, 'raw');
 budget('HWP PDF face list (fonts/hwp/hwp-pdf-faces.*.json)', match(/^fonts\/hwp\/hwp-pdf-faces\.[^/]+\.json$/), 48 * KB);
 
+rows.push({ label: `files (guard ${MAX_FILES.toLocaleString('en-US')} / CF ${CF_MAX_FILES.toLocaleString('en-US')})`, size: files.length * KB, limit: MAX_FILES * KB, unit: 'files', count: true });
 console.log('check-dist: budgets');
-for (const r of rows) console.log(`  ${r.label.padEnd(44)} ${(r.size / KB).toFixed(1).padStart(7)} KB  / ${Number.isFinite(r.limit) ? `${r.limit / KB} KB` : '-'} ${r.unit}`);
+for (const r of rows) {
+  if (r.count) console.log(`  ${r.label.padEnd(44)} ${String(r.size / KB).padStart(7)}     / ${r.limit / KB}`);
+  else console.log(`  ${r.label.padEnd(44)} ${(r.size / KB).toFixed(1).padStart(7)} KB  / ${Number.isFinite(r.limit) ? `${r.limit / KB} KB` : '-'} ${r.unit}`);
+}
 
 for (const w of warnings) console.warn(`check-dist: WARNING ${w}`);
 const largest = files.reduce((a, f) => (f.size > a.size ? f : a), { path: '-', size: 0 });
