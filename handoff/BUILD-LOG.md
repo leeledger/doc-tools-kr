@@ -714,3 +714,85 @@ Scope: docs/UX-AUDIT-2.md P1 list and §7.2/§7.3, plus two owner decisions rela
 
 ### Polish Q status (Bob)
 - **DONE.** Nothing committed. Gates: check 1 error (pre-existing, tests/e2e/hwp-to-pdf.spec.ts:183, present at 3358fd7); unit 523/523 (27 files); both builds (dist-noauto flag off, dist flag on) check-dist OK, UI fonts 185.8 / 190 KB, share images 29–42 KB / 300 KB, precache OK; check:licenses OK (31, flag off); e2e 5 projects + manual-chromium: final full run 785 passed / 5 failed / 16 flaky / 172 skipped, the 5 failures were one test (home og:description must name every live tool) fixed afterwards and re-run green on all 5 projects with polish.spec + site.spec (379 passed, 6 Firefox goto flakies, 0 failed) and id-photo.spec on chromium, mobile-chrome, manual-chromium (78 passed); flakies are the known Firefox/WebKit goto race under load (all passed on retry); no-upload fixture on every test. Lighthouse 7 URLs × 3 runs: 99/100/100/100, all assertions pass. qa:visual (local preview): 215 PNGs, 0 hard failures, weight probe 1.74–1.78, idp done below header at 390/360/768/200 % and 1280. regress:merge 5/5, regress:compress 122/122, regress:photo 85/85 + 24/24, regress:idphoto 10/11 (the known p07 landmark miss, unchanged since Step 4).
+
+## HWP direct — WIP state (Bob, 2026-09-30; worktree `C:\dev\doc-tools-kr-hwpdl`, branch `hwp-direct`)
+Spec: `SPIKE-HWP-DIRECT.md` ("H": in-page vector PDF writer, per-page raster fallback, `<a download>`). Status: **WIP, not ready for review** (one open gate blocker below). Work stopped here on the coordinator's request (move to a cloud session).
+
+### Done (against SPIKE-HWP-DIRECT.md)
+- **Step 0:** merged origin/main a01af5e (Polish Q) cleanly (commit a4f8abd). Brand 문서딱 in all HWP copy; `src/lib/ui/josa.ts` is used for the done line and every number or file name followed by a particle. The HWP exemptions were removed from the postbuild "plain language" test (`COPY_EXEMPT_PAGES = ['licenses']`, no `hwpSources`): /hwp-to-pdf/ and every HWP JS string pass it.
+- **§6.2 modules** (`src/lib/hwp/pdf/`):
+  - `woff.ts`: WOFF 1.0 → SFNT (fflate).
+  - `faces.ts`: FaceTable. parseRanges incl. `U+4??`; families() with pick(); resolve order chain → Fallback → Sans → Serif; any face of a family without the wanted weight, with synthBold; PUA → null, never "missing"; `unpackFaces`.
+  - `font-source.ts`: the only new `fetch(` (same-origin face list and `.woff` slices under /fonts/hwp/); the network-guard allowlist is updated.
+  - `svg-to-pdf.ts`: SvgPdfWriter, the §6.3 table (markers, nested svg, gradients as 64 bands, tspan dx/dy, SVG pictures drawn as vector, always `0 Tr`/`3 Tr` per text object, non-finite → 0 and counted).
+  - `images.ts`: ImageCache. JPEG pass-through, CMYK → canvas, a 64-bit FNV dedupe key (never the data URL itself), the linearRGB brightness/contrast LUT; the canvas work is injected (`Recode`).
+  - `raster-page.ts`: 200 dpi + invisible text layer; fonts inlined as data: woff; 150 ms settle.
+  - `export.ts`: exportPdf. Per-page loop; hybrid rule = unsupported, a missing glyph or a non-finite number → removePage + raster; a blank page for a page that fails to parse; yield per page; AbortSignal; stats incl. sanitizerRemovals.
+  - `brotli-stub.ts`: aliased for `brotli/decompress.js` in astro.config.mjs.
+- `src/tools/hwp-to-pdf/download.ts` (`pdfName` = safeFileName(stem, '.pdf'); `triggerDownload` = hidden in-page `<a download>`) and `export-chunk.ts` (the lazy entry).
+- **Deleted:** `print.ts`, `guidance.ts`, `tests/unit/hwp-print.test.ts`, the guidance/print cases in `hwp-tool.test.ts`, the whole `@media print` block and the body print classes, `#hw-guide`, `#hw-after`, `COPY.afterPrint` / `viewerOnlyPrint`, `installPageStyle` / `removePageStyle`, `sizeKey`, `viewer.downscale` with its blob bookkeeping, `downscaleImages()` (its helpers `targetSize`, `needsDownscale`, `isOpaquePhoto`, `parseDataUrl` are reused by `pdf/images.ts`), `fontsSettled` / `hwpFontsReady`.
+- **§6.1/6.4 UI:** the controller is rewritten.
+  - States empty / loading / convert / viewer-first / viewer-only / exporting / error. Always the lazy viewer. The worker stays alive until reset. Page 0 is awaited before the result shows.
+  - Export: awaitPage + exportPdf. Done line `「x.pdf」를 내려받았습니다 · N쪽 · size` (size through `formatSize`: docs/COPY.md wins over the spec's "0.3 MB" example). 「다시 내려받기」 is an `<a download>` with the same blob, revoked only on reset or replacement.
+  - Cancel → back to the routed state + "PDF 만들기를 취소했습니다.". aria-disabled buttons while exporting; `body[data-busy]`; the in-flight flag during the export; oom for RangeError/allocation, else corrupt.
+  - The preview id is renamed `hwp-print-root` → `hw-preview`.
+- **§6.5 assets:**
+  - `gen-hwp-fonts.mjs` copies every fontsource `.woff` sibling, the static Pretendard 400/700 woff dynamic subset (`pretendard-static@1.3.9/`), the base fallback `.woff` and the extended fallback faces (`fallback-ext@<hash8>/`).
+  - It declares the extended faces in the preview CSS after the sorted lines, in reverse order (CSS tries overlapping unicode-ranges last-defined first).
+  - It writes a **packed** face list `public/fonts/hwp/hwp-pdf-faces.<hash>.json` (40.7 KB gzip; the flat list was 168 KB gzip, so it is fetched on the first export, not bundled) and `src/generated/hwp-pdf-faces.json` ({json}).
+  - `gen-hwp-fallback.mjs` cuts the four OFL faces (Noto Sans CJK KR 2.004, Math 3.000, Symbols 2 2.008, Sans 2.015; SHA-256s in `licenses/third-party/SOURCES.md`), sliced greedily to ≤ 58 KB per file in both formats: fb-cjk-1..3, fb-math-1..2, fb-sym2, fb-sans (committed in `scripts/fonts/`, woff2 + woff). The base `anolim-hwp-fallback.woff2` stays byte-identical; only its `.woff` is new.
+- **§6.6 routing:** equations no longer route (`GUARD_EQUATIONS` and the `equations` reason are gone; RouteInput has no equations). A soft note `#hw-eq-note` shows for files with equations. New banner copy (text boxes / ≥ 100쪽 / both), worded "100쪽 이상인" because the guard is ≥ 100, not > 100. Caps unchanged.
+- **§6.7:** `prefetchRhwpWasm()` in `wasm-browser.ts` on the picker's pointerdown / Enter / Space and the tool's dragenter (skipped on Save-Data/2G through `preload.skipped`). The hwp font CSS is injected on `scanned`; `preloadFacesFor(page 0)`. Staged readout: "처음 한 번만 문서 여는 프로그램을 받는 중 · 43%", "문서를 읽는 중", "1/26쪽 보여 드리는 중", "PDF 만드는 중 12/26쪽". The export chunk is warmed on idle once the document shows (not for viewer-only, not on Save-Data).
+- **§6.8 copy:** lead, 안전한 이유, the three steps, FAQ (the 인쇄 창 FAQ deleted; "PDF는 어디에 저장되나요?" added; "제 문서가 어디로 보내지나요?"), errors, banners, meta description (no 업로드; keeps "hwp pdf 변환" and "한글파일 PDF로 변환"). Decisions, where docs/COPY.md and the spec table differ, COPY.md wins:
+  - 합니다체 is kept ("~는 중", "할 수 있습니다"), not 해요체.
+  - The drop-zone privacy line stays "파일은 이 기기 밖으로 전송되지 않습니다." (the COPY.md rule; see the id-photo CLS note above for why that wording is kept).
+  - MiB is written as "MB" (COPY.md: 1 MB = 1,048,576 bytes).
+- **Merge/compress hardening:** `download.removeAttribute('href')` in both `revokeBlob`s, and the initial `href="#"` removed from both anchors.
+- **§6.9 tests:** new unit files `hwp-pdf-woff`, `hwp-pdf-faces`, `hwp-pdf-writer` (jsdom + pdf.js read-back), `hwp-pdf-images`, `hwp-pdf-export`, `hwp-download`, `hwp-copy`; helper `tests/helpers/hwp-pdf.ts`. E2E `hwp-to-pdf.spec.ts` is rewritten around downloads with a `noSwap()` guard: no main-frame navigation, the same URL and title, no dialog, no new page, `window.print` never called, and the preview stays the same visible node while exporting.
+- **regress:hwp:**
+  - The harness runs `exportPdf` in the page (no `page.pdf()`).
+  - Rule 2 uses the 14 keys; `EXPECTED_MODES` law09 / adm19 → convert. Rule 6 = open → PDF (law10 ≤ 4 s, adm28 ≤ 15 s).
+  - New rule 7: valid (pdf.js + no NaN/Infinity operand); missingGlyphs 0; recall ≥ 0.99 for guarded files too; 0 fallback pages on the spike's 40-file sample.
+  - SSIM vs `regress-out/direct/print/chromium-P/<key>.pdf` (PRINT_DIR, report only; only the 40 sample files have one). Browser-tree memory through `scripts/regress/memwatch.ps1` (Windows only).
+- **§6.10 budgets** (`check-dist.mjs`, additive):
+
+  | budget | measured | limit |
+  |---|---|---|
+  | export chunk closure (gzip) | 345.1 KB | 360 KB |
+  | each fallback face file (raw) | max 52.2 KB | 60 KB |
+  | PDF face list (gzip) | 40.7 KB | 48 KB |
+  | viewer chunk (gzip) | 2.3 KB | 25 KB |
+  | initial JS /hwp-to-pdf/ (gzip) | 10.8 KB | 30 KB |
+
+  A Brotli-decoder marker check runs on the export closure. dist has 2,285 files.
+- **§6.11 dependencies and licences:**
+  - `@cantoo/fontkit` 2.0.12 (exact pin, MIT) with restructure (MIT) and dfa (MIT; its licence text is in `licenses/third-party/dfa/LICENSE`, the package ships none). brotli (MIT) is aliased to the stub and not shipped.
+  - The Noto fallback faces are a component entry with `licenses/third-party/noto-fonts/OFL.txt`.
+  - `playwright.config.ts` reads an `E2E_MANUAL_PORT` env (was hard-coded 4181), so a second checkout can run next to another agent's servers.
+
+### Gates run (all with PUBLIC_SITE_URL=https://docttak.com)
+- `astro check`: 0 errors, 0 warnings (1 hint).
+- Unit: **546/546** (33 files), incl. postbuild "plain language" with no HWP exemption (against a flag-off build).
+- Build flag off (`PUBLIC_ID_PHOTO_AUTOFRAME=0`, moved to `dist-noauto/`): check-dist OK; gen-sw OK (370 KB / 450).
+- `check:licenses`: OK (36 production packages, 5 components).
+- E2E HWP spec, chromium only, ports 4273/4281: **17 passed, 4 skipped** (phone-only). The adm28 cancel test then failed once in the full run: a page finishing after 취소 overwrote the status. Fixed in the controller (`onProgress` checks the run token); not re-run yet.
+- regress:hwp smoke (`--fixtures-only --only "law05|adm19"`): all rules pass. SSIM vs print 0.997 mean, worst page 0.988; 0 fallback pages; law05 open → PDF 1.6 s, adm19 4.1 s (under parallel load).
+
+### Blocker and what is left
+1. **The flag-on build fails gen-sw** (`PUBLIC_ID_PHOTO_AUTOFRAME=1`, the build the main e2e projects use): precache 1,235.5 KB / 450.
+   - Cause: rolldown puts its runtime helper (`__export`, module `\0rolldown/runtime.js`) into the HWP export chunk ("merge common chunks into an existing entry chunk"). The lazily imported /id-photo/ controller, which gen-sw precaches with its static closure, then imports `export-chunk.*.js`.
+   - Tried without effect: `manualChunks` (the runtime id never reaches it), `codeSplitting.groups` with a runtime test, `experimental.chunkOptimization.mergeCommonChunks: false`.
+   - Next ideas: make the export chunk a small entry that dynamically imports the heavy writer (so the entry the runtime lands in is small); check this rolldown version's runtime placement options; or exclude `export-chunk*` from gen-sw's controller closure, only if offline behaviour stays correct.
+   - The flag-off build is unaffected.
+2. Full e2e on 5 projects + manual-chromium: not completed. The first full run used a flag-off `dist` (so the id-photo MediaPipe tests failed, as expected) and was stopped. It needs the flag-on dist (blocked by 1).
+3. regress:hwp on the full corpus (fixtures + `C:\dev\doc-tools-kr\spikes\hwp\corpus`, 120 files): not run. **The corpus exists only on the owner's machine.** A cloud session can run `npm run regress:hwp -- --fixtures-only` only, and has no print PDFs for SSIM (report-only anyway).
+4. Lighthouse on /hwp-to-pdf/ and qa:visual: not run. `lighthouserc.json` hard-codes port 4173; use a temporary config with another port.
+5. Not done from the spec: real-device checks (§6.12, owner), the Slow 4G first-use measurement (§6.7 "expected effect"), `docs/` device notes, the mobile regress profile.
+6. REVIEW-REQUEST.md is not written (the work is not complete).
+
+### Gotchas for a fresh session
+- Rebuild order: `PUBLIC_ID_PHOTO_AUTOFRAME=0 npm run build && mv dist dist-noauto`, then `PUBLIC_ID_PHOTO_AUTOFRAME=1 npm run build`. The autoframe DEFAULT is "0"; the chromium id-photo specs need MediaPipe in `dist`.
+- Run `npm ci` and then `node scripts/gen-hwp-fonts.mjs` (prebuild does it) before the unit tests: `src/generated/hwp-pdf-faces.json` is git-ignored and `font-source.ts` imports it.
+- `scripts/gen-hwp-fallback.mjs` needs the four Noto sources, which are not committed (they were in `regress-out/direct/fonts/`). Its outputs in `scripts/fonts/` are committed, so normal builds never need it.
+- `@cantoo/fontkit` must read WOFF, not WOFF2, sources: WOFF2 subsets into broken glyphs (spike bug 1).
+- Scripted edits with backslashes through the Git-Bash tool mangled `\\` once (the download.ts regex); check regexes after scripted edits.
