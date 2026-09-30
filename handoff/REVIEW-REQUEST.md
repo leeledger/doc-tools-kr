@@ -1,4 +1,66 @@
-# Review Request — Step 5 (HWP PDF 변환 `/hwp-to-pdf/`)
+# Review Request — Step 5 (HWP PDF 변환 `/hwp-to-pdf/`), round 2: Arch decisions + merge with Step 4
+Date: 2026-09-30
+Ready for Review: YES
+Worktree: `C:\dev\doc-tools-kr-step5`, branch `step5`. main (ee507ab, Step 4) merged in as 909256f; tip f558825 (plus this file). Local commits only, never pushed.
+Status: DONE. Every gate is green on the merged tree; the only open items are Step 4's own known misses (check:licenses with auto-framing ON fails on fft2d; regress:idphoto p07 landmark miss), unchanged from main.
+
+## Round 2: Arch decisions (logged in BUILD-LOG "Step 5 decisions, round 2")
+- **F1 accepted.** regress rule 2 now requires the routed set = the 19 guard keys + every cap-routed file, each listed with its reason. Full corpus: guard parity exact; cap-routed (desktop): adm16 (pages 411 > 300; also guard-routed) and kr01 (images 66,512,643 > 60,000,000).
+- **F2 built.** `src/lib/hwp/downscale.ts`: a PNG/BMP over 100 KB that is not oversized is re-encoded as JPEG q 0.85 at the same pixel size when it is an opaque photo, kept only if smaller. Line-art rule (my call): keep PNG when any alpha < 255, when ≤ 64 distinct colours, or when ≥ 85 % of pixels equal their left neighbour. 0.70 was tried first and kept kr38 p5 (77,936 colours, 0.745 flat) and kr36 p4 (19,655, 0.738) as PNG. Unit-tested (`isOpaquePhoto`).
+  - Rule 5 now passes: kr21 2.36× (was 15.5×), kr38 1.79× (was 3.69×), kr45 1.37× (was 4.35×); median 1.19 (was 1.24); kr01 1.39 MB.
+- **F3.** /licenses/ is no longer precached (arrived with main). Precache 369.0 / 450 KB (auto-framing build), 366.5 KB (dist-noauto).
+- **F4 accepted.** HWP font CSS budget 31 KB, reason in check-dist.
+- **New in round 2:** `preloadFacesFor()` requests every (family, weight) with its characters while the built pages are still hidden. The WebKit `fontsSettled()` loop had pushed law10 render-to-ready to 3.0–3.7 s; now 2.4 s (adm28 4.9 s).
+
+## Merge (main → step5)
+- tools.ts: both tools live (5 live, soon list empty; the home 준비 중 block is not rendered).
+- e2e: site.spec (5 cards, sitemap with both pages, related tools: hwp-to-pdf shows the two PDF tools, the others show 4), polish.spec (LIVE/SOON, footer paths, the phone menu outside-click point is now below the sheet: with 5 tools the sheet reaches past y = 400), id-photo.spec related count 3 → 4.
+- check-dist: both budget blocks; UI fonts 190 KB (main); HWP font CSS 31 KB. `tests/unit/postbuild.test.ts` UI-font total raised to 190 KB to match check-dist (main had left it at 180; the merged faces are 184.0 KB).
+- licenses.manifest.json: main's entries + the 6 Step 5 entries; /licenses/ uses main's gen-licenses dedupe (mine removed) plus the 한글(HWP) notice section.
+- playwright.config.ts: main's manual-chromium project + `E2E_PORT`. astro.config.mjs: main's `ui-shared` manualChunks + the rhwp worker plugin. network-guard allowlist: main's list + `lib/hwp/wasm-browser.ts`.
+- BUILD-LOG: both sections kept (Step 4 then Step 5).
+
+## Gates on the merged tree (actual numbers)
+| Gate | Result |
+|---|---|
+| check | 0 errors, 0 warnings (1 hint) |
+| unit | 500/500, 25 files |
+| build 1: `PUBLIC_ID_PHOTO_AUTOFRAME=0 astro build --outDir dist-noauto` + postbuild on it | check-dist OK, 1210 files; precache 366.5 KB |
+| build 2: `npm run build` (default, flag off) | check-dist OK; precache 366.5 KB; UI fonts 184.0 / 190 KB |
+| build 3: `PUBLIC_ID_PHOTO_AUTOFRAME=1 npm run build` (dist for the auto-frame e2e) | check-dist OK, 1217 files; precache 369.0 KB; UI fonts 185.4 KB |
+| check:licenses | flag off (shipping default): OK, 31 packages, 4 components. Flag on: FAIL on fft2d `LicenseRef-Ooura`, Step 4's open licence Flag, unchanged from main |
+| e2e, 5 projects + manual-chromium (E2E_PORT=4392, manual 4181) | 776 passed, 6 failed, 8 flaky, 172 skipped. The 6 failures were one id-photo SEO test (related links 3 → 4 after the merge), fixed; rerun 6/6 passed. The 8 flaky are Firefox (7) and one mobile-safari merge test, all green on retry |
+| Lighthouse (7 URLs, port 4393) | all assertions pass; /hwp-to-pdf/ 0.99/1/1/1, LCP 1969 ms, CLS 0.0003; /id-photo/ 0.99/1/1/1, LCP 1821 ms, CLS 0.0018 |
+| regress:hwp, 120 files | all pass rules pass. all 6/120 (5.0 %, CI 2.3–10.5 %); non-routed 2/100 (2.0 %, CI 0.6–7.0 %: adm06, nt08); routed 4/20. measureCalls, sanitizer, dangling, unparsed pages all 0; screen = PDF pages on all 120. law10 2.4 s, adm28 4.9 s. Flagged (not failures): adm29 17.9 s vs 8.1, kr17 3.3 vs 1.5, kr18 1.8 vs 0.8 |
+| regress:hwp fixtures | 10/10 |
+| regress:merge / compress / photo | 5/5 PASS / 122/122 / 85/85 + 24/24 |
+| regress:idphoto | Chromium 10/11, Firefox 10/11: the one miss is check 2 landmarks (p07 chin −1.11 mm), Step 4's known p07 miss, unchanged |
+| smoke:assets (4393) | OK, 1216 URLs |
+| qa:visual (4393) | 212 PNGs, 0 hard failures |
+
+## Budget table (merged, default build)
+| Asset | Size | Budget |
+|---|---|---|
+| `/hwp-to-pdf/` initial JS | 9.9 KB | 30 KB |
+| `hwp.worker*.js` | 20.3 KB | 90 KB |
+| viewer + print chunk | 4.4 KB | 25 KB |
+| `rhwp_bg.wasm` | 9.48 MiB raw, one copy; brotli q5 3.0 MiB | 10.5 MB |
+| HWP font CSS | 30.3 KB | 31 KB (Arch F4) |
+| largest font slice / fallback | 48.3 KB / 1.9 KB raw | 250 / 60 KB |
+| UI fonts total | 184.0 KB | 190 KB |
+| SW precache | 366.5 KB | 450 KB |
+
+## Files changed in round 2
+- `src/lib/hwp/downscale.ts`: `isOpaquePhoto()`, same-size JPEG re-encode of opaque non-line-art PNG/BMP.
+- `src/tools/hwp-to-pdf/fonts.ts`: `preloadFacesFor()`; `controller.ts` calls it before showing a built document; the harness does the same.
+- `scripts/regress/hwp.mjs`: rule 2 (guard parity + cap-routed list).
+- `tests/unit/hwp-tool.test.ts`: photo vs line-art tests.
+- Merge resolutions listed above; `tests/e2e/{site,polish,id-photo}.spec.ts`, `tests/unit/postbuild.test.ts` for five live tools.
+
+---
+
+# Round 1 (for reference)
+
 Date: 2026-09-30
 Ready for Review: YES (with Flags under "Blocked")
 Worktree: `C:\dev\doc-tools-kr-step5`, branch `step5` off 9c4e019 (built in parallel with Step 4 on main). Local commits only, never pushed.
