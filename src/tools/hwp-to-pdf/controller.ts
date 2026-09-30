@@ -1,7 +1,9 @@
 // HWP PDF 변환 UI controller (brief Step 5 "Flow", §3.2). States: empty → loading → convert | viewer-first |
 // viewer-only | error; viewer-first → rendering → convert (그래도 PDF로 저장, cancelable back to viewer-first).
-// Initial JS: this file, the sniff, the route and the guidance. The worker (rhwp glue, scan) starts when a
-// file is picked; the viewer / post-processing / print chunk (./lazy) and the document fonts load after that.
+// Initial JS: this file, the sniff and the route. The guidance data comes with the lazy chunk (it is shown
+// only once a document is ready; the help section is server-rendered from the same data). The worker (rhwp
+// glue, scan) starts when a file is picked; the viewer / post-processing / print chunk (./lazy) and the
+// document fonts load after that.
 // Two tokens: `docId` (one per opened document; stale worker messages are dropped) and `renderRun` (one per
 // full render; a cancel bumps it, so no page of the canceled run is awaited or appended by it).
 import type { HwpErrorCode } from '../../lib/hwp/errors';
@@ -15,10 +17,9 @@ import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { safeFileName } from '../../lib/ui/format';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
-import { detectBrowser, orderedGuides } from './guidance';
 import { LIMITS, overHardLimit, route, type Mode, type RouteResult } from './limits';
 import { COPY, ERRORS, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from './messages';
-import { hwpFontsReady, loadHwpFonts } from './fonts';
+import { fontsSettled, hwpFontsReady, loadHwpFonts } from './fonts';
 import { createWatchdog } from './watchdog';
 
 type State = 'empty' | 'loading' | Mode | 'rendering' | 'error';
@@ -234,8 +235,8 @@ export function initHwpTool(): void {
     void showEngineError();
   }
 
-  function renderGuide(): void {
-    const [lead, ...rest] = orderedGuides(detectBrowser({ ua: navigator.userAgent, platform: navigator.platform, maxTouchPoints: navigator.maxTouchPoints }));
+  function renderGuide(lz: Lazy): void {
+    const [lead, ...rest] = lz.orderedGuides(lz.detectBrowser({ ua: navigator.userAgent, platform: navigator.platform, maxTouchPoints: navigator.maxTouchPoints }));
     const card = document.createElement('div');
     card.className = 'hw-guide-lead';
     card.append(para('hw-guide-title', `${lead.title}에서 저장하는 방법`), list(lead.steps));
@@ -344,13 +345,13 @@ export function initHwpTool(): void {
     send({ type: 'close' });
     stopWorker();
     lz.installPageStyle(infos);
-    renderGuide();
+    renderGuide(lz);
     setState('convert');
     saveBtn.disabled = true;
     announce(`${COPY.ready(n)} ${COPY.fonts}`);
     await hwpFontsReady();
     for (let i = 0; i < n && live(); i++) await v.downscale(i);
-    await document.fonts.ready;
+    await fontsSettled();
     if (!live()) return;
     setInflight(null);
     saveBtn.disabled = false;

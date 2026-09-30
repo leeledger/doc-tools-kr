@@ -20,7 +20,7 @@ and embedded into `/licenses/` by `scripts/gen-licenses.mjs` (`localFiles` in `l
 | File | Source |
 |---|---|
 | `rhwp/THIRD_PARTY_LICENSES.md` | https://raw.githubusercontent.com/edwardkim/rhwp/v0.8.6/THIRD_PARTY_LICENSES.md (tag `v0.8.6`, the release of `@rhwp/core@0.8.6`; downloaded 2026-09-30, verbatim). The Rust crates compiled into `rhwp_bg.wasm` are MIT, Apache-2.0, BSD-3-Clause, Zlib, ISC or Unicode-DFS (dual-licensed crates offer MIT or Apache-2.0). |
-| `rhwp/CRATES.md` | The parts of `rhwp/THIRD_PARTY_LICENSES.md` that concern the shipped wasm (crate, version and licence columns of the crate table, the dependency licence summary in English, the Volexity BSD-3-Clause notice verbatim, the Hancom spec references). This is the file `/licenses/` embeds. |
+| `rhwp/CRATES.md` | The parts of `rhwp/THIRD_PARTY_LICENSES.md` that concern the shipped wasm (crate, version and licence columns of the crate table without the optional native and test-only crates, the dependency licence summary in English, the Volexity BSD-3-Clause notice verbatim, the Hancom spec references). This is the file `/licenses/` embeds. |
 | `rhwp/APACHE-2.0.txt` | https://www.apache.org/licenses/LICENSE-2.0.txt (the Apache-2.0 text the crate notices refer to) |
 | `noto-sans-cjk/LICENSE` | https://github.com/notofonts/noto-cjk/raw/main/Sans/LICENSE (SIL OFL 1.1; declares no Reserved Font Name) |
 

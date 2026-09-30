@@ -2,3 +2,4 @@
 // controller once the first page is on its way. Nothing here loads before a file is picked.
 export { createViewer, type Viewer } from './viewer';
 export { installPageStyle, printDocument, removePageStyle } from './print';
+export { detectBrowser, orderedGuides } from './guidance';

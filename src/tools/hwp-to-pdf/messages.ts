@@ -7,10 +7,11 @@ import type { Device } from '../../lib/ui/device';
 export const HANCOM_NOTICE = '본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.';
 export const TRADEMARK_NOTICE = '한글, 한컴, HWP, HWPX는 한글과컴퓨터의 등록상표이며, 본 서비스는 한글과컴퓨터와 무관합니다.';
 
-/** `80 MB` with the 1,000,000-byte MB of the limits (one decimal below 10). */
+/** `80 MB`, `10.5 MB`: the 1,000,000-byte MB of the limits, at most one decimal (so a file just over a cap
+ * never reads as the cap itself). */
 export function mbDec(bytes: number): string {
-  const v = bytes / MB_DEC;
-  return `${v.toLocaleString('ko-KR', { maximumFractionDigits: v < 10 ? 1 : 0 })} MB`;
+  const v = Math.ceil((bytes / MB_DEC) * 10) / 10;
+  return `${v.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} MB`;
 }
 
 export function mib(bytes: number): string {

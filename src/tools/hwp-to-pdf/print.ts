@@ -2,6 +2,7 @@
 // One named @page per distinct page size, the first size as the default @page (engines without named pages),
 // the title swapped to the file's base name for the PDF name, restored on afterprint.
 import { sizeKey, type PageInfo } from '../../lib/hwp/engine';
+import { fontsSettled } from './fonts';
 
 const STYLE_ID = 'hwp-page-style';
 const PT_PER_PX = 0.75;
@@ -41,7 +42,7 @@ export function removePageStyle(): void {
  * opens the print dialog. `onAfter` runs once on afterprint, after the title is restored.
  */
 export async function printDocument(title: string, onAfter: () => void): Promise<void> {
-  await document.fonts.ready;
+  await fontsSettled();
   const previous = document.title;
   const after = (): void => {
     window.removeEventListener('afterprint', after);

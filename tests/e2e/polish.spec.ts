@@ -13,8 +13,8 @@ const SCAN = fixturePath('gen_scan_a6.pdf');
 const SMALL = fixturePath('gen_already_small.pdf');
 const NOTES = join(RUNTIME_DIR, 'notes.txt');
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-const LIVE = ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기'];
-const SOON = ['여권·증명사진 규격 맞추기', '한글(HWP) → PDF 변환'];
+const LIVE = ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기', 'HWP PDF 변환'];
+const SOON = ['여권·증명사진 규격 맞추기'];
 
 const serious = async (page: Page): Promise<string[]> =>
   (await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()).violations
@@ -220,7 +220,7 @@ test('home, meta, og and JSON-LD name every live tool and no soon tool; the soon
   for (const text of [lead, desc, og, ld]) {
     for (const name of LIVE) expect(text).toContain(name);
     for (const name of SOON) expect(text).not.toContain(name);
-    expect(text).not.toMatch(/여권|HWP|한글 파일/);
+    expect(text).not.toMatch(/여권/);
   }
   expect(lead.startsWith('지금 쓸 수 있는 도구: ')).toBe(true);
   expect([...desc].length).toBeGreaterThanOrEqual(80);
@@ -578,7 +578,7 @@ test.describe('header tools menu (P.9)', () => {
     await btn.focus();
     await page.keyboard.press('Enter');
     await expect(panel).toBeVisible();
-    for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
+    for (let i = 0; i < LIVE.length + 3; i++) await page.keyboard.press('Tab');
     await expect(panel).toBeHidden();
   });
 

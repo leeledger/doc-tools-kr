@@ -502,3 +502,37 @@
 - **DONE.** check 0/0/0; unit 309/309; build and budgets OK (UI fonts 169.4 / 180 KB; precache 405.4 / 450 KB); licences OK (25); e2e 5 projects 516 passed / 0 failed / 4 flaky (the Firefox `goto` race) / 105 skipped; smoke:assets OK (332 URLs); qa:visual 176 PNGs, 0 hard failures. Nothing committed.
 
 - Known Gap (Polish P, Richard r2): carry-assets reads a live manifest without Content-Length in full before the 1 MB check; bounded only by the 60 s timeout; source is our own origin. Low risk, deferred.
+
+## Step 5 build notes (Bob, 2026-09-30; worktree `doc-tools-kr-step5`, branch `step5` off 9c4e019, built in parallel with Step 4)
+
+### Dependencies (exact pins; licences)
+- `@rhwp/core@0.8.6` (MIT). Crate notices from upstream `THIRD_PARTY_LICENSES.md` (tag v0.8.6) are in `licenses/third-party/rhwp/` (full file + `CRATES.md` extract that /licenses/ embeds + the Apache-2.0 text). Crates: MIT, Apache-2.0 (incl. dual), BSD-2/3, Zlib, ISC, Unicode-DFS, 0BSD, Unlicense/CC0/WTFPL only as alternatives to MIT/Apache.
+  - `rhwp_bg.wasm` SHA-256 `8000e4ce320b7994dca6bcd58be0c862144c7b805576504e523a420439da658b` (pinned in `scripts/vendor-rhwp.mjs`), 9.48 MiB raw, 3.0 MiB brotli q5.
+- `@fontsource/noto-serif-kr@5.3.0`, `@fontsource/noto-sans-kr@5.3.0`, `@fontsource/nanum-myeongjo@5.3.0`, `@fontsource/nanum-gothic@5.3.0` (fonts OFL-1.1; the packages ship the OFL text only). All four have 400 and 700 with the Korean unicode-range slices (no Flag).
+- Fallback face "Anolim HWP Fallback": subset of Noto Sans CJK KR Regular 2.004 (OFL-1.1, no Reserved Font Name in its LICENSE or name table), 1.9 KiB, committed as `scripts/fonts/anolim-hwp-fallback.woff2`. cmap probe (harfbuzzjs): Noto Serif/Sans KR 400 lack U+119E and U+2027; Nanum Myeongjo/Gothic and Pretendard also lack U+329E; Noto Sans Symbols 2 has none; Noto Sans CJK KR has all four.
+- Dev: `jsdom@30.1.1` (MIT) for the svg-dom unit tests.
+- `check:licenses` OK, 30 production packages.
+
+### Decisions (reasonable calls; each is in REVIEW-REQUEST)
+- **Worker:** rhwp initialises in a module worker in Chromium, Firefox and WebKit (probed first), so there is no main-thread path. The scan runs in the worker before the engine loads (a non-HWP, password or damaged file never downloads the wasm).
+- **Full render is page-driven** (`render {i}` one at a time); no `renderAll` message. A cancel is a run token; the worker keeps the document for the lazy viewer.
+- **Build hidden:** during a full render the preview is `display:none`. With ~860 unicode-range faces every arriving font slice re-lays out all text shown so far; a visible build was quadratic (adm28 20 s → 6.6 s). Downscale runs after the pages are shown (it needs layout).
+- **Fonts settle:** `fontsSettled()` repeats `document.fonts.ready` until `status === 'loaded'` (WebKit resolves `ready` and then starts more slice loads). Save is enabled only after that.
+- **rewriteFonts bug found by the harness:** HEAVY faces got a second `font-weight` next to rhwp's `font-weight="bold"`; XML DOMParser rejects duplicate attributes (the spike used innerHTML, which keeps the first). Now the existing value is replaced. Without the fix adm02 lost 4 pages and law09 1 page (placeholders).
+- **Double wasm:** Vite emitted a second `rhwp_bg.wasm` from the glue's `new URL('rhwp_bg.wasm', import.meta.url)`. Stopped by a pre-transform plugin (`scripts/lib/vite-rhwp.mjs`, worker plugins in `astro.config.mjs`) that replaces the pattern with a throw (init always receives the compiled module). check-dist asserts exactly one copy.
+- **wasm size constant** comes from `src/generated/rhwp.json` (written by vendor-rhwp) instead of a Vite `define`: same build-time constant, no astro.config change.
+- **Font CSS** is written with relative URLs, unquoted family names and faces sorted by unicode-range so gzip encodes each shared range list once: 143 KB → 30.3 KB gzip (Flag: brief 30 KB).
+- **/licenses/ dedupe:** byte-identical licence texts are printed once, later entries point to it ("위 … 와 같은 전문입니다"). Needed to keep the SW precache ≤ 450 KB (Apache-2.0 was printed 4 times).
+- **Guidance data** is in the lazy chunk (initial JS 9.7 KB); the help section is server-rendered from the same data.
+- **FAQPage JSON-LD** on /hwp-to-pdf/ only, as the Step 5 brief says (the program brief §5 says no FAQPage; the step brief wins).
+- **RelatedTools** got an optional `only` prop (PDF 합치기, PDF 용량 줄이기 on this page).
+- **Error beacon:** not wired for this tool (BeaconTool is a union that Step 4 also edits; the beacon is off). Known Gap.
+- **E2E port:** `playwright.config.ts` reads `E2E_PORT` (default 4173) so this build was tested on 4392 next to the Step 4 build.
+- **Ink baseline:** `hwp-baseline.json` ink is re-measured with the harness's pdf.js metric on the spike's own PDFs; compare.py used PyMuPDF, which scores the same PDF up to 0.09 differently (law22 0.794 vs 0.706), and turned a renderer difference into "auto-broken" for kr10 and law22.
+
+### Known Gaps (Step 5)
+- Everything in the brief's Out of Scope (no-dialog download, batch, HWPML, editing, R1–R13 beyond the four workarounds, middle-dot width, HWP 3.0 feature scan, /hwp-viewer/, viewer search/zoom/thumbnails).
+- Real devices (mid-range Android, iPhone, iOS picker for .hwp, Safari macOS print) and Gate 11 label strings.
+- Error beacon not wired for hwp-to-pdf.
+- Precache is at 448.0 / 450 KB; the Step 4 merge adds a page and will need Arch's call (raise the budget or drop /licenses/ from the precache).
+- Opaque PNG photos that are not oversized stay PNG (see the regress rule-5 Flag).

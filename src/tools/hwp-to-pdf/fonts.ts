@@ -24,7 +24,27 @@ export function loadHwpFonts(): Promise<void> {
   return loaded;
 }
 
+const frame = (): Promise<void> => new Promise((r) => {
+  const t = setTimeout(r, 100);
+  requestAnimationFrame(() => {
+    clearTimeout(t);
+    r();
+  });
+});
+
+/**
+ * document.fonts.ready, repeated until no face is loading. WebKit resolves `ready` and then starts more slice
+ * loads on the next layout, so one await is not enough there (bounded: 50 rounds).
+ */
+export async function fontsSettled(): Promise<void> {
+  for (let i = 0; i < 50; i++) {
+    await document.fonts.ready;
+    await frame();
+    if (document.fonts.status === 'loaded') return;
+  }
+}
+
 export async function hwpFontsReady(): Promise<void> {
   await loadHwpFonts();
-  await document.fonts.ready;
+  await fontsSettled();
 }

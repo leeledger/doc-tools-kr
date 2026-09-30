@@ -6,6 +6,9 @@ WebAssembly engine are listed; the upstream repository and remarks columns are l
 
 ## Rust crates (direct dependencies of rhwp 0.8.6)
 
+Left out: resvg, skia-safe and subsecond (optional native features) and wasm-bindgen-test (tests), which the
+WebAssembly build does not contain.
+
 | Crate | Version | License |
 | --- | --- | --- |
 | aes | 0.9.2 | MIT OR Apache-2.0 |
@@ -32,16 +35,13 @@ WebAssembly engine are listed; the upstream repository and remarks columns are l
 | pcx | 0.2.5 | MIT OR Apache-2.0 OR WTFPL |
 | pdf-writer | 0.12.1 | MIT OR Apache-2.0 |
 | quick-xml | 0.41.0 | MIT |
-| resvg | 0.47.0 | Apache-2.0 OR MIT |
 | roxmltree | 0.21.1 | MIT OR Apache-2.0 |
 | serde | 1.0.229 | MIT OR Apache-2.0 |
 | serde_json | 1.0.151 | MIT OR Apache-2.0 |
 | sha1 | 0.11.0 | MIT OR Apache-2.0 |
 | sha2 | 0.11.0 | MIT OR Apache-2.0 |
-| skia-safe | 0.99.0 | MIT |
 | snafu | 0.9.2 | MIT OR Apache-2.0 |
 | strum | 0.28.0 | MIT |
-| subsecond | 0.7.10 | MIT OR Apache-2.0 |
 | subsetter | 0.2.6 | MIT OR Apache-2.0 |
 | svg2pdf | 0.13.0 | MIT OR Apache-2.0 |
 | svgtypes | 0.16.1 | Apache-2.0 OR MIT |
@@ -51,7 +51,6 @@ WebAssembly engine are listed; the upstream repository and remarks columns are l
 | unicode-width | 0.2.2 | MIT OR Apache-2.0 |
 | usvg | 0.45.1 | Apache-2.0 OR MIT |
 | wasm-bindgen | 0.2.125 | MIT OR Apache-2.0 |
-| wasm-bindgen-test | 0.3.75 | MIT OR Apache-2.0 |
 | web-sys | 0.3.102 | MIT OR Apache-2.0 |
 | zip | 8.6.0 | MIT |
 

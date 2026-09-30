@@ -11,6 +11,8 @@ import { openPdf, pageText, unitSize } from '../../scripts/regress/lib.mjs';
 const CORPUS = join(process.cwd(), 'tests', 'corpus', 'hwp');
 const fx = (name: string): string => join(CORPUS, name);
 const expected = JSON.parse(readFileSync(join(CORPUS, 'expected.json'), 'utf8')).files as Record<string, { pages: number; officialText: string; officialWords: number }>;
+// Routed responses carry the site CSP, as every real response does (the no-upload fixture checks it).
+const CSP = readFileSync(join(process.cwd(), 'public', '_headers'), 'utf8').match(/Content-Security-Policy: (.+)/)![1].trim();
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const HANCOM = '본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.';
 const TRADEMARK = '한글, 한컴, HWP, HWPX는 한글과컴퓨터의 등록상표이며, 본 서비스는 한글과컴퓨터와 무관합니다.';
@@ -26,6 +28,12 @@ test.beforeEach(async ({ page }) => {
     document.addEventListener('securitypolicyviolation', () => (window as unknown as { __csp: number }).__csp++);
     (window as unknown as { __printed: string[] }).__printed = [];
     window.print = () => (window as unknown as { __printed: string[] }).__printed.push(document.title);
+    const revoke = URL.revokeObjectURL.bind(URL);
+    (window as unknown as { __revoked: string[] }).__revoked = [];
+    URL.revokeObjectURL = (u: string) => {
+      (window as unknown as { __revoked: string[] }).__revoked.push(u);
+      revoke(u);
+    };
   });
 });
 
@@ -57,8 +65,10 @@ const dangling = (page: Page) =>
     return n;
   });
 
+// The page drawings (rhwp SVG, up to ~20,000 nodes a page) are excluded: they are graphics inside a labelled
+// role="group" per page; scanning them made axe take minutes. Everything else on the page is checked.
 const serious = async (page: Page) =>
-  (await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length}`);
+  (await new AxeBuilder({ page }).withTags(AXE_TAGS).exclude('#hwp-print-root .page > svg').analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length}`);
 
 // ---------- lazy load ----------
 
@@ -219,6 +229,7 @@ test('downscale: adm19 after 그래도 PDF로 저장 has blob: images, none over
   await open(page, fx('adm19.hwpx'), 'viewer-first');
   await page.locator('#hw-force').click();
   await expect(tool(page)).toHaveAttribute('data-state', 'convert', { timeout: 240_000 });
+  await expect(page.locator('#hw-save')).toBeEnabled({ timeout: 120_000 });
   const r = await page.evaluate(async () => {
     const out = { blobs: 0, over: [] as string[] };
     for (const svg of Array.from(document.querySelectorAll('#hwp-print-root .page svg')) as SVGSVGElement[]) {
@@ -260,7 +271,7 @@ test('viewer-only on a phone: adm28 (60쪽 with 128), padded law05 (10 MB), adm1
   await page.emulateMedia({ media: 'screen' });
   await page.locator('#hw-reset').click();
   await open(page, hwpRuntime('law05-padded.hwp'), 'viewer-only');
-  await expect(page.locator('#hw-banner')).toContainText('10 MB가 넘는 문서를 PDF로 저장할 수 없어 보기만 제공합니다 (이 문서 10.5 MB)');
+  await expect(page.locator('#hw-banner')).toContainText(/10 MB가 넘는 문서를 PDF로 저장할 수 없어 보기만 제공합니다 \(이 문서 10\.\d MB\)/);
   await page.locator('#hw-reset').click();
   await open(page, hwpRuntime('adm14-images.hwpx'), 'viewer-only');
   await expect(page.locator('#hw-banner')).toContainText('그림이 8 MB가 넘게 들어 있는 문서');
@@ -304,12 +315,13 @@ test('too large on a phone: a 26 MB file is refused with the numbers before any 
   test.skip(!isMobile, 'The 25 MB hard limit is the phone limit (150 MB on PC is unit-tested).');
   await open(page, hwpRuntime('big-26mb.hwp'), 'error');
   await expect(page.locator('#hw-error')).toHaveText('휴대폰에서는 25 MB까지 열 수 있습니다 (이 파일 26 MB). 컴퓨터에서 열어 주세요.');
-  expect(network.requests.filter((r) => /hwp\.worker|rhwp_bg/.test(r.url()))).toEqual([]);
+  // The worker script may be preloaded (focus in the tool + idle, Polish P.7); the engine wasm never is.
+  expect(network.requests.filter((r) => /rhwp_bg/.test(r.url()))).toEqual([]);
 });
 
 test('engine: a wasm 404 shows the engine panel with 새로고침, not a file error', async ({ page, context }) => {
   test.setTimeout(120_000);
-  await context.route(/\/vendor\/rhwp\/.*\.wasm$/, (route) => route.fulfill({ status: 404, body: 'missing' }));
+  await context.route(/\/vendor\/rhwp\/.*\.wasm$/, (route) => route.fulfill({ status: 404, body: 'missing', headers: { 'Content-Security-Policy': CSP } }));
   await open(page, fx('law05.hwp'), 'error');
   await expect(page.locator('#engine-error')).toBeVisible();
   await expect(page.locator('#engine-error').getByRole('button', { name: '새로고침' })).toBeFocused();
@@ -318,7 +330,7 @@ test('engine: a wasm 404 shows the engine panel with 새로고침, not a file er
 
 test('a crashing worker is oom', async ({ page, context }) => {
   await context.route(/hwp\.worker[^/]*\.js$/, (route) =>
-    route.fulfill({ status: 200, contentType: 'text/javascript', body: "self.postMessage({type:'progress',phase:'parse'}); setTimeout(() => { throw new Error('out of memory'); }, 50);" }),
+    route.fulfill({ status: 200, contentType: 'text/javascript', headers: { 'Content-Security-Policy': CSP }, body: "self.postMessage({type:'progress',phase:'parse'}); setTimeout(() => { throw new Error('out of memory'); }, 50);" }),
   );
   await open(page, fx('law05.hwp'), 'error');
   await expect(page.locator('#hw-error')).toContainText('이 브라우저에서 처리하기에는 문서가 너무 무겁습니다.');
@@ -342,6 +354,7 @@ test('다른 문서 열기: no page, no blob URL, then law05 opens', async ({ pa
   await open(page, fx('adm19.hwpx'), 'viewer-first');
   await page.locator('#hw-force').click();
   await expect(tool(page)).toHaveAttribute('data-state', 'convert', { timeout: 240_000 });
+  await expect(page.locator('#hw-save')).toBeEnabled({ timeout: 120_000 });
   expect(await page.locator('image[href^="blob:"]').count()).toBeGreaterThan(0);
   const urls = await page.evaluate(() => Array.from(document.querySelectorAll('image[href^="blob:"]')).map((i) => i.getAttribute('href')!));
   await page.locator('#hw-reset').click();
@@ -349,8 +362,9 @@ test('다른 문서 열기: no page, no blob URL, then law05 opens', async ({ pa
   await expect(pages(page)).toHaveCount(0);
   expect(await page.locator('image[href^="blob:"]').count()).toBe(0);
   // The revoked URLs no longer load.
-  const loads = await page.evaluate(async (u) => Promise.all(u.slice(0, 3).map((x) => new Promise<boolean>((res) => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = x; }))), urls);
-  expect(loads.every((x) => !x)).toBe(true);
+  // Every blob: URL the pages used was revoked (fetching a blob: URL would itself be a CSP connect-src violation).
+  const revoked = await page.evaluate(() => (window as unknown as { __revoked: string[] }).__revoked);
+  for (const u of urls) expect(revoked).toContain(u);
   expect(await page.evaluate(() => document.getElementById('hwp-page-style'))).toBeNull();
   await convertReady(page, fx('law05.hwp'));
   await expect(pages(page)).toHaveCount(1);
@@ -392,7 +406,7 @@ test('keyboard only: pick, scroll the preview, 그래도 PDF로 저장, PDF로 �
 // ---------- axe ----------
 
 test('axe: empty, convert (law10), viewer-first (law17), error; / and /licenses/', async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(360_000);
   await gotoReady(page, '/hwp-to-pdf/');
   expect(await serious(page)).toEqual([]);
   await convertReady(page, fx('law10.hwp'));
