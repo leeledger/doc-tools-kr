@@ -14,11 +14,13 @@ export interface DeviceLimits {
   capPages: number;
   capWasmBytes: number;
   capImageBytes: number;
+  /** Total inflated section bytes the scan may produce (zip-bomb guard; Arch, Step 5 round 3). */
+  inflateCap: number;
 }
 
 export const LIMITS: Record<Device, DeviceLimits> = {
-  desktop: { hardBytes: 150 * MB_DEC, capBytes: 80 * MB_DEC, capPages: 300, capWasmBytes: 1024 * MIB, capImageBytes: 60 * MB_DEC },
-  mobile: { hardBytes: 25 * MB_DEC, capBytes: 10 * MB_DEC, capPages: 60, capWasmBytes: 256 * MIB, capImageBytes: 8 * MB_DEC },
+  desktop: { hardBytes: 150 * MB_DEC, capBytes: 80 * MB_DEC, capPages: 300, capWasmBytes: 1024 * MIB, capImageBytes: 60 * MB_DEC, inflateCap: 512 * MB_DEC },
+  mobile: { hardBytes: 25 * MB_DEC, capBytes: 10 * MB_DEC, capPages: 60, capWasmBytes: 256 * MIB, capImageBytes: 8 * MB_DEC, inflateCap: 128 * MB_DEC },
 };
 
 /** Guard (viewer-first), the same on every device. */

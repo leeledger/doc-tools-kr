@@ -313,7 +313,8 @@ const ours = rows.filter((r) => r.routed).map((r) => r.key).sort();
 const guardRouted = rows.filter((r) => r.ok && r.route.desktop.reasons.some((x) => !CAP_KINDS.includes(x.kind))).map((r) => r.key);
 const capRouted = rows.filter((r) => r.ok && r.route.desktop.reasons.some((x) => CAP_KINDS.includes(x.kind)));
 const capLines = capRouted.map((r) => `${r.key}: ${r.route.desktop.reasons.filter((x) => CAP_KINDS.includes(x.kind)).map((x) => `${x.kind} ${x.value} > ${x.limit}`).join(', ')}`);
-const parityDiff = haveCorpus ? [...guardRouted.filter((k) => !GUARDED_KEYS.includes(k)).map((k) => `+${k}`), ...GUARDED_KEYS.filter((k) => keys.includes(k) && !guardRouted.includes(k)).map((k) => `-${k}`)] : [];
+// On a --fixtures-only run this compares the fixture subset (the files actually run) only.
+const parityDiff = [...guardRouted.filter((k) => !GUARDED_KEYS.includes(k)).map((k) => `+${k}`), ...GUARDED_KEYS.filter((k) => keys.includes(k) && !guardRouted.includes(k)).map((k) => `-${k}`)];
 for (const d of parityDiff) {
   const r = results[d.slice(1)];
   fails.push(`rule 2: guard parity ${d} (pages ${r?.pages}, equations ${r?.equations}, textboxes ${r?.textboxes}, reasons ${JSON.stringify(r?.route?.desktop.reasons)})`);
@@ -360,7 +361,7 @@ out('|---|---|---|---|---|---|');
 for (const [name, s] of [['all', all], ['non-routed (TS scan + route.ts, desktop)', non], ['routed', routedSet]]) out(`| ${name} | ${s.n} | ${s.broken} | ${pct(s.rate)} | ${pct(s.lo)}–${pct(s.hi)} | ${s.keys.join(' ')} |`);
 out('');
 out(`Routed set (desktop): ${ours.join(' ')}`);
-out(`Guard parity with the 19 spike keys: ${parityDiff.length ? parityDiff.join(' ') : 'exact match'}`);
+out(partial ? `Guard parity: ${parityDiff.length ? parityDiff.join(' ') : 'fixture subset match'} (${guardRouted.length} guard-routed of ${keys.length} fixtures; the full check needs CORPUS_DIR)` : `Guard parity with the 19 spike keys: ${parityDiff.length ? parityDiff.join(' ') : 'exact match'}`);
 out(`Cap-routed (desktop): ${capLines.length ? capLines.join('; ') : 'none'}`);
 out('');
 out(`Size rule: ${sizeRows.length} non-routed files with ≥ 1 MB of images and a twin; median ratio ${median?.toFixed(2) ?? '-'}; ` + sizeRows.map((r) => `${r.key} ${(r.pdfBytes / r.officialBytes).toFixed(2)}×`).join(', '));

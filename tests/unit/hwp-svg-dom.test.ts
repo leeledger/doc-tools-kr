@@ -21,7 +21,7 @@ describe('parsePageSvg', () => {
 
 describe('sanitize', () => {
   it('removes each active element and counts it', () => {
-    for (const tag of ['script', 'foreignObject', 'iframe', 'object', 'embed', 'animate', 'set', 'animateTransform', 'animateMotion']) {
+    for (const tag of ['script', 'style', 'foreignObject', 'iframe', 'meta', 'link', 'form', 'object', 'embed', 'animate', 'set', 'animateTransform', 'animateMotion']) {
       const svg = parse(`<g><${tag}/></g><rect/>`);
       expect(sanitize(svg), tag).toBe(1);
       expect(svg.getElementsByTagName(tag).length).toBe(0);
@@ -39,20 +39,48 @@ describe('sanitize', () => {
     expect(rect.getAttribute('fill')).toBe('red');
   });
 
-  it('keeps #fragments, data:image and blob: on <image>; drops external and non-image data hrefs', () => {
+  it('keeps #fragments and data:image on <image>; drops blob:, external and non-image data hrefs', () => {
     const svg = parse(
       '<use href="#p0_a"/><use xlink:href="#p0_b"/>' +
         '<image href="data:image/png;base64,iVBORw0KGgo="/><image href="data:image/svg+xml;base64,PHN2Zy8+"/><image href="blob:http://x/1"/>' +
         '<image href="https://evil.example/a.png"/><image xlink:href="javascript:alert(1)"/><use href="data:image/png;base64,AA=="/>',
     );
-    expect(sanitize(svg)).toBe(3);
+    expect(sanitize(svg)).toBe(4);
     const hrefs = Array.from(svg.querySelectorAll('image, use')).map((e) => e.getAttribute('href') ?? e.getAttribute('xlink:href'));
-    expect(hrefs).toEqual(['#p0_a', '#p0_b', 'data:image/png;base64,iVBORw0KGgo=', 'data:image/svg+xml;base64,PHN2Zy8+', 'blob:http://x/1', null, null, null]);
+    expect(hrefs).toEqual(['#p0_a', '#p0_b', 'data:image/png;base64,iVBORw0KGgo=', 'data:image/svg+xml;base64,PHN2Zy8+', null, null, null, null]);
   });
 
   it('removes nothing from a clean rhwp-shaped page', () => {
     const svg = parse('<defs><clipPath id="p0_body-clip-3"><rect x="1" y="1" width="9" height="9"/></clipPath></defs><g clip-path="url(#p0_body-clip-3)"><text x="1" y="2" font-family="x">가</text></g>');
     expect(sanitize(svg)).toBe(0);
+  });
+});
+
+describe('sanitize: elements outside the SVG namespace (Richard round 2, Should Fix 1)', () => {
+  const XHTML = 'http://www.w3.org/1999/xhtml';
+  it('an XHTML meta refresh is removed', () => {
+    const svg = parse(`<g><meta xmlns="${XHTML}" http-equiv="refresh" content="0;url=https://evil.example/"/></g><rect/>`);
+    expect(sanitize(svg)).toBe(1);
+    expect(svg.getElementsByTagNameNS(XHTML, 'meta').length).toBe(0);
+    expect(svg.getElementsByTagName('rect').length).toBe(1);
+  });
+
+  it('SVG and XHTML <style> are removed', () => {
+    const svg = parse(`<style>body{display:none}</style><g><style xmlns="${XHTML}">body{background:red}</style></g><rect/>`);
+    expect(sanitize(svg)).toBe(2);
+    expect(svg.getElementsByTagName('style').length).toBe(0);
+  });
+
+  it('an XHTML <form> (and whatever it holds) and <link> are removed', () => {
+    const svg = parse(`<g><form xmlns="${XHTML}" action="https://evil.example/"><input name="x"/></form><link xmlns="${XHTML}" rel="stylesheet" href="https://evil.example/x.css"/></g>`);
+    expect(sanitize(svg)).toBe(2);
+    expect(svg.getElementsByTagNameNS(XHTML, '*').length).toBe(0);
+  });
+
+  it('a style attribute with an external url() is dropped; a fragment url() stays', () => {
+    const svg = parse('<rect style="fill:url(https://evil.example/x.png)"/><rect style="fill:url(#p0_g)"/><rect style="fill:red"/>');
+    expect(sanitize(svg)).toBe(1);
+    expect(Array.from(svg.querySelectorAll('rect')).map((r) => r.getAttribute('style'))).toEqual([null, 'fill:url(#p0_g)', 'fill:red']);
   });
 });
 

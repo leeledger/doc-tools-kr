@@ -2,7 +2,7 @@
 // through their local header. ZIP64 is refused (UnsupportedError): a file that needs it is far over every
 // cap. Structural damage is a CorruptError; an entry over the inflate cap is a CorruptError too.
 import { CorruptError, UnsupportedError } from './errors';
-import { INFLATE_CAP, InflateCapError, inflateRawCapped } from './inflate';
+import { INFLATE_CAP, InflateCapError, inflateRawCapped, inflateRawStream } from './inflate';
 
 export interface ZipEntry {
   name: string;
@@ -76,6 +76,32 @@ export function readEntry(bytes: Uint8Array, e: ZipEntry, cap: number = INFLATE_
   if (e.method !== 8) throw new CorruptError(`zip: ${e.name} uses compression method ${e.method}`);
   try {
     return inflateRawCapped(data, cap);
+  } catch (err) {
+    if (err instanceof InflateCapError) throw new CorruptError(`zip: ${e.name} inflates past the cap`);
+    throw new CorruptError(`zip: ${e.name} does not inflate`);
+  }
+}
+
+/**
+ * Streams the entry's data into `onChunk` without holding the inflated output, at most `cap` bytes (the
+ * zip-bomb guard for the section XML). Returns the output size. CorruptError past the cap or when it does
+ * not inflate.
+ */
+export function streamEntry(bytes: Uint8Array, e: ZipEntry, cap: number, onChunk: (chunk: Uint8Array) => void): number {
+  const dv = view(bytes);
+  if (e.offset + 30 > bytes.length || dv.getUint32(e.offset, true) !== LOC_SIG) throw new CorruptError(`zip: bad local header for ${e.name}`);
+  const start = e.offset + 30 + dv.getUint16(e.offset + 26, true) + dv.getUint16(e.offset + 28, true);
+  const end = start + e.compressedSize;
+  if (end > bytes.length) throw new CorruptError(`zip: ${e.name} runs past the end of the file`);
+  const data = bytes.subarray(start, end);
+  if (e.method === 0) {
+    if (data.length > cap) throw new CorruptError(`zip: ${e.name} over the size cap`);
+    for (let off = 0; off < data.length; off += 65536) onChunk(data.subarray(off, Math.min(off + 65536, data.length)));
+    return data.length;
+  }
+  if (e.method !== 8) throw new CorruptError(`zip: ${e.name} uses compression method ${e.method}`);
+  try {
+    return inflateRawStream(data, cap, onChunk);
   } catch (err) {
     if (err instanceof InflateCapError) throw new CorruptError(`zip: ${e.name} inflates past the cap`);
     throw new CorruptError(`zip: ${e.name} does not inflate`);

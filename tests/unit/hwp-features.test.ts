@@ -118,3 +118,54 @@ describe('features: flags and errors', () => {
     expect(two.tag88).toBe(1);
   });
 });
+
+describe('streaming scan (Richard round 2, Should Fix 3; Arch caps 512 MB desktop, 128 MB phone)', () => {
+  it('ByteCounter matches the features.py regex on the decoded text, for every split point', async () => {
+    const { ByteCounter } = await import('../../src/lib/hwp/features');
+    const text = `<hp:equation x/><hp:equationX/><hp:equation_/><hp:drawText/> <<hp:equation${String.fromCharCode(10)}<hp:equation가<hp:equation`;
+    const re = new RegExp('<hp:equation' + String.fromCharCode(92) + 'b', 'g');
+    const whole = (text.match(re) ?? []).length;
+    expect(whole).toBe(4);
+    const bytes = new TextEncoder().encode(text);
+    for (let cut = 0; cut <= bytes.length; cut++) {
+      for (const cut2 of [cut, Math.min(bytes.length, cut + 5)]) {
+        const c = new ByteCounter('<hp:equation');
+        c.push(bytes.subarray(0, cut));
+        c.push(bytes.subarray(cut, cut2));
+        c.push(bytes.subarray(cut2));
+        c.end();
+        expect(c.count, `cuts ${cut}/${cut2}`).toBe(whole);
+      }
+    }
+  });
+
+  it('RecordWalker fed one byte at a time counts what the whole-buffer walk counts', async () => {
+    const { RecordWalker } = await import('../../src/lib/hwp/features');
+    const rec = (tag: number, payload: number[]): number[] => {
+      const h = (tag & 0x3ff) | (payload.length << 20);
+      return [h & 255, (h >>> 8) & 255, (h >>> 16) & 255, h >>> 24, ...payload];
+    };
+    const id = (s: string): number[] => [s.charCodeAt(3), s.charCodeAt(2), s.charCodeAt(1), s.charCodeAt(0)];
+    const ext = (tag: number, payload: number[]): number[] => {
+      const h = (tag & 0x3ff) | (0xfff << 20);
+      const n = payload.length;
+      return [h & 255, (h >>> 8) & 255, (h >>> 16) & 255, h >>> 24, n & 255, (n >>> 8) & 255, (n >>> 16) & 255, n >>> 24, ...payload];
+    };
+    const buf = Uint8Array.from([...rec(88, []), ...rec(71, id('eqed')), ...ext(76, [...id('$rec'), 1, 2, 3]), ...rec(76, [1, 2]), ...rec(76, id('$pol')), ...rec(71, id('eq'))]);
+    const whole = new RecordWalker();
+    whole.push(buf);
+    const bytewise = new RecordWalker();
+    for (const b of buf) bytewise.push(Uint8Array.of(b));
+    expect(whole.counts).toEqual({ tag88: 1, eqed: 1, textboxes: 2 });
+    expect(bytewise.counts).toEqual(whole.counts);
+  });
+
+  it('a 150 MB section passes the desktop cap and is corrupt under the 128 MB phone cap', async () => {
+    const { hwpxZipBomb } = await import('../helpers/hwp');
+    const { LIMITS } = await import('../../src/lib/hwp/limits');
+    const bomb = hwpxZipBomb(150_000_000);
+    expect(bomb.length).toBeLessThan(1_000_000);
+    expect(scanFeatures(bomb, { inflateCap: LIMITS.desktop.inflateCap }).format).toBe('hwpx');
+    expect(code(() => scanFeatures(bomb, { inflateCap: LIMITS.mobile.inflateCap }))).toBe('corrupt');
+  });
+});

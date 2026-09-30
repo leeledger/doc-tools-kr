@@ -37,19 +37,49 @@ export function removePageStyle(): void {
   document.getElementById(STYLE_ID)?.remove();
 }
 
+/** When neither afterprint nor a return to the page ends the swap (some mobile engines), restore after this. */
+export const PRINT_FALLBACK_MS = 60_000;
+
+interface Swap {
+  original: string;
+  end: (notify: boolean) => void;
+}
+let current: Swap | null = null;
+
 /**
  * Waits for the fonts, swaps the title to `title` (Chrome and Edge use it as the default PDF name) and
- * opens the print dialog. `onAfter` runs once on afterprint, after the title is restored.
+ * opens the print dialog. The title is restored and `onAfter` runs once, on afterprint, or when the page
+ * becomes visible again after print() returned, or after PRINT_FALLBACK_MS (afterprint never fires on some
+ * mobile engines). A second call first ends a pending swap, so the original title is never lost (Richard,
+ * Step 5 round 2, Should Fix 6).
  */
-export async function printDocument(title: string, onAfter: () => void): Promise<void> {
+export async function printDocument(title: string, onAfter: () => void, fallbackMs: number = PRINT_FALLBACK_MS): Promise<void> {
   await fontsSettled();
-  const previous = document.title;
-  const after = (): void => {
-    window.removeEventListener('afterprint', after);
-    document.title = previous;
-    onAfter();
+  current?.end(false);
+  const original = document.title;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const onAfterPrint = (): void => swap.end(true);
+  const onVisible = (): void => {
+    if (document.visibilityState === 'visible') swap.end(true);
   };
-  window.addEventListener('afterprint', after);
+  const swap: Swap = {
+    original,
+    end(notify) {
+      if (current !== swap) return;
+      current = null;
+      window.removeEventListener('afterprint', onAfterPrint);
+      document.removeEventListener('visibilitychange', onVisible);
+      if (timer !== undefined) clearTimeout(timer);
+      document.title = original;
+      if (notify) onAfter();
+    },
+  };
+  current = swap;
+  window.addEventListener('afterprint', onAfterPrint);
   document.title = title;
   window.print();
+  if (current === swap) {
+    document.addEventListener('visibilitychange', onVisible);
+    timer = setTimeout(() => swap.end(true), fallbackMs);
+  }
 }

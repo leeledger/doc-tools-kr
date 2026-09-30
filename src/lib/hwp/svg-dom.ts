@@ -24,37 +24,43 @@ export function parsePageSvg(markup: string, parser: DOMParser = new DOMParser()
   return { svg: root as unknown as SVGSVGElement, failed: false };
 }
 
-const REMOVE = new Set(['script', 'foreignObject', 'iframe', 'object', 'embed', 'animate', 'set', 'animateTransform', 'animateMotion']);
-const SAFE_IMAGE_HREF = /^(data:image\/|blob:)/i;
+// Allow-list (Richard, Step 5 round 2, Should Fix 1): only SVG-namespace elements survive (an XHTML <meta
+// http-equiv="refresh">, <style> or <form> inside a page SVG would otherwise be adopted into the HTML
+// document), and these SVG elements are removed as well.
+const REMOVE = new Set(['script', 'style', 'foreignObject', 'iframe', 'meta', 'link', 'form', 'object', 'embed', 'animate', 'set', 'animateTransform', 'animateMotion']);
+const DATA_IMAGE = /^data:image\//i;
+const STYLE_URL = /url\(\s*(['"]?)\s*([^'")\s]*)/gi;
 
 /**
- * Defence in depth (the CSP already blocks inline script): removes active elements, unwraps <a> (keeping
- * its children), drops every on* attribute and every href that is not a same-document fragment, or on
- * <image> a data:image/… or blob: URL. Returns the number of removals (elements, unwraps and attributes).
+ * Defence in depth (the CSP already blocks inline script). Removes every element outside the SVG namespace
+ * and the REMOVE elements, unwraps <a> (keeping its children), drops every on* attribute, every href that is
+ * not a same-document fragment (or, on <image>, a data:image/… URL), and every style attribute with a url()
+ * that is not a fragment. Returns the number of removals (elements, unwraps and attributes).
  */
 export function sanitize(svg: Element): number {
   let removed = 0;
   const all = [svg, ...Array.from(svg.getElementsByTagName('*'))];
   for (const el of all) {
-    if (!el.isConnected && el !== svg) continue;
+    if (el !== svg && !svg.contains(el)) continue; // inside an element removed above
     const name = el.localName;
-    if (REMOVE.has(name)) {
+    if (el !== svg && (el.namespaceURI !== SVG_NS || REMOVE.has(name))) {
       el.remove();
       removed++;
       continue;
     }
     for (const attr of Array.from(el.attributes)) {
       const local = attr.localName.toLowerCase();
-      if (local.startsWith('on')) {
+      let drop = false;
+      if (local.startsWith('on')) drop = true;
+      else if (local === 'href') {
+        const v = attr.value.trim();
+        drop = !(v.startsWith('#') || (name === 'image' && DATA_IMAGE.test(v)));
+      } else if (local === 'style') {
+        for (const m of attr.value.matchAll(STYLE_URL)) if (!m[2].startsWith('#')) drop = true;
+      }
+      if (drop) {
         el.removeAttributeNode(attr);
         removed++;
-      } else if (local === 'href') {
-        const v = attr.value.trim();
-        const ok = v.startsWith('#') || (name === 'image' && SAFE_IMAGE_HREF.test(v));
-        if (!ok) {
-          el.removeAttributeNode(attr);
-          removed++;
-        }
       }
     }
     if (name === 'a' && el.parentNode) {

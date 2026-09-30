@@ -1,130 +1,100 @@
-# Review Feedback — Step 4 (여권·증명사진 규격 맞추기, /id-photo/)
+# Review Feedback — Step 5 (HWP PDF 변환 /hwp-to-pdf/), round 2
 Date: 2026-09-30
-Reviewer: Richard
-Diff: uncommitted working tree against HEAD 9c4e019
-Ready for Builder: YES (round 2, 2026-09-30; round-1 findings below are resolved)
+Reviewer: Richard. Worktree C:\dev\doc-tools-kr-step5, branch step5 at 22990da; diff ee507ab..step5.
+Ready for Builder: YES
 
-## What I ran myself
+## Gates I ran myself (merged tree)
 | Gate | Result |
 |---|---|
-| `npm run check` | 0 errors, 0 warnings, 0 hints (172 files) |
-| `vitest run` | 393/393 (18 files) |
-| `npm run build` (flag default = 0, the shipping build) | green; check-dist OK, 338 files; UI fonts 178.0/180 KB; precache 297.5/450 KB, `/licenses/` not in sw.js; `check-dist --no-mediapipe` OK |
-| grep of the flag-0 dist for `mediapipe`, `FaceLandmarker`, `odml`, `vision_wasm`, `tasks-vision` | no hits. `dist/vendor` holds only pdfjs and qpdf |
-| `check:licenses`, flag 0 | OK: 26 packages, 3 components, 0 exceptions |
-| `PUBLIC_ID_PHOTO_AUTOFRAME=1 npm run build` | green; vision_bundle 43.9/50, loaders 76.2/76.1 of 90, wasm 11,481 KB raw and 3,360 KB gzip, lazy total 6,736.5/7,372.8 KB, fonts 179.1/180, precache 298.4 |
-| `check:licenses`, flag 1 | FAIL on fft2d `LicenseRef-Ooura` only; Eigen exception used. This is expected; the Arch decision keeps it off |
-| e2e id-photo spec: chromium, firefox and webkit (flag-1 dist, plus dist-noauto for the kill switch) | 85 passed, 1 flaky (firefox `page.goto` timeout in `gotoReady`, the known race; passed on retry), 10 skipped (stated reasons), 0 failed |
-| lockfile | `package-lock.json` diff is +7/−0: only `@mediapipe/tasks-vision@1.0.1` with its integrity hash. The repo builds green from the restored node_modules. |
+| npm run check | 0 errors, 0 warnings, 1 hint |
+| npm test | 500/500, 25 files |
+| Build 1: PUBLIC_ID_PHOTO_AUTOFRAME=0 astro build --outDir dist-noauto, then check-dist / gen-headers / carry-assets / gen-sw with --dist dist-noauto | OK: 1210 files; precache 366.5 / 450 KB; 0 MediaPipe files; 0 FaceLandmarker strings in the JS; 0 auto-frame phrases on /id-photo/; exactly 1 rhwp_bg.wasm |
+| Build 2: npm run build (flag off) | check-dist OK. /hwp-to-pdf/ initial JS 9.9 / 30 KB; worker 20.3 / 90; lazy chunk 4.4 / 25; wasm 9.48 MiB raw (brotli q5 3.0 MiB); HWP font CSS 30.3 / 31; largest slice 48.3 KB; fallback face 1.9 KB; UI fonts 184.0 / 190; precache 366.5 KB, 23 URLs (no /licenses/, /vendor/rhwp/ or /fonts/hwp/). No MediaPipe, same as build 1 |
+| check:licenses | OK: 31 packages, 4 components (flag off) |
+| e2e hwp-to-pdf.spec.ts on chromium, firefox, webkit, mobile-chrome and mobile-safari (E2E_PORT=4395) | 88 passed, 27 skipped, 0 failed, 0 flaky. Every skip states its reason (page.pdf is Chromium-only; phone and desktop caps) |
+| regress:hwp --fixtures-only | 10/10, all pass rules pass. measure 0, sanitizer 0, dangling 0; law10 ready 2.34 s (limit 3 s); adm28 5.6 s |
+| Container fuzz (mine): 6,000 seeded truncations, bit flips, 0xFF blocks, hostile u32s and tail garbage on law05, law07, adm02 and adm14 | 0 exceptions other than HwpError; slowest input 12 ms |
+| Zip bomb (mine): a 622 KB HWPX whose section0.xml inflates to 637 MB | Rejected as corrupt after 5.7 s, but RSS peaked at +591 MB (Should Fix 3) |
+| rhwp escaping probe (mine): adm19 with markup and quotes injected into hp:t text and into the content.hpf media-type and href | No injected markup reaches the page SVG. Text is escaped glyph by glyph, and the image MIME comes from the bytes, not the manifest |
+| Manual screenshots in Chromium: empty, loaded law10, guidance, after print, viewer-first law17, error .txt; at desktop 1280, Pixel 7, dark desktop and dark Pixel 7 | Horizontal overflow 0 everywhere; 0 CSP violations; print stub called once; title restored after afterprint. The copy is clean 합니다체 and matches the brief |
 
-Manual pass on the shipping (flag-0) build in Chromium: desktop 1280, Pixel 7 and dark. I captured screenshots of the empty, adjusting, confirm-unchecked, confirm-checked, done and outside states and looked at them with Read.
-- No off-origin request, no non-GET request, no MediaPipe request, no console error. Horizontal scroll is 0 on all three.
-- **Downloaded files, parsed byte by byte by me (PIL agrees):**
-  - passport 413×531, 72,191 B, SOF0, JFIF units 1 at 300/300, markers e0,db,c0,c4,da (no APP1), EOI present, no "Exif".
-  - From the 3200×4000 spike p01 (prescale path), every preset: gosi 137×177 at 99 dpi, qnet 413×531 at 300, saramin 100×140 at 96, jobkorea 150×210 at 96, halfcard 354×472 at 300. Custom 200×250 with 10 KB gave 8,570 B at 96 dpi.
-  - Rotated +5° after zooming in gave 413×531 with real photo pixels in all four corners (no white fill).
-  - All of them are exact and under their limits.
-- **Confirmation:** save is disabled with the visible reason. The checkbox clears on every adjustment: arrow key, −, [, Home, nudge button, reset, zoom slider, rotate slider, mouse drag and preset change.
-- **Zoom and rotation limits:** zoom-in stops at s = 1 (range 1000/1000). Rotation stops at 5.0°. Zooming out to the minimum shows the hatched area, the outside block and a disabled save.
-- **Download button:** visible in the viewport on the done state at desktop (y 590 of 900) and on mobile (y 550 of 839).
-- **Copy on the page:** the six notices and the confirmation label are verbatim (e2e 11 as well). The checker link has rel noopener noreferrer, target _blank and "(새 창)". The 6 MB line is absent with the flag off.
-
-Not re-run by me: Lighthouse, qa:visual, smoke:assets, the regress suites, mobile projects in e2e. I relied on the numbers Bob reported for those.
+## Focus checklist
+- **Routing and caps:** limits.ts matches brief §3.4 exactly.
+  - Hard limits: 150 / 25 MB, checked before any read (controller.ts:373).
+  - Caps (viewer-only): 80 / 10 MB, 300 / 60 p, 1 GiB / 256 MiB, 60 / 8 MB. Caps are checked first, then the guard (pages ≥ 100, equations ≥ 1, textboxes ≥ 3).
+  - A password is rejected in the scan, before the engine loads (features.ts:98).
+  - The 5 M record cap and the 512 MB inflate cap are in place, and the inflate is streamed.
+  - The 90 s watchdog is kicked on every send and on every non-page message, and stops when no page is pending.
+  - The hwp-inflight notice shows once.
+  - Rule 2 is accepted per F1: the 19 guard keys plus the cap-routed kr01 and adm16.
+- **Security:**
+  - No innerHTML in the tool; all copy goes through textContent.
+  - Page SVGs go through DOMParser, then sanitize, then importNode.
+  - The CFB and ZIP readers are bounds-checked, cycle-guarded and depth-capped, and the fuzz found no escape.
+  - The only fetch( is the same-origin wasm GET, enforced by network-guard.
+  - The sanitizer has a defence-in-depth gap (Should Fix 1).
+- **Output:**
+  - Printing: one named @page per page size, with the first size as the default; break-after, print-color-adjust, title swap and restore; the after-print note with the 용량 줄이기 link; print notices for viewer-only and not-ready.
+  - The UA table is correct for every row in §3.3, including in-app browsers, and the save button stays.
+  - The spike fixes are all ported: scopeIds with a real backslash-b word boundary (the source-bytes test guards it), dropCellClips, fitFillImages, addSpaces with the row index, and pick() with the HEAVY duplicate-attribute fix.
+  - The F2 image rule: PNG is kept when any alpha < 255, when there are ≤ 64 colours, or when ≥ 85 % of pixels are flat. The JPEG is kept only when it is smaller.
+  - The 도장(U+329E) / 아래아 (U+318D, U+119E) / U+2027 fallback is a 1.9 KB OFL subset, limited by unicode-range, at the end of every family chain.
+- **Legal and fonts:**
+  - The Hancom and trademark lines are byte-identical to brief §3.1. They appear in 도움말 and in the tool footer, in the /licenses/ top section, in README.md, and in the cfb.ts and features.ts headers.
+  - The fonts are 4 @fontsource OFL families plus the Noto CJK subset. They are served from our own origin, load on the first page, and none is precached.
+- **Merge with Step 4:**
+  - tools.ts has 5 live tools, and the sitemap has both pages.
+  - The manifest and /licenses/ are deduped and include the rhwp crates, the 4 font packages and the fallback face.
+  - check-dist has both budget blocks; Playwright has manual-chromium and E2E_PORT; ui-shared is precached.
+  - The id-photo flag-off build is clean.
+- **A11y and SEO:**
+  - Pages are role=group, labelled "N쪽". The preview region is focusable, the banner has role=status, and an error is an alert with focus moved to it. The axe e2e passes on every state.
+  - One H1, a canonical URL and FAQPage JSON-LD. The description is 97 characters and has the three required phrases.
 
 ## Must Fix
-- src/pages/id-photo/index.astro:35, :182 and src/data/tools.ts:160 (confidence: 9/10) — **The shipping build advertises a feature it does not have.** With the Arch decision "ship MANUAL-ONLY", the flag-0 page still says:
-  - lead: "얼굴 위치를 자동으로 잡아 드리고, 안내선을 보며 직접 맞춘 뒤 …"
-  - 사용 방법 2: "얼굴 위치를 자동으로 맞춘 뒤 안내선이 나타납니다."
-  - FAQ 2 (also in the FAQPage JSON-LD): "얼굴 위치 자동 맞춤은 추정값이어서, …"
-  I confirmed all three in the built `dist/id-photo/index.html` of the default build. A user sees no auto frame, only the largest centred crop with "직접 맞추기: 안내선에 정수리와 턱을 맞추세요". This is exactly the kind of claim the owner would have to apologise for.
-  - Fix: gate these three strings on `__ID_PHOTO_AUTOFRAME__`, as the 6 MB line already is (index.astro:13/77). tools.ts needs the same define (vitest.config already has it).
-  - Give each one a manual-mode variant, for example lead "… 안내선을 보며 사진 위치를 직접 맞춘 뒤 …", step 2 "안내선이 나타나면 끌어서 옮기고 확대·축소해 정수리와 턱을 안내선에 맞춥니다.", and FAQ 2 without the 자동 맞춤 sentence ("안내선을 보고 정수리와 턱 위치를 직접 확인해야 저장할 수 있습니다.").
-  - Add a postbuild/e2e assertion: a flag-0 dist contains no "자동으로 잡아", "자동으로 맞춘" or "자동 맞춤은" on /id-photo/.
-  - The exact wording is for Arch to decide (see Escalate); the gating is not optional.
+- None.
 
 ## Should Fix
-- src/tools/id-photo/autoframe.ts:61-64 (confidence: 8/10, flag-1 only, so not shipped today) — **A skip or timeout during model init leaves the crash flag set for the whole session.**
-  - The code is `const lm = await landmarker; const bm = await bitmap; if (done) return;`. This path returns without `clearAttempt(storage)`, although `markAttempt` ran at :49.
-  - After "건너뛰고 직접 맞추기" (or the 60 s timeout) while `createLandmarker` is still running, `idphoto-mp-attempt` stays in sessionStorage. Every later photo in that tab then goes manual, because the guard reads it as a crash.
-  - Fix: call `clearAttempt(storage)` before that early return, since the tab evidently survived init. Add a unit test: skip during init, then resolve init, and the key is gone.
-- scripts/regress/idphoto.mjs:36 (confidence: 9/10) — **The Arch Firefox PSNR floor is not implemented.** The code still has `const PSNR_MIN = 38;` for every browser. Arch decided on 37.0 dB for Firefox only, with Chromium and WebKit kept at 38.0.
-  - The harness still reports Firefox check 6 as a FAIL, so the recorded gate and the decision disagree.
-  - Fix: make PSNR_MIN 37 when the browser is firefox and 38 otherwise, with a comment citing the BUILD-LOG decision. Re-run `regress:idphoto` on firefox and paste the result.
-- src/pages/id-photo/index.astro:158 / the `.save-name` style (confidence: 7/10) — **The file name on screen does not match the real one.** "저장될 이름: passport_413x531.jpg" renders as "passport_413×531.jpg". The UI font contextual alternates turn digit-x-digit into ×, as seen in the desktop and mobile done screenshots.
-  - The DOM text and the real file name are ASCII "x", but a user who types or compares the name sees a character that is not in the file.
-  - Fix: `font-feature-settings: "calt" 0` on `.save-name`. Check the name lines of the other tools too.
-- scripts/gen-sw.mjs (confidence: 7/10) — **Offline first use of /id-photo/ gets the engine panel.** The page is precached but its lazily imported controller chunk is not (open question from Bob).
-  - The controller chunk plus its static imports are a few KB. Adding them to the precache list does not touch LCP, because the SW installs after load, and it makes the precached page actually work offline.
-  - Recommend adding it, or have Arch accept the gap explicitly.
+1. **src/lib/hwp/svg-dom.ts:27,38-65** (confidence 8 that the gap exists; about 3 that it can be exploited today).
+   - **Problem:** the sanitizer is a denylist of SVG local names. Elements in other namespaces, and style, pass through and are adopted into the HTML document.
+   - **What I ran:** the production sanitize() plus importNode, in Chromium, Firefox and WebKit.
+   - **What happened:**
+     - An XHTML-namespaced meta http-equiv="refresh" navigated the tab in all three engines, with 0 removals. The CSP does not stop a meta refresh.
+     - An SVG style and an XHTML style both restyled body (a spoofing primitive).
+     - An XHTML form action survived.
+   - **Why only Should Fix:** my rhwp probe shows text is escaped, so there is no exploit path today. But the sanitizer exists for the case where rhwp gets this wrong (brief failure row "Malicious SVG content: nothing runs").
+   - **Fix:**
+     - Remove every element whose namespaceURI is not the SVG namespace, and add style to REMOVE.
+     - Optionally strip style attributes whose url() points anywhere other than #.
+     - Add jsdom cases for XHTML meta, style, form and link.
+     - Rerun the harness and confirm sanitizer removals stay 0. The wasm contains one style-tag literal; confirm that it never appears in page SVG.
+2. **src/tools/hwp-to-pdf/controller.ts:308 and 320-361** (confidence 7).
+   - **Problem:** the viewer-first state clears hwp-inflight (setInflight(null) at 308), and a forced fullRender never sets it again.
+   - **Why it matters:** "그래도 PDF로 저장" on a heavy routed file (adm19 is the brief's real-device tab-kill case) is the likeliest place for a phone tab kill, and the reload then shows no notice.
+   - **Fix:** call setInflight(file?.size ?? 0) at the start of a forced fullRender. It is already cleared at 358 and on cancel, reset and error. Cover it in e2e or a unit test.
+3. **src/lib/hwp/inflate.ts:173-190 and features.ts:130-139** (confidence 6).
+   - **Problem:** the 512 MB cap meets the spec, but the scan buffers the whole inflated output before counting. A 622 KB HWPX drove RSS to +591 MB before it was rejected.
+   - **Why it matters:** on a phone the worker is more likely to be killed than to return corrupt. The inflight notice covers that, so the failure is not silent.
+   - **Recommendation:** either count the records and regex matches over streamed chunks (with a small overlap), or use a device-dependent cap. Otherwise log it as a Known Gap. See Escalate.
+4. **src/tools/hwp-to-pdf/controller.ts:147,351-359** (confidence 6).
+   - **Problem:** hwp-printable turns on as soon as the state is convert. The save button stays disabled until the fonts settle and downscaling ends, but Ctrl/Cmd+P in that window prints pages with fallback fonts and full-size images. This is the brief's "fonts not loaded at print" row reached by another route.
+   - **Fix:** keep hwp-not-ready on (or hwp-printable off) until line 359 enables the button.
+5. **src/pages/hwp-to-pdf/index.astro:52** (confidence 6; verify intent).
+   - **Problem:** "그래도 PDF로 저장" uses btn primary. Brief §3.2 calls it "the secondary button", and primary styling invites the click the warning is meant to slow down.
+   - **Fix:** use secondary or ghost styling, or record the deviation as intentional.
+6. **src/tools/hwp-to-pdf/print.ts:211-222** (confidence 5; verify).
+   - **Problem:** if afterprint never fires (some mobile engines), the listener stays and the title stays swapped. The next save then records the swapped title as "previous".
+   - **Fix:** keep the original title in module state and drop any pending listener before adding a new one.
 
 ## Escalate to Architect
-- **Copy for the manual-only build.** The Must Fix needs flag-0 wording for the lead, step 2 and FAQ 2. The lead in the brief is "verbatim" and assumes auto-framing. I proposed text above; Arch owns the final words.
-- **Offline first use of /id-photo/** (open question from Bob). Precache the controller chunk (my recommendation) or accept the gap.
-- **UI font headroom** is ~1 KB with the flag on (179.1/180) and 2 KB with it off. The next tool with new copy will break the budget; a decision is due before Step 5 merges its copy.
-- **Flag-1 e2e only.** The main id-photo e2e suite assumes flag 1. The shipping flag-0 build is covered by one chromium kill-switch test plus the manual fallback paths that run inside flag 1. My manual pass found the shipping build behaving correctly.
-  - Once the Must Fix gates copy on the flag, consider running the notices, SEO and copy tests against dist-noauto as well, so that the shipped configuration is what gets tested.
+- Inflate cap for phones (Should Fix 3): keep 512 MB on every device, or set a lower cap for phones? This is a limits-table decision, not a code decision.
+
+## Appendix (low confidence)
+- **controller.ts:361:** the forced path calls window.print() after long awaits, when the click's user activation has expired. Desktop engines allow this. iOS Safari may prompt or refuse; add it to the real-device checklist.
+- **scripts/regress/hwp.mjs:** with --fixtures-only the report still says "Guard parity with the 19 spike keys: exact match". The parity check covers only the fixture subset, so the wording overstates it.
+- **Focus ring:** the ring on #hw-file-name after load (programmatic focus) is visually heavy. Cosmetic.
 
 ## Cleared
-The spec output is correct. I checked it by reading the code and by parsing files I downloaded myself from the shipping build:
-- exact pixels per preset, gosi at 349,999 B, and JFIF dpi 300/99/96/96/300/96;
-- the verify-or-discard step, and SOF0 with no APP1;
-- s ≤ 1 with no padding (white fill only within the 0.5 px tolerance), and rotation corners.
+I reviewed the full ee507ab..step5 diff: the HWP module, the tool and its page, the build and licence scripts, and the merge points with Step 4. I ran every gate listed above. Behaviour, limits, legal texts, budgets and the flag-off build all match the brief and Arch's F1-F4 decisions.
 
-Also cleared:
-- The reducer clears the confirmation on every adjustment.
-- The notices are verbatim, the presets are sourced, and the dropped presets are absent.
-- The flag-0 dist carries no MediaPipe byte or string, and the flag-0 license set is clean.
-- Flag-1 telemetry is detached and CSP-blocked (e2e green).
-- The /licenses/ precache removal and the ui-shared chunk behave as Bob reported. The lockfile adds only tasks-vision.
-- check, unit, both builds and the three-browser id-photo e2e are green.
-
-Step 4 clears once the Must Fix lands.
-
----
-
-# Round 2 — Richard, 2026-09-30
-Ready for Builder: YES. **Step 4 is clear.**
-
-## Gates I ran
-| Gate | Result |
-|---|---|
-| check | 0 / 0 / 0 |
-| unit | 397/397 (19 files); I re-ran it after the builds settled |
-| build, flag off (default, shipping) | check-dist OK, 338 files; fonts 178.0/190; precache 327.5/450, 20 URLs incl. `controller.*.js` |
-| build, flag off into dist-noauto | `check-dist --dist dist-noauto --no-mediapipe` OK |
-| build, flag 1 | check-dist OK, 345 files; fonts 179.1/190; precache 330.1/450 |
-| licenses | flag 0 OK (26, 3, 0 exceptions); flag 1 FAIL on fft2d only (accepted Known Gap) |
-| e2e id-photo, chromium + manual-chromium | 49 passed, 15 skipped, 0 failed, 0 flaky |
-
-## Verified
-- **Must Fix: resolved.**
-  - A grep of the shipping `dist/id-photo/index.html` (and `dist/index.html`) finds none of "자동으로 잡아", "자동으로 맞춘", "자동 맞춤", "건너뛰고" or "6 MB의".
-  - The lead now reads "…안내선을 보며 사진 위치를 직접 맞춘 뒤…". The skip button is not rendered, and reset reads "처음 위치로".
-  - The flag-off controller chunk still holds `manualSwitch` and `resetAuto` strings. They are unreachable there: `photo.face` and `note = COPY.manualSwitch` are set only inside the `__ID_PHOTO_AUTOFRAME__` branch. Harmless.
-- **Phrase guard, both directions.**
-  - The flag-0 build passes.
-  - Running `PUBLIC_ID_PHOTO_AUTOFRAME=0 node scripts/check-dist.mjs` against the flag-1 dist FAILs, naming all five phrases.
-  - The flag-1 page still carries the auto copy (1 hit for "자동으로 잡아").
-- **Should Fix 1** (autoframe.ts:58-66): `clearAttempt(storage)` now runs on the `done` early return. There is a new unit test for skip and timeout with a late init.
-- **Should Fix 2** (regress/idphoto.mjs:38): `PSNR_MIN = browserName === "firefox" ? 37 : 38`, citing the Arch decision.
-- **Should Fix 3** (app.css:231-233): calt is off on `.save-name` and on the merge/photo name rows.
-- **Should Fix 4** (gen-sw): the lazy controller chunk is precached; I confirmed `controller.*.js` is in the shipping `sw.js`.
-- **Font budget** is 190 KB in check-dist, logged as an Arch decision; usage is 178.0 / 179.1 KB.
-- **manual-chromium** runs the whole id-photo suite against dist-noauto on port 4181. It appears only when dist-noauto exists (see the note below).
-- **Keyboard test (Home instead of ArrowUp in manual mode): a test fix, not a regression.** I checked this on the shipping build.
-  - The manual start frame is the largest centred crop, so there is no margin. ArrowUp moves the frame 1 output px past the photo edge.
-  - The outside block is therefore correct ("never pad"). Save is disabled with the reason "확인 목록에 저장을 막는 항목이 있습니다…".
-  - The checklist and the live region both read "저장할 수 없습니다. 사진 바깥 부분이 들어갑니다. 빈 곳을 채우지 않으니 확대하거나 위치를 옮기고…". That message tells the user exactly what to do.
-  - After 5× "+" then ArrowUp, save is enabled again.
-
-## Should Fix (informational, does not block)
-- src/tools/id-photo/controller.ts, manual readout (confidence: 5/10). At the manual start, the first natural move (drag the head up to the crown line) blocks at once, and the 1-px hatched sliver is hard to see. The message is clear, so this is UX polish only.
-  - Consider making the manual readout say "먼저 확대한 뒤 끌어서 정수리와 턱을 안내선에 맞추세요". That would be a copy change for Arch.
-- playwright.config.ts (confidence: 6/10). `manual-chromium` exists only when `dist-noauto/` is present, and the folder is git-ignored. A CI run or a fresh clone that builds only `dist/` silently skips the shipping configuration.
-  - The deploy gate should build dist-noauto first, as the REVIEW-REQUEST reproduction note says. Better still, fail loudly in CI (`process.env.CI && !MANUAL`) so it is never skipped quietly.
-
-## Still owed (not a code finding)
-- Gate 11 (real Chrome/Firefox/Edge plus one phone) and the real-iPhone check stay with the owner or orchestrator.
-- The p07 chin miss and the license flag are accepted Known Gaps, and apply only with auto-framing on.
-
-Step 4 is clear.
+Step 5 is clear.

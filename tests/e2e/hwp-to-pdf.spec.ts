@@ -172,6 +172,59 @@ test('HWPX: adm02 and adm14 open in convert mode with the expected page counts',
   await expect(pages(page)).toHaveCount(expected.adm14.pages);
 });
 
+test('print gate: the document is printable only once PDF로 저장 is enabled; before that print shows the preparing notice', async ({ page }) => {
+  test.setTimeout(240_000);
+  await gotoReady(page, '/hwp-to-pdf/');
+  await page.evaluate(() => {
+    const log: { printable: boolean; preparing: boolean; saveDisabled: boolean }[] = [];
+    (window as unknown as { __printLog: typeof log }).__printLog = log;
+    const save = document.getElementById('hw-save') as HTMLButtonElement;
+    new MutationObserver(() =>
+      log.push({ printable: document.body.classList.contains('hwp-printable'), preparing: document.body.classList.contains('hwp-preparing'), saveDisabled: save.disabled || save.hidden }),
+    ).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  });
+  await convertReady(page, fx('law10.hwp'));
+  const log = await page.evaluate(() => (window as unknown as { __printLog: { printable: boolean; preparing: boolean; saveDisabled: boolean }[] }).__printLog);
+  expect(log.some((x) => x.preparing)).toBe(true);
+  expect(log.filter((x) => x.printable && x.saveDisabled)).toEqual([]);
+  expect(await page.evaluate(() => document.body.classList.contains('hwp-printable'))).toBe(true);
+  await page.evaluate(() => {
+    document.body.classList.remove('hwp-printable');
+    document.body.classList.add('hwp-preparing');
+  });
+  await page.emulateMedia({ media: 'print' });
+  expect(await page.evaluate(() => getComputedStyle(document.body, '::before').content)).toContain('문서를 준비하는 중입니다');
+});
+
+test('그래도 PDF로 저장 is a secondary button and sets the in-flight flag again for the full render, cleared after', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.addInitScript(() => {
+    const log: string[] = [];
+    (window as unknown as { __storage: string[] }).__storage = log;
+    const set = Storage.prototype.setItem;
+    const remove = Storage.prototype.removeItem;
+    Storage.prototype.setItem = function (k: string, v: string) {
+      if (k === 'hwp-inflight') log.push(`set ${document.getElementById('hwp-tool')?.dataset.state ?? ''}`);
+      return set.call(this, k, v);
+    };
+    Storage.prototype.removeItem = function (k: string) {
+      if (k === 'hwp-inflight') log.push('remove');
+      return remove.call(this, k);
+    };
+  });
+  await open(page, fx('law17.hwp'), 'viewer-first');
+  await expect(page.locator('#hw-force')).toHaveClass(/(^| )ghost( |$)/);
+  await expect(page.locator('#hw-force')).not.toHaveClass(/(^| )primary( |$)/);
+  await page.evaluate(() => ((window as unknown as { __storage: string[] }).__storage.length = 0));
+  await page.locator('#hw-force').click();
+  await expect(tool(page)).toHaveAttribute('data-state', 'convert', { timeout: 120_000 });
+  await expect(page.locator('#hw-save')).toBeEnabled({ timeout: 60_000 });
+  const log = await page.evaluate(() => (window as unknown as { __storage: string[] }).__storage);
+  expect(log[0]).toBe('set viewer-first');
+  expect(log[log.length - 1]).toBe('remove');
+  expect(await page.evaluate(() => sessionStorage.getItem('hwp-inflight'))).toBeNull();
+});
+
 // ---------- viewer-first ----------
 
 test('viewer-first: law09 and law17 show the 수식·도형 copy; the save path is 그래도 PDF로 저장', async ({ page }) => {

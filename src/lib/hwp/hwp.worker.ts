@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 // HWP PDF 변환 worker (brief Step 5 §2). One document per worker; cancel and reset terminate it.
-// In:  {type:'open', bytes}  (the file's ArrayBuffer, transferred)
+// In:  {type:'open', bytes, inflateCap}  (the file's ArrayBuffer, transferred; the device's inflate cap)
 //      {type:'render', i}    (one page; the page drives the order, so a cancel is a run token, not a restart)
 //      {type:'close'}        (doc.free())
 //      {type:'warm'}         (preload: answers at once; loading this script was the point, never the 10 MB wasm)
@@ -14,7 +14,7 @@ import type { TextRun } from './svg-dom';
 import { withEngineRetry } from '../ui/engine-load';
 import { loadRhwpModule } from './wasm-browser';
 
-export type HwpRequest = { type: 'open'; bytes: ArrayBuffer } | { type: 'render'; i: number } | { type: 'close' } | { type: 'warm' };
+export type HwpRequest = { type: 'open'; bytes: ArrayBuffer; inflateCap?: number } | { type: 'render'; i: number } | { type: 'close' } | { type: 'warm' };
 
 export type HwpResponse =
   | { type: 'progress'; phase: 'engine'; loaded: number; total: number }
@@ -76,9 +76,9 @@ async function engine(): Promise<void> {
   wasmMemory = exports.memory;
 }
 
-async function open(buffer: ArrayBuffer): Promise<void> {
+async function open(buffer: ArrayBuffer, inflateCap?: number): Promise<void> {
   const bytes = new Uint8Array(buffer);
-  const features = scanFeatures(bytes);
+  const features = scanFeatures(bytes, { inflateCap });
   post({ type: 'scanned', format: features.format, equations: features.equations, textboxes: features.textboxes, imageBytes: features.imageBytes, distribution: features.distribution });
   await engine();
   post({ type: 'progress', phase: 'parse' });
@@ -111,7 +111,7 @@ self.onmessage = async (ev: MessageEvent<HwpRequest>) => {
     if (msg.type === 'warm') {
       post({ type: 'warm-done' });
     } else if (msg.type === 'open') {
-      await open(msg.bytes);
+      await open(msg.bytes, msg.inflateCap);
     } else if (msg.type === 'render') {
       render(msg.i);
     } else if (msg.type === 'close') {

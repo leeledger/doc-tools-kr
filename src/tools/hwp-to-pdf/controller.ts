@@ -144,9 +144,16 @@ export function initHwpTool(): void {
     banner.hidden = !(next === 'viewer-first' || next === 'viewer-only' || next === 'rendering');
     if (next !== 'convert') after.hidden = true;
     // Print CSS: only a finished document prints; viewer-only prints a one-line notice (brief §3.2).
-    document.body.classList.toggle('hwp-printable', next === 'convert');
+    // A converted document prints only once the save button is on (fonts settled, images downscaled);
+    // Ctrl/Cmd+P before that prints a one-line notice (Richard, Step 5 round 2, Should Fix 4).
+    setPrintReady(false);
     document.body.classList.toggle('hwp-viewer-only', next === 'viewer-only');
     document.body.classList.toggle('hwp-not-ready', next === 'viewer-first' || next === 'rendering' || (next === 'loading' && infos.length > 0));
+  }
+
+  function setPrintReady(ready: boolean): void {
+    document.body.classList.toggle('hwp-printable', state === 'convert' && ready);
+    document.body.classList.toggle('hwp-preparing', state === 'convert' && !ready);
   }
 
   function progress(text: string, value: number | null, force = false): void {
@@ -324,6 +331,9 @@ export function initHwpTool(): void {
     const live = (): boolean => id === docId && run === renderRun;
     const n = infos.length;
     v.setLazy(false);
+    // 그래도 PDF로 저장 on a heavy routed file is where a phone kills the tab: flag it again (cleared below,
+    // and on cancel, reset and error). Richard, Step 5 round 2, Should Fix 2.
+    if (forced) setInflight(file?.size ?? 0);
     setState(forced ? 'rendering' : 'loading');
     progress(COPY.pages(0, n), 0, true);
     preview.classList.add('hw-building');
@@ -357,6 +367,7 @@ export function initHwpTool(): void {
     if (!live()) return;
     setInflight(null);
     saveBtn.disabled = false;
+    setPrintReady(true);
     announce(COPY.ready(n));
     if (forced) await save();
     else fileName.focus();
@@ -443,7 +454,7 @@ export function initHwpTool(): void {
     w.onmessageerror = () => {
       if (id === docId) fail('oom');
     };
-    send({ type: 'open', bytes: buffer }, [buffer]);
+    send({ type: 'open', bytes: buffer, inflateCap: LIMITS[device].inflateCap }, [buffer]);
   }
 
   async function save(): Promise<void> {
@@ -466,6 +477,7 @@ export function initHwpTool(): void {
     releaseWaiters();
     pending.clear();
     watchdog.stop();
+    setInflight(null);
     setState('viewer-first');
     viewer?.setLazy(true);
     announce(COPY.canceled);

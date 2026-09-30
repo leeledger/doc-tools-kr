@@ -1,4 +1,34 @@
-# Review Request — Step 5 (HWP PDF 변환 `/hwp-to-pdf/`), round 2: Arch decisions + merge with Step 4
+# Review Request — Step 5, round 3 (Richard's six Should Fix items)
+Date: 2026-09-30
+Ready for Review: YES
+Branch `step5` (worktree `C:\dev\doc-tools-kr-step5`), local commits only. Status: DONE.
+
+## Round 3 changes
+1. **Sanitizer allow-list** (`src/lib/hwp/svg-dom.ts`): removes every non-SVG-namespace element, plus script, style, foreignObject, iframe, meta, link, form, object, embed and the animation elements; drops every on* attribute; allows href only as `#fragment` or `data:image/*` on `<image>`; drops style attributes with a non-fragment url(). New jsdom tests: XHTML meta refresh, SVG and XHTML `<style>`, XHTML `<form>` and `<link>`, style url(). Corpus: 0 sanitizer removals on all 120 files (so the wasm's style literal never reaches a page SVG).
+2. **hwp-inflight** set again at the start of a forced full render, cleared when save enables, on cancel/reset/error (`controller.ts` fullRender, cancel). e2e: the storage log after 그래도 PDF로 저장 is `set` (from viewer-first) … `remove`, and the key is gone.
+3. **Zip bomb** (`inflate.ts`, `zipdir.ts streamEntry`, `features.ts RecordWalker/ByteCounter`): inflated data is walked chunk by chunk and never held; one running cap per file, `LIMITS.inflateCap` = 512 MB desktop, 128 MB phone (Arch), passed to the worker. Unit tests: split-point invariance for the byte matcher, byte-at-a-time record walk, a 150 MB section passes the desktop cap and fails the phone cap. **Richard's zip bomb re-run** (613 KB HWPX → 637 MB section.xml): corrupt; peak RSS **+51 MB** (60 → 111 MB, `process.resourceUsage().maxRSS`), 4.2 s with the desktop cap, 1.0 s with the phone cap. Was +591 MB.
+4. **Print gate:** `hwp-printable` only once PDF로 저장 is enabled; before that `hwp-preparing` prints "문서를 준비하는 중입니다. 「PDF로 저장」 버튼이 켜진 뒤 다시 인쇄해 주세요". e2e: a class log shows no moment where the document is printable while save is disabled.
+5. **그래도 PDF로 저장** is `btn ghost` (secondary); e2e asserts it.
+6. **Title swap cleanup** (`print.ts`): afterprint, or visibilitychange back to visible after print() returned, or a 60 s timeout ends the swap; a second save ends a pending swap first so the original title is kept. 4 jsdom tests.
+- `--fixtures-only` now reports "Guard parity: fixture subset match (4 guard-routed of 10 fixtures; the full check needs CORPUS_DIR)" and checks parity on the subset.
+- REVIEW-FEEDBACK.md (Richard's round 2) is committed with this round.
+
+## Gates (round 3)
+| Gate | Result |
+|---|---|
+| check | 0 errors, 0 warnings (1 hint) |
+| unit | 511/511, 26 files |
+| build 1: dist-noauto (flag off) + postbuild | check-dist OK, 1210 files; precache 366.8 / 450 KB |
+| build 2: npm run build | check-dist OK; /hwp-to-pdf/ initial JS 9.9 KB, worker 20.9 KB, lazy chunk 4.6 KB, HWP font CSS 30.3 / 31 KB, UI fonts 184.0 / 190 KB |
+| check:licenses | OK, 31 packages, 4 components (flag off) |
+| e2e hwp-to-pdf.spec, 5 projects (E2E_PORT=4392) | 98 passed, 27 skipped (stated reasons), 0 failed, 0 flaky |
+| e2e site.spec, chromium | 41 passed |
+| regress:hwp fixtures | 10/10, all rules pass |
+| regress:hwp full corpus | all rules pass; 6/120 (5.0 %), non-routed 2/100 (2.0 %, adm06 nt08); guard parity exact; cap-routed adm16 (pages), kr01 (images); size median 1.19, kr21 2.36×, kr38 1.79×, kr45 1.37×; sanitizer 0, measure 0, unparsed 0; law10 2.1 s, adm28 4.4 s. Flagged only: kr17 3.2 s, kr18 1.7 s (> 2 × baseline, not failures) |
+
+---
+
+# Round 2 (for reference): Arch decisions + merge with Step 4
 Date: 2026-09-30
 Ready for Review: YES
 Worktree: `C:\dev\doc-tools-kr-step5`, branch `step5`. main (ee507ab, Step 4) merged in as 909256f; tip f558825 (plus this file). Local commits only, never pushed.

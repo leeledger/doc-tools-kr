@@ -8,8 +8,8 @@ const base = (device: Device): RouteInput => ({ device, fileBytes: 1000, pages: 
 
 describe('limits', () => {
   it('the brief numbers', () => {
-    expect(LIMITS.desktop).toEqual({ hardBytes: 150 * MB_DEC, capBytes: 80 * MB_DEC, capPages: 300, capWasmBytes: 1024 * MIB, capImageBytes: 60 * MB_DEC });
-    expect(LIMITS.mobile).toEqual({ hardBytes: 25 * MB_DEC, capBytes: 10 * MB_DEC, capPages: 60, capWasmBytes: 256 * MIB, capImageBytes: 8 * MB_DEC });
+    expect(LIMITS.desktop).toEqual({ hardBytes: 150 * MB_DEC, capBytes: 80 * MB_DEC, capPages: 300, capWasmBytes: 1024 * MIB, capImageBytes: 60 * MB_DEC, inflateCap: 512 * MB_DEC });
+    expect(LIMITS.mobile).toEqual({ hardBytes: 25 * MB_DEC, capBytes: 10 * MB_DEC, capPages: 60, capWasmBytes: 256 * MIB, capImageBytes: 8 * MB_DEC, inflateCap: 128 * MB_DEC });
   });
 
   it.each(['desktop', 'mobile'] as Device[])('hard limit on %s: at the limit ok, one byte above too large', (d) => {
