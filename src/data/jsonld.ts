@@ -36,3 +36,64 @@ export function faqJsonLd(tool: Tool): Record<string, unknown> {
     mainEntity: tool.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
   };
 }
+
+export interface GuideLd {
+  slug: string;
+  title: string;
+  description: string;
+  published: string;
+  updated: string;
+  faq: readonly { q: string; a: string }[];
+  /** Source URLs (preset sources resolved). */
+  citations: readonly string[];
+}
+
+const organization = (site: URL | undefined): Record<string, unknown> => ({
+  '@type': 'Organization',
+  name: SITE.name,
+  url: new URL('/', site).href,
+  logo: { '@type': 'ImageObject', url: new URL('/brand/icon-512.png', site).href },
+});
+
+/** Absolute URL of a guide's share image (src/pages/og/guide/[slug].png.ts). */
+export const guideOgUrl = (slug: string, site: URL | undefined): string => new URL(`/og/guide/${slug}.png`, site).href;
+
+/** JSON-LD for a guide (Growth G.1): Article + FAQPage (the visible FAQ, same text) + BreadcrumbList. No HowTo. */
+export function guideJsonLd(g: GuideLd, site: URL | undefined): Record<string, unknown>[] {
+  const url = new URL(`/guide/${g.slug}/`, site).href;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: g.title,
+      description: g.description,
+      datePublished: g.published,
+      dateModified: g.updated,
+      author: organization(site),
+      publisher: organization(site),
+      image: guideOgUrl(g.slug, site),
+      mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+      inLanguage: 'ko-KR',
+      citation: [...g.citations],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: g.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+    },
+    breadcrumbs(site, [
+      [SITE.name, '/'],
+      ['안내', '/guide/'],
+      [g.title, `/guide/${g.slug}/`],
+    ]),
+  ];
+}
+
+/** BreadcrumbList with positions 1..n and absolute items. */
+export function breadcrumbs(site: URL | undefined, items: readonly [string, string][]): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map(([name, path], i) => ({ '@type': 'ListItem', position: i + 1, name, item: new URL(path, site).href })),
+  };
+}

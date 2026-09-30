@@ -22,6 +22,8 @@ export interface Tool {
   summary: string;
   icon: string;
   status: ToolStatus;
+  /** Last real change of the page (YYYY-MM-DD): the sitemap lastmod. Hand-maintained (docs/COPY.md release checklist). */
+  updated: string;
   faq: FaqItem[];
   /** Copywriting reference only. Never emitted as a meta keywords tag. */
   keywords: string[];
@@ -38,6 +40,7 @@ export const TOOLS: Tool[] = [
     summary: '여러 PDF를 한 파일로 묶고, 파일 순서를 원하는 대로 바꾸세요.',
     icon: '<path d="M7 3h7l4 4v11H7z"/><path d="M4 6v15h11"/>',
     status: 'live',
+    updated: '2026-09-30',
     faq: [
       {
         q: '파일 크기나 개수에 제한이 있나요?',
@@ -72,6 +75,7 @@ export const TOOLS: Tool[] = [
     summary: '제출 용량 제한에 맞게 PDF를 줄입니다. 글자는 선택·검색 가능한 상태로 유지합니다.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 14l3 3 3-3M12 10v7"/>',
     status: 'live',
+    updated: '2026-09-30',
     faq: [
       {
         q: '얼마나 줄어드나요?',
@@ -110,6 +114,7 @@ export const TOOLS: Tool[] = [
     summary: '원하는 KB에 맞춰 사진을 줄이면서 화질은 최대한 지킵니다.',
     icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/>',
     status: 'live',
+    updated: '2026-09-30',
     faq: [
       {
         q: '원하는 KB 이하로 정확히 맞출 수 있나요?',
@@ -149,6 +154,7 @@ export const TOOLS: Tool[] = [
     summary: '여권·시험·이력서 제출 규격에 맞게 사진을 자르고 크기와 용량을 맞춥니다. 보정은 하지 않습니다.',
     icon: '<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c1-2.5 2.6-3.5 4.5-3.5s3.5 1 4.5 3.5"/>',
     status: 'live',
+    updated: '2026-09-30',
     faq: [
       {
         q: '여권사진 규격이 어떻게 되나요?',
@@ -193,6 +199,7 @@ export const TOOLS: Tool[] = [
     summary: '한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 저장하세요.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 15h6M9 18h4"/>',
     status: 'live',
+    updated: '2026-09-30',
     faq: [
       {
         q: '한글 프로그램 없이 되나요?',

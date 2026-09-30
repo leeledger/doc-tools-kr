@@ -1,0 +1,115 @@
+// The guide frontmatter contract (Growth G.1). src/content.config.ts uses it for the `guides` collection, so a
+// violation fails the build; tests/unit/guides-schema.test.ts parses every guide with it too.
+import { z } from 'astro/zod';
+import { getPreset } from './id-photo-presets';
+import { TOOL_FACTS, isToolFactRef } from './tool-facts';
+import { LIVE_TOOLS } from './tools';
+import { parseHref } from '../lib/ui/deeplink';
+
+export const CATEGORIES = ['사진', 'PDF', '한글파일'] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+/** A source older than this at build time fails the dist test (T9): re-verify it (runbook, every January). */
+export const MAX_SOURCE_AGE_DAYS = 400;
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+/** YAML reads an unquoted 2026-09-30 as a Date; both spellings become the same ISO string. */
+const isoDate = z.preprocess(
+  (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v),
+  z.string().regex(ISO, 'YYYY-MM-DD').refine((s) => !Number.isNaN(Date.parse(`${s}T00:00:00Z`)), 'not a date'),
+);
+
+const len = (min: number, max: number) =>
+  z.string().refine((s) => [...s].length >= min && [...s].length <= max, `${min}–${max} characters`);
+
+const presetSource = z.object({ preset: z.string() }).strict();
+const urlSource = z
+  .object({
+    url: z.string().regex(/^https:\/\/[^\s]+$/, 'https URL'),
+    title: len(2, 80),
+    quote: len(2, 300),
+    retrieved: isoDate,
+  })
+  .strict();
+
+export const publishedGuideSchema = z
+  .object({
+    title: len(4, 40),
+    description: len(50, 110),
+    ogDescription: len(10, 80),
+    query: z.string().min(2),
+    answer: len(10, 120),
+    published: isoDate,
+    updated: isoDate,
+    category: z.enum(CATEGORIES),
+    tools: z.array(z.string()).min(1),
+    cta: z.object({ href: z.string(), label: len(2, 30) }).strict(),
+    related: z.array(z.string()).min(2).max(4),
+    sources: z.array(z.union([presetSource, urlSource])).min(1),
+    toolFacts: z.array(z.object({ ref: z.string(), value: z.union([z.number(), z.string()]) }).strict()).default([]),
+    faq: z.array(z.object({ q: len(4, 80), a: len(10, 400) }).strict()).min(3).max(6),
+    og: z.object({ title: len(2, 14), line: len(4, 34) }).strict(),
+    season: z.object({ peak: z.string(), refresh: z.array(isoDate) }).strict().optional(),
+    draft: z.literal(false).default(false),
+  })
+  .strict()
+  .superRefine((g, ctx) => {
+    for (const issue of guideProblems(g)) ctx.addIssue({ code: 'custom', message: issue });
+  });
+
+/**
+ * A planned page whose facts are not quoted yet (Growth G.1 step 0): never rendered, linked or listed. It
+ * records what blocks it and every official page tried, with the verbatim failure.
+ */
+export const draftGuideSchema = z
+  .object({
+    draft: z.literal(true),
+    title: len(4, 40),
+    query: z.string().min(2),
+    blockedBy: z.string().min(4),
+    publishBy: isoDate.optional(),
+    tried: z.array(z.object({ url: z.string().regex(/^https:\/\//, 'https URL'), result: z.string().min(2), date: isoDate }).strict()).default([]),
+  })
+  .strict();
+
+export const guideSchema = z.union([draftGuideSchema, publishedGuideSchema]);
+
+export type GuideData = z.infer<typeof publishedGuideSchema>;
+export type DraftGuideData = z.infer<typeof draftGuideSchema>;
+
+/** Rules across fields (also run by the unit test). Empty when the guide is valid. */
+export function guideProblems(
+  g: Pick<GuideData, 'title' | 'answer' | 'published' | 'updated' | 'tools' | 'cta' | 'sources' | 'toolFacts'>,
+  now: Date = new Date(),
+): string[] {
+  const e: string[] = [];
+  const today = now.toISOString().slice(0, 10);
+  if (g.updated < g.published) e.push(`updated ${g.updated} is before published ${g.published}`);
+  for (const [k, v] of [['published', g.published], ['updated', g.updated]] as const) if (v > today) e.push(`${k} ${v} is in the future`);
+  const year = g.title.match(/(?<!\d)(20\d\d)(?!\d)/)?.[1];
+  if (year && year !== g.updated.slice(0, 4)) e.push(`the title says ${year} but updated is ${g.updated}`);
+  // One sentence ending in 다 or 요 (optionally followed by a full stop).
+  if (!/[다요]\.?$/.test(g.answer)) e.push('answer must end in 다 or 요');
+  if (/[.?!]\s+\S/.test(g.answer)) e.push('answer must be one sentence');
+  const live = LIVE_TOOLS.map((t) => t.slug);
+  for (const t of g.tools) if (!live.includes(t)) e.push(`tool "${t}" is not a live tool`);
+  if (!parseHref(g.cta.href, live)) e.push(`cta href "${g.cta.href}" is not a live tool link with a valid deep link`);
+  let linked = 0;
+  for (const s of g.sources) {
+    if (!('preset' in s)) {
+      linked++;
+      continue;
+    }
+    const p = getPreset(s.preset);
+    if (!p) e.push(`preset "${s.preset}" does not exist`);
+    else if (p.status === 'official' && p.sourceUrls.length) linked++;
+    // An arithmetic preset (반명함판) backs its own numbers, which the page must call 계산값/일반 크기; it lists no source.
+    else if (p.status !== 'arithmetic') e.push(`preset "${s.preset}" has no official source`);
+  }
+  if (!linked) e.push('at least one source must link to an official page');
+  for (const f of g.toolFacts) {
+    if (!isToolFactRef(f.ref)) e.push(`toolFact "${f.ref}" is not in src/data/tool-facts.ts`);
+    else if (TOOL_FACTS[f.ref].value !== f.value) e.push(`toolFact "${f.ref}" is ${String(TOOL_FACTS[f.ref].value)}, the guide says ${String(f.value)}`);
+  }
+  return e;
+}

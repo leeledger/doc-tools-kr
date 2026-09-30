@@ -239,8 +239,11 @@ test('home, meta, og and JSON-LD name every live tool and no soon tool; the soon
 
 test('404 lists the live tools', async ({ page }) => {
   await gotoReady(page, '/no-such-page/');
-  for (const name of LIVE) await expect(page.locator('.nf-tools').getByRole('link', { name })).toBeVisible();
-  await expect(page.locator('.nf-tools a')).toHaveCount(LIVE.length);
+  const tools = page.locator('.nf-tools:not(.nf-guides)');
+  for (const name of LIVE) await expect(tools.getByRole('link', { name })).toBeVisible();
+  await expect(tools.locator('a')).toHaveCount(LIVE.length);
+  // Growth G: five guides under 많이 찾는 안내.
+  await expect(page.locator('.nf-guides a')).toHaveCount(5);
 });
 
 // ---------- P.10 brand ----------

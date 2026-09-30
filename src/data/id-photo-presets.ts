@@ -3,6 +3,8 @@
 // that are our own choice are marked in `note`. Dropped (확인 필요): 주민등록증, 운전면허증, TOEIC, 고용24,
 // 지방공무원 — see FAQ 4 and BUILD-LOG Known Gaps.
 
+import { DEFAULT_PRESET_ID } from './preset-ids';
+
 export type PresetStatus = 'official' | 'arithmetic' | 'user';
 /** "이하" → KB × 1000; "미만" → KB × 1000 − 1 (the Step 3 convention: safe under both 1000 and 1024). */
 export type LimitRule = 'le' | 'lt' | null;
@@ -167,7 +169,7 @@ export const PRESETS: readonly IdPreset[] = [
   },
 ];
 
-export const DEFAULT_PRESET = 'passport_online';
+export const DEFAULT_PRESET = DEFAULT_PRESET_ID;
 
 export const CUSTOM_BOUNDS = { minPx: 50, maxPx: 2000, minKb: 10, maxKb: 10_000 } as const;
 
