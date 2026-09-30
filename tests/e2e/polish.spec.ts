@@ -572,7 +572,9 @@ test.describe('header tools menu (P.9)', () => {
     await expect(btn).toBeFocused();
 
     await btn.click();
-    await page.mouse.click(5, 400);
+    // Outside the panel: below it (with five tools the mobile sheet reaches past y = 400).
+    const sheet = (await panel.boundingBox())!;
+    await page.mouse.click(5, Math.max(400, sheet.y + sheet.height + 20));
     await expect(panel).toBeHidden();
 
     await btn.focus();

@@ -130,17 +130,17 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(5);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 용량 줄이기' })).toHaveAttribute('href', '/photo-compress/');
   await expect(cards.getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
   await expect(cards.getByRole('link', { name: 'HWP PDF 변환' })).toHaveAttribute('href', '/hwp-to-pdf/');
-  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기', '사용하기', '사용하기']);
-  await expect(page.locator('.card')).toHaveCount(4);
+  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기', '사용하기', '사용하기', '사용하기']);
+  await expect(page.locator('.card')).toHaveCount(5);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
-  await expect(page.locator('.soon h3')).toHaveText('준비 중');
-  await expect(page.locator('.soon-list li')).toHaveCount(0);
+  // Every tool is live: the 준비 중 block is not rendered at all.
+  await expect(page.locator('.soon')).toHaveCount(0);
   await expect(page.locator('.soon a')).toHaveCount(0);
   await expect(page.locator('footer').getByRole('link', { name: '이용약관' })).toHaveAttribute('href', '/terms/');
   await expect(page.locator('footer').getByRole('link', { name: '개인정보 처리방침' })).toHaveAttribute('href', '/privacy/');
