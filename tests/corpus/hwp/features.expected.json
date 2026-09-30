@@ -1,0 +1,83 @@
+{
+ "$comment": "Guard fields of spikes/hwp/scripts/features.py (Corpus v2, olefile 0.47) for the fixtures; generated once, 2026-09-30. bindata_total_kb = sum of BinData sizes // 1024.",
+ "files": {
+  "adm02": {
+   "format": "hwpx",
+   "equations": 0,
+   "textboxes": 0,
+   "bindata_total_kb": 0
+  },
+  "adm14": {
+   "format": "hwpx",
+   "equations": 0,
+   "textboxes": 0,
+   "bindata_total_kb": 0
+  },
+  "adm19": {
+   "format": "hwpx",
+   "equations": 214,
+   "textboxes": 0,
+   "bindata_total_kb": 7431
+  },
+  "adm28": {
+   "format": "hwpx",
+   "equations": 1,
+   "textboxes": 10,
+   "bindata_total_kb": 41
+  },
+  "law05": {
+   "format": "hwp5",
+   "equations": 0,
+   "textboxes": 0,
+   "compressed": true,
+   "password": false,
+   "distribution": false,
+   "bindata_total_kb": 0
+  },
+  "law07": {
+   "format": "hwp5",
+   "equations": 0,
+   "textboxes": 0,
+   "compressed": true,
+   "password": false,
+   "distribution": false,
+   "bindata_total_kb": 0
+  },
+  "law09": {
+   "format": "hwp5",
+   "equations": 28,
+   "textboxes": 0,
+   "compressed": true,
+   "password": false,
+   "distribution": false,
+   "bindata_total_kb": 0
+  },
+  "law10": {
+   "format": "hwp5",
+   "equations": 0,
+   "textboxes": 0,
+   "compressed": true,
+   "password": false,
+   "distribution": false,
+   "bindata_total_kb": 0
+  },
+  "law17": {
+   "format": "hwp5",
+   "equations": 0,
+   "textboxes": 29,
+   "compressed": true,
+   "password": false,
+   "distribution": false,
+   "bindata_total_kb": 0
+  },
+  "law18": {
+   "format": "hwp5",
+   "equations": 0,
+   "textboxes": 1,
+   "compressed": true,
+   "password": false,
+   "distribution": false,
+   "bindata_total_kb": 0
+  }
+ }
+}

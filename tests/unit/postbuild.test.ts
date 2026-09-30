@@ -409,8 +409,8 @@ describe('built output', () => {
     need();
     const html = readFileSync(join(DIST, 'index.html'), 'utf8');
     const head = html.slice(0, html.indexOf('</head>'));
-    for (const name of ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기']) expect(head).toContain(name);
-    for (const name of ['여권·증명사진 규격 맞추기', '한글(HWP) → PDF 변환', '여권', 'HWP']) expect(head).not.toContain(name);
+    for (const name of ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기', 'HWP PDF 변환']) expect(head).toContain(name);
+    for (const name of ['여권·증명사진 규격 맞추기', '여권']) expect(head).not.toContain(name);
   });
 });
 

@@ -11,9 +11,10 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
  * - lib/pdf/compress/wasm-browser.ts: the compress worker's qpdf load (a same-origin module import).
  * - lib/ui/engine-load.ts: GET /deploy-manifest.json for the engine-panel copy (Polish P.1).
  * - sw/sw.ts: the service worker's allowlisted same-origin GETs (Polish P.11; it never reads a body).
+ * - lib/hwp/wasm-browser.ts: rhwp wasm, own origin (Step 5).
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
-const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/pdf/compress/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/pdf/compress/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/hwp/wasm-browser.ts'];
 /** sendBeacon only in the error-beacon stub, which is off (and dropped from the bundle) unless configured. */
 const BEACON_ALLOWLIST: string[] = ['lib/ui/beacon.ts'];
 
@@ -43,6 +44,13 @@ describe('no network APIs in src/', () => {
       .map((f) => relative(SRC, f).split('\\').join('/'));
     expect(hits.length).toBeGreaterThan(0);
     for (const h of hits) expect(FETCH_ALLOWLIST, h).toContain(h);
+  });
+
+  it('in the HWP module only wasm-browser.ts calls fetch( (rhwp wasm, own origin)', () => {
+    const hits = all
+      .filter((f) => /\bfetch\s*\(/.test(readFileSync(f, 'utf8')))
+      .map((f) => relative(SRC, f).split('\\').join('/'));
+    expect(hits.filter((h) => h.startsWith('lib/hwp/'))).toEqual(['lib/hwp/wasm-browser.ts']);
   });
 
   it('uses sendBeacon only in the beacon stub', () => {

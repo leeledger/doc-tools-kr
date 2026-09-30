@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import licenses from '../../generated/licenses.json';
+import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-to-pdf/messages';
 
 interface LicenseEntry {
   name: string;
@@ -11,6 +12,17 @@ interface LicenseEntry {
   texts: { file: string; text: string }[];
 }
 const list = licenses as LicenseEntry[];
+// A text that is byte-identical to one shown earlier (the Apache-2.0 text of several packages, the same OFL
+// file of two font packages) is printed once; later entries point to it. Keeps the precached page small.
+const seen = new Map<string, string>();
+const shown = list.map((p) => ({
+  ...p,
+  texts: p.texts.map((t) => {
+    const first = seen.get(t.text);
+    if (!first) seen.set(t.text, `${p.name} ${t.file}`);
+    return { ...t, sameAs: first ?? null };
+  }),
+}));
 ---
 <Base
   title="오픈소스 라이선스 | 안올림"
@@ -19,6 +31,11 @@ const list = licenses as LicenseEntry[];
   <div class="prose">
     <div class="wrap narrow">
       <h1>오픈소스 라이선스</h1>
+      <section aria-labelledby="hwp-notice-title">
+        <h2 id="hwp-notice-title">한글(HWP) 문서 관련 고지</h2>
+        <p>{HANCOM_NOTICE}</p>
+        <p>{TRADEMARK_NOTICE}</p>
+      </section>
       <p class="meta-line">안올림은 아래 오픈소스 소프트웨어와 글꼴을 이 사이트에서 직접 제공해 사용합니다. 각 라이선스 전문은 항목을 펼쳐 볼 수 있습니다.</p>
       <table>
         <thead><tr><th scope="col">이름</th><th scope="col">버전</th><th scope="col">라이선스</th><th scope="col">용도</th></tr></thead>
@@ -29,14 +46,14 @@ const list = licenses as LicenseEntry[];
         </tbody>
       </table>
       <h2>라이선스 전문</h2>
-      {list.map((p) => (
+      {shown.map((p) => (
         <details class="license">
           <summary>{p.name} {p.version} ({p.license})</summary>
           {p.homepage && <p><a href={p.homepage} rel="noopener">{p.homepage}</a></p>}
           {p.texts.map((t) => (
             <>
               <h3>{t.file}</h3>
-              <pre>{t.text}</pre>
+              {t.sameAs ? <p>위 {t.sameAs}와 같은 전문입니다.</p> : <pre>{t.text}</pre>}
             </>
           ))}
         </details>

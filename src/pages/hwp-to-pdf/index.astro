@@ -1,0 +1,182 @@
+---
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { GUIDES } from '../../tools/hwp-to-pdf/guidance';
+import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-to-pdf/messages';
+
+const tool = getTool('hwp-to-pdf');
+const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
+const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx';
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">한글 프로그램 없이 한글파일 PDF로 변환합니다. HWP·HWPX 문서를 고르면 모든 쪽을 미리 보여 드리고, 글자를 선택할 수 있는 PDF로 저장합니다. HWP 뷰어처럼 바로 열어 볼 수도 있습니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="HWP PDF 변환 도구">
+    <div class="wrap narrow">
+      <div id="hwp-tool" class="hwp" data-state="empty">
+        <p class="notice" id="hw-notice" role="status" hidden></p>
+        <div class="drop" id="hw-drop">
+          <input id="hw-input" class="file-input" type="file" accept={accept}>
+          <label class="btn primary" for="hw-input" id="hw-pick">HWP 파일 선택</label>
+          <p class="drop-hint">또는 여기에 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱이나 다운로드 폴더에서 고를 수 있습니다.</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <div class="progress-box" id="hw-progress" hidden>
+          <p id="hw-progress-text">문서를 여는 중</p>
+          <progress id="hw-progress-bar" aria-labelledby="hw-progress-text"></progress>
+          <button type="button" class="btn ghost" id="hw-cancel">취소</button>
+        </div>
+
+        <EngineError />
+        <p class="error-box" id="hw-error" role="alert" data-live="alert" tabindex="-1" hidden></p>
+
+        <div class="hw-result" id="hw-result" hidden>
+          <p class="result-title" id="hw-file-name" tabindex="-1"></p>
+          <p class="notice warn" id="hw-banner" role="status" hidden></p>
+          <div class="row hw-actions">
+            <button type="button" class="btn primary" id="hw-save" disabled hidden>PDF로 저장</button>
+            <button type="button" class="btn primary" id="hw-force" hidden>그래도 PDF로 저장</button>
+            <button type="button" class="btn ghost" id="hw-reset">다른 문서 열기</button>
+          </div>
+          <div class="hw-guide" id="hw-guide" hidden></div>
+          <p class="hint" id="hw-note" hidden>원본 프로그램과 글꼴·줄바꿈이 조금 다를 수 있습니다.</p>
+          <div class="notice" id="hw-after" hidden>
+            <p>PDF 파일이 저장되지 않았다면 인쇄 창에서 PDF로 저장을 골랐는지 확인해 주세요.</p>
+            <p><a href="/pdf-compress/">저장한 PDF가 크면 PDF 용량 줄이기</a></p>
+          </div>
+          <div class="hw-preview" id="hwp-print-root" tabindex="0" role="region" aria-label="문서 미리보기"></div>
+        </div>
+
+        <p class="visually-hidden" id="hw-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="hwp-to-pdf-result" size="rect" />
+    </div>
+  </section>
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>HWP 파일 선택</strong><span>HWP·HWPX 문서를 고르거나 끌어다 놓습니다. 모든 쪽이 미리보기로 열립니다.</span></li>
+        <li><strong>PDF로 저장 누르기</strong><span>브라우저의 인쇄 창이 열립니다.</span></li>
+        <li><strong>PDF로 저장 고르기</strong><span>인쇄 창에서 「PDF로 저장」을 고르고 저장을 누릅니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">안전한 이유</h2>
+      <ul class="points">
+        <li><strong>업로드하지 않습니다</strong><span>문서는 이 기기 안에서만 처리되고 어디에도 전송되지 않습니다.</span></li>
+        <li><strong>설치하지 않습니다</strong><span>한글 프로그램이나 다른 프로그램을 설치하지 않아도 됩니다.</span></li>
+        <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="help" aria-labelledby="help-title">
+    <div class="wrap narrow">
+      <h2 id="help-title">도움말</h2>
+      <h3>PDF로 저장하는 방법</h3>
+      {GUIDES.map((g) => (
+        <details>
+          <summary>{g.title}</summary>
+          <ol>{g.steps.map((s) => <li>{s}</li>)}</ol>
+        </details>
+      ))}
+      <h3>원본과 다를 수 있는 문서</h3>
+      <ul>
+        <li>수식이 들어 있는 문서는 수식 모양이 원본과 다를 수 있습니다.</li>
+        <li>글상자·도형이 많은 문서는 도형의 위치가 원본과 다를 수 있습니다.</li>
+        <li>100쪽 이상인 문서는 쪽 나눔이 원본과 다를 수 있습니다.</li>
+      </ul>
+      <p>이런 문서는 먼저 미리보기로 보여 드립니다. 확인한 뒤 「그래도 PDF로 저장」을 누르면 저장할 수 있습니다.</p>
+      <h3>한글(HWP) 문서 관련 고지</h3>
+      <p>{HANCOM_NOTICE}</p>
+      <p>{TRADEMARK_NOTICE}</p>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['pdf-merge', 'pdf-compress']} />
+  <div class="wrap narrow"><AdSlot id="hwp-to-pdf-footer" size="leaderboard" /></div>
+  <aside class="tool-legal" aria-label="한글(HWP) 문서 관련 고지">
+    <div class="wrap narrow">
+      <p>{HANCOM_NOTICE}</p>
+      <p>{TRADEMARK_NOTICE}</p>
+    </div>
+  </aside>
+</Base>
+
+<style is:global>
+  .hwp .hw-result { margin-top: 20px; display: grid; gap: 12px; }
+  .hwp .hw-result .result-title { margin: 0; overflow-wrap: anywhere; }
+  .hwp .hw-actions { flex-wrap: wrap; }
+  .hwp .notice.warn { border-color: var(--warn); }
+  .hw-guide { padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .hw-guide ol { margin: 6px 0 8px; padding-left: 22px; }
+  .hw-guide-title { margin: 8px 0 0; font-weight: 700; }
+  .hw-preview {
+    max-height: 80vh; overflow: auto; padding: 12px; border-radius: var(--radius);
+    background: #e5e7eb; display: grid; gap: 12px; justify-items: center;
+  }
+  .hw-preview:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+  .hw-preview .page { width: 100%; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .18); overflow: hidden; }
+  .hw-preview .page svg { display: block; width: 100%; height: auto; }
+  .hw-preview .page-failed { margin: 0; padding: 24px; color: #444; text-align: center; }
+  .help h3 { margin: 20px 0 8px; font-size: 17px; }
+  .help details { margin: 6px 0; }
+  .help ol, .help ul { padding-left: 22px; }
+  .tool-legal { margin-top: 12px; color: var(--muted); font-size: 14px; }
+  .tool-legal p { margin: 4px 0; }
+
+  /* Print (brief Step 5 §3.2): a finished document prints its pages only, one named @page per size (the
+     sizes come from print.ts at runtime); viewer-only prints a one-line notice, never partial pages. */
+  @media print {
+    @page { margin: 0; }
+    body.hwp-printable *:not(:has(#hwp-print-root)):not(#hwp-print-root):not(#hwp-print-root *) { display: none !important; }
+    body.hwp-printable :has(#hwp-print-root) {
+      display: block !important; margin: 0 !important; padding: 0 !important; border: 0 !important;
+      max-width: none !important; width: auto !important; background: none !important; box-shadow: none !important;
+    }
+    body.hwp-printable #hwp-print-root { display: block; max-height: none; overflow: visible; padding: 0; margin: 0; background: none; border-radius: 0; }
+    body.hwp-printable #hwp-print-root .page {
+      max-width: none !important; aspect-ratio: auto !important; margin: 0; box-shadow: none;
+      break-after: page; overflow: hidden; print-color-adjust: exact; -webkit-print-color-adjust: exact;
+    }
+    body.hwp-printable #hwp-print-root .page:last-child { break-after: auto; }
+    body.hwp-printable #hwp-print-root .page svg { width: 100%; height: 100%; }
+    body.hwp-viewer-only > *, body.hwp-not-ready > * { display: none !important; }
+    body.hwp-viewer-only::before { content: "이 문서는 보기 전용입니다"; display: block; padding: 20mm; font-size: 16pt; }
+    body.hwp-not-ready::before { content: "「그래도 PDF로 저장」을 누른 뒤 저장해 주세요"; display: block; padding: 20mm; font-size: 16pt; }
+  }
+</style>
+
+<script>
+  import { initHwpTool } from '../../tools/hwp-to-pdf/controller';
+  initHwpTool();
+</script>

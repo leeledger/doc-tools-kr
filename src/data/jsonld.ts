@@ -27,3 +27,12 @@ export function toolJsonLd(tool: Tool, site: URL | undefined): Record<string, un
     },
   ];
 }
+
+/** FAQPage JSON-LD from tools.ts faq[] (brief Step 5 §3.1; used by /hwp-to-pdf/ only). */
+export function faqJsonLd(tool: Tool): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: tool.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+  };
+}

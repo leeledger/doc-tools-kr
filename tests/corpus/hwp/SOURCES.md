@@ -1,0 +1,16 @@
+# HWP test fixtures: sources
+
+Only law.go.kr 별표·서식 and 행정규칙 attachments (statutes, notices and their annexes are not protected works under 저작권법 §7). Downloaded 2026-09-29 for the spike corpus (spikes/hwp/corpus/sources.md), copied here unchanged. No official PDF is committed; `expected.json` holds page counts and the content text of each official PDF (scripts/regress/hwp-expected.mjs), `features.expected.json` the spike scan (spikes/hwp/scripts/features.py).
+
+| key | type | pages (official PDF) | title | source page | HWP/HWPX URL | PDF twin URL |
+|---|---|---|---|---|---|---|
+| adm02 | hwpx | 8 | law.go.kr 행정규칙 첨부 | 2025년 국가유산수리 표준품셈 일부 개정 신구조문 대비표.hwpx (국가유산수리 표준품셈) | https://www.law.go.kr/DRF/lawService.do?OC=test&target=admrul&ID=2100000262458&type=HTML | https://www.law.go.kr/flDownload.do?flSeq=155447053 | https://www.law.go.kr/flDownload.do?flSeq=155026051 |
+| adm14 | hwpx | 5 | law.go.kr 행정규칙 첨부 | 경인지방데이터청 공적심사규정(경인청 예규 제02호¸ 2026.7.1.).hwpx (경인지방데이터청 공적심사규정) | https://www.law.go.kr/DRF/lawService.do?OC=test&target=admrul&ID=2100000281714&type=HTML | https://www.law.go.kr/flDownload.do?flSeq=166602519 | https://www.law.go.kr/flDownload.do?flSeq=166602523 |
+| adm19 | hwpx | 29 | law.go.kr 행정규칙 첨부 | 내진설계 일반(KDS 17 10 00).hwpx (내진설계 일반(KDS 17 10 00)) | https://www.law.go.kr/DRF/lawService.do?OC=test&target=admrul&ID=2100000237514&type=HTML | https://www.law.go.kr/flDownload.do?flSeq=140462713 | https://www.law.go.kr/flDownload.do?flSeq=140462717 |
+| adm28 | hwpx | 128 | law.go.kr 행정규칙 첨부 | ★ (행정안전부고시 제2025-69호(2025.12.11.))소하천설계기준 일부개정 전문(최종).hwpx (소하천설계기준) | https://www.law.go.kr/DRF/lawService.do?OC=test&target=admrul&ID=2100000269612&type=HTML | https://www.law.go.kr/flDownload.do?flSeq=159147547 | https://www.law.go.kr/flDownload.do?flSeq=159147551 |
+| law05 | hwp | 1 | [서식] 관세법 시행규칙 — 「방위사업법」 제57조의4에 따른 중개수수료 신고 자료 | https://www.law.go.kr (별표서식) | https://www.law.go.kr/LSW/flDownload.do?flSeq=167613637 | https://www.law.go.kr/LSW/flDownload.do?flSeq=167613639 |
+| law07 | hwp | 1 | [별표] 공직선거관리규칙 — 10배 이상 50배 이하 과태료 부과기준 (자수하지 아니한 경우) | https://www.law.go.kr (별표서식) | https://www.law.go.kr/LSW/flDownload.do?flSeq=167245493 | https://www.law.go.kr/LSW/flDownload.do?flSeq=167245495 |
+| law09 | hwp | 20 | [별표] 도시가스사업법 시행규칙 — 가스도매사업의 가스공급시설의 시설ㆍ기술ㆍ검사ㆍ정밀안전진단ㆍ안전성평가의 기준 (20p) | https://www.law.go.kr (별표서식) | https://www.law.go.kr/LSW/flDownload.do?flSeq=168735381 | https://www.law.go.kr/LSW/flDownload.do?flSeq=168735383 |
+| law10 | hwp | 26 | [별표] 공무원임용시험령 — 각종 임용시험 과목표(제7조제1항관련) (26p) | https://www.law.go.kr (별표서식) | https://www.law.go.kr/LSW/flDownload.do?flSeq=166118273 | https://www.law.go.kr/LSW/flDownload.do?flSeq=166118275 |
+| law17 | hwp | 2 | law.go.kr 별표·서식 | [서식] 공직선거관리규칙 — 거소투표 발송용 봉투, (거소투표)·(사전투표) 회송용 봉투 | https://www.law.go.kr (별표서식, DRF licbyl) | https://www.law.go.kr/LSW/flDownload.do?flSeq=167246083 | https://www.law.go.kr/LSW/flDownload.do?flSeq=167246085 |
+| law18 | hwp | 9 | law.go.kr 별표·서식 | [서식] 공직선거관리규칙 — 경선홍보물 발송용 봉투, 경선홍보물 발송 신고서, 당내경선 (합동연설회)ㆍ(합동토론회) 개최신고서, 휴대전화 가상번호 제공 요청서, 휴대전화 가상번호 명부, 휴대전화 가상번호 비용 통보, 휴대전화 가상번호 비용 공고, 자동 동보통신을 이용한 문자메시지 전송용 전화번호 신고서 | https://www.law.go.kr (별표서식, DRF licbyl) | https://www.law.go.kr/LSW/flDownload.do?flSeq=167245719 | https://www.law.go.kr/LSW/flDownload.do?flSeq=167245721 |

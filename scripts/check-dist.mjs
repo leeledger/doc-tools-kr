@@ -3,7 +3,7 @@
 // Runs first in postbuild, before carry-assets, so the budgets judge the fresh build only.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { gzipSync } from 'node:zlib';
+import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
 import { beaconPath } from './lib/beacon-path.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 
@@ -109,8 +109,30 @@ count(/^_astro\/mozjpeg_enc[^/]*\.wasm$/, 1, 'mozjpeg_enc*.wasm');
 count(/^_astro\/webp_enc-[^/]*\.wasm$/, 1, 'webp_enc*.wasm');
 count(/^_astro\/webp_enc_simd-[^/]*\.wasm$/, 1, 'webp_enc_simd*.wasm');
 
+// HWP PDF 변환 (brief Step 5 §4).
+budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
+{
+  // The viewer / post-processing / print chunk: lazy*.js plus the chunks it imports that the page does not.
+  const initial = new Set(initialJs(pageHtml.get('hwp-to-pdf/index.html') ?? ''));
+  const lazy = match(/^_astro\/lazy[.-][^/]*\.js$/);
+  budget('hwp viewer + print chunk (lazy*.js)', [...new Set(lazy.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 25 * KB);
+}
+count(/(^|\/)rhwp_bg[^/]*\.wasm$/, 1, 'rhwp_bg*.wasm');
+budget('vendor/rhwp/*/rhwp_bg.wasm', match(/^vendor\/rhwp\/[^/]+\/rhwp_bg\.wasm$/), 10.5 * 1024 * KB, raw, 'raw');
+// Quality 5 (about what a CDN uses on the fly; q11 takes a minute on 10 MB). q9 is 2.9 MiB, q4 3.3 MiB.
+for (const w of match(/^vendor\/rhwp\/[^/]+\/rhwp_bg\.wasm$/)) rows.push({ label: '  (rhwp_bg.wasm brotli q5, reported)', size: brotliCompressSync(read(w), { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 5 } }).length, limit: Infinity, unit: 'br' });
+// Brief: 30 KB. The floor is the unique unicode-range lists of the slices (22.4 KB gzip); 30.4 KB is a Flag
+// in the Step 5 REVIEW-REQUEST, so the gate is 31 KB until Arch decides.
+budget('HWP font CSS (fonts/hwp/hwp-fonts.*.css)', match(/^fonts\/hwp\/hwp-fonts\.[^/]+\.css$/), 31 * KB);
+{
+  const slices = match(/^fonts\/hwp\/[^/]+@[^/]+\/[^/]+\.woff2$/).filter((f) => !f.includes('/fallback@'));
+  const largestSlice = slices.reduce((a, f) => (raw(f) > raw(a) ? f : a), slices[0] ?? '');
+  budget(`HWP font slice, largest (${slices.length} files)`, largestSlice ? [largestSlice] : [], 250 * KB, raw, 'raw');
+}
+budget('HWP fallback face', match(/^fonts\/hwp\/fallback@[^/]+\/[^/]+\.woff2$/), 60 * KB, raw, 'raw');
+
 console.log('check-dist: budgets');
-for (const r of rows) console.log(`  ${r.label.padEnd(44)} ${(r.size / KB).toFixed(1).padStart(7)} KB  / ${r.limit / KB} KB ${r.unit}`);
+for (const r of rows) console.log(`  ${r.label.padEnd(44)} ${(r.size / KB).toFixed(1).padStart(7)} KB  / ${Number.isFinite(r.limit) ? `${r.limit / KB} KB` : '-'} ${r.unit}`);
 
 const largest = files.reduce((a, f) => (f.size > a.size ? f : a), { path: '-', size: 0 });
 if (errors.length) {

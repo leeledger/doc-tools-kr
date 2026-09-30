@@ -138,6 +138,60 @@
       "files": [
         "LICENSE"
       ]
+    },
+    {
+      "name": "@rhwp/core",
+      "use": "HWP PDF 변환: HWP·HWPX 문서 해석과 쪽 그리기 (rhwp, WebAssembly, 작업자 스레드). 포함된 Rust 크레이트 고지 포함",
+      "files": [
+        "LICENSE"
+      ],
+      "localFiles": [
+        "licenses/third-party/rhwp/CRATES.md",
+        "licenses/third-party/rhwp/APACHE-2.0.txt"
+      ],
+      "homepage": "https://github.com/edwardkim/rhwp"
+    },
+    {
+      "name": "@fontsource/noto-serif-kr",
+      "use": "HWP PDF 변환: 문서 글꼴 Noto Serif KR (원본 그대로, CSS에서만 \"Anolim HWP Serif\"로 부름)",
+      "files": [
+        "LICENSE"
+      ],
+      "homepage": "https://fontsource.org/fonts/noto-serif-kr"
+    },
+    {
+      "name": "@fontsource/noto-sans-kr",
+      "use": "HWP PDF 변환: 문서 글꼴 Noto Sans KR (원본 그대로, CSS에서만 \"Anolim HWP Sans\"로 부름)",
+      "files": [
+        "LICENSE"
+      ],
+      "homepage": "https://fontsource.org/fonts/noto-sans-kr"
+    },
+    {
+      "name": "@fontsource/nanum-myeongjo",
+      "use": "HWP PDF 변환: 문서 글꼴 나눔명조 (원본 그대로, CSS에서만 \"Anolim HWP Myeongjo\"로 부름)",
+      "files": [
+        "LICENSE"
+      ],
+      "homepage": "https://fontsource.org/fonts/nanum-myeongjo"
+    },
+    {
+      "name": "@fontsource/nanum-gothic",
+      "use": "HWP PDF 변환: 문서 글꼴 나눔고딕 (원본 그대로, CSS에서만 \"Anolim HWP Gothic\"로 부름)",
+      "files": [
+        "LICENSE"
+      ],
+      "homepage": "https://fontsource.org/fonts/nanum-gothic"
+    },
+    {
+      "component": "Noto Sans CJK KR (부분)",
+      "version": "2.004",
+      "license": "OFL-1.1",
+      "homepage": "https://github.com/notofonts/noto-cjk",
+      "use": "HWP PDF 변환: 네 글자(도장 기호, 아래아 등)만 남긴 보조 글꼴 \"Anolim HWP Fallback\"",
+      "localFiles": [
+        "licenses/third-party/noto-sans-cjk/LICENSE"
+      ]
     }
   ]
 }

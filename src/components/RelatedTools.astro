@@ -4,8 +4,13 @@ import { LIVE_TOOLS } from '../data/tools';
 interface Props {
   /** The current tool, left out of the list. */
   current: string;
+  /** Optional: only these slugs, in this order (brief Step 5 §3.6). */
+  only?: string[];
 }
-const others = LIVE_TOOLS.filter((t) => t.slug !== Astro.props.current);
+const { current, only } = Astro.props;
+const others = only
+  ? only.map((s) => LIVE_TOOLS.find((t) => t.slug === s)).filter((t): t is (typeof LIVE_TOOLS)[number] => Boolean(t) && t!.slug !== current)
+  : LIVE_TOOLS.filter((t) => t.slug !== current);
 ---
 {others.length > 0 && (
   <section class="related" aria-labelledby="related-title">
