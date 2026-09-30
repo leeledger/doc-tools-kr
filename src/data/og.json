@@ -1,0 +1,25 @@
+{
+  "$comment": "Share previews (Polish Q). scripts/gen-brand.mjs draws /brand/og-<image>.png (1200×630) from each image's title and line; Base.astro picks the page's image and description (og:description and twitter:description: plain words, at most 80 characters). Paths not listed use \"*\". {tools} is the live tool names (tools.ts status), so the home preview never names a tool that is not live. Tool image titles equal the tool names in tools.ts (unit test). domain is printed on the images; the name is always 문서딱.",
+  "domain": "docttak.com",
+  "images": {
+    "home": { "title": "내야 하는 문서·사진", "line": "용량과 규격에 딱 맞춰 드려요 — 무료, 내 폰·PC 안에서만" },
+    "pdf-merge": { "title": "PDF 합치기", "line": "여러 PDF를 한 파일로 — 무료, 내 폰·PC 안에서만" },
+    "pdf-compress": { "title": "PDF 용량 줄이기", "line": "제출 용량에 맞게 — 무료, 내 폰·PC 안에서만" },
+    "photo-compress": { "title": "사진 용량 줄이기", "line": "원하는 KB에 딱 맞게 — 무료, 내 폰·PC 안에서만" },
+    "id-photo": { "title": "여권·증명사진 규격 맞추기", "line": "제출처 크기와 용량에 딱 맞게 — 무료, 내 폰·PC 안에서만" },
+    "hwp-to-pdf": { "title": "HWP PDF 변환", "line": "한글 프로그램 없이 — 무료, 내 폰·PC 안에서만" },
+    "default": { "title": "문서·사진, 규격에 딱", "line": "PDF·사진·여권사진·HWP — 무료, 내 폰·PC 안에서만" }
+  },
+  "pages": {
+    "/": { "image": "home", "description": "{tools}. 내 폰·PC 안에서만, 무료예요." },
+    "/pdf-merge/": { "image": "pdf-merge", "description": "여러 PDF를 원하는 순서로 한 파일로 묶어요. 파일은 내 폰·PC 밖으로 안 나가요. 무료." },
+    "/pdf-compress/": { "image": "pdf-compress", "description": "스캔·사진이 든 PDF를 제출 용량에 맞게 줄여요. 글자는 그대로, 파일은 밖으로 안 나가요." },
+    "/photo-compress/": { "image": "photo-compress", "description": "사진을 100KB·200KB·500KB 등 원하는 용량에 맞춰 줄여요. 촬영 위치 정보는 지워요. 무료." },
+    "/id-photo/": { "image": "id-photo", "description": "여권·시험·이력서 사진을 제출처 크기와 용량에 맞춰요. 보정 없이, 사진은 밖으로 안 나가요." },
+    "/hwp-to-pdf/": { "image": "hwp-to-pdf", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 저장해요. 파일은 밖으로 안 나가요." },
+    "/privacy/": { "image": "default", "description": "문서딱은 가입이 없고 개인정보를 받지 않아요. 파일은 내 폰·PC 안에서만 처리해요." },
+    "/terms/": { "image": "default", "description": "문서딱 이용약관: 무료로 쓰는 문서·사진 도구의 이용 조건과 책임의 범위를 알려 드려요." },
+    "/licenses/": { "image": "default", "description": "문서딱이 쓰는 오픈소스 소프트웨어와 글꼴의 목록, 버전, 라이선스 전문이에요." },
+    "*": { "image": "default", "description": "내야 하는 문서·사진, 용량과 규격에 딱 맞춰 드려요. 파일은 내 폰·PC 밖으로 안 나가요. 무료." }
+  }
+}

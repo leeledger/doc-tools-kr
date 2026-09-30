@@ -32,8 +32,9 @@ if (files.length > MAX_FILES) errors.push(`${files.length} files (limit ${MAX_FI
 const env = publicEnv();
 const email = env.PUBLIC_CONTACT_EMAIL?.trim();
 if (email && !EMAIL_RE.test(email)) errors.push(`PUBLIC_CONTACT_EMAIL "${email}" is not an email address`);
-// Arch (Polish P round 2): the site may ship with "문의: 준비 중" while it processes no personal data, but
-// the error beacon or ads (both collect data) need a published contact first.
+// Arch (Polish P round 2), kept by the owner in Polish Q: while the site processes no personal data it
+// publishes no contact at all, but the error beacon or ads (both collect data) need a published contact
+// first (and a full privacy policy with a privacy officer: BUILD-LOG Known Gaps).
 const beaconOn = beaconPath(env.PUBLIC_ERROR_BEACON_PATH) !== '';
 const adsOn = /export const ADS_ENABLED\s*=\s*true/.test(readFileSync(join(import.meta.dirname, '..', 'src', 'data', 'site.ts'), 'utf8'));
 if ((beaconOn || adsOn) && !email) errors.push(`${beaconOn ? 'the error beacon' : 'ads'} is enabled but PUBLIC_CONTACT_EMAIL is not set (the privacy policy must name a contact first)`);
@@ -144,7 +145,10 @@ for (const css of match(/^_astro\/[^/]*\.css$/)) {
 }
 
 // Brand (Polish P.10).
-budget('brand/og.png', match(/^brand\/og\.png$/), 150 * KB, raw, 'raw');
+// Share images (Polish Q): one per og.json image, each ≤ 300 KB (Kakao, Facebook, X and Slack all accept that).
+const ogImages = match(/^brand\/og-[a-z-]+\.png$/);
+if (ogImages.length < 7) errors.push(`brand/og-*.png: ${ogImages.length} share images, expected one per og.json image (7)`);
+for (const img of ogImages) budget(img, [img], 300 * KB, raw, 'raw');
 budget('favicon.ico', match(/^favicon\.ico$/), 20 * KB, raw, 'raw');
 for (const icon of ['brand/apple-touch-icon.png', 'brand/icon-192.png', 'brand/icon-512.png', 'brand/icon-maskable-512.png', 'manifest.webmanifest']) {
   if (!files.some((f) => f.path === icon)) errors.push(`${icon} is missing`);

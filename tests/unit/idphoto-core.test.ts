@@ -406,7 +406,7 @@ describe('warnings', () => {
     expect(ids(outside.blocks)).toEqual(['outside']);
     expect(outside.blocks[0]!.text).toBe(COPY.outside);
     const low = run(null, { lowres: true });
-    expect(low.blocks).toEqual([{ id: 'lowres', text: '사진 해상도가 낮아 413×531 px로 만들 수 없습니다. 흐려지지 않게 키우지 않으니 더 큰 원본 사진을 선택해 주세요.' }]);
+    expect(low.blocks).toEqual([{ id: 'lowres', text: '사진 해상도가 낮아 413×531픽셀로 만들 수 없습니다. 흐려지지 않게 키우지 않으니 더 큰 원본 사진을 선택해 주세요.' }]);
     expect(ids(run(null, { customError: '50–2,000 px' }).blocks)).toEqual(['custom']);
     expect(ids(run(null, { manualReason: 'noface' }).warns)).toEqual(['manual']);
     expect(run(null, { manualReason: 'skipped' }).warns).toEqual([]);

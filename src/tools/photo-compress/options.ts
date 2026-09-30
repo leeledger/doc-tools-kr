@@ -60,7 +60,7 @@ export function rangeMessage(field: FieldName): string {
   if (field === 'targetCustom') return `${n(RANGES.targetKb.min)}부터 ${n(RANGES.targetKb.max)} 사이의 숫자(KB)를 입력해 주세요.`;
   if (field === 'percentCustom') return `${RANGES.percent.min}부터 ${RANGES.percent.max} 사이의 숫자(%)를 입력해 주세요.`;
   if (field === 'quality') return `${RANGES.quality.min}부터 ${RANGES.quality.max} 사이의 숫자를 고르세요.`;
-  return `${n(RANGES.edge.min)}부터 ${n(RANGES.edge.max)} 사이의 숫자(px)를 입력해 주세요.`;
+  return `${n(RANGES.edge.min)}부터 ${n(RANGES.edge.max)} 사이의 숫자(픽셀)를 입력해 주세요.`;
 }
 
 export function parseOptions(f: FormState): Parsed {

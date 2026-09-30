@@ -1,6 +1,7 @@
 // Device limits for PDF 용량 줄이기. Basis: spike §3.4 (40.7 MB → +709 MB peak memory; 74 MB → +1.5 GB).
 // Byte limits are checked when the file is picked; page limits after inspection and when the level changes.
 import { MB, type Device } from '../../lib/ui/device';
+import { josa } from '../../lib/ui/josa';
 
 export interface CompressLimits {
   /** Above these the user is asked to confirm. */
@@ -23,8 +24,8 @@ export type LimitCheck = { level: 'ok' } | { level: 'soft' | 'hard'; message: st
 const mbText = (bytes: number): string => `${Math.round(bytes / MB).toLocaleString('ko-KR')} MB`;
 const pagesText = (n: number): string => `${n.toLocaleString('ko-KR')}쪽`;
 const where = (device: Device): string => (device === 'mobile' ? '휴대폰에서는' : '이 기기에서는');
-const MEMORY = '기기 메모리가 부족해 브라우저가 멈출 수 있기 때문입니다.';
-const SLOW = '기기 메모리를 많이 써서 오래 걸리거나 브라우저가 멈출 수 있습니다.';
+const MEMORY = '이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다.';
+const SLOW = '처리할 양이 많아 오래 걸리거나 화면이 멈출 수 있습니다.';
 
 /** At pick time: the hard byte limit. */
 export function checkFileBytes(bytes: number, device: Device): LimitCheck {
@@ -51,13 +52,13 @@ export function checkRun(bytes: number, pages: number, raster: boolean, device: 
   if (hardPages.level !== 'ok') return hardPages;
   const lim = LIMITS[device];
   if (raster && pages > lim.rasterSoftPages) {
-    return { level: 'soft', message: `${pagesText(lim.rasterSoftPages)}이 넘는 파일을 이미지로 바꾸면 ${SLOW} 계속 줄일까요?` };
+    return { level: 'soft', message: `${josa(pagesText(lim.rasterSoftPages), '이/가')} 넘는 파일을 이미지로 바꾸면 ${SLOW} 계속 줄일까요?` };
   }
   if (bytes > lim.softBytes) {
-    return { level: 'soft', message: `${mbText(lim.softBytes)}가 넘는 파일은 ${SLOW} 계속 줄일까요?` };
+    return { level: 'soft', message: `${josa(mbText(lim.softBytes), '이/가')} 넘는 파일은 ${SLOW} 계속 줄일까요?` };
   }
   if (pages > lim.softPages) {
-    return { level: 'soft', message: `${pagesText(lim.softPages)}이 넘는 파일은 ${SLOW} 계속 줄일까요?` };
+    return { level: 'soft', message: `${josa(pagesText(lim.softPages), '이/가')} 넘는 파일은 ${SLOW} 계속 줄일까요?` };
   }
   return { level: 'ok' };
 }

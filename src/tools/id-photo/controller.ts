@@ -18,6 +18,7 @@ import { reportError } from '../../lib/ui/beacon';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { formatSize } from '../../lib/ui/format';
+import { josa } from '../../lib/ui/josa';
 import { checkDims, checkFileBytes, WORKING_LONG_EDGE } from './limits';
 import { INITIAL, canSave, reduce, saveReason, type Phase, type SaveAction, type SaveModel } from './model';
 import { drawOverlay } from './overlay';
@@ -31,9 +32,13 @@ export const COPY = {
   manualReadout: '직접 맞추기: 안내선에 정수리와 턱을 맞추세요',
   resetAuto: '자동 맞춤으로 되돌리기',
   resetManual: '처음 위치로',
-  exported: (name: string) => `저장했습니다. ${name}을 내려받을 수 있습니다.`,
+  exported: (name: string) => `저장했습니다. ${josa(name, '을/를')} 내려받을 수 있습니다.`,
+  /** The Step 3 copy says "줄일 수 없습니다"; this tool does not compress (UX-AUDIT-2 §7.3). */
+  animated: '움직이는 이미지는 여권·증명사진으로 쓸 수 없습니다. 사진 파일을 선택해 주세요.',
+  /** Done headline (UX-AUDIT-2 §7.2): what happened, then the size; the pixel size is a chip. */
+  done: (size: string) => `규격에 맞췄습니다 · ${size}`,
   verify: '규격에 맞는 파일을 만들지 못했습니다. 다시 저장해 보고, 계속되면 다른 사진을 써 주세요.',
-  unreachable: (kb: number, w: number, h: number) => `${kb.toLocaleString('ko-KR')} KB로는 ${w}×${h} px 사진을 만들 수 없습니다. 용량 한도를 조금 높여 주세요.`,
+  unreachable: (kb: number, w: number, h: number) => `${kb.toLocaleString('ko-KR')} KB로는 ${w}×${h}픽셀 사진을 만들 수 없습니다. 용량 한도를 조금 높여 주세요.`,
   fallback: '빠른 방식으로 저장했습니다. 규격과 용량은 같습니다.',
   summary: (c: Checklist) =>
     c.blocks.length
@@ -41,7 +46,7 @@ export const COPY = {
       : c.warns.length
         ? `확인할 항목 ${c.warns.length}개가 있습니다.`
         : '확인할 항목이 없습니다.',
-  customPx: `가로와 세로는 ${CUSTOM_BOUNDS.minPx}–${CUSTOM_BOUNDS.maxPx.toLocaleString('ko-KR')} px 사이의 정수로 입력해 주세요.`,
+  customPx: `가로와 세로는 ${CUSTOM_BOUNDS.minPx}–${CUSTOM_BOUNDS.maxPx.toLocaleString('ko-KR')}픽셀 사이의 정수로 입력해 주세요.`,
   customKb: `용량 한도는 ${CUSTOM_BOUNDS.minKb}–${CUSTOM_BOUNDS.maxKb.toLocaleString('ko-KR')} KB 사이의 정수로 입력하거나 비워 두세요.`,
 } as const;
 
@@ -445,7 +450,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     };
     const bytesErr = checkFileBytes(file.size, device);
     if (bytesErr) return fail(bytesErr);
-    if (file.size === 0) return fail(ERRORS['not-image']);
+    if (file.size === 0) return fail(ERRORS.empty);
     let sniff;
     try {
       const head = new Uint8Array(await file.slice(0, HEAD_BYTES).arrayBuffer());
@@ -456,7 +461,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     }
     if (sniff.format === 'unknown') return fail(ERRORS['not-image']);
     if (sniff.format === 'tiff') return fail(unsupportedMessage(sniff.format));
-    if (sniff.animated) return fail(ERRORS.animated);
+    if (sniff.animated) return fail(COPY.animated);
     if (sniff.truncated) return fail(ERRORS.truncated);
     const dims = orientedSize(sniff);
     if (dims) {
@@ -638,12 +643,12 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     result.src = resultUrl;
     result.width = p.outW;
     result.height = p.outH;
-    result.alt = `저장한 사진 미리보기 (${p.outW}×${p.outH} px)`;
+    result.alt = `저장한 사진 미리보기 (${p.outW}×${p.outH}픽셀)`;
     zoom2.checked = false;
     result.style.width = `${p.outW}px`;
-    headline.textContent = `${p.outW}×${p.outH} px · ${formatSize(bytes.length)} · ${p.dpi} dpi · ${p.label}`;
+    headline.textContent = COPY.done(formatSize(bytes.length));
     const lim = limitLabel(p);
-    const chipTexts = [`${p.label} ${p.outW}×${p.outH} px`, ...(lim ? [lim] : []), '사진 정보(EXIF)·위치 정보 없음'];
+    const chipTexts = [p.id === 'custom' ? '직접 입력한 규격' : p.label, `${p.outW}×${p.outH}픽셀`, ...(lim ? [lim] : []), '촬영 위치 등 사진 정보 없음'];
     chips.replaceChildren(
       ...chipTexts.map((t) => {
         const li = document.createElement('li');
@@ -658,7 +663,10 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     hideError();
     setPhase('done');
     say(COPY.exported(name));
-    headline.focus({ preventScroll: false });
+    // The headline, the chips and 내려받기 sit fully below the sticky header (UX-AUDIT-2 P1-1): the box scrolls to
+    // its scroll-margin-top, then the headline takes focus without a second scroll.
+    done.scrollIntoView({ block: 'start', behavior: 'instant' });
+    headline.focus({ preventScroll: true });
   }
 
   zoom2.addEventListener('change', () => {

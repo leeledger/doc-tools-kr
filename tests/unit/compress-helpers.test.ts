@@ -135,7 +135,7 @@ describe('limits (brief 5.4)', () => {
     expect(soft.level !== 'ok' && soft.message).toContain('20 MB');
     expect(checkRun(1, 301, false, 'mobile').level).toBe('soft');
     const hard = checkFileBytes(50 * MB + 1, 'mobile');
-    expect(hard.level !== 'ok' && hard.message).toBe('휴대폰에서는 50 MB까지 줄일 수 있습니다. 기기 메모리가 부족해 브라우저가 멈출 수 있기 때문입니다.');
+    expect(hard.level !== 'ok' && hard.message).toBe('휴대폰에서는 50 MB까지 줄일 수 있습니다. 이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다.');
   });
 
   it('이미지로 변환: desktop confirm above 200쪽, block above 500쪽; mobile 30쪽 / 100쪽', () => {

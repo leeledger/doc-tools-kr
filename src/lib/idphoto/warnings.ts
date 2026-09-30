@@ -65,7 +65,7 @@ const n0 = (v: number): string => Math.round(v).toLocaleString('ko-KR');
 
 export const COPY = {
   outside: '사진 바깥 부분이 들어갑니다. 빈 곳을 채우지 않으니 확대하거나 위치를 옮기고, 안 되면 머리 위와 어깨가 넉넉한 사진을 쓰세요.',
-  lowres: (w: number, h: number) => `사진 해상도가 낮아 ${w}×${h} px로 만들 수 없습니다. 흐려지지 않게 키우지 않으니 더 큰 원본 사진을 선택해 주세요.`,
+  lowres: (w: number, h: number) => `사진 해상도가 낮아 ${w}×${h}픽셀로 만들 수 없습니다. 흐려지지 않게 키우지 않으니 더 큰 원본 사진을 선택해 주세요.`,
   yaw: (deg: number) => `얼굴이 옆으로 약 ${n0(deg)}° 돌아가 있습니다. 정면을 보고 다시 찍는 것이 좋습니다.`,
   pitch: '고개가 위나 아래로 기울어져 있습니다. 정면을 보고 다시 찍는 것이 좋습니다.',
   roll: (deg: number) => `머리가 약 ${n0(deg)}° 기울어져 있습니다. 사진 전체가 기울었다면 기울기를 조정하고, 아니면 다시 찍는 것이 좋습니다.`,
@@ -77,7 +77,7 @@ export const COPY = {
   headReferencePct: (pct: number) => `추정 머리 길이가 사진 높이의 ${n0(pct)}%로 참고 범위(71–80%) 밖입니다. 확대·축소로 턱 끝을 초록 띠 안에 맞추세요.`,
   background: '배경이 흰색이 아닌 것 같습니다. 이 도구는 배경을 바꾸지 않으니 흰 배경에서 다시 찍어 주세요.',
   manual: '얼굴을 찾지 못해 직접 맞추기로 바꿨습니다. 안내선에 정수리와 턱을 맞추세요.',
-  size: (w: number, h: number) => `${w}×${h} px로 저장합니다.`,
+  size: (w: number, h: number) => `${w}×${h}픽셀로 저장합니다.`,
   bytes: (kb: string) => `${kb} 안으로 맞춥니다.`,
   inside: '사진 안쪽만 씁니다.',
   pose: '얼굴이 정면이고 표정·눈 상태에 문제가 보이지 않습니다.',

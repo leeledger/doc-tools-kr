@@ -58,9 +58,3 @@ export function cancelRun(rows: QueueRow[]): { anyFinished: boolean } {
   for (const r of rows) if (RUNNING.has(r.state)) r.state = 'pending';
   return { anyFinished: rows.some((r) => r.state === 'done' || r.state === 'kept' || r.state === 'error') };
 }
-
-/** Counts for the final summary: all rows in the list, and the rows that produced a smaller file. */
-export function summary(rows: readonly QueueRow[]): { total: number; done: number; failed: number } {
-  const done = rows.filter((r) => r.state === 'done').length;
-  return { total: rows.length, done, failed: rows.length - done };
-}

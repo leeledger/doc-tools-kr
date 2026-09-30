@@ -12,11 +12,13 @@ import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize, safeFileName } from '../../lib/ui/format';
+import { josa } from '../../lib/ui/josa';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { initCompare } from './compare';
 import { checkCount, checkDims, checkFileBytes, checkRun } from './limits';
 import { DEFAULT_FORM, KB_BYTES, parseOptions, rangeMessage, reductionPercent, type FieldName, type FormState, type Parsed } from './options';
-import { cancelRun, crash, startRun, summary, type RowState } from './queue';
+import { doneSummary, outcomeOf } from './headline';
+import { cancelRun, crash, startRun, type RowState } from './queue';
 
 type State = 'empty' | 'ready' | 'working' | 'done';
 
@@ -44,6 +46,8 @@ interface Row {
   softPixels: boolean;
   result: Result | null;
   kept: PhotoReport | null;
+  /** The kept row was already within the target (target mode), not merely no smaller (Polish Q note). */
+  keptSmall: boolean;
   origUrl: string | null;
   li: HTMLLIElement;
 }
@@ -235,7 +239,7 @@ export function initPhotoTool(): void {
     doneBar.hidden = next !== 'done';
     confirmBox.hidden = true;
     for (const inp of controls.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')) inp.disabled = next === 'working';
-    zipBtn.hidden = rows.filter((r) => r.result).length < 2;
+    zipBtn.hidden = rows.filter((r) => r.result || r.kept).length < 2;
     if (next !== 'done') {
       zipError.hidden = true;
       compare.hide();
@@ -285,8 +289,10 @@ export function initPhotoTool(): void {
     if (notes.length) {
       const ul = el('ul', 'ph-notes');
       for (const n of notes) {
-        const item = el('li', undefined, n);
-        item.setAttribute('role', 'note');
+        const note = el('span', undefined, n);
+        note.setAttribute('role', 'note');
+        const item = el('li');
+        item.append(note);
         ul.append(item);
       }
       meta.append(ul);
@@ -305,6 +311,15 @@ export function initPhotoTool(): void {
       cmp.setAttribute('aria-pressed', String(compareId === r.id));
       cmp.addEventListener('click', () => showCompare(r.id, true));
       actions.append(a, cmp);
+    } else if (r.kept) {
+      // Already small enough and nothing private in it: the original itself is the download (Polish Q).
+      r.origUrl ??= URL.createObjectURL(r.file);
+      const a = el('a', 'btn primary small', '원본 내려받기');
+      a.href = r.origUrl;
+      a.download = r.file.name;
+      a.setAttribute('aria-label', `${r.file.name} 원본 그대로 내려받기`);
+      a.dataset.role = 'download';
+      actions.append(a);
     }
     const del = el('button', 'btn ghost small danger', '삭제');
     del.type = 'button';
@@ -318,7 +333,7 @@ export function initPhotoTool(): void {
   function rowNotes(r: Row): string[] {
     const rep = r.result?.report ?? r.kept;
     if (!rep) return [];
-    if (rep.kept) return [NOTES.kept];
+    if (rep.kept) return [r.keptSmall ? NOTES.keptSmall : NOTES.keptNoGain];
     const n: string[] = [];
     if (rep.encoder === 'stripped') n.push(NOTES.stripped);
     // A grown file already says why in its size line.
@@ -339,6 +354,7 @@ export function initPhotoTool(): void {
     }
     r.result = null;
     r.kept = null;
+    r.keptSmall = false;
   }
 
   function releaseRow(r: Row): void {
@@ -361,7 +377,7 @@ export function initPhotoTool(): void {
     try {
       const bytesError = checkFileBytes(f.size, device);
       if (bytesError) return invalid(bytesError);
-      if (f.size === 0) return invalid(ERRORS['not-image']);
+      if (f.size === 0) return invalid(ERRORS.empty);
       const head = new Uint8Array(await f.slice(0, HEAD_BYTES).arrayBuffer());
       const tail = new Uint8Array(await f.slice(Math.max(0, f.size - TAIL_BYTES)).arrayBuffer());
       const s = sniffImage(head, { tail, size: f.size });
@@ -394,7 +410,7 @@ export function initPhotoTool(): void {
     const added = files.slice(0, accept).map((file): Row => {
       const li = el('li', 'photo-row');
       list.append(li);
-      return { id: nextId++, file, sniff: null, dims: null, checking: true, state: 'pending', error: null, softPixels: false, result: null, kept: null, origUrl: null, li };
+      return { id: nextId++, file, sniff: null, dims: null, checking: true, state: 'pending', error: null, softPixels: false, result: null, kept: null, keptSmall: false, origUrl: null, li };
     });
     rows.push(...added);
     if (state === 'empty') setState('ready');
@@ -430,11 +446,11 @@ export function initPhotoTool(): void {
     revokeZip();
     if (!rows.length) {
       resetAll(false);
-      announce(`${name}을(를) 목록에서 삭제했습니다.`);
+      announce(`${josa(name, '을/를')} 목록에서 삭제했습니다.`);
       return;
     }
     setState(state === 'done' && !rows.some((x) => x.result || x.kept) ? 'ready' : state);
-    announce(`${name}을(를) 목록에서 삭제했습니다.`);
+    announce(`${josa(name, '을/를')} 목록에서 삭제했습니다.`);
     (list.querySelector<HTMLButtonElement>('.photo-row button.danger') ?? addInput).focus();
   }
 
@@ -607,6 +623,7 @@ export function initPhotoTool(): void {
         r.state = 'done';
       } else {
         r.kept = msg.report;
+        r.keptSmall = runTarget?.parsed.options.mode === 'target';
         r.state = 'kept';
       }
     } else if (msg.type === 'item-error') {
@@ -627,26 +644,27 @@ export function initPhotoTool(): void {
   function finish(): void {
     runId++;
     stopWorker();
-    const s = summary(rows);
     setState('done');
     const first = rows.find((r) => r.result);
     if (first) showCompare(first.id, false);
-    const tail = s.failed ? ` ${s.failed}장은 줄이지 못했습니다.` : '';
-    const text = `${s.total}장 중 ${s.done}장을 줄였습니다.${tail}`;
-    renderHeadline(text);
-    announce(text);
+    announce(renderHeadline());
     const target = !zipBtn.hidden ? zipBtn : (list.querySelector<HTMLElement>('a[data-role="download"]') ?? againBtn);
     // The headline and the first download stay in view (below the sticky header); focus lands on a visible element.
     doneBar.scrollIntoView({ block: 'start' });
     target.focus();
   }
 
-  /** Done-state headline: the count, and the total before → after of the finished photos. */
-  function renderHeadline(summaryText: string): void {
-    const done = rows.filter((r) => r.result);
-    const before = done.reduce((a, r) => a + r.result!.report.inBytes, 0);
-    const after = done.reduce((a, r) => a + r.result!.report.outBytes, 0);
-    headline.textContent = done.length ? `${summaryText} ${formatSize(before)} → ${formatSize(after)}` : summaryText;
+  /** Done-state headline: 줄임 / 그대로 / 늘어남 counted apart, and the reduced photos' before → after. Returns the announced text. */
+  function renderHeadline(): string {
+    const { text, sizes } = doneSummary(
+      rows.map((r) => ({
+        outcome: outcomeOf(r.state, r.result ? r.result.report : null),
+        ...(r.result ? { inBytes: r.result.report.inBytes, outBytes: r.result.report.outBytes } : {}),
+      })),
+      formatSize,
+    );
+    headline.textContent = sizes ? `${text} ${sizes}` : text;
+    return text;
   }
 
   /** The worker or a codec did not load. Rows go back to 대기 (never a file error); the panel offers 새로고침. */
@@ -655,7 +673,7 @@ export function initPhotoTool(): void {
     stopWorker();
     const { anyFinished } = cancelRun(rows);
     setState(anyFinished ? 'done' : 'ready');
-    if (anyFinished) renderHeadline(`${summary(rows).total}장 중 ${summary(rows).done}장을 줄였습니다.`);
+    if (anyFinished) renderHeadline();
     reportError({ tool: 'photo-compress', phase: 'load', code: 'engine' });
     void showEngineError();
   }
@@ -666,7 +684,7 @@ export function initPhotoTool(): void {
     stopWorker();
     const { anyFinished } = cancelRun(rows);
     setState(anyFinished ? 'done' : 'ready');
-    if (anyFinished) renderHeadline(`${summary(rows).total}장 중 ${summary(rows).done}장을 줄였습니다.`);
+    if (anyFinished) renderHeadline();
     const first = rows.find((r) => r.result);
     if (first) showCompare(first.id, false);
     (anyFinished ? againBtn : runBtn).focus();
@@ -674,7 +692,8 @@ export function initPhotoTool(): void {
   }
 
   async function downloadZip(): Promise<void> {
-    const done = rows.filter((r) => r.result);
+    // Kept rows go in as their original files (the same download their row offers; Polish Q).
+    const done = rows.filter((r) => r.result || r.kept);
     if (done.length < 2) return;
     zipError.hidden = true;
     let buildZip: (typeof import('./zip'))['buildZip'];
@@ -686,7 +705,10 @@ export function initPhotoTool(): void {
       return;
     }
     try {
-      const bytes = buildZip(done.map((r) => ({ name: r.result!.name, bytes: r.result!.bytes })));
+      const entries = await Promise.all(
+        done.map(async (r) => (r.result ? { name: r.result.name, bytes: r.result.bytes } : { name: r.file.name, bytes: new Uint8Array(await r.file.arrayBuffer()) })),
+      );
+      const bytes = buildZip(entries);
       revokeZip();
       zipUrl = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/zip' }));
       const a = el('a');

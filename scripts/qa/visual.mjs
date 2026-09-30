@@ -190,15 +190,15 @@ async function weightProbe(browser, name) {
   const page = await ctx.newPage();
   await goto(page, '/');
   const r = await page.evaluate(async () => {
-    await document.fonts.load('400 32px "Anolim UI Sans"', '서류 파일 안올림');
-    await document.fonts.load('800 32px "Anolim UI Sans"', '서류 파일 안올림');
+    await document.fonts.load('400 32px "Anolim UI Sans"', '서류 파일 문서딱');
+    await document.fonts.load('800 32px "Anolim UI Sans"', '서류 파일 문서딱');
     const probe = (w) => {
       const c = document.createElement('canvas');
       c.width = 400;
       c.height = 60;
       const g = c.getContext('2d');
       g.font = `${w} 32px "Anolim UI Sans"`;
-      g.fillText('서류 파일 안올림', 4, 44);
+      g.fillText('서류 파일 문서딱', 4, 44);
       let ink = 0;
       for (const [i, v] of g.getImageData(0, 0, 400, 60).data.entries()) if (i % 4 === 3) ink += v;
       return ink;
@@ -267,6 +267,45 @@ async function stateRun(browser, mode, prefix, steps) {
 async function engineShown(page, label) {
   await page.locator('#engine-error').waitFor({ state: 'visible', timeout: 30_000 });
   if (await page.getByText('파일이 손상되었거나').count()) hard(`${label}: an engine failure was shown with the corrupt copy`);
+}
+
+/**
+ * /id-photo/ done state (UX-AUDIT-2 P1-1): the headline, the chips and 내려받기 must be fully visible, with the
+ * top edge below the sticky header and the bottom edge inside the viewport, and the headline focused.
+ */
+async function idpDoneInView(page, label) {
+  const r = await page.evaluate(() => {
+    const box = (sel) => document.querySelector(sel).getBoundingClientRect();
+    const header = box('header.top').bottom;
+    const parts = ['#idp-headline', '#idp-chips', '#idp-download'].map((sel) => ({ sel, top: box(sel).top, bottom: box(sel).bottom }));
+    return { header, vh: innerHeight, parts, focused: document.activeElement?.id === 'idp-headline' };
+  });
+  const bad = r.parts.filter((p) => p.top < r.header - 0.5 || p.bottom > r.vh + 0.5).map((p) => `${p.sel} ${Math.round(p.top)}–${Math.round(p.bottom)}`);
+  const ok = bad.length === 0 && r.focused;
+  report.mobileDownload.push({ state: `${label}-done`, headerBottom: Math.round(r.header), viewport: r.vh, belowHeaderAndInViewport: bad.length === 0, headlineFocused: r.focused });
+  if (!ok) hard(`${label} done: ${bad.length ? `hidden by the header or below the fold: ${bad.join(', ')}` : 'the headline is not focused'} (header bottom ${Math.round(r.header)}, viewport ${r.vh})`);
+}
+
+/** The /id-photo/ done state at 360, 768 and 200 % zoom (390 runs in the state matrix above). */
+async function idpDoneMatrix(browser) {
+  for (const [name, vp] of [['m360', VIEWPORTS.m360], ['t768', VIEWPORTS.t768], ['zoom200', { width: 720, height: 450, dpr: 2 }]]) {
+    const ctx = await newContext(browser, vp, 'light');
+    recorder(ctx, `idp-done-${name}`);
+    const page = await ctx.newPage();
+    try {
+      await goto(page, '/id-photo/');
+      await page.setInputFiles('#idp-input', join(FIX, 'photo', 'portrait_pd.jpg'));
+      await page.locator('#idp-tool[data-state="adjust"]').waitFor({ timeout: 90_000 });
+      await page.locator('#idp-confirm').check();
+      await page.locator('#idp-save').click();
+      await page.locator('#idp-tool[data-state="done"]').waitFor({ timeout: 60_000 });
+      await shoot(page, `idp-${name}-done-fold`, { full: false });
+      await idpDoneInView(page, `idp-${name}`);
+    } catch (err) {
+      hard(`idp-done-${name}: ${String(err instanceof Error ? err.message : err).split('\n')[0]}`);
+    }
+    await ctx.close();
+  }
 }
 
 async function toolStates(browser, f) {
@@ -391,8 +430,7 @@ async function toolStates(browser, f) {
       await page.locator('#idp-save').click();
       await page.locator('#idp-tool[data-state="done"]').waitFor({ timeout: 60_000 });
       await shot(3, 'done');
-      const box = await page.locator('#idp-download').boundingBox();
-      if (mode === 'm' && (!box || box.y + box.height > VIEWPORTS.m390.height)) hard('idp-m: the download button is not in the first screen of the done state');
+      await idpDoneInView(page, `idp-${mode}`);
       await goto(page, '/id-photo/');
       await page.setInputFiles('#idp-input', join(FIX, 'photo', 'anim.gif'));
       await page.locator('#idp-error').waitFor({ state: 'visible' });
@@ -443,7 +481,10 @@ const chrome = browsers.find(([n]) => n === 'chromium')?.[1];
 const f = await inputs();
 try {
   if (!ONLY || ONLY === 'static') await staticMatrix(browsers);
-  if ((!ONLY || ONLY === 'tools') && chrome) await toolStates(chrome, f);
+  if ((!ONLY || ONLY === 'tools') && chrome) {
+    await toolStates(chrome, f);
+    await idpDoneMatrix(chrome);
+  }
   if ((!ONLY || ONLY === 'net') && chrome) await timings(chrome, f);
 } finally {
   for (const [, b] of browsers) await b.close();

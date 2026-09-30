@@ -1,5 +1,6 @@
 // Device limits for PDF 합치기. Basis: spike S7 (75 MB / 845쪽 took 6.5–10.8 s and about +351 MB of memory on desktop).
 import { MB, type Device } from '../../lib/ui/device';
+import { josa } from '../../lib/ui/josa';
 
 export const MAX_FILES = 50;
 
@@ -37,7 +38,7 @@ export function checkAddBytes(totalBytes: number, device: Device): LimitCheck {
   const where = device === 'mobile' ? '휴대폰' : '이 기기';
   return {
     level: 'hard',
-    message: `파일 합계가 ${mbText(lim.hardBytes)}를 넘으면 ${where}의 메모리로는 합칠 수 없어 일부 파일을 추가하지 않았습니다. 파일을 나눠서 합쳐 주세요.`,
+    message: `파일 합계가 ${josa(mbText(lim.hardBytes), '을/를')} 넘으면 ${where}에서 한 번에 합칠 수 없어 일부 파일을 추가하지 않았습니다. 파일을 나눠서 합쳐 주세요.`,
   };
 }
 
@@ -48,13 +49,13 @@ export function checkMerge(totalBytes: number, totalPages: number, device: Devic
   if (totalBytes > lim.softBytes) {
     return {
       level: 'soft',
-      message: `파일 합계가 ${mbText(lim.softBytes)}를 넘습니다. 기기 메모리를 많이 써서 오래 걸리거나 브라우저가 멈출 수 있습니다. 계속 합칠까요?`,
+      message: `파일 합계가 ${josa(mbText(lim.softBytes), '을/를')} 넘습니다. 처리할 양이 많아 오래 걸리거나 화면이 멈출 수 있습니다. 계속 합칠까요?`,
     };
   }
   if (totalPages > lim.softPages) {
     return {
       level: 'soft',
-      message: `모두 ${lim.softPages.toLocaleString('ko-KR')}쪽이 넘습니다. 기기 메모리를 많이 써서 오래 걸리거나 브라우저가 멈출 수 있습니다. 계속 합칠까요?`,
+      message: `모두 ${lim.softPages.toLocaleString('ko-KR')}쪽이 넘습니다. 처리할 양이 많아 오래 걸리거나 화면이 멈출 수 있습니다. 계속 합칠까요?`,
     };
   }
   return { level: 'ok' };

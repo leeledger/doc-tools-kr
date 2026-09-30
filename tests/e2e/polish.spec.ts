@@ -123,10 +123,13 @@ test.describe('engine load failure (P.1)', () => {
 // ---------- P.4 operator, contact, 이용약관 ----------
 
 for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/hwp-to-pdf/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
-  test(`footer on ${path}: operator, contact (준비 중), 이용약관·개인정보·라이선스 links`, async ({ page }) => {
+  test(`footer on ${path}: no operator or contact line (owner, Polish Q), 이용약관·개인정보·라이선스 links`, async ({ page }) => {
     await gotoReady(page, path);
     const foot = page.locator('footer');
-    await expect(foot.locator('.foot-op')).toHaveText('운영: 사이티드(Cited) · 문의: 준비 중');
+    await expect(foot.locator('.foot-op')).toHaveCount(0);
+    await expect(foot).not.toContainText('준비');
+    await expect(foot).not.toContainText('사이티드');
+    await expect(foot.locator('.foot-copy')).toHaveText('© 2026 문서딱 · 내야 하는 문서·사진, 용량과 규격에 딱 맞춰 드려요');
     await expect(foot.getByRole('link', { name: '이용약관' })).toHaveAttribute('href', '/terms/');
     await expect(foot.getByRole('link', { name: '개인정보 처리방침' })).toHaveAttribute('href', '/privacy/');
     await expect(foot.getByRole('link', { name: '오픈소스 라이선스' })).toHaveAttribute('href', '/licenses/');
@@ -137,31 +140,32 @@ for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/
         r.selectNodeContents(el!.querySelector('a') ?? el!);
         return Math.round(r.getBoundingClientRect().left);
       };
-      return [text(f.querySelector('.foot-op')), text(f.querySelector('.foot-links')), text(f.querySelector('.foot-copy'))];
+      return [text(f.querySelector('.foot-links')), text(f.querySelector('.foot-copy'))];
     });
     expect(Math.max(...lefts) - Math.min(...lefts)).toBeLessThanOrEqual(1);
   });
 }
 
-test('terms: 200, canonical, the full text with 11 sections and the contact line', async ({ page }) => {
+test('terms: 200, canonical, the full text with 10 sections and no contact clause (owner, Polish Q)', async ({ page }) => {
   const res = await gotoReady(page, '/terms/');
   expect(res?.status()).toBe(200);
   await expect(page.locator('h1')).toHaveText('이용약관');
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute('href'))!).pathname).toBe('/terms/');
-  await expect(page.locator('.prose h2')).toHaveCount(11);
+  await expect(page.locator('.prose h2')).toHaveCount(10);
   await expect(page.locator('main')).toContainText('다만 운영자의 고의 또는 중대한 과실로 생긴 손해는 예외입니다.');
-  await expect(page.locator('main')).toContainText('문의: 준비 중');
+  await expect(page.locator('main')).toContainText('이 약관은 문서딱(이하 "서비스")의 이용 조건');
+  for (const gone of ['문의', '준비 중', '사이티드']) await expect(page.locator('main')).not.toContainText(gone);
 });
 
-test('privacy: §5 names the operator, the privacy officer and the contact state', async ({ page }) => {
+test('privacy: a short plain statement (owner, Polish Q): no sign-up, no personal data, files stay on the device; the access-log note; no officer or contact', async ({ page }) => {
   await gotoReady(page, '/privacy/');
-  await expect(page.getByRole('heading', { name: '5. 운영자와 문의처' })).toBeVisible();
   const main = page.locator('main');
-  await expect(main).toContainText('운영자: 사이티드(Cited)');
-  await expect(main).toContainText('개인정보 보호책임자: 사이티드 대표');
-  await expect(main).toContainText('문의: 준비 중입니다. 연락처가 정해지면 이 페이지와 모든 페이지 하단에 표시합니다.');
-  await expect(main).toContainText('문의 메일은 답변에만 쓰고, 문의가 끝나면 지웁니다.');
-  await expect(main).toContainText('운영자·문의처 항목 추가, 이용약관 신설');
+  await expect(page.locator('.prose h2')).toHaveText(['1. 받는 개인정보가 없어요', '2. 파일은 어디로도 보내지 않아요', '3. 사이트를 여는 기록', '4. 광고', '5. 변경 이력']);
+  await expect(main).toContainText('문서딱은 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요.');
+  await expect(main).toContainText('고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요.');
+  await expect(main).toContainText('사이트를 여는 기록(접속 기록: IP 주소, 쓰는 기기와 앱의 종류 등)은 Cloudflare가 보안과 운영을 위해 잠시 보관할 수 있어요.');
+  await expect(main).toContainText('시행일:');
+  for (const gone of ['보호책임자', '문의', '준비 중', '사이티드', '운영자:']) await expect(main).not.toContainText(gone);
   // The beacon is off: no 익명 오류 통계 section.
   await expect(main).not.toContainText('익명 오류 통계');
 });
@@ -245,21 +249,26 @@ test('icons, manifest and OG image are served; the head links them', async ({ pa
   const ico = await request.get('/favicon.ico');
   expect(ico.status()).toBe(200);
   expect(ico.headers()['content-type']).toMatch(/^image\//);
-  const og = await request.get('/brand/og.png');
-  expect(og.status()).toBe(200);
-  expect(og.headers()['content-type']).toBe('image/png');
+  // Polish Q: one share image per tool, home and a default, all served as PNG.
+  for (const name of ['home', 'default', 'pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf']) {
+    const og = await request.get(`/brand/og-${name}.png`);
+    expect(og.status(), name).toBe(200);
+    expect(og.headers()['content-type'], name).toBe('image/png');
+  }
+  expect((await request.get('/brand/og.png')).status()).toBe(404);
   const man = await request.get('/manifest.webmanifest');
   expect(man.status()).toBe(200);
   const m = await man.json();
-  expect(m).toMatchObject({ name: '안올림 — 파일을 올리지 않는 서류 도구', short_name: '안올림', start_url: '/', scope: '/', display: 'standalone', background_color: '#ffffff', theme_color: '#0f766e', lang: 'ko' });
+  expect(m).toMatchObject({ name: '문서딱 — 내야 하는 문서·사진, 용량과 규격에 딱 맞춰 드려요', short_name: '문서딱', start_url: '/', scope: '/', display: 'standalone', background_color: '#ffffff', theme_color: '#0f766e', lang: 'ko' });
   for (const icon of m.icons) expect((await request.get(icon.src)).status()).toBe(200);
   await gotoReady(page, '/pdf-merge/');
   const icons = await page.locator('link[rel="icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href')!.slice(0, 18)));
   expect(icons).toEqual(['data:image/svg+xml', '/favicon.ico']);
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/brand/apple-touch-icon.png');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
-  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /^https:\/\/.+\/brand\/og\.png$/);
-  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', '안올림 — 파일을 올리지 않는 서류 도구');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /^https:\/\/.+\/brand\/og-pdf-merge\.png$/);
+  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', '문서딱: PDF 합치기. 여러 PDF를 한 파일로 — 무료, 내 폰·PC 안에서만');
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', /^https:\/\/.+\/brand\/og-pdf-merge\.png$/);
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
 });
 
@@ -268,8 +277,8 @@ test('icons, manifest and OG image are served; the head links them', async ({ pa
 test('UI font weights: 800 renders bolder than 400 (static instances; the audit WebKit symptom)', async ({ page }) => {
   await gotoReady(page, '/');
   const r = await page.evaluate(async () => {
-    await document.fonts.load('400 32px "Anolim UI Sans"', '서류 파일 안올림');
-    await document.fonts.load('800 32px "Anolim UI Sans"', '서류 파일 안올림');
+    await document.fonts.load('400 32px "Anolim UI Sans"', '서류 파일 문서딱');
+    await document.fonts.load('800 32px "Anolim UI Sans"', '서류 파일 문서딱');
     const probe = (weight: number) => {
       const c = document.createElement('canvas');
       c.width = 400;
@@ -277,11 +286,11 @@ test('UI font weights: 800 renders bolder than 400 (static instances; the audit 
       const ctx = c.getContext('2d')!;
       ctx.font = `${weight} 32px "Anolim UI Sans"`;
       ctx.fillStyle = '#000';
-      ctx.fillText('서류 파일 안올림', 4, 44);
+      ctx.fillText('서류 파일 문서딱', 4, 44);
       const px = ctx.getImageData(0, 0, c.width, c.height).data;
       let ink = 0;
       for (let i = 3; i < px.length; i += 4) ink += px[i]!;
-      return { width: ctx.measureText('서류 파일 안올림').width, ink };
+      return { width: ctx.measureText('서류 파일 문서딱').width, ink };
     };
     return { bold: probe(800), regular: probe(400), check: document.fonts.check('800 16px "Anolim UI Sans"') };
   });
@@ -395,7 +404,7 @@ test('merge: a txt and a jpg never enter the list; one alert names both; only th
 test('compress: a txt is rejected with its name and never becomes the card', async ({ page }) => {
   await gotoReady(page, '/pdf-compress/');
   await page.setInputFiles('#cmp-input', NOTES);
-  await expect(page.locator('#cmp-error')).toHaveText('notes.txt은(는) PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
+  await expect(page.locator('#cmp-error')).toHaveText('notes.txt는 PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
   await expect(page.locator('#cmp-file')).toBeHidden();
 });
 
@@ -535,8 +544,13 @@ test.describe('merge list (P.16)', () => {
     await page.setInputFiles('#merge-input', [LAW, FW9, SCAN]);
     await expect(mergeRows(page)).toHaveCount(8);
     await expect(page.locator('#merge-list .info', { hasText: '쪽' })).toHaveCount(8);
-    await page.evaluate(() => document.querySelector('#merge-list')!.scrollIntoView({ block: 'start' }));
     const bar = page.locator('#merge-actions');
+    // Polish Q (UX-AUDIT-2 P2-7): at the top of the page, with the list running past the fold, the bar is
+    // already pinned to the bottom edge (a full-page screenshot cannot show this).
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    expect(await page.evaluate(() => document.querySelector('#merge-list')!.getBoundingClientRect().bottom > innerHeight)).toBe(true);
+    await expect(bar).toBeInViewport({ ratio: 1 });
+    await page.evaluate(() => document.querySelector('#merge-list')!.scrollIntoView({ block: 'start' }));
     await expect(bar).toBeInViewport({ ratio: 1 });
     await expect(bar.getByRole('button', { name: 'PDF 8개 합치기' })).toBeVisible();
     const vh = page.viewportSize()!.height;

@@ -14,7 +14,8 @@ import { formatSize } from '../../src/lib/ui/format';
 import { nonPdfMessage } from '../../src/lib/ui/pdf-pick';
 import { SIGNALS, schedulePreload, warmWorker } from '../../src/lib/ui/preload';
 import { beaconPath } from '../../scripts/lib/beacon-path.mjs';
-import { contactLine, defaultDescription, EMAIL_RE, liveNames, ogDescription } from '../../src/data/site';
+import { contactLine, defaultDescription, EMAIL_RE, footerContact, liveNames, sharePreview, SITE, TITLE_SUFFIX } from '../../src/data/site';
+import og from '../../src/data/og.json';
 import { LIVE_TOOLS, TOOLS, type Tool } from '../../src/data/tools';
 import { handleFetch, route, staleCaches, type SwEnv } from '../../src/sw/sw';
 import { parseTargetMb, TARGET_COPY, targetBytes, targetLabel } from '../../src/tools/pdf-compress/target';
@@ -420,7 +421,9 @@ describe('목표 용량 search', () => {
 // ---------- P.15 non-PDF ----------
 
 it('nonPdfMessage: one name, several names, and more than three', () => {
-  expect(nonPdfMessage(['a.txt'])).toBe('a.txt은(는) PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
+  expect(nonPdfMessage(['a.txt'])).toBe('a.txt는 PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
+  expect(nonPdfMessage(['메모.hwp'])).toBe('메모.hwp는 PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
+  expect(nonPdfMessage(['사진.html'])).toBe('사진.html은 PDF 파일이 아니어서 넣지 않았습니다. PDF 파일만 넣을 수 있습니다.');
   expect(nonPdfMessage(['a.txt', 'b.jpg'])).toBe('파일 2개는 PDF가 아니어서 넣지 않았습니다: a.txt, b.jpg');
   expect(nonPdfMessage(['a', 'b', 'c', 'd', 'e'])).toBe('파일 5개는 PDF가 아니어서 넣지 않았습니다: a, b, c 외 2개');
 });
@@ -431,7 +434,7 @@ describe('live-only description (P.6)', () => {
   const soon = TOOLS.filter((t) => t.status !== 'live');
 
   it('names every live tool and no soon tool; 80–120 characters', () => {
-    for (const text of [defaultDescription(), ogDescription()]) {
+    for (const text of [defaultDescription()]) {
       for (const t of LIVE_TOOLS) expect(text).toContain(t.name);
       for (const t of soon) expect(text).not.toContain(t.name);
     }
@@ -458,12 +461,55 @@ describe('live-only description (P.6)', () => {
   });
 });
 
+describe('brand and titles (Polish Q)', () => {
+  it('every tool title is "{h1} — {TITLE_SUFFIX}"; the H1 is the menu name', () => {
+    for (const t of TOOLS) {
+      expect(t.title).toBe(`${t.h1} — ${TITLE_SUFFIX}`);
+      expect(t.h1).toBe(t.name);
+    }
+    expect(TITLE_SUFFIX.endsWith(`| ${SITE.name}`)).toBe(true);
+    expect(SITE.name).toBe('문서딱');
+  });
+});
+
+describe('share previews (Polish Q, src/data/og.json)', () => {
+  it('each tool has its own image titled with its name; every page description is plain and ≤ 80 characters', () => {
+    const images = og.images as Record<string, { title: string; line: string }>;
+    const pages = og.pages as Record<string, { image: string; description: string }>;
+    for (const t of TOOLS) {
+      expect(pages[`/${t.slug}/`]?.image, t.slug).toBe(t.slug);
+      expect(images[t.slug]?.title).toBe(t.name);
+    }
+    expect(pages['*']).toBeDefined();
+    for (const [path, p] of Object.entries(pages)) {
+      expect(images[p.image], path).toBeDefined();
+      const d = sharePreview(path, 'https://docttak.com').description;
+      expect([...d].length, path).toBeLessThanOrEqual(80);
+      expect(d, path).not.toMatch(/업로드|서버|브라우저|네트워크|메모리|안올림|\{tools\}/);
+    }
+    for (const img of Object.values(images)) expect(img.line).toContain(' — ');
+    expect(og.domain).toBe('docttak.com');
+  });
+  it('sharePreview: absolute image URL on the given site; unlisted paths take the default', () => {
+    expect(sharePreview('/pdf-merge/', 'https://docttak.com')).toEqual({
+      image: 'https://docttak.com/brand/og-pdf-merge.png',
+      description: (og.pages as Record<string, { description: string }>)['/pdf-merge/']!.description,
+      alt: '문서딱: PDF 합치기. 여러 PDF를 한 파일로 — 무료, 내 폰·PC 안에서만',
+    });
+    expect(sharePreview('/404.html', 'https://docttak.com').image).toBe('https://docttak.com/brand/og-default.png');
+    // The home preview names the live tools (the same rule as the meta description).
+    for (const t of LIVE_TOOLS) expect(sharePreview('/', 'https://docttak.com').description).toContain(t.name);
+  });
+});
+
 describe('operator contact (P.4)', () => {
-  it('contactLine: 준비 중 when unset, an escaped mailto link when set', () => {
-    expect(contactLine()).toBe('문의: 준비 중');
-    expect(contactLine('준비 중입니다.', undefined)).toBe('문의: 준비 중입니다.');
-    expect(contactLine('x', 'help@example.kr')).toBe('문의: <a href="mailto:help@example.kr">help@example.kr</a>');
-    expect(contactLine('x', 'a<b@c.kr')).toBe('문의: <a href="mailto:a&lt;b@c.kr">a&lt;b@c.kr</a>');
+  it('contactLine and footerContact: nothing while unset (owner decision, Polish Q); an escaped mailto link when set', () => {
+    expect(contactLine(undefined)).toBeNull();
+    expect(footerContact(undefined, undefined)).toBe('');
+    expect(contactLine('help@example.kr')).toBe('문의: <a href="mailto:help@example.kr">help@example.kr</a>');
+    expect(contactLine('a<b@c.kr')).toBe('문의: <a href="mailto:a&lt;b@c.kr">a&lt;b@c.kr</a>');
+    expect(footerContact('help@example.kr', '123-45-67890')).toBe('문의: <a href="mailto:help@example.kr">help@example.kr</a> · 사업자등록번호 123-45-67890');
+    expect(footerContact(undefined, '1<2')).toBe('사업자등록번호 1&lt;2');
   });
   it('EMAIL_RE', () => {
     expect(EMAIL_RE.test('help@example.kr')).toBe(true);

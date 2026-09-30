@@ -9,10 +9,11 @@ import fontverter from 'fontverter';
 import { afterAll, describe, expect, it } from 'vitest';
 import { carryAssets, safePath } from '../../scripts/carry-assets.mjs';
 import { reservedNameProblems } from '../../scripts/font-rename.mjs';
-import { buildIco, renderBrand } from '../../scripts/gen-brand.mjs';
+import { buildIco, ogDomain, renderBrand } from '../../scripts/gen-brand.mjs';
 import { domainHeaders } from '../../scripts/gen-headers.mjs';
 import { smokeAssets } from '../../scripts/smoke-assets.mjs';
 import { startServer } from '../e2e/serve.mjs';
+import { PRESETS } from '../../src/data/id-photo-presets';
 
 const ROOT = join(__dirname, '..', '..');
 const DIST = join(ROOT, 'dist');
@@ -286,7 +287,7 @@ describe('gen-brand (P.10)', () => {
   });
 
   it('favicon.ico holds 16, 32 and 48 px PNG entries; the icons and the OG image have their sizes', () => {
-    const out = renderBrand();
+    const out = renderBrand() as Record<string, Buffer>;
     const ico = out['favicon.ico'];
     expect(ico.readUInt16LE(2)).toBe(1);
     expect(ico.readUInt16LE(4)).toBe(3);
@@ -305,8 +306,18 @@ describe('gen-brand (P.10)', () => {
     expect(pngSize(out['brand/icon-192.png'])).toMatchObject({ w: 192, h: 192 });
     expect(pngSize(out['brand/icon-512.png'])).toMatchObject({ w: 512, h: 512 });
     expect(pngSize(out['brand/icon-maskable-512.png'])).toMatchObject({ w: 512, h: 512 });
-    expect(pngSize(out['brand/og.png'])).toMatchObject({ w: 1200, h: 630 });
-    expect(out['brand/og.png'].length).toBeLessThanOrEqual(150 * 1024);
+    // One share image per og.json image (Polish Q), 1200×630, ≤ 300 KB; no single og.png any more.
+    const og = Object.keys(out).filter((k) => /^brand\/og-[a-z-]+\.png$/.test(k)).sort();
+    expect(og).toEqual(['default', 'home', 'hwp-to-pdf', 'id-photo', 'pdf-compress', 'pdf-merge', 'photo-compress'].map((n) => `brand/og-${n}.png`));
+    expect(out).not.toHaveProperty(['brand/og.png']);
+    for (const k of og) {
+      expect(pngSize(out[k]), k).toMatchObject({ w: 1200, h: 630, png: true });
+      expect(out[k].length, k).toBeLessThanOrEqual(300 * 1024);
+    }
+    // The printed domain: the production host, never a preview host.
+    expect(ogDomain('https://docttak.com')).toBe('docttak.com');
+    expect(ogDomain('https://doc-tools-kr.pages.dev')).toBe('docttak.com');
+    expect(ogDomain(undefined)).toBe('docttak.com');
     // A 256 px entry is written as 0 (the ICO convention).
     expect(buildIco([{ size: 256, data: Buffer.from('x') }]).readUInt8(6)).toBe(0);
   });
@@ -412,6 +423,120 @@ describe('built output', () => {
     const ours = walk(join(DIST, '_astro'), /^index\.astro.*\.js$|^preload-helper.*\.js$/).map((f) => readFileSync(f, 'utf8')).join('\n');
     expect(ours).not.toMatch(/\d %|} % /);
     for (const good of ['다른 파일 처리하기', '파일 분석 중…', '마무리하는 중…', '% 줄었습니다', '인쇄용 선명도 (약 200 ppi)', '저장될 이름: ']) expect(text, good).toContain(good);
+  });
+
+  // Polish Q (owner): ordinary users do not know these words. Where a number must be read or typed, "픽셀(px)"
+  // may appear once per page; everything else says 픽셀, 해상도, "이 기기", "밖으로 보내지 않음".
+  const JARGON = /업로드|서버|브라우저|네트워크|메모리|개발자 도구|(?<![A-Za-z])(?:px|dpi|exif)(?![A-Za-z])/gi;
+  // /hwp-to-pdf/ is being reworked on the hwp-direct branch (its copy is rewritten there); /licenses/ lists
+  // software as its authors name it. The HWP tool's own strings are recognised by their source files.
+  const COPY_EXEMPT_PAGES = ['licenses', 'hwp-to-pdf'];
+  const hwpSources = (): string =>
+    [join(ROOT, 'src', 'tools', 'hwp-to-pdf'), join(ROOT, 'src', 'lib', 'hwp')]
+      .flatMap((d) => walk(d, /\.ts$/))
+      .map((f) => readFileSync(f, 'utf8'))
+      .join('\n');
+
+  /** What a user reads on a page: the title, the meta/og texts, alt/aria-label/placeholder/title attributes and the body text. */
+  const userText = (html: string): string =>
+    [
+      html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '',
+      ...[...html.matchAll(/\s(?:content|alt|aria-label|placeholder|title)="([^"]*)"/g)].map((m) => m[1]!),
+      html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/g, ' '),
+    ].join('\n');
+
+  it('plain language (Polish Q): no 업로드·서버·브라우저·네트워크·메모리·EXIF·px·dpi in the pages or in our UI strings', () => {
+    need();
+    const pages = walk(DIST, /\.html$/).filter((f) => !f.split(/[\\/]/).some((part) => COPY_EXEMPT_PAGES.includes(part)));
+    expect(pages.length).toBeGreaterThanOrEqual(8);
+    const hits: string[] = [];
+    for (const f of pages) {
+      const text = userText(readFileSync(f, 'utf8'));
+      expect((text.match(/픽셀\(px\)/g) ?? []).length, `${f}: "픽셀(px)" more than once`).toBeLessThanOrEqual(1);
+      for (const m of text.replace(/픽셀\(px\)/g, '').matchAll(JARGON)) hits.push(`${f}: …${text.slice(Math.max(0, m.index! - 30), m.index! + 20).replace(/\s+/g, ' ')}…`);
+    }
+    // UI strings in our JS: every quoted run that holds Hangul. Official quotes kept for the preset audit trail
+    // (never shown) and the HWP tool's strings (rewritten on its branch) are exempt.
+    const hwp = hwpSources();
+    const quotes = new Set(PRESETS.map((p) => p.quote).filter(Boolean));
+    for (const f of walk(join(DIST, '_astro'), /\.js$/)) {
+      for (const seg of readFileSync(f, 'utf8').match(/[^"'`\n]*[가-힣][^"'`\n]*/g) ?? []) {
+        if (!seg.match(JARGON) || quotes.has(seg)) continue;
+        const pieces = seg.split(/\$\{[^}]*\}/).map((p) => p.trim()).filter((p) => /[가-힣]/.test(p));
+        if (pieces.every((p) => hwp.includes(p))) continue;
+        for (const m of seg.matchAll(JARGON)) hits.push(`${f.split(/[\\/]/).pop()}: …${seg.slice(Math.max(0, m.index! - 30), m.index! + 20)}…`);
+      }
+    }
+    expect(hits).toEqual([]);
+  });
+
+  it('brand (Polish Q): "안올림" appears nowhere users can see it; the new name is in the pages, the manifest and the OG image text', () => {
+    need();
+    const files = [...walk(DIST, /\.(html|js|css|webmanifest|json|xml|txt)$/)].filter((f) => !f.split(/[\\/]/).includes('licenses'));
+    const found = files.filter((f) => readFileSync(f, 'utf8').includes('안올림'));
+    expect(found).toEqual([]);
+    // Owner's brand rule: the name is always 문서딱. "docttak" appears only as the domain (docttak.com), never
+    // as a name ("Docttak", "DOCTTAK", "독딱").
+    const misnamed = files.filter((f) => /독딱|docttak(?!\.com)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.com/gi, '')));
+    expect(misnamed).toEqual([]);
+    const home = readFileSync(join(DIST, 'index.html'), 'utf8');
+    expect(home).toContain('<meta property="og:site_name" content="문서딱">');
+    expect(home).toContain('<title>문서딱 — 내야 하는 문서·사진, 용량과 규격에 딱 맞춰 드려요</title>');
+    const manifest = JSON.parse(readFileSync(join(DIST, 'manifest.webmanifest'), 'utf8')) as { name: string; short_name: string };
+    expect(manifest.short_name).toBe('문서딱');
+    expect(manifest.name.startsWith('문서딱')).toBe(true);
+  });
+
+  it('share previews (Polish Q): every page has the full og/twitter set, absolute https URLs on the site host, a 1200×630 PNG that exists', () => {
+    need();
+    // The host every absolute URL must use: PUBLIC_SITE_URL of the build (read back from the home canonical).
+    const home = readFileSync(join(DIST, 'index.html'), 'utf8');
+    const site = new URL(home.match(/<link rel="canonical" href="([^"]+)"/)![1]!);
+    if (process.env.PUBLIC_SITE_URL) expect(site.origin).toBe(new URL(process.env.PUBLIC_SITE_URL).origin);
+    const pages = walk(DIST, /\.html$/);
+    expect(pages.length).toBeGreaterThanOrEqual(10);
+    const png = (p: string) => {
+      const b = readFileSync(p);
+      return { w: b.readUInt32BE(16), h: b.readUInt32BE(20), png: b.subarray(1, 4).toString() === 'PNG', size: b.length };
+    };
+    for (const f of pages) {
+      const html = readFileSync(f, 'utf8');
+      const meta = (attr: 'property' | 'name', key: string): string => {
+        const m = html.match(new RegExp(`<meta ${attr}="${key}" content="([^"]*)"`));
+        expect(m, `${f}: ${key}`).not.toBeNull();
+        return m![1]!;
+      };
+      expect(meta('property', 'og:type')).toBe('website');
+      expect(meta('property', 'og:site_name')).toBe('문서딱');
+      expect(meta('property', 'og:locale')).toBe('ko_KR');
+      expect(meta('property', 'og:title')).toBe(html.match(/<title>([^<]*)<\/title>/)![1]);
+      const desc = meta('property', 'og:description');
+      expect([...desc].length, `${f}: og:description length`).toBeLessThanOrEqual(80);
+      expect(desc.length).toBeGreaterThan(20);
+      for (const key of ['og:url', 'og:image']) {
+        const u = new URL(meta('property', key));
+        expect(u.protocol, `${f}: ${key}`).toBe('https:');
+        expect(u.host, `${f}: ${key}`).toBe(site.host);
+      }
+      expect(meta('property', 'og:image:type')).toBe('image/png');
+      expect(meta('property', 'og:image:width')).toBe('1200');
+      expect(meta('property', 'og:image:height')).toBe('630');
+      expect(meta('property', 'og:image:alt')).toMatch(/^문서딱: /);
+      expect(meta('name', 'twitter:card')).toBe('summary_large_image');
+      expect(meta('name', 'twitter:title')).toBe(meta('property', 'og:title'));
+      expect(meta('name', 'twitter:description')).toBe(desc);
+      expect(meta('name', 'twitter:image')).toBe(meta('property', 'og:image'));
+      const img = new URL(meta('property', 'og:image')).pathname;
+      expect(img, f).toMatch(/^\/brand\/og-[a-z-]+\.png$/);
+      expect(png(join(DIST, img)), `${f}: ${img}`).toMatchObject({ w: 1200, h: 630, png: true });
+      expect(png(join(DIST, img)).size).toBeLessThanOrEqual(300 * 1024);
+      expect(html, f).not.toContain('안올림');
+    }
+    // Each tool page has its own image; the legal pages share the default one.
+    const imageOf = (path: string) => readFileSync(join(DIST, path, 'index.html'), 'utf8').match(/<meta property="og:image" content="[^"]*\/brand\/(og-[a-z-]+)\.png"/)![1];
+    for (const slug of ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf']) expect(imageOf(slug)).toBe(`og-${slug}`);
+    expect(imageOf('')).toBe('og-home');
+    for (const p of ['privacy', 'terms', 'licenses']) expect(imageOf(p)).toBe('og-default');
   });
 
   it('/id-photo/ mentions auto-framing only in a build that has it (Step 4 round 2)', () => {

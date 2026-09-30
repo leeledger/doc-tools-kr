@@ -1,7 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import JsonLd from '../components/JsonLd.astro';
-import { SITE, defaultDescription, liveNames, ogDescription } from '../data/site';
+import { SITE, defaultDescription, liveNames } from '../data/site';
+import { josa } from '../lib/ui/josa';
 import { LIVE_TOOLS, TOOLS } from '../data/tools';
 
 const soon = TOOLS.filter((t) => t.status !== 'live');
@@ -26,14 +27,14 @@ const jsonLd = [
   },
 ];
 ---
-<Base isHome skipTarget="tools" ogDescription={ogDescription()}>
+<Base isHome skipTarget="tools">
   <JsonLd slot="head" data={jsonLd} />
   <section class="hero">
     <div class="wrap">
-      <p class="eyebrow">업로드 없음 · 회원가입 없음 · 무료</p>
-      <h1>서류 파일, 올리지 말고 <br>내 브라우저에서 바로 처리하세요</h1>
+      <p class="eyebrow">파일이 밖으로 안 나가요 · 가입 없음 · 무료</p>
+      <h1>내야 하는 문서·사진, <br>용량과 규격에 딱 맞춰 드려요</h1>
       <p class="lead">지금 쓸 수 있는 도구: {liveNames()}.
-        파일은 서버로 전송되지 않고 지금 보고 계신 기기 안에서만 처리됩니다.</p>
+        사진과 서류는 내 폰·컴퓨터 안에서만 고쳐요. 어디로도 보내지 않아요.</p>
       <div class="hero-cta">
         <a class="btn primary" href="#tools">도구 둘러보기</a>
         <a class="btn ghost" href="#privacy">어떻게 안전한가요?</a>
@@ -44,7 +45,7 @@ const jsonLd = [
   <section id="tools" class="tools" aria-labelledby="tools-title">
     <div class="wrap">
       <h2 id="tools-title">자주 쓰는 서류 작업</h2>
-      <p class="section-lead">공공기관·채용 사이트 제출, 사무 업무에서 가장 많이 찾는 작업부터 준비하고 있습니다.</p>
+      <p class="section-lead">공공기관·채용 사이트 제출, 사무 업무에서 가장 많이 찾는 작업을 바로 쓸 수 있습니다.</p>
       <ul class="grid">
         {LIVE_TOOLS.map((t) => (
           <li class="card live">
@@ -72,14 +73,14 @@ const jsonLd = [
     <div class="wrap two-col">
       <div>
         <h2 id="privacy-title">파일이 기기 밖으로 나가지 않습니다</h2>
-        <p>일반적인 온라인 변환 사이트는 파일을 서버에 올린 뒤 처리합니다.
-          안올림은 처리 코드를 브라우저로 내려받아 <strong>내 기기에서 직접 실행</strong>합니다.
-          주민등록번호가 담긴 서류, 계약서, 증명사진도 외부 서버를 거치지 않습니다.</p>
+        <p>다른 변환 사이트는 내 파일을 그 회사 컴퓨터로 보낸 뒤 처리합니다.
+          {josa(SITE.name, '은/는')} 처리 프로그램을 이 페이지에 받아 와서 <strong>내 폰·컴퓨터 안에서 바로 처리</strong>합니다.
+          주민등록번호가 담긴 서류, 계약서, 증명사진도 다른 곳을 거치지 않습니다.</p>
       </div>
       <ul class="points">
-        <li><strong>업로드 없음</strong><span>파일 내용은 네트워크로 전송되지 않습니다.</span></li>
-        <li><strong>저장 없음</strong><span>창을 닫으면 작업한 파일은 기기 메모리에서 사라집니다.</span></li>
-        <li><strong>설치·가입 없음</strong><span>PC와 휴대폰 브라우저에서 바로 사용합니다. 한 번 사용한 도구는 인터넷을 끊어도 동작합니다. 비행기 모드에서 직접 확인해 보세요.</span></li>
+        <li><strong>밖으로 보내지 않음</strong><span>파일은 인터넷으로 어디에도 보내지지 않습니다.</span></li>
+        <li><strong>저장 없음</strong><span>작업한 파일은 창을 닫으면 사라집니다.</span></li>
+        <li><strong>설치·가입 없음</strong><span>PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있습니다. 한 번 쓴 도구는 인터넷을 끊어도 동작합니다. 비행기 모드에서 직접 확인해 보세요.</span></li>
       </ul>
     </div>
   </section>

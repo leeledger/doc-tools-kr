@@ -49,7 +49,7 @@ for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/
     expect(new URL(canonical!).pathname).toBe(path);
     await expect(page.locator('h1')).toHaveCount(1);
     expect(await page.locator('meta[property="og:url"]').getAttribute('content')).toBe(canonical);
-    expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toMatch(/^https:\/\/.+\/og\.png$/);
+    expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toMatch(/^https:\/\/.+\/brand\/og-[a-z-]+\.png$/);
     expect(await page.locator('meta[property="og:locale"]').getAttribute('content')).toBe('ko_KR');
     await expect(page.locator('meta[name="keywords"]')).toHaveCount(0);
     for (const json of await page.locator('script[type="application/ld+json"]').allTextContents()) {
@@ -76,7 +76,7 @@ for (const [path, name] of [
       offers: { price: 0, priceCurrency: 'KRW' },
     });
     expect(data.some((d: { '@type': string }) => d['@type'] === 'BreadcrumbList')).toBe(true);
-    await expect(page).toHaveTitle(`${name} — 업로드 없이 브라우저에서 무료로 | 안올림`);
+    await expect(page).toHaveTitle(`${name} — 파일을 보내지 않고 무료로 | 문서딱`);
     const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
     expect(desc.toLowerCase()).toContain(name.toLowerCase());
     expect([...desc].length).toBeGreaterThanOrEqual(80);
