@@ -1,18 +1,24 @@
-// Regression harness for HWP PDF 변환 (brief Step 5 "Regression harness"). Local only, not CI.
-// Starts a Vite dev server on scripts/regress/hwp-harness/ (public/ served, so the vendored wasm and fonts load
-// as in production), opens it in Playwright Chromium and, per file, runs the production worker, viewer
-// post-processing, downscale and print CSS as a full render; then emulateMedia('print') + page.pdf and scores
-// the PDF in Node with pdf.js against the official twin (content recall, ink IoU at 36 dpi, 2-up aware).
+// Regression harness for HWP PDF 변환 (brief Step 5 "Regression harness"; HWP direct, SPIKE-HWP-DIRECT §6.9).
+// Local only, not CI. Starts a Vite dev server on scripts/regress/hwp-harness/ (public/ served, so the vendored
+// wasm and fonts load as in production), opens it in Playwright Chromium and, per file, runs the production
+// worker and the production PDF export (exportPdf: vector writer + raster fallback) in the page, then scores
+// the PDF bytes in Node with pdf.js against the official twin (content recall, ink IoU at 36 dpi, 2-up aware),
+// checks them (rule 7: valid, no NaN/Infinity operand, no missing glyph, fallback pages) and reports SSIM
+// against the print-path PDFs made once from main (PRINT_DIR, report only). On Windows the browser's process
+// tree working set is sampled (memwatch.ps1): peak − idle per file.
 // Inputs: the 10 fixtures (tests/corpus/hwp) always, plus every file in CORPUS_DIR (default spikes/hwp/corpus)
 // with its twin <key>.pdf; manual classes from spikes/hwp/results/classes.v2.json (override: CLASSES).
 // Usage: npm run regress:hwp [-- --fixtures-only] [-- --only <regex>] [-- --mobile] [-- --keep-pdf]
+//        PRINT_DIR (default regress-out/direct/print/chromium-P): <key>.pdf of the old print path, if any.
 //        node scripts/regress/hwp.mjs --make-baseline [--spike spikes/hwp]   (once: spike results → hwp-baseline.json)
 // Every rhwp upgrade re-runs this harness on the full corpus before merge.
 // Output: regress-out/hwp.json and regress-out/hwp.md.
+import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { crop, gray, iou } from './hwp-ink.mjs';
+import { inflateSync } from 'node:zlib';
+import { crop, gray, iou, ssim } from './hwp-ink.mjs';
 import { openPdf, pageText, renderRgba, unitSize } from './lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -22,7 +28,8 @@ const baselinePath = join(root, 'scripts', 'regress', 'hwp-baseline.json');
 const fixturesDir = join(root, 'tests', 'corpus', 'hwp');
 
 // ---------- rules (do not lower them; misses go under Blocked) ----------
-const GUARDED_KEYS = ['adm04', 'adm07', 'adm11', 'adm16', 'adm19', 'adm28', 'adm29', 'adm30', 'law09', 'law14', 'law16', 'law17', 'law19', 'law20', 'law21', 'nt01', 'nt02', 'nt03', 'nt04'];
+// The 19 spike keys minus the five routed by equations only (HWP direct §6.6: law14, adm07, law09, law16, adm19).
+const GUARDED_KEYS = ['adm04', 'adm11', 'adm16', 'adm28', 'adm29', 'adm30', 'law17', 'law19', 'law20', 'law21', 'nt01', 'nt02', 'nt03', 'nt04'];
 const EXPECTED_MODES = {
   law05: ['convert', 'convert'],
   law07: ['convert', 'convert'],
@@ -30,9 +37,9 @@ const EXPECTED_MODES = {
   law18: ['convert', 'convert'],
   adm02: ['convert', 'convert'],
   adm14: ['convert', 'convert'],
-  law09: ['viewer-first', 'viewer-first'],
+  law09: ['convert', 'convert'],
   law17: ['viewer-first', 'viewer-first'],
-  adm19: ['viewer-first', 'viewer-first'],
+  adm19: ['convert', 'convert'],
   adm28: ['viewer-first', 'viewer-only'],
 };
 const RECALL_MIN = 0.99;
@@ -42,7 +49,12 @@ const MAX_BROKEN_RATE = 0.05;
 const SIZE_MAX_RATIO = 3;
 const SIZE_MEDIAN_MAX = 1.5;
 const KR01_MAX = 5 * 1_000_000;
-const TIME_HARD = { law10: 3000, adm28: 15000 };
+// Export time, open → PDF bytes (desktop Chromium; the spike measured 1.9–3.2 s and 5.2–8.4 s).
+const TIME_HARD = { law10: 4000, adm28: 15000 };
+// The spike's 40-file sample (10 fixtures + 30 corpus files): 0 fallback pages there (rule 7).
+const SAMPLE_40 = 'adm01 adm02 adm04 adm06 adm10 adm11 adm12 adm14 adm16 adm19 adm21 adm28 adm29 kr01 kr03 kr08 kr10 kr17 kr18 kr36 kr45 law01 law04 law05 law07 law08 law09 law10 law11 law16 law17 law18 law19 law20 na02 na05 na07 nt02 nt03 nt08'.split(' ');
+const SSIM_SCALE = 100 / 72;
+const MAX_SSIM_PAGES = 40;
 const TIMEOUT_MS = 300_000;
 const MOBILE_KEYS = ['law09', 'kr18', 'kr17', 'adm04'];
 
@@ -70,7 +82,43 @@ function recallOf(official, ours) {
   return official.length ? inter / official.length : 1;
 }
 
-async function score(ourPdf, twinPath, officialText) {
+/** Content streams (flate) with a NaN or Infinity operand, plus any outside streams. */
+function badNumbers(bytes) {
+  const buf = Buffer.from(bytes);
+  let bad = 0;
+  let i = 0;
+  for (;;) {
+    const s = buf.indexOf('stream', i);
+    if (s < 0) break;
+    let start = s + 6;
+    if (buf[start] === 0x0d) start++;
+    if (buf[start] === 0x0a) start++;
+    const e = buf.indexOf('endstream', start);
+    if (e < 0) break;
+    try {
+      if (/(^|[\s[])-?(NaN|Infinity)\b/.test(inflateSync(buf.subarray(start, e)).toString('latin1'))) bad++;
+    } catch {
+      // not a flate stream (image, font)
+    }
+    i = e + 9;
+  }
+  if (/-Infinity|NaN/.test(buf.toString('latin1').replace(/stream[\s\S]*?endstream/g, ''))) bad++;
+  return bad;
+}
+
+/** SSIM per page vs the print-path PDF (≤ 40 pages, evenly sampled), or null without one. */
+async function ssimVsPrint(ours, printPath) {
+  if (!printPath || !existsSync(printPath)) return null;
+  const pr = await openPdf(new Uint8Array(readFileSync(printPath)));
+  const n = Math.min(pr.numPages, ours.numPages);
+  const pick = n <= MAX_SSIM_PAGES ? [...Array(n).keys()] : [...Array(MAX_SSIM_PAGES).keys()].map((i) => Math.round((i * (n - 1)) / (MAX_SSIM_PAGES - 1)));
+  const vals = [];
+  for (const i of pick) vals.push(ssim(gray(await renderRgba(pr, i, SSIM_SCALE)), gray(await renderRgba(ours, i, SSIM_SCALE))));
+  await pr.close();
+  return vals.length ? { mean: vals.reduce((x, y) => x + y, 0) / vals.length, min: Math.min(...vals) } : null;
+}
+
+async function score(ourPdf, twinPath, officialText, printPath) {
   const ours = await openPdf(new Uint8Array(ourPdf));
   const out = { pdfPages: ours.numPages, sizes: [] };
   let text = '';
@@ -80,6 +128,14 @@ async function score(ourPdf, twinPath, officialText) {
   }
   const oursContent = content(text);
   out.wordCount = text.split(/\s+/).filter(Boolean).length;
+  out.badNumbers = badNumbers(ourPdf);
+  // Valid: pdf.js opened it and read every page's text (above), and no operand is NaN/Infinity.
+  out.valid = out.badNumbers === 0;
+  const sv = await ssimVsPrint(ours, printPath);
+  if (sv) {
+    out.ssimMean = sv.mean;
+    out.ssimMin = sv.min;
+  }
   if (twinPath && existsSync(twinPath)) {
     const off = await openPdf(new Uint8Array(readFileSync(twinPath)));
     let otext = '';
@@ -140,7 +196,7 @@ if (args.includes('--make-baseline')) {
       inkMeanPyMuPDF: c?.ink_iou_mean ?? null,
       ms: r.ms ? Math.round(r.ms.init + r.ms.parse + r.ms.renderSvgAll + r.ms.fonts) : null,
       pdfBytes: r.pdfBytes ?? null,
-      guard: (r.pages ?? 0) >= 100 || (f.equations ?? 0) > 0 || (f.textboxes ?? 0) >= 3,
+      guard: (r.pages ?? 0) >= 100 || (f.textboxes ?? 0) >= 3,
     };
   }
   for (const k of Object.keys(files)) {
@@ -168,6 +224,7 @@ if (!haveCorpus && !fixturesOnly) {
   console.error(`regress:hwp: CORPUS_DIR ${corpus} not found. Pass --fixtures-only for a PARTIAL run.`);
   process.exit(1);
 }
+const printDir = resolve(root, process.env.PRINT_DIR ?? 'regress-out/direct/print/chromium-P');
 const baseline = JSON.parse(readFileSync(baselinePath, 'utf8')).files;
 const classes = existsSync(classesPath) ? JSON.parse(readFileSync(classesPath, 'utf8')) : {};
 const expected = JSON.parse(readFileSync(join(fixturesDir, 'expected.json'), 'utf8')).files;
@@ -193,12 +250,37 @@ const server = await createServer({
   server: { port: 0, host: '127.0.0.1', fs: { allow: [root, corpus] } },
   worker: { format: 'es', plugins: () => [rhwpNoDefaultWasm()] },
   plugins: [rhwpNoDefaultWasm()],
+  optimizeDeps: { include: ['@cantoo/pdf-lib', '@cantoo/fontkit', 'fflate'] },
 });
 await server.listen();
 const base = server.resolvedUrls.local[0];
 const fsUrl = (p) => `/@fs/${p.split('\\').join('/').replace(/^\/+/, '')}`;
 
-let browser = await pw.chromium.launch();
+/** The browser process tree's working set, sampled by memwatch.ps1 (Windows only; elsewhere no samples). */
+function memWatch(pid) {
+  const samples = [];
+  if (process.platform !== 'win32' || !pid) return { samples, since: () => [], stop: () => undefined };
+  const ps = spawn('C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(root, 'scripts', 'regress', 'memwatch.ps1'), String(pid)]);
+  let buf = '';
+  ps.stdout.on('data', (d) => {
+    buf += d;
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const l of lines) {
+      const [t, b] = l.trim().split(' ').map(Number);
+      if (b) samples.push([t, b]);
+    }
+  });
+  return { samples, since: (t) => samples.filter(([x]) => x >= t).map(([, b]) => b), stop: () => ps.kill() };
+}
+async function launch() {
+  const srv = await pw.chromium.launchServer({});
+  const b = await pw.chromium.connect(srv.wsEndpoint());
+  const mem = memWatch(srv.process().pid);
+  return { browser: b, mem, close: async () => { mem.stop(); await b.close().catch(() => undefined); await srv.close().catch(() => undefined); } };
+}
+let B = await launch();
+let browser = B.browser;
 const chromiumVersion = browser.version();
 const results = {};
 mkdirSync(join(root, 'regress-out'), { recursive: true });
@@ -215,23 +297,30 @@ for (const key of keys) {
   try {
     await page.goto(`${base}index.html`);
     await page.waitForFunction(() => window.READY);
+    await new Promise((res2) => setTimeout(res2, 400));
+    const idle = B.mem.samples.length ? B.mem.samples[B.mem.samples.length - 1][1] : 0;
+    const tStart = Date.now();
     const res = await Promise.race([
       page.evaluate((u) => window.RUN(u), fsUrl(input.path)),
       new Promise((_, rej) => setTimeout(() => rej(new Error(`TIMEOUT ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS)),
     ]);
+    await new Promise((res2) => setTimeout(res2, 300));
+    const during = B.mem.since(tStart);
+    r.memDeltaMB = during.length && idle ? (Math.max(...during) - idle) / 1048576 : null;
+    const pdf = res.pdf ? Buffer.from(res.pdf, 'base64') : null;
+    delete res.pdf;
     Object.assign(r, res);
-    if (res.ok && !mobileMode) {
-      await page.emulateMedia({ media: 'print' });
-      const tp = Date.now();
-      const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true, timeout: 600_000 });
-      r.pdfMs = Date.now() - tp;
+    if (res.ok && pdf) {
+      Object.assign(r, { failedPages: res.stats.failedPages, fallbackPages: res.stats.fallbackPages, missingGlyphs: res.stats.missingGlyphs, nonFinite: res.stats.nonFinite, sanitizerRemovals: res.stats.sanitizerRemovals, unsupported: res.stats.unsupported, fontBytes: res.stats.fontBytes, images: res.stats.images });
       r.pdfBytes = pdf.length;
       if (args.includes('--keep-pdf')) {
         mkdirSync(join(root, 'regress-out', 'hwp-pdf'), { recursive: true });
         writeFileSync(join(root, 'regress-out', 'hwp-pdf', `${key}.pdf`), pdf);
       }
-      const twin = haveCorpus ? join(corpus, `${key}.pdf`) : null;
-      Object.assign(r, await score(pdf, twin, expected[key]?.officialText));
+      if (!mobileMode) {
+        const twin = haveCorpus ? join(corpus, `${key}.pdf`) : null;
+        Object.assign(r, await score(pdf, twin, expected[key]?.officialText, join(printDir, `${key}.pdf`)));
+      }
     }
   } catch (err) {
     r.ok = false;
@@ -239,15 +328,16 @@ for (const key of keys) {
   }
   r.totalMs = Date.now() - t0;
   results[key] = r;
-  console.log(key, r.ok ? `ok pages=${r.pages} pdf=${r.pdfPages ?? '-'} recall=${r.recall?.toFixed(4) ?? '-'} ink=${r.inkMean?.toFixed(3) ?? '-'} ready=${Math.round(r.ms?.ready ?? 0)}ms mode=${r.route?.desktop.mode}/${r.route?.mobile.mode}` : `FAIL ${r.error}`);
+  console.log(key, r.ok ? `ok pages=${r.pages} pdf=${r.pdfPages ?? '-'} recall=${r.recall?.toFixed(4) ?? '-'} ink=${r.inkMean?.toFixed(3) ?? '-'} ssim=${r.ssimMean?.toFixed(3) ?? '-'}/${r.ssimMin?.toFixed(3) ?? '-'} export=${Math.round(r.ms?.ready ?? 0)}ms memΔ=${r.memDeltaMB != null ? Math.round(r.memDeltaMB) : '-'}MB fallback=${r.fallbackPages} missing=${r.missingGlyphs} MB=${((r.pdfBytes ?? 0) / 1e6).toFixed(2)} mode=${r.route?.desktop.mode}/${r.route?.mobile.mode}` : `FAIL ${r.error}`);
   await ctx.close().catch(() => undefined);
   if (!r.ok) {
-    await browser.close().catch(() => undefined);
-    browser = await pw.chromium.launch();
+    await B.close();
+    B = await launch();
+    browser = B.browser;
   }
   writeFileSync(join(root, 'regress-out', mobileMode ? 'hwp-mobile.json' : 'hwp.json'), JSON.stringify(results, null, 1));
 }
-await browser.close();
+await B.close();
 await server.close();
 
 // ---------- report ----------
@@ -256,11 +346,11 @@ const out = (s = '') => lines.push(s);
 if (mobileMode) {
   out('# regress:hwp — mobile profile (Pixel 7 emulation, 4x CPU throttle)');
   out('');
-  out('| file | ok | pages | engine ms | parse ms | render ms | fonts ms | ready ms | WASM MiB |');
-  out('|---|---|---|---|---|---|---|---|---|');
+  out('| file | ok | pages | engine ms | parse ms | export ms | open → PDF ms | memory Δ MB | WASM MiB | fallback pages |');
+  out('|---|---|---|---|---|---|---|---|---|---|');
   for (const k of keys) {
     const r = results[k];
-    out(`| ${k} | ${r.ok ? 'yes' : `no: ${r.error}`} | ${r.pages ?? '-'} | ${Math.round(r.ms?.engine ?? 0)} | ${Math.round(r.ms?.parse ?? 0)} | ${Math.round(r.ms?.render ?? 0)} | ${Math.round(r.ms?.fonts ?? 0)} | ${Math.round(r.ms?.ready ?? 0)} | ${r.wasmBytes ? (r.wasmBytes / 1048576).toFixed(0) : '-'} |`);
+    out(`| ${k} | ${r.ok ? 'yes' : `no: ${r.error}`} | ${r.pages ?? '-'} | ${Math.round(r.ms?.engine ?? 0)} | ${Math.round(r.ms?.parse ?? 0)} | ${Math.round(r.ms?.export ?? 0)} | ${Math.round(r.ms?.ready ?? 0)} | ${r.memDeltaMB != null ? Math.round(r.memDeltaMB) : '-'} | ${r.wasmBytes ? (r.wasmBytes / 1048576).toFixed(0) : '-'} | ${r.fallbackPages ?? '-'} |`);
   }
   writeFileSync(join(root, 'regress-out', 'hwp-mobile.md'), `${lines.join('\n')}\n`);
   console.log(lines.join('\n'));
@@ -277,7 +367,7 @@ for (const k of keys) {
   if (!r.ok) why.push(`error: ${r.error}`);
   else {
     if (b.pages != null && r.pages !== b.pages) why.push(`pages ${r.pages} ≠ baseline ${b.pages}`);
-    if (r.pdfPages !== r.screenPages) why.push(`PDF pages ${r.pdfPages} ≠ screen pages ${r.screenPages}`);
+    if (r.pdfPages !== r.pages) why.push(`PDF pages ${r.pdfPages} ≠ document pages ${r.pages}`);
     if (r.recall != null && r.officialBytes != null && r.recall < RECALL_MIN) why.push(`recall ${r.recall.toFixed(4)} < ${RECALL_MIN}`);
     if (r.recall != null && b.recall != null && r.recall < b.recall - RECALL_SLACK) why.push(`recall ${r.recall.toFixed(4)} < baseline ${b.recall} − ${RECALL_SLACK}`);
     if (r.dangling > 0) why.push(`dangling refs ${r.dangling}`);
@@ -291,7 +381,7 @@ for (const k of keys) {
   r.broken = r.manual === 'broken' || r.autoBroken;
   r.routed = r.ok ? r.route.desktop.mode !== 'convert' : Boolean(b.guard);
   if (r.autoBroken) flagged.push(`${k}: ${why.join('; ')}`);
-  if (r.ok && b.ms && r.ms.ready > 2 * b.ms) flagged.push(`${k}: ready ${Math.round(r.ms.ready)} ms > 2 × baseline ${b.ms} ms (flag, not a failure)`);
+  // (The baseline `ms` is the old render-to-ready time; the export time is judged by rule 6 instead.)
   rows.push(r);
 }
 const setStats = (set) => {
@@ -306,7 +396,7 @@ const routedSet = setStats(rows.filter((r) => r.routed));
 
 // Rule 1
 if (haveCorpus && non.rate > MAX_BROKEN_RATE) fails.push(`rule 1: non-routed broken rate ${pct(non.rate)} > 5.0 %`);
-// Rule 2 (Arch F1): the routed set on the desktop profile = the 19 guard keys + every file routed by a cap,
+// Rule 2 (Arch F1; 14 keys since HWP direct): the routed set on the desktop profile = the guard keys + every file routed by a cap,
 // and each cap-routed file is listed with its reason. Parity is checked on the guard reasons.
 const CAP_KINDS = ['bytes', 'pages', 'wasm', 'images'];
 const ours = rows.filter((r) => r.routed).map((r) => r.key).sort();
@@ -346,8 +436,16 @@ const median = ratios.length ? (ratios.length % 2 ? ratios[(ratios.length - 1) /
 for (const r of sizeRows) if (r.pdfBytes > SIZE_MAX_RATIO * r.officialBytes) fails.push(`rule 5: ${r.key} PDF ${(r.pdfBytes / 1e6).toFixed(1)} MB > 3 × official ${(r.officialBytes / 1e6).toFixed(1)} MB`);
 if (median != null && median > SIZE_MEDIAN_MAX) fails.push(`rule 5: median size ratio ${median.toFixed(2)} > 1.5`);
 if (results.kr01?.ok && results.kr01.pdfBytes > KR01_MAX) fails.push(`rule 5: kr01 PDF ${(results.kr01.pdfBytes / 1e6).toFixed(1)} MB > 5 MB`);
-// Rule 6
-for (const [k, lim] of Object.entries(TIME_HARD)) if (results[k]?.ok && results[k].ms.ready > lim) fails.push(`rule 6: ${k} render-to-ready ${Math.round(results[k].ms.ready)} ms > ${lim} ms`);
+// Rule 6: export time, open → PDF bytes
+for (const [k, lim] of Object.entries(TIME_HARD)) if (results[k]?.ok && results[k].ms.ready > lim) fails.push(`rule 6: ${k} open → PDF ${Math.round(results[k].ms.ready)} ms > ${lim} ms`);
+// Rule 7 (HWP direct): every PDF valid, no missing glyph, recall ≥ 0.99 for guarded files too, and no fallback
+// page on the spike's 40-file sample (fallback pages are reported for every file).
+for (const r of rows.filter((x) => x.ok)) {
+  if (!r.valid) fails.push(`rule 7: ${r.key} PDF not valid (${r.badNumbers} content stream(s) with NaN/Infinity)`);
+  if (r.missingGlyphs > 0) fails.push(`rule 7: ${r.key} ${r.missingGlyphs} missing glyph(s)`);
+  if (r.recall != null && r.officialBytes != null && r.recall < RECALL_MIN) fails.push(`rule 7: ${r.key} recall ${r.recall.toFixed(4)} < ${RECALL_MIN}`);
+  if (SAMPLE_40.includes(r.key) && r.fallbackPages > 0) fails.push(`rule 7: ${r.key} ${r.fallbackPages} fallback page(s) (${JSON.stringify(r.unsupported)})`);
+}
 
 const partial = !haveCorpus;
 out(`# regress:hwp${partial ? ' — PARTIAL (fixtures only, no corpus)' : ''}`);
@@ -361,11 +459,17 @@ out('|---|---|---|---|---|---|');
 for (const [name, s] of [['all', all], ['non-routed (TS scan + route.ts, desktop)', non], ['routed', routedSet]]) out(`| ${name} | ${s.n} | ${s.broken} | ${pct(s.rate)} | ${pct(s.lo)}–${pct(s.hi)} | ${s.keys.join(' ')} |`);
 out('');
 out(`Routed set (desktop): ${ours.join(' ')}`);
-out(partial ? `Guard parity: ${parityDiff.length ? parityDiff.join(' ') : 'fixture subset match'} (${guardRouted.length} guard-routed of ${keys.length} fixtures; the full check needs CORPUS_DIR)` : `Guard parity with the 19 spike keys: ${parityDiff.length ? parityDiff.join(' ') : 'exact match'}`);
+out(partial ? `Guard parity: ${parityDiff.length ? parityDiff.join(' ') : 'fixture subset match'} (${guardRouted.length} guard-routed of ${keys.length} fixtures; the full check needs CORPUS_DIR)` : `Guard parity with the 14 keys (the 19 spike keys minus the equation-only five): ${parityDiff.length ? parityDiff.join(' ') : 'exact match'}`);
 out(`Cap-routed (desktop): ${capLines.length ? capLines.join('; ') : 'none'}`);
 out('');
 out(`Size rule: ${sizeRows.length} non-routed files with ≥ 1 MB of images and a twin; median ratio ${median?.toFixed(2) ?? '-'}; ` + sizeRows.map((r) => `${r.key} ${(r.pdfBytes / r.officialBytes).toFixed(2)}×`).join(', '));
-for (const k of ['kr01', 'kr17', 'adm04']) if (results[k]?.ok) out(`- ${k}: PDF ${(results[k].pdfBytes / 1e6).toFixed(2)} MB, official ${((results[k].officialBytes ?? 0) / 1e6).toFixed(2)} MB, downscaled ${results[k].downscaled}`);
+for (const k of ['kr01', 'kr17', 'adm04']) if (results[k]?.ok) out(`- ${k}: PDF ${(results[k].pdfBytes / 1e6).toFixed(2)} MB, official ${((results[k].officialBytes ?? 0) / 1e6).toFixed(2)} MB, images re-encoded ${results[k].images?.reencoded ?? '-'} / passed through ${results[k].images?.passthrough ?? '-'}`);
+const ssimRows = rows.filter((r) => r.ssimMean != null);
+if (ssimRows.length) out(`SSIM vs the print path (report only, ${ssimRows.length} files with a print PDF): mean ${(ssimRows.reduce((a, r) => a + r.ssimMean, 0) / ssimRows.length).toFixed(3)}, worst page ${Math.min(...ssimRows.map((r) => r.ssimMin)).toFixed(3)} (${ssimRows.reduce((a, r) => (r.ssimMin < a.ssimMin ? r : a)).key}); pages < 0.90 in: ${ssimRows.filter((r) => r.ssimMin < 0.9).map((r) => r.key).join(' ') || 'none'}`);
+const fallbackTotal = rows.reduce((a, r) => a + (r.fallbackPages ?? 0), 0);
+out(`Fallback pages: ${fallbackTotal} of ${rows.reduce((a, r) => a + (r.ok ? r.pages : 0), 0)} (${rows.filter((r) => r.fallbackPages > 0).map((r) => `${r.key} ${r.fallbackPages}`).join(', ') || 'none'})`);
+const mems = rows.filter((r) => r.memDeltaMB != null);
+if (mems.length) out(`Memory (browser tree working set, peak − idle): max ${Math.round(Math.max(...mems.map((r) => r.memDeltaMB)))} MB (${mems.reduce((a, r) => (r.memDeltaMB > a.memDeltaMB ? r : a)).key})${results.adm16?.memDeltaMB != null ? `; adm16 ${Math.round(results.adm16.memDeltaMB)} MB (budget 1,536 MB)` : ''}`);
 out('');
 out(`Pass rules: ${fails.length ? 'FAIL' : 'all pass'}`);
 for (const f of fails) out(`- ${f}`);
@@ -376,12 +480,12 @@ if (!flagged.length) out('- none');
 out('');
 out('## Per file');
 out('');
-out('| key | ok | pages (base) | PDF pages | recall (base) | ink mean/min (base) | dangling | sanitizer | measure | spaces | fitted | downscaled | ready ms (base) | PDF MB (×off) | mode desktop/mobile | class | auto |');
-out('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+out('| key | ok | pages (base) | PDF pages | recall (base) | ink mean/min (base) | SSIM vs print mean/min | dangling | sanitizer | measure | fallback | missing | open → PDF ms | memory Δ MB | PDF MB (×off) | fonts MB | mode desktop/mobile | class | auto |');
+out('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const r of rows) {
   const b = baseline[r.key] ?? {};
   out(
-    `| ${r.key} | ${r.ok ? 'yes' : 'no'} | ${r.pages ?? '-'} (${b.pages ?? '-'}) | ${r.pdfPages ?? '-'} | ${r.recall?.toFixed(4) ?? '-'} (${b.recall ?? '-'}) | ${r.inkMean?.toFixed(3) ?? '-'}/${r.inkMin?.toFixed(3) ?? '-'} (${b.inkMean ?? '-'}) | ${r.dangling ?? '-'} | ${r.sanitizerRemovals ?? '-'} | ${r.measureCalls ?? '-'} | ${r.spacesAdded ?? '-'} | ${r.fillFitted ?? '-'} | ${r.downscaled ?? '-'} | ${Math.round(r.ms?.ready ?? 0)} (${b.ms ?? '-'}) | ${r.pdfBytes ? (r.pdfBytes / 1e6).toFixed(2) : '-'}${r.officialBytes ? ` (${(r.pdfBytes / r.officialBytes).toFixed(2)})` : ''} | ${r.route ? `${r.route.desktop.mode}/${r.route.mobile.mode}` : '-'} | ${r.manual ?? '-'} | ${r.autoBroken ? 'broken' : ''} |`,
+    `| ${r.key} | ${r.ok ? 'yes' : 'no'} | ${r.pages ?? '-'} (${b.pages ?? '-'}) | ${r.pdfPages ?? '-'} | ${r.recall?.toFixed(4) ?? '-'} (${b.recall ?? '-'}) | ${r.inkMean?.toFixed(3) ?? '-'}/${r.inkMin?.toFixed(3) ?? '-'} (${b.inkMean ?? '-'}) | ${r.ssimMean?.toFixed(3) ?? '-'}/${r.ssimMin?.toFixed(3) ?? '-'} | ${r.dangling ?? '-'} | ${r.sanitizerRemovals ?? '-'} | ${r.measureCalls ?? '-'} | ${r.fallbackPages ?? '-'} | ${r.missingGlyphs ?? '-'} | ${Math.round(r.ms?.ready ?? 0)} | ${r.memDeltaMB != null ? Math.round(r.memDeltaMB) : '-'} | ${r.pdfBytes ? (r.pdfBytes / 1e6).toFixed(2) : '-'}${r.officialBytes ? ` (${(r.pdfBytes / r.officialBytes).toFixed(2)})` : ''} | ${r.fontBytes != null ? (r.fontBytes / 1e6).toFixed(2) : '-'} | ${r.route ? `${r.route.desktop.mode}/${r.route.mobile.mode}` : '-'} | ${r.manual ?? '-'} | ${r.autoBroken ? 'broken' : ''} |`,
   );
 }
 writeFileSync(join(root, 'regress-out', 'hwp.md'), `${lines.join('\n')}\n`);

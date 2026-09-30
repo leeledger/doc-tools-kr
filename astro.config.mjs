@@ -1,4 +1,5 @@
 // @ts-check
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
 import { autoframeOn } from './scripts/lib/autoframe.mjs';
@@ -37,6 +38,8 @@ export default defineConfig({
         },
       },
     },
+    // HWP direct: @cantoo/fontkit's Brotli decoder is never used (the PDF path reads WOFF 1.0 only).
+    resolve: { alias: [{ find: /^brotli\/decompress(\.js)?$/, replacement: fileURLToPath(new URL('./src/lib/hwp/pdf/brotli-stub.ts', import.meta.url)) }] },
     // rhwpNoDefaultWasm: one rhwp_bg.wasm in dist/ (Step 5; see scripts/lib/vite-rhwp.mjs).
     worker: { format: 'es', plugins: () => [rhwpNoDefaultWasm()] },
     define: { __ERROR_BEACON_PATH__: JSON.stringify(errorBeaconPath), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe) },

@@ -4,7 +4,7 @@ import { LIMITS, MB_DEC, MIB, overHardLimit } from '../../src/lib/hwp/limits';
 import { route, type RouteInput } from '../../src/lib/hwp/route';
 import type { Device } from '../../src/lib/ui/device';
 
-const base = (device: Device): RouteInput => ({ device, fileBytes: 1000, pages: 10, wasmBytes: 8 * MIB, imageBytes: 0, equations: 0, textboxes: 0 });
+const base = (device: Device): RouteInput => ({ device, fileBytes: 1000, pages: 10, wasmBytes: 8 * MIB, imageBytes: 0, textboxes: 0 });
 
 describe('limits', () => {
   it('the brief numbers', () => {
@@ -37,26 +37,29 @@ describe('route', () => {
     }
   });
 
-  it('guard: pages 99 converts, 100 is viewer-first; equations 1; text boxes 2 converts, 3 is viewer-first', () => {
+  it('guard: pages 99 converts, 100 is viewer-first; text boxes 2 converts, 3 is viewer-first', () => {
     expect(route({ ...base('desktop'), pages: 99 }).mode).toBe('convert');
     expect(route({ ...base('desktop'), pages: 100 })).toEqual({ mode: 'viewer-first', reasons: [{ kind: 'long', value: 100 }] });
-    expect(route({ ...base('desktop'), equations: 1 })).toEqual({ mode: 'viewer-first', reasons: [{ kind: 'equations', value: 1 }] });
     expect(route({ ...base('desktop'), textboxes: 2 }).mode).toBe('convert');
     expect(route({ ...base('desktop'), textboxes: 3 })).toEqual({ mode: 'viewer-first', reasons: [{ kind: 'textboxes', value: 3 }] });
-    expect(route({ ...base('mobile'), pages: 60, equations: 0 }).mode).toBe('convert');
+    expect(route({ ...base('mobile'), pages: 60 }).mode).toBe('convert');
   });
 
-  it('reason order: caps in table order, then equations, text boxes, long; caps win over the guard', () => {
-    const r = route({ device: 'mobile', fileBytes: 11 * MB_DEC, pages: 128, wasmBytes: 300 * MIB, imageBytes: 9 * MB_DEC, equations: 2, textboxes: 5 });
+  it('equations never route (HWP direct, SPIKE-HWP-DIRECT §6.6: law09 with 28 equations converts)', () => {
+    expect(route({ ...base('desktop'), pages: 20, ...({ equations: 28 } as object) })).toEqual({ mode: 'convert', reasons: [] });
+  });
+
+  it('reason order: caps in table order, then text boxes, long; caps win over the guard', () => {
+    const r = route({ device: 'mobile', fileBytes: 11 * MB_DEC, pages: 128, wasmBytes: 300 * MIB, imageBytes: 9 * MB_DEC, textboxes: 5 });
     expect(r.mode).toBe('viewer-only');
-    expect(r.reasons.map((x) => x.kind)).toEqual(['bytes', 'pages', 'wasm', 'images', 'equations', 'textboxes', 'long']);
-    const g = route({ ...base('desktop'), pages: 128, equations: 3, textboxes: 4 });
+    expect(r.reasons.map((x) => x.kind)).toEqual(['bytes', 'pages', 'wasm', 'images', 'textboxes', 'long']);
+    const g = route({ ...base('desktop'), pages: 128, textboxes: 4 });
     expect(g.mode).toBe('viewer-first');
-    expect(g.reasons.map((x) => x.kind)).toEqual(['equations', 'textboxes', 'long']);
+    expect(g.reasons.map((x) => x.kind)).toEqual(['textboxes', 'long']);
   });
 
-  it('adm28 (128 p, 1 equation, 10 text boxes): viewer-first on desktop, viewer-only on mobile', () => {
-    const adm28 = { fileBytes: 238_366, pages: 128, wasmBytes: 30 * MIB, imageBytes: 41 * 1024, equations: 1, textboxes: 10 };
+  it('adm28 (128 p, 10 text boxes): viewer-first on desktop, viewer-only on mobile', () => {
+    const adm28 = { fileBytes: 238_366, pages: 128, wasmBytes: 30 * MIB, imageBytes: 41 * 1024, textboxes: 10 };
     expect(route({ device: 'desktop', ...adm28 }).mode).toBe('viewer-first');
     expect(route({ device: 'mobile', ...adm28 }).mode).toBe('viewer-only');
   });

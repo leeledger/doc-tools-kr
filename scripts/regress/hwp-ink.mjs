@@ -44,3 +44,57 @@ export function iou(a, b) {
   }
   return uni ? inter / uni : 1;
 }
+
+/**
+ * SSIM of two grey images (8×8 windows, stride 4, Wang et al. constants), on their common area; a size
+ * difference over 3 px resizes the second image (SPIKE-HWP-DIRECT score.mjs; regress:hwp report-only column).
+ */
+export function ssim(a0, b0) {
+  let a = a0;
+  let b = b0;
+  if (b.w !== a.w || b.h !== a.h) {
+    const w = Math.min(a.w, b.w);
+    const h = Math.min(a.h, b.h);
+    const cut = (im) => {
+      const g = new Uint8Array(w * h);
+      for (let y = 0; y < h; y++) g.set(im.g.subarray(y * im.w, y * im.w + w), y * w);
+      return { g, w, h };
+    };
+    if (Math.abs(a.w - b.w) > 3 || Math.abs(a.h - b.h) > 3) b = resize(b, a.w, a.h);
+    else {
+      a = cut(a);
+      b = cut(b);
+    }
+  }
+  const C1 = (0.01 * 255) ** 2;
+  const C2 = (0.03 * 255) ** 2;
+  const W = 8;
+  const S = 4;
+  const N = W * W;
+  let tot = 0;
+  let n = 0;
+  for (let y = 0; y + W <= a.h; y += S)
+    for (let x = 0; x + W <= a.w; x += S) {
+      let sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0;
+      for (let j = 0; j < W; j++) {
+        const o = (y + j) * a.w + x;
+        for (let i = 0; i < W; i++) {
+          const p = a.g[o + i];
+          const q = b.g[o + i];
+          sa += p;
+          sb += q;
+          saa += p * p;
+          sbb += q * q;
+          sab += p * q;
+        }
+      }
+      const ma = sa / N;
+      const mb = sb / N;
+      const va = saa / N - ma * ma;
+      const vb = sbb / N - mb * mb;
+      const cov = sab / N - ma * mb;
+      tot += ((2 * ma * mb + C1) * (2 * cov + C2)) / ((ma * ma + mb * mb + C1) * (va + vb + C2));
+      n++;
+    }
+  return n ? tot / n : 1;
+}

@@ -176,7 +176,7 @@ export function initCompressTool(): void {
   const revokeBlob = (): void => {
     if (blobUrl) URL.revokeObjectURL(blobUrl);
     blobUrl = null;
-    download.href = '#';
+    download.removeAttribute('href');
   };
   const stopWorker = (): void => {
     worker?.terminate();

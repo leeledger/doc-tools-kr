@@ -1,29 +1,33 @@
-// HWP PDF 변환 UI controller (brief Step 5 "Flow", §3.2). States: empty → loading → convert | viewer-first |
-// viewer-only | error; viewer-first → rendering → convert (그래도 PDF로 저장, cancelable back to viewer-first).
-// Initial JS: this file, the sniff and the route. The guidance data comes with the lazy chunk (it is shown
-// only once a document is ready; the help section is server-rendered from the same data). The worker (rhwp
-// glue, scan) starts when a file is picked; the viewer / post-processing / print chunk (./lazy) and the
-// document fonts load after that.
-// Two tokens: `docId` (one per opened document; stale worker messages are dropped) and `renderRun` (one per
-// full render; a cancel bumps it, so no page of the canceled run is awaited or appended by it).
+// HWP PDF 변환 UI controller (brief Step 5 "Flow"; SPIKE-HWP-DIRECT §6.1 "H": PDF 내려받기). States:
+// empty → loading → convert | viewer-first | viewer-only | error; convert / viewer-first → exporting → back.
+// The preview is always the lazy viewer (±2 / ±6 pages). 「PDF 내려받기」 builds the PDF in the page, one page
+// at a time from the worker (export chunk: pdf-lib + fontkit + the writer), and saves it through an in-page
+// <a download>. The page never navigates, swaps its title or opens a dialog, and the preview stays on screen.
+// Initial JS: this file, the sniff, the route and the prefetch. The worker starts when a file is picked; the
+// viewer chunk (./lazy) and the document fonts load after that; the export chunk on idle or on the first click.
+// Tokens: `docId` (one per opened document; stale worker messages are dropped) and `exportRun` (one per
+// export; a cancel bumps it, so nothing of the canceled run lands).
 import type { HwpErrorCode } from '../../lib/hwp/errors';
 import type { HwpRequest, HwpResponse } from '../../lib/hwp/hwp.worker';
 import type { PageInfo } from '../../lib/hwp/engine';
 import { SNIFF_BYTES, sniffContainer } from '../../lib/hwp/sniff';
+import { prefetchRhwpWasm } from '../../lib/hwp/wasm-browser';
 import { announce as live, clearAlert, clearStatus } from '../../lib/ui/announce';
 import { detectDevice, type Device } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
-import { safeFileName } from '../../lib/ui/format';
+import { formatSize } from '../../lib/ui/format';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
-import { LIMITS, overHardLimit, route, type Mode, type RouteResult } from './limits';
+import { pdfName, triggerDownload } from './download';
+import { LIMITS, overHardLimit, route, type Mode } from './limits';
 import { COPY, ERRORS, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from './messages';
-import { fontsSettled, hwpFontsReady, loadHwpFonts, preloadFacesFor } from './fonts';
+import { loadHwpFonts, preloadFacesFor } from './fonts';
 import { createWatchdog } from './watchdog';
 
-type State = 'empty' | 'loading' | Mode | 'rendering' | 'error';
+type State = 'empty' | 'loading' | Mode | 'exporting' | 'error';
 type Lazy = typeof import('./lazy');
+type ExportChunk = typeof import('./export-chunk');
 type Viewer = import('./lazy').Viewer;
 type PageMsg = Extract<HwpResponse, { type: 'page' }>;
 type Scanned = Extract<HwpResponse, { type: 'scanned' }>;
@@ -33,8 +37,8 @@ export const INFLIGHT_KEY = 'hwp-inflight';
 const PROGRESS_INTERVAL_MS = 250;
 
 const createWorker = (): Worker => new Worker(new URL('../../lib/hwp/hwp.worker.ts', import.meta.url), { type: 'module' });
-const stem = (name: string): string => name.replace(/\.[^./\\]+$/, '');
-const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+const loadExportChunk = (): Promise<ExportChunk> => import('./export-chunk');
+const isOom = (err: unknown): boolean => err instanceof RangeError || /out of memory|allocation|array buffer/i.test(err instanceof Error ? err.message : String(err));
 
 function must<T extends HTMLElement>(id: string): T {
   const e = document.getElementById(id);
@@ -42,7 +46,7 @@ function must<T extends HTMLElement>(id: string): T {
   return e as T;
 }
 
-/** True once when the previous page load left the in-flight flag behind (the tab was killed mid-parse). */
+/** True once when the previous page load left the in-flight flag behind (the tab was killed mid-work). */
 function takeInflight(): boolean {
   try {
     const had = sessionStorage.getItem(INFLIGHT_KEY) !== null;
@@ -62,21 +66,11 @@ function setInflight(bytes: number | null): void {
   }
 }
 
-function list(steps: string[]): HTMLOListElement {
-  const ol = document.createElement('ol');
-  for (const s of steps) {
-    const li = document.createElement('li');
-    li.textContent = s;
-    ol.append(li);
-  }
-  return ol;
-}
-
-function para(cls: string, text: string): HTMLParagraphElement {
-  const p = document.createElement('p');
-  p.className = cls;
-  p.textContent = text;
-  return p;
+/** Runs `fn` when the page is idle (the export chunk warm-up). */
+function whenIdle(fn: () => void): void {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  if (w.requestIdleCallback) w.requestIdleCallback(fn, { timeout: 5000 });
+  else setTimeout(fn, 1000);
 }
 
 export function initHwpTool(): void {
@@ -98,62 +92,64 @@ export function initHwpTool(): void {
   const saveBtn = must<HTMLButtonElement>('hw-save');
   const forceBtn = must<HTMLButtonElement>('hw-force');
   const resetBtn = must<HTMLButtonElement>('hw-reset');
+  const eqNote = must<HTMLParagraphElement>('hw-eq-note');
   const note = must<HTMLParagraphElement>('hw-note');
-  const guide = must<HTMLDivElement>('hw-guide');
-  const after = must<HTMLDivElement>('hw-after');
-  const preview = must<HTMLDivElement>('hwp-print-root');
+  const done = must<HTMLDivElement>('hw-done');
+  const doneText = must<HTMLParagraphElement>('hw-done-text');
+  const again = must<HTMLAnchorElement>('hw-again');
+  const preview = must<HTMLDivElement>('hw-preview');
 
   let state: State = 'empty';
+  /** The routed mode of the open document (the state an export returns to). */
+  let base: Mode = 'convert';
   let docId = 0;
-  let renderRun = 0;
+  let exportRun = 0;
+  let abort: AbortController | null = null;
   let worker: Worker | null = null;
   let viewer: Viewer | null = null;
   let lazy: Lazy | null = null;
   let infos: PageInfo[] = [];
-  let routed: RouteResult | null = null;
+  let equations = 0;
   let file: File | null = null;
   let device: Device = detectDevice();
   let lastProgress = 0;
-  /** Pages the full render awaits; a cancel or a reset answers them with null so the render unwinds. */
+  let outstanding = 0;
+  let resultUrl: string | null = null;
+  /** Pages awaited by the first-page wait or the export; a cancel or a reset answers them with null. */
   const waiters = new Map<number, (m: PageMsg | null) => void>();
   const releaseWaiters = (): void => {
     const all = [...waiters.values()];
     waiters.clear();
     for (const w of all) w(null);
   };
-  const pending = new Set<number>();
   const watchdog = createWatchdog(() => fail('timeout'));
 
   const announce = (msg: string): void => live('status', msg, root);
   const preload = schedulePreload(() => warmWorker(createWorker), { root, immediate: [pick, input], dropZone: root });
+  const prefetch = (): void => {
+    if (!preload.skipped) void prefetchRhwpWasm();
+  };
 
   function setState(next: State): void {
     state = next;
     root.dataset.state = next;
-    if (next === 'loading' || next === 'rendering') document.body.dataset.busy = 'hwp';
+    if (next === 'loading' || next === 'exporting') document.body.dataset.busy = 'hwp';
     else delete document.body.dataset.busy;
-    const shown = next === 'convert' || next === 'viewer-first' || next === 'viewer-only' || next === 'rendering';
+    const exporting = next === 'exporting';
+    const mode: State = exporting ? base : next;
     drop.hidden = next !== 'empty' && next !== 'error';
-    progressBox.hidden = next !== 'loading' && next !== 'rendering';
-    result.hidden = !shown;
-    saveBtn.hidden = next !== 'convert';
-    forceBtn.hidden = next !== 'viewer-first';
-    resetBtn.hidden = next === 'rendering';
-    note.hidden = next !== 'convert';
-    guide.hidden = next !== 'convert';
-    banner.hidden = !(next === 'viewer-first' || next === 'viewer-only' || next === 'rendering');
-    if (next !== 'convert') after.hidden = true;
-    // Print CSS: only a finished document prints; viewer-only prints a one-line notice (brief §3.2).
-    // A converted document prints only once the save button is on (fonts settled, images downscaled);
-    // Ctrl/Cmd+P before that prints a one-line notice (Richard, Step 5 round 2, Should Fix 4).
-    setPrintReady(false);
-    document.body.classList.toggle('hwp-viewer-only', next === 'viewer-only');
-    document.body.classList.toggle('hwp-not-ready', next === 'viewer-first' || next === 'rendering' || (next === 'loading' && infos.length > 0));
-  }
-
-  function setPrintReady(ready: boolean): void {
-    document.body.classList.toggle('hwp-printable', state === 'convert' && ready);
-    document.body.classList.toggle('hwp-preparing', state === 'convert' && !ready);
+    progressBox.hidden = next !== 'loading' && !exporting;
+    result.hidden = !(mode === 'convert' || mode === 'viewer-first' || mode === 'viewer-only');
+    saveBtn.hidden = mode !== 'convert';
+    forceBtn.hidden = mode !== 'viewer-first';
+    for (const b of [saveBtn, forceBtn, resetBtn]) {
+      if (exporting) b.setAttribute('aria-disabled', 'true');
+      else b.removeAttribute('aria-disabled');
+    }
+    note.hidden = mode !== 'convert';
+    eqNote.hidden = !(mode === 'convert' && equations > 0);
+    banner.hidden = !(mode === 'viewer-first' || mode === 'viewer-only');
+    if (exporting || (next !== 'convert' && next !== 'viewer-first')) done.hidden = true;
   }
 
   function progress(text: string, value: number | null, force = false): void {
@@ -168,7 +164,7 @@ export function initHwpTool(): void {
 
   function stopWorker(): void {
     watchdog.stop();
-    pending.clear();
+    outstanding = 0;
     releaseWaiters();
     if (worker) {
       worker.onmessage = null;
@@ -185,22 +181,34 @@ export function initHwpTool(): void {
     worker.postMessage(msg, transfer);
   }
 
-  function clearDocument(): void {
-    preview.classList.remove('hw-building');
-    viewer?.destroy();
-    viewer = null;
-    lazy?.removePageStyle();
-    infos = [];
-    routed = null;
-    banner.textContent = '';
-    fileName.textContent = '';
-    guide.replaceChildren();
+  function dropResult(): void {
+    if (resultUrl) URL.revokeObjectURL(resultUrl);
+    resultUrl = null;
+    again.removeAttribute('href');
+    doneText.textContent = '';
+    done.hidden = true;
   }
 
-  /** Terminates the worker, revokes every blob URL, clears the pages, the @page style and the in-flight flag. */
+  function stopExport(): void {
+    exportRun++;
+    abort?.abort();
+    abort = null;
+  }
+
+  function clearDocument(): void {
+    stopExport();
+    dropResult();
+    viewer?.destroy();
+    viewer = null;
+    infos = [];
+    equations = 0;
+    banner.textContent = '';
+    fileName.textContent = '';
+  }
+
+  /** Terminates the worker, revokes the PDF URL, clears the pages and the in-flight flag. */
   function reset(focus = true): void {
     docId++;
-    renderRun++;
     stopWorker();
     clearDocument();
     setInflight(null);
@@ -217,7 +225,6 @@ export function initHwpTool(): void {
 
   function showError(text: string): void {
     docId++;
-    renderRun++;
     stopWorker();
     clearDocument();
     setInflight(null);
@@ -234,7 +241,6 @@ export function initHwpTool(): void {
       return;
     }
     docId++;
-    renderRun++;
     stopWorker();
     clearDocument();
     setInflight(null);
@@ -242,58 +248,34 @@ export function initHwpTool(): void {
     void showEngineError();
   }
 
-  function renderGuide(lz: Lazy): void {
-    const [lead, ...rest] = lz.orderedGuides(lz.detectBrowser({ ua: navigator.userAgent, platform: navigator.platform, maxTouchPoints: navigator.maxTouchPoints }));
-    const card = document.createElement('div');
-    card.className = 'hw-guide-lead';
-    card.append(para('hw-guide-title', `${lead.title}에서 저장하는 방법`), list(lead.steps));
-    const more = document.createElement('details');
-    more.className = 'more';
-    const sum = document.createElement('summary');
-    sum.textContent = '다른 브라우저에서 저장하는 방법';
-    more.append(sum);
-    for (const g of rest) more.append(para('hw-guide-title', g.title), list(g.steps));
-    guide.replaceChildren(card, more);
-  }
-
   // ---------- pages ----------
 
   function onPage(msg: PageMsg): void {
-    pending.delete(msg.i);
-    void loadHwpFonts();
+    outstanding = Math.max(0, outstanding - 1);
+    if (!outstanding) watchdog.stop();
     const w = waiters.get(msg.i);
     if (w) {
       waiters.delete(msg.i);
       w(msg);
-    } else viewer?.insert(msg.i, msg.svg, msg.runs, msg.failed);
-    if (!pending.size) watchdog.stop();
+    }
+    // The viewer takes every page it wants (it drops the others), also the ones the export asked for.
+    viewer?.insert(msg.i, msg.svg, msg.runs, msg.failed);
   }
 
-  /** Lazy viewer request (the viewer marks the slot pending; the answer goes to viewer.insert). */
   function request(i: number): void {
-    if (pending.has(i)) return;
-    pending.add(i);
+    outstanding++;
     send({ type: 'render', i });
   }
 
   function awaitPage(i: number): Promise<PageMsg | null> {
     return new Promise((resolve) => {
       waiters.set(i, resolve);
-      pending.add(i);
-      send({ type: 'render', i });
+      request(i);
     });
   }
 
   async function onParsed(msg: Parsed, feats: Scanned, id: number): Promise<void> {
-    routed = route({
-      device,
-      fileBytes: file?.size ?? 0,
-      pages: msg.pages,
-      wasmBytes: msg.wasmBytes,
-      imageBytes: feats.imageBytes,
-      equations: feats.equations,
-      textboxes: feats.textboxes,
-    });
+    const routed = route({ device, fileBytes: file?.size ?? 0, pages: msg.pages, wasmBytes: msg.wasmBytes, imageBytes: feats.imageBytes, textboxes: feats.textboxes });
     try {
       lazy ??= await withEngineRetry(() => import('./lazy'));
     } catch {
@@ -301,76 +283,22 @@ export function initHwpTool(): void {
       return;
     }
     if (id !== docId) return;
-    watchdog.stop();
     infos = msg.pageInfos;
+    equations = feats.equations;
+    base = routed.mode;
     fileName.textContent = `${file?.name ?? ''} · ${msg.pages.toLocaleString('ko-KR')}쪽`;
-    const mode = routed.mode;
-    viewer = lazy.createViewer({ root: preview, infos, lazy: mode !== 'convert', request, pageFailedText: COPY.pageFailed });
-    if (mode === 'convert') {
-      renderRun++;
-      await fullRender(id, renderRun, false);
-      return;
-    }
-    banner.textContent = mode === 'viewer-first' ? viewerFirstMessage(routed.reasons) : viewerOnlyMessage(device, routed.reasons);
+    progress(COPY.firstPage(msg.pages), null, true);
+    viewer = lazy.createViewer({ root: preview, infos, request, pageFailedText: COPY.pageFailed });
+    const first = await awaitPage(0);
+    if (id !== docId || !first) return;
+    const page0 = preview.querySelector('[data-page="0"]');
+    if (page0) void preloadFacesFor(page0);
+    if (base !== 'convert') banner.textContent = base === 'viewer-first' ? viewerFirstMessage(routed.reasons) : viewerOnlyMessage(device, routed.reasons);
     setInflight(null);
-    setState(mode);
-    announce(`${COPY.ready(msg.pages)} ${banner.textContent}`);
+    setState(base);
+    announce([COPY.ready(msg.pages), base === 'convert' ? '' : banner.textContent, base === 'convert' && equations ? COPY.equations : ''].filter(Boolean).join(' '));
     fileName.focus();
-  }
-
-  /**
-   * Renders every page in order (convert, or 그래도 PDF로 저장), frees the engine and prepares printing.
-   * The preview is hidden while pages arrive: with ~860 unicode-range faces, every font slice that lands
-   * re-lays out all the text already shown, so a visible build is quadratic (adm28: 20 s instead of 5 s).
-   * Downscaling needs layout, so it runs once the pages are shown and the fonts are in.
-   */
-  async function fullRender(id: number, run: number, forced: boolean): Promise<void> {
-    const v = viewer;
-    const lz = lazy;
-    if (!v || !lz) return;
-    const live = (): boolean => id === docId && run === renderRun;
-    const n = infos.length;
-    v.setLazy(false);
-    // 그래도 PDF로 저장 on a heavy routed file is where a phone kills the tab: flag it again (cleared below,
-    // and on cancel, reset and error). Richard, Step 5 round 2, Should Fix 2.
-    if (forced) setInflight(file?.size ?? 0);
-    setState(forced ? 'rendering' : 'loading');
-    progress(COPY.pages(0, n), 0, true);
-    preview.classList.add('hw-building');
-    try {
-      for (let i = 0; i < n; i++) {
-        if (!v.isRendered(i)) {
-          const msg = await awaitPage(i);
-          if (!live() || !msg) return;
-          v.insert(i, msg.svg, msg.runs, msg.failed);
-        }
-        progress(COPY.pages(i + 1, n), (i + 1) / n, i === n - 1);
-        await tick();
-        if (!live()) return;
-      }
-      await preloadFacesFor(preview);
-      if (!live()) return;
-    } finally {
-      preview.classList.remove('hw-building');
-    }
-    // Free the WASM before print doubles the peak.
-    send({ type: 'close' });
-    stopWorker();
-    lz.installPageStyle(infos);
-    renderGuide(lz);
-    setState('convert');
-    saveBtn.disabled = true;
-    announce(`${COPY.ready(n)} ${COPY.fonts}`);
-    await hwpFontsReady();
-    for (let i = 0; i < n && live(); i++) await v.downscale(i);
-    await fontsSettled();
-    if (!live()) return;
-    setInflight(null);
-    saveBtn.disabled = false;
-    setPrintReady(true);
-    announce(COPY.ready(n));
-    if (forced) await save();
-    else fileName.focus();
+    if (base !== 'viewer-only' && !preload.skipped) whenIdle(() => void loadExportChunk().catch(() => undefined));
   }
 
   // ---------- open ----------
@@ -438,9 +366,11 @@ export function initHwpTool(): void {
         } else progress(COPY.opening, null, true);
       } else if (msg.type === 'scanned') {
         feats = msg;
-        // Start the viewer chunk while the engine loads.
+        // The viewer chunk and the document font CSS load while the engine does.
         void import('./lazy').then((m) => (lazy ??= m)).catch(() => undefined);
+        void loadHwpFonts();
       } else if (msg.type === 'parsed') {
+        watchdog.stop();
         if (feats) void onParsed(msg, feats, id);
       } else if (msg.type === 'error') fail(msg.code === 'too-large' ? 'corrupt' : msg.code);
     };
@@ -457,40 +387,95 @@ export function initHwpTool(): void {
     send({ type: 'open', bytes: buffer, inflateCap: LIMITS[device].inflateCap }, [buffer]);
   }
 
-  async function save(): Promise<void> {
-    if (!lazy || state !== 'convert' || saveBtn.disabled) return;
-    after.hidden = true;
-    saveBtn.focus();
-    await lazy.printDocument(safeFileName(stem(file?.name ?? ''), ''), () => {
-      after.hidden = false;
-      saveBtn.focus();
-    });
+  // ---------- export ----------
+
+  async function exportDocument(button: HTMLButtonElement): Promise<void> {
+    if ((state !== 'convert' && state !== 'viewer-first') || !file || !infos.length) return;
+    const id = docId;
+    const run = ++exportRun;
+    const ctl = new AbortController();
+    abort = ctl;
+    const current = (): boolean => id === docId && run === exportRun;
+    const n = infos.length;
+    const name = pdfName(file.name);
+    // Building the PDF of a heavy file is where a phone may kill the tab: flag it (cleared on every exit).
+    setInflight(file.size);
+    setState('exporting');
+    lastProgress = 0;
+    progress(COPY.exporting(0, n), 0, true);
+    let chunk: ExportChunk;
+    try {
+      chunk = await withEngineRetry(loadExportChunk);
+    } catch {
+      if (current()) fail('engine');
+      return;
+    }
+    if (!current()) return;
+    try {
+      const { blob, stats } = await chunk.exportPdf({
+        infos,
+        getPage: async (i) => {
+          const m = await awaitPage(i);
+          if (!m) throw new DOMException('page request released', 'AbortError');
+          return m;
+        },
+        // A page finishing after 취소 must not overwrite the "취소했습니다" line.
+        onProgress: (i, total) => {
+          if (current()) progress(COPY.exporting(i, total), i / total, i === total);
+        },
+        signal: ctl.signal,
+      });
+      if (!current()) return;
+      abort = null;
+      setInflight(null);
+      dropResult();
+      resultUrl = URL.createObjectURL(blob);
+      triggerDownload(resultUrl, name);
+      again.href = resultUrl;
+      again.download = name;
+      const line = COPY.done(name, n, formatSize(blob.size));
+      doneText.textContent = stats.failedPages ? `${line}. ${COPY.failedPages(stats.failedPages)}` : line;
+      setState(base);
+      done.hidden = false;
+      announce(doneText.textContent);
+      button.focus();
+    } catch (err) {
+      if (!current()) return;
+      abort = null;
+      if ((err as { name?: unknown } | null)?.name === 'AbortError') return;
+      fail(isOom(err) ? 'oom' : 'corrupt');
+    }
   }
 
   function cancel(): void {
-    if (state !== 'rendering') {
+    if (state !== 'exporting') {
       reset();
       return;
     }
-    // Back to viewer-first; the worker still holds the document and the lazy window takes over again.
-    renderRun++;
+    // Back to the document; the worker still holds it and the viewer keeps its pages.
+    stopExport();
     releaseWaiters();
-    pending.clear();
-    watchdog.stop();
     setInflight(null);
-    setState('viewer-first');
-    viewer?.setLazy(true);
+    setState(base);
     announce(COPY.canceled);
-    forceBtn.focus();
+    (base === 'viewer-first' ? forceBtn : saveBtn).focus();
   }
 
   // ---------- wiring ----------
 
-  const busy = (): boolean => state === 'loading' || state === 'rendering';
+  const busy = (): boolean => state === 'loading' || state === 'exporting';
   input.addEventListener('change', () => {
     const f = input.files?.[0];
     if (f) void open(f);
   });
+  // The engine download overlaps the file dialog (SPIKE-HWP-DIRECT §6.7).
+  for (const el of [pick, input] as HTMLElement[]) {
+    el.addEventListener('pointerdown', prefetch);
+    el.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') prefetch();
+    });
+  }
+  root.addEventListener('dragenter', prefetch);
   root.addEventListener('dragover', (ev) => {
     if (!ev.dataTransfer?.types.includes('Files') || busy()) return;
     ev.preventDefault();
@@ -506,17 +491,14 @@ export function initHwpTool(): void {
     if (f) void open(f);
   });
   cancelBtn.addEventListener('click', cancel);
-  resetBtn.addEventListener('click', () => reset());
-  saveBtn.addEventListener('click', () => void save());
-  forceBtn.addEventListener('click', () => {
-    if (state !== 'viewer-first') return;
-    renderRun++;
-    lastProgress = 0;
-    void fullRender(docId, renderRun, true);
+  resetBtn.addEventListener('click', () => {
+    if (state !== 'exporting') reset();
   });
+  saveBtn.addEventListener('click', () => void exportDocument(saveBtn));
+  forceBtn.addEventListener('click', () => void exportDocument(forceBtn));
   window.addEventListener('pagehide', () => {
     docId++;
-    renderRun++;
+    stopExport();
     stopWorker();
   });
 
