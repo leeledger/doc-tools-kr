@@ -80,6 +80,20 @@ budget('fflate chunk (zip*.js)', match(/^_astro\/zip[.-][^/]*\.js$/), 12 * KB);
 // byte may ship; otherwise the lazy face assets have their budgets and the model its SHA-256 pin.
 const autoframe = autoframeOn(env.PUBLIC_ID_PHOTO_AUTOFRAME) && !process.argv.includes('--no-mediapipe');
 budget('encode.worker*.js (id-photo)', match(/^_astro\/encode\.worker[^/]*\.js$/), 25 * KB);
+// 전자서명·도장 이미지 (Sprint C, C1): the ink worker (5.05 KB gzip measured at C1 integration, after C1-core round 2
+// added the ink colour; budget = measured + 20 %), and the page's controls (photo*.js, pad*.js and what only they
+// import; 11.3 KB gzip measured, budget + 20 %), which load on first use only, never with the page.
+budget('ink.worker*.js (stamp-signature)', match(/^_astro\/ink\.worker[^/]*\.js$/), 6.1 * KB);
+{
+  const html = pageHtml.get('stamp-signature/index.html');
+  if (!html) errors.push('stamp-signature/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controls = match(/^_astro\/(photo|pad)\.[\w-]{8}\.js$/);
+    if (controls.some((f) => initial.has(f))) errors.push('the /stamp-signature/ controls (photo*.js, pad*.js) load with the page');
+    budget('stamp-signature controls (photo*.js + pad*.js, lazy)', [...new Set(controls.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 13.5 * KB);
+  }
+}
 if (!autoframe) {
   for (const f of files) if (/mediapipe|vision_bundle|vision_wasm|face_landmarker/i.test(f.path)) errors.push(`${f.path}: MediaPipe file in a build without auto-framing`);
   for (const js of match(/\.m?js$/)) if (/FaceLandmarker|odml\.pa\.googleapis/.test(read(js).toString('latin1'))) errors.push(`${js} contains MediaPipe code in a build without auto-framing`);

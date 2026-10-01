@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, gotoReady, test } from './no-upload';
 import { fixturePath, photoFixture, runtimePath } from './paths';
 
-const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
+const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 for (const path of PAGES) {
@@ -39,7 +39,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   expect(await serious()).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/privacy/', '/terms/', '/licenses/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -65,6 +65,7 @@ for (const [path, name] of [
   ['/photo-compress/', '사진 용량 줄이기'],
   ['/hwp-to-pdf/', 'HWP PDF 변환'],
   ['/hwp-viewer/', 'hwp 뷰어'],
+  ['/stamp-signature/', '도장 이미지 만들기'],
 ] as const) {
   test(`tool page JSON-LD, title and description on ${path}`, async ({ page }) => {
     await gotoReady(page, path);
@@ -85,7 +86,7 @@ for (const [path, name] of [
   });
 }
 
-test('related tools: each tool page links to the other live tools (the HWP tools: each other and the PDF tools)', async ({ page }) => {
+test('related tools: each tool page links to the other live tools (the HWP tools: each other and the PDF tools; /stamp-signature/: its three)', async ({ page }) => {
   const tools = [
     ['/pdf-merge/', 'PDF 합치기'],
     ['/pdf-compress/', 'PDF 용량 줄이기'],
@@ -93,8 +94,14 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     ['/id-photo/', '여권·증명사진 규격 맞추기'],
     ['/hwp-to-pdf/', 'HWP PDF 변환'],
     ['/hwp-viewer/', 'HWP·HWPX 파일 보기'],
+    ['/stamp-signature/', '전자서명·도장 이미지 만들기'],
   ] as const;
-  const related: Record<string, string[]> = { '/hwp-to-pdf/': ['/hwp-viewer/', '/pdf-merge/', '/pdf-compress/'], '/hwp-viewer/': ['/hwp-to-pdf/', '/pdf-compress/'] };
+  const related: Record<string, string[]> = {
+    '/hwp-to-pdf/': ['/hwp-viewer/', '/pdf-merge/', '/pdf-compress/'],
+    '/hwp-viewer/': ['/hwp-to-pdf/', '/pdf-compress/'],
+    // Sprint C (C1): where a signature or 도장 image goes next.
+    '/stamp-signature/': ['/photo-compress/', '/hwp-to-pdf/', '/pdf-merge/'],
+  };
   for (const [path] of tools) {
     await gotoReady(page, path);
     const others = tools.filter(([p]) => p !== path && (!related[path] || related[path].includes(p)));
@@ -109,7 +116,7 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
   const pages = locs.filter((p) => !p.startsWith('/guide/'));
-  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/'].sort());
   // Growth G: /guide/ and every published guide (drafts never). G2 A1: hwp-to-pdf is published; both hubs are in.
   const guides = locs.filter((p) => p.startsWith('/guide/'));
   expect(guides).toContain('/guide/');
@@ -139,15 +146,16 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(6);
+  await expect(cards).toHaveCount(7);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 용량 줄이기' })).toHaveAttribute('href', '/photo-compress/');
   await expect(cards.getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
   await expect(cards.getByRole('link', { name: 'HWP PDF 변환' })).toHaveAttribute('href', '/hwp-to-pdf/');
   await expect(cards.getByRole('link', { name: 'HWP·HWPX 파일 보기' })).toHaveAttribute('href', '/hwp-viewer/');
-  await expect(cards.locator('.status')).toHaveText(Array(6).fill('사용하기'));
-  await expect(page.locator('.card')).toHaveCount(6);
+  await expect(cards.getByRole('link', { name: '전자서명·도장 이미지 만들기' })).toHaveAttribute('href', '/stamp-signature/');
+  await expect(cards.locator('.status')).toHaveText(Array(7).fill('사용하기'));
+  await expect(page.locator('.card')).toHaveCount(7);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
   // Every tool is live: the 준비 중 block is not rendered at all.
   await expect(page.locator('.soon')).toHaveCount(0);
@@ -177,7 +185,7 @@ test('licenses page lists the shipped packages and their texts', async ({ page }
 test.describe('mobile layout', () => {
   test.use({ viewport: { width: 360, height: 780 } });
 
-  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/privacy/', '/terms/', '/licenses/']) {
+  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/']) {
     test(`no horizontal scroll at 360 px on ${path}`, async ({ page }) => {
       await gotoReady(page, path);
       const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);

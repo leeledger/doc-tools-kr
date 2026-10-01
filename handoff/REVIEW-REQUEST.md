@@ -1,3 +1,34 @@
+# Review Request — Sprint C, C1 integration (/stamp-signature/)
+Date: 2026-10-02
+Ready for Review: YES
+
+**Tree:** branch `c1`, rebased onto main d277beb (A1 + A2); C1-core commits under it. Status DONE_WITH_CONCERNS: the real-photo gate waits for the owner's 6 photos (Arch allows the page to ship first; gate before 11-15). Full notes and the gate list: BUILD-LOG "Sprint C — C1 integration".
+
+## Files Changed
+- `src/pages/stamp-signature/index.astro` — page, two ARIA tabs, controls, previews, honest-limits box, 사용 방법 / 안전한 이유 / FAQ.
+- `src/tools/stamp-signature/entry.ts` — tabs + lazy loading of `photo.ts` / `pad.ts`; engine panel on load failure.
+- `src/tools/stamp-signature/photo.ts` — photo flow: sniff, limits, decode to the work copy, ink worker load/run, debounce 150 ms, area messages, size disabling, crash -> 다시 시도, export.
+- `src/tools/stamp-signature/pad.ts` — signature pad (Pointer Events, DPR, midpoint quadratic smoothing, undo/clear, export via key.ts crop + size).
+- `src/tools/stamp-signature/png.ts` — PNG encode with one retry at the next smaller size.
+- `src/tools/stamp-signature/{copy,limits}.ts`, `stamp.css` — strings, limits, page CSS (inlined).
+- `src/data/tools.ts` — the tool entry (title, description, FAQ: what the tool does only).
+- `src/data/{og.json,site.ts,guides.ts,guide-schema.ts}`, `docs/COPY.md` — share image/page, shorter meta template, NEXT_GUIDES, topic `서명·도장`.
+- `src/content/guides/stamp-image.md`, `src/content/guides/e-signature-law.md` — the two guides (published; check:quotes 121/121).
+- `scripts/check-dist.mjs:83-96` — ink worker 6.1 KB and lazy-controls 13.5 KB budgets; controls must not load with the page.
+- `lighthouserc.json`, `scripts/qa/visual.mjs` — new URLs and states.
+- Tests: `tests/unit/stamp-signature.test.ts`, `tests/e2e/stamp-signature.spec.ts` (new); `tests/e2e/{site,polish}.spec.ts`, `tests/unit/{postbuild,polish}.test.ts` (lists, og rule, statute-quote exemption).
+
+## Open Questions
+- e-signature-law: please read it against the red lines (no "an image is a 전자서명", no 인감, ends with the 받는 곳 line). It shows the statute text verbatim; `tests/unit/postbuild.test.ts` now exempts law.go.kr quotes from "no quote is rendered".
+- Home og:description no longer lists the tools (7 names > 80 chars). Arch decision requested (BUILD-LOG decision 2).
+- The photo controller is not precached (precache 444.3 / 450 KB). Arch decision requested (decision 3).
+- Area-message wording moved to 합니다체 without 잡혔 (decision 5).
+
+## Out of Scope (logged in BUILD-LOG)
+- Real-photo gate (owner photos), Hancom 한글 section, text-to-도장 generator, /remove-background/ link (C2).
+
+---
+
 # Review Request — G2 Sprint A, A2 (spec cluster D: exam and ID photos)
 Date: 2026-10-02
 Ready for Review: YES

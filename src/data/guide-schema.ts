@@ -11,7 +11,7 @@ export const CATEGORIES = ['사진', 'PDF', '한글파일', '서류'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 /** Reader-facing topics (G2 A1): the /guide/ index groups the guides by these, in this order. */
-export const TOPICS = ['여권·신분증', '시험·자격증', '취업·이력서', '입시·장학', '세금·민원', 'PDF·메일', '한글파일'] as const;
+export const TOPICS = ['여권·신분증', '시험·자격증', '취업·이력서', '입시·장학', '세금·민원', 'PDF·메일', '한글파일', '서명·도장'] as const;
 export type Topic = (typeof TOPICS)[number];
 
 /** Korea Standard Time, UTC+9 (no daylight saving). */

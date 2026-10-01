@@ -18,7 +18,9 @@ export const liveNames = (tools: readonly Tool[] = LIVE_TOOLS): string => tools.
  * nothing promises a tool that is not live (UX-AUDIT-1 P0-4). No particle follows the variable part.
  */
 export function defaultDescription(tools: readonly Tool[] = LIVE_TOOLS): string {
-  return `${liveNames(tools)}. 용량과 규격에 딱 맞춰 드려요. 파일은 내 폰·컴퓨터 밖으로 나가지 않아요. 무료.`;
+  // Sprint C (C1): with seven tools the names alone are 85 characters, so the tagline sentence left the template
+  // (it is the page title's); the text stays within 80–120.
+  return `${liveNames(tools)}. 파일은 내 폰·컴퓨터 밖으로 나가지 않아요. 무료.`;
 }
 
 /** Ads stay off in this phase. AdSlot renders nothing while this is false. */
