@@ -3,7 +3,8 @@
 // The preview is always the lazy viewer (±2 / ±6 pages). 「PDF 내려받기」 builds the PDF in the page, one page
 // at a time from the worker (export chunk: pdf-lib + fontkit + the writer), and saves it through an in-page
 // <a download>. The page never navigates, swaps its title or opens a dialog, and the preview stays on screen.
-// Initial JS: this file, the sniff, the route and the prefetch. The worker starts when a file is picked; the
+// Loaded by ./boot after the first paint (or on the first interaction): this file, the sniff, the route and the
+// prefetch. The worker starts when a file is picked; the
 // viewer chunk (./lazy) and the document fonts load after that; the export chunk on idle or on the first click.
 // Tokens: `docId` (one per opened document; stale worker messages are dropped) and `exportRun` (one per
 // export; a cancel bumps it, so nothing of the canceled run lands).
@@ -19,6 +20,7 @@ import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize } from '../../lib/ui/format';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
+import type { BootStart } from './boot';
 import { pdfName, triggerDownload } from './download';
 import { LIMITS, overHardLimit, route, type Mode } from './limits';
 import { COPY, ERRORS, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from './messages';
@@ -73,7 +75,7 @@ function whenIdle(fn: () => void): void {
   else setTimeout(fn, 1000);
 }
 
-export function initHwpTool(): void {
+export function initHwpTool(start: BootStart = {}): void {
   const found = document.getElementById('hwp-tool');
   if (!found) return;
   const root: HTMLElement = found;
@@ -516,4 +518,10 @@ export function initHwpTool(): void {
     notice.hidden = false;
   }
   setState('empty');
+  // What the page script saw before this controller ran (./boot).
+  if (start.prefetch) {
+    void preload.start();
+    prefetch();
+  }
+  if (start.file) void open(start.file);
 }
