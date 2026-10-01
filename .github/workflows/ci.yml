@@ -1,11 +1,19 @@
 name: CI
 
+# main pushes and pull requests only. WIP branches don't send failure mail;
+# they are checked by their PR, or by the deploy gate before merging.
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   checks:
@@ -26,18 +34,47 @@ jobs:
         run: npm test
       - name: License gate
         run: npm run check:licenses
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
-      - name: E2E (5 projects, no-upload assertion, axe)
-        run: npm run test:e2e
       - name: Lighthouse CI
         run: npm run lhci
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: reports
+          name: reports-checks
+          path: .lighthouseci/
+          retention-days: 7
+
+  # One job per Playwright project, run in parallel. The full 5-project suite in a
+  # single job ran past the 30-minute limit.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit, mobile-chrome, mobile-safari]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Install Playwright browser
+        run: |
+          case "${{ matrix.project }}" in
+            chromium|mobile-chrome) npx playwright install --with-deps chromium ;;
+            firefox) npx playwright install --with-deps firefox ;;
+            webkit|mobile-safari) npx playwright install --with-deps webkit ;;
+          esac
+      - name: E2E (no-upload assertion, axe)
+        run: npx playwright test --project=${{ matrix.project }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: reports-${{ matrix.project }}
           path: |
             playwright-report/
             test-results/
-            .lighthouseci/
           retention-days: 7
