@@ -27,7 +27,7 @@ Read this first in any new session (local or cloud). It supersedes `SESSION-CHEC
 Expect conflicts in `src/data/tools.ts`, `scripts/check-dist.mjs` budgets, `licenses.manifest.json`, `handoff/BUILD-LOG.md` and the e2e lists. Keep both sides.
 
 ## 3. Deploy gate (every step)
-1. Build with `PUBLIC_SITE_URL=https://docttak.com`. Run all gates: check, unit, check-dist, licenses, e2e with no-upload, axe, Lighthouse, qa:visual, and regress with `--fixtures-only` in the cloud. Lighthouse: median of 5 runs per URL (`numberOfRuns: 5`), thresholds unchanged; the CI runner's result is the source of truth (Arch, G2 A0).
+1. Build with `PUBLIC_SITE_URL=https://docttak.com`. Run all gates: check, unit, check-dist, licenses, e2e with no-upload, axe, Lighthouse, qa:visual, and regress with `--fixtures-only` in the cloud. Lighthouse: median of 5 runs per URL (`numberOfRuns: 5`), thresholds unchanged; the CI runner's result is the source of truth (Arch, G2 A0). Any deploy that adds or edits a guide quote also runs `npm run check:quotes` (network; every quote verbatim with whitespace runs folded to one space, exit 1 otherwise; G2 A1 review).
 2. Richard writes "clear" in REVIEW-FEEDBACK.
 3. Commit and push `main`. Cloudflare builds in about 1–2 minutes, and the live `<meta name="build-id">` shows the commit.
 4. Run the live smoke test (§6).

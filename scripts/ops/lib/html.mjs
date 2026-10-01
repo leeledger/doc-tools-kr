@@ -117,6 +117,29 @@ export function pageText(html) {
   return decodeEntities(noCode).replace(/\s+/g, ' ').trim();
 }
 
+/** Inline elements: text on both sides of their tags runs on with no space between (서류제출<b>현황</b>). */
+const INLINE = /^(?:a|abbr|b|bdi|bdo|cite|code|data|dfn|em|font|i|kbd|label|mark|q|s|samp|small|span|strong|sub|sup|time|u|var)$/i;
+
+/**
+ * Visible text for the exact (publish-gate) check, G2 A1: an inline tag joins its neighbours with nothing, any
+ * other tag is a break; entities decoded; every whitespace run (nbsp included) becomes one space. Unlike
+ * `pageText` + `findQuote`, this never invents or drops a space inside a word.
+ */
+export function pageTextExact(html) {
+  const noCode = html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1\s*>/gi, ' ')
+    .replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (_, name) => (INLINE.test(name) ? '' : ' '))
+    .replace(/<[^>]+>/g, ' ');
+  return exactForm(decodeEntities(noCode));
+}
+
+/** The exact comparison form: NFC, every whitespace run one space, trimmed. Punctuation and case are kept. */
+export const exactForm = (s) => s.normalize('NFC').replace(/\s+/g, ' ').trim();
+
+/** True when the fragment stands in the page text character for character (whitespace runs count as one space). */
+export const hasExactQuote = (fragment, exactText) => exactText.includes(exactForm(fragment));
+
 const FOLD = [
   [/[·ㆍ・‧•∙]/g, '·'],
   [/[∼〜～]/g, '~'],

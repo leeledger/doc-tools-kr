@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "check:licenses": "node scripts/check-licenses.mjs",
+    "check:quotes": "node scripts/ops/source-watch.mjs --exact",
     "lhci": "lhci autorun",
     "smoke:assets": "node scripts/smoke-assets.mjs",
     "ping:indexnow": "node scripts/indexnow.mjs",

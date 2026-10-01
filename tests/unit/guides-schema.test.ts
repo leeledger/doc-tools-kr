@@ -13,7 +13,7 @@ import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from '../../scripts/lib
 import { TOPICS } from '../../src/data/guide-schema';
 import { specProblems } from '../../src/data/guide-facts';
 import { hubSchema } from '../../src/data/hub-schema';
-import { HUB_KIND, HUB_SLUGS, hubRows } from '../../src/data/hubs';
+import { HUB_KIND, HUB_SLUGS, hubRows, quotedLimit } from '../../src/data/hubs';
 import { ID_PHOTO_LINK_MAX, ID_PHOTO_LINK_ORDER } from '../../src/data/quicklinks';
 import { GUARD_PAGES, LIMITS as HWP_LIMITS, MB_DEC } from '../../src/lib/hwp/limits';
 
@@ -186,18 +186,28 @@ describe('G2 A1: topics, spec rows, hubs', () => {
     const row = (label: string) => photo.find((r) => r.label.startsWith(label))!;
     const p = (id: string) => getPreset(id)!;
     expect(row('여권 사진').size).toBe(`${p('passport_online').outW}×${p('passport_online').outH} 픽셀`);
-    expect(row('여권 사진').limit).toBe(`${presetLimit(p('passport_online'))!.kb} KB 이하`);
+    // Limits in the agency's own words (Arch, A1 review): a rule word only where the quote has one.
+    expect(row('여권 사진').limit).toBe(`${presetLimit(p('passport_online'))!.kb}KB 이하`);
     expect(row('국가공무원').size).toBe(`${p('gosi').mm!.w / 10}×${p('gosi').mm!.h / 10} cm · ${p('gosi').outW}×${p('gosi').outH} 픽셀`);
-    expect(row('국가공무원').limit).toBe(`${presetLimit(p('gosi'))!.kb} KB 미만`);
+    expect(row('국가공무원').limit).toBe(`${presetLimit(p('gosi'))!.kb}KB 미만`);
     expect(row('Q-Net').size).toBe(''); // Q-Net states no pixel size: our 413×531 choice is never shown as theirs.
     expect(row('Q-Net').fit).toBe('/id-photo/?preset=qnet');
-    expect(row('사람인').limit).toBe(`${presetLimit(p('saramin'))!.kb / 1000} MB 이하`);
+    expect(row('사람인').limit).toBe(`${presetLimit(p('saramin'))!.kb / 1000}MB`);
+    expect(row('잡코리아').limit).toBe(`${presetLimit(p('jobkorea'))!.kb / 1000}MB 이내`);
     const dl = published.find((g) => g.slug === 'driver-license-photo')!.parsed.spec[0]!;
     expect(row('운전면허').size).toBe(`${dl.mm!.w / 10}×${dl.mm!.h / 10} cm`);
     const upload = hubRows(hubGuides, 'upload');
     const kosaf = published.find((g) => g.slug === 'kosaf-docs')!.parsed.spec[0]!;
-    expect(upload.find((r) => r.guide.slug === 'kosaf-docs')).toMatchObject({ limit: `${kosaf.kb} KB 이하`, fit: '' });
-    expect(upload.find((r) => r.label.startsWith('Gmail'))!.limit).toBe(`${GMAIL_LIMIT.mb} MB 이하`);
+    expect(upload.find((r) => r.guide.slug === 'kosaf-docs')).toMatchObject({ limit: `${kosaf.kb}kb 이하`, fit: '' });
+    expect(upload.find((r) => r.label.startsWith('Gmail'))!.limit).toBe(`${GMAIL_LIMIT.mb}MB`);
+    // Every limit is copied from a quote of its own guide or preset, character for character.
+    for (const r of [...photo, ...upload].filter((x) => x.limit)) {
+      const g = published.find((x) => x.slug === r.guide.slug)!.parsed;
+      const quotes = [...g.sources.flatMap((s) => ('quote' in s ? [s.quote] : [])), ...g.sources.flatMap((s) => ('preset' in s ? [getPreset(s.preset)?.quote ?? ''] : []))];
+      expect(quotes.some((q) => q.includes(r.limit)), `${r.label}: ${r.limit}`).toBe(true);
+    }
+    expect(() => quotedLimit(26, 'MB', ['제한은 25MB입니다.'], 'x')).toThrow(/no quote states 26 MB/);
+    expect(quotedLimit(200, 'KB', ['파일용량 : 200KB 이하'], 'x')).toBe('200KB 이하');
     // Every number a row shows is backed by its guide (preset values or quotes).
     for (const r of [...photo, ...upload]) {
       const g = published.find((x) => x.slug === r.guide.slug)!.parsed;

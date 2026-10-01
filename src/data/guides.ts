@@ -1,7 +1,7 @@
 // Published guides (Growth G.1): drafts are never rendered, linked, listed or submitted. Hubs (G2 A1) live in
 // their own collection and are listed with the guides wherever all /guide/ pages are (sitemap, RSS, llms.txt).
 import { getCollection, type CollectionEntry } from 'astro:content';
-import { TOPICS, type Category, type GuideData, type Topic } from './guide-schema';
+import { TOPICS, type GuideData, type Topic } from './guide-schema';
 import type { HubData } from './hub-schema';
 
 /** A published guide (drafts carry a different, smaller frontmatter and are never rendered). */
@@ -60,7 +60,6 @@ export async function guidesForTool(slug: string, max = 4): Promise<Guide[]> {
   return [...own, ...next].slice(0, max);
 }
 
-export const CATEGORY_ORDER: readonly Category[] = ['사진', 'PDF', '한글파일'];
 
 /** The /guide/ index groups (G2 A1): TOPICS order, empty topics left out, each guide exactly once. */
 export function topicGroups(guides: readonly Guide[]): { topic: Topic; items: Guide[] }[] {

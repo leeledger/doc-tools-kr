@@ -30,6 +30,37 @@ None.
 
 ## Cleared
 I reviewed the 600-face removal, the lhci median aggregation, the CI upload/Firefox project changes and the WebGL-conditional skips, then rebuilt and ran visual QA. The behaviour matches the brief, no thresholds were loosened, and the no-upload guard is intact. ci-green is clear.
+# Review Feedback — G2 Sprint A, A1 (140156d on 3dc0796)
+Date: 2026-10-02
+Ready for Builder: NO (2 Must Fix, both copy/frontmatter, < 15 min)
+
+## Must Fix
+- `src/content/guides/kosaf-docs.md:306` (confidence: 10) — the quote is not verbatim. The live page (faq.do?searchType=s&searchStr=신청방법+및+필요서류, re-fetched 2026-10-02) says `1) 홈페이지 업로드(빠른접수) : 로그인>장학금>장학금신청>서류제출현황 우측 하단 [서류제출]클릭 후 파일 업로드`. We publish `… 장학금신청> 서류제출 현황 우측 하단 [ 서류제출 ]클릭 …`, which adds 3 spaces. source-watch did not catch it because `findQuote` normalises whitespace away. Fix: copy the live string exactly. Optionally add a strict-whitespace unit check for new quotes.
+- `src/content/hubs/photo-sizes.md:406` and `upload-limits.md:443` (confidence: 9) — the copy says "'이하'와 '미만'은 기관 안내의 말 그대로예요". That is false for 4 of 9 rows. Saramin's quote is "용량 : 10MB", Jobkorea's is "5MB 이내", Gmail's is "제한은 25MB" and Outlook's is "크기 제한은 25MB". The hub prints "이하" for all four, because `hubs.ts` hard-codes 이하 for literal rows and `presetLimit` maps `le` to 이하. Only passport, gosi, qnet and kosaf actually say 이하/미만. Fix: reword so it does not claim verbatim wording, for example "기관이 '미만'이라고 쓴 곳만 '미만'으로 적었고, 나머지는 그 값까지 돼요". Keep the table values.
+
+## Should Fix
+- `photo-sizes.md:395` (confidence: 7) — "형식과 파일 용량만 맞추면 되고" is a rule no source states. For the admission row the 파일 용량 is also 안내 없음. Fix: drop that clause and keep "문서딱이 어떤 크기로 맞추는지는 … 안내 페이지에".
+- `photo-sizes.md:397` (confidence: 7) — "온라인 원서는 픽셀 크기나 파일 용량을 정해요" overgeneralises. The 대입 원서 row is online and states neither. Fix: say "정하는 곳이 많아요" or tie it to the rows.
+- `univ-docs-upload.md:179` answer and `upload-limits.md:433` (confidence: 6, verify) — "용량은 대학 모집요강마다 다르고" / "대학마다 모집요강에 따로 정해요". No quote says the size limit varies by university. Uway says the 제출 방법 varies, and jinhak says to check the 모집요강 for 제출서류. Defensible as an inference, but closer wording is "받는 서류와 형식·용량은 모집요강에서 확인".
+- `kosaf-docs.md:313` (confidence: 6) — the source title "동의서를 홈페이지로 낼 때 주의할 점" is paraphrased. The FAQ heading is "홈페이지를 통해 동의서 업로드 시 주의해야 할 점이 있나요?" The other kosaf titles are verbatim. If the paraphrase is meant to avoid the word 업로드, label it as not the FAQ title (e.g. "한국장학재단 FAQ (동의서 제출 주의사항)").
+- `admission-photo.md:168` (confidence: 5) — 「반명함판 3×4 cm」 is shown as the picker label. The real label is "반명함판 3×4 cm (일반 크기, 기관 규격 아님)". Fine as a reference, but the 「」 brackets imply the exact text.
+- `kosaf-docs.md:282` (confidence: 5) — `category: 사진`, so the breadcrumb reads "안내 › 사진" on a documents guide. Consider PDF or a docs category if one exists.
+- Informational, not a defect: the review request says the tool pages are byte-identical to HEAD. In fact the 5 tool pages and home differ from HEAD in their guide links (NEXT_GUIDES, home 6th guide), as the brief intends. Their CSS, JS and `_headers` are identical.
+
+## Escalate to Architect
+- none.
+
+## Verified
+- **Quotes:** all 30 URL quotes in the 4 guides were re-fetched 2026-10-02. 29 are verbatim with a strict whitespace check (uway decoded as EUC-KR); the kosaf one is above. The 3 deploy-gate quotes (kosaf 400kb, jinhak 3X4, Hancom 2413 menu) are verbatim. All hub rows trace to a quote or preset: preset px/cm are shown only when quoted (passport 413×531 px; gosi 3.5×4.5 cm and 137×177 px; Q-Net 안내 없음), the formats match the quotes, and the driver-license row is 3.5×4.5 cm / 여권용.
+- **Copy rules:** the brand is 문서딱. Rendered pages have no 업로드/서버/브라우저 (quotes are not rendered). No contact or operator lines. The only scripts are the first-party Base module and JSON-LD.
+- **Ad slots and existing guides:** the slots render nothing (`ADS_ENABLED=false`, and the check-dist guard is present). The 14 existing guide articles are byte-equal to a fresh 3dc0796 build, apart from the CSS file name.
+- **check-dist duplicate gate:** pure and deterministic, so not flaky. The max pair is photo-sizes ~ upload-limits at 0.256 / 0.45. It scans /guide/<slug>/ only, not /guide/ itself.
+- **No-upload guard and CSP:** `_headers` is byte-identical, and no guard file was touched.
+- **Weight 600:** none in A1 (CSS, `th` defaults to bold 700, OG unchanged).
+- **Tests and visual:** unit 680/680; hubs e2e chromium 6/6 on port 4473. Visual check at 390 and 1280, light and dark, of both hubs, /guide/ and kosaf-docs: no page overflow, no console errors, and the hub tables scroll inside their box on phones.
+
+## Cleared
+Not yet. After the two Must Fix copy edits (re-run build, check-dist, unit tests), A1 can be cleared without a full re-review.
 
 ---
 

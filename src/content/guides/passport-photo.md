@@ -39,8 +39,8 @@ sources:
     retrieved: '2026-09-30'
   - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=32
     title: 외교부 여권안내 — 여권사진 규격
-    quote: '입은 다물어야 하며 (치아 노출 불가), 미소(예: 눈을 가늘게 뜨고 얼굴을 찡그리기)짓거나 눈썹을 올리지 않는 무표정이어야 함'
-    retrieved: '2026-09-30'
+    quote: '입은 다물어야 하며(치아 노출 불가), 미소(예: 눈을 가늘게 뜨고 얼굴을 찡그리기)짓거나 눈썹을 올리지 않는 무표정이어야 함'
+    retrieved: '2026-10-02'
   - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=32
     title: 외교부 여권안내 — 여권사진 규격
     quote: 머리카락으로 눈썹 및 얼굴 윤곽(광대, 볼 등)을 가리는 사진은 제출 불가함

@@ -1,5 +1,6 @@
 // A-3: weekly source watch (docs/OPS-RUNBOOK.md).
 //   node scripts/ops/source-watch.mjs [--dry-run]
+//   node scripts/ops/source-watch.mjs --exact   (G2 A1 publish gate: no issue, exit 1 on any non-verbatim quote)
 // Every official source a page cites (guide frontmatter `sources`, the official id-photo presets) is fetched
 // once, politely (identifying UA, one request at a time with a pause, retries with backoff), and every quoted
 // fragment must still be on that page. A missing fragment or an unreachable source is reported in one issue
@@ -8,7 +9,7 @@
 import { BOT_UA, cell, fetchText, isMain, isoDate, parseArgs, sleep, today } from './lib/common.mjs';
 import { createGitHub } from './lib/github.mjs';
 import { readGuides, readPresets, watchList } from './lib/guides.mjs';
-import { findQuote, pageText, quoteFragments } from './lib/html.mjs';
+import { findQuote, hasExactQuote, pageText, pageTextExact, quoteFragments } from './lib/html.mjs';
 
 export const LABEL = 'ops:source-changed';
 const PAUSE_MS = 1500;
@@ -17,16 +18,18 @@ const PAUSE_MS = 1500;
  * Checks a watch list against fetched pages. `get(url)` returns { ok, status, text, error }. A quote read in a
  * browser (`via: 'browser'`, G2 A1: the HTML is a script shell, so a fetch can never find it) is not fetched; it
  * goes to `manual` and is never counted as changed or unreachable.
+ * `exact` (the publish gate, G2 A1): a fragment counts only when it stands in the page character for character,
+ * whitespace runs folded to one space (`pageTextExact`); the weekly watch stays lenient to detect changes.
  * @returns {Promise<{ checked: number, changed: object[], unreachable: object[], manual: object[] }>}
  */
-export async function checkSources(all, get) {
+export async function checkSources(all, get, { exact = false } = {}) {
   const manual = all.filter((e) => e.via === 'browser').map((e) => ({ pages: e.pages, url: e.urls[0], quote: e.quote }));
   const list = all.filter((e) => e.via !== 'browser');
   const pages = new Map();
   const load = async (url) => {
     if (!pages.has(url)) {
       const r = await get(url);
-      pages.set(url, r.ok ? { ok: true, text: pageText(r.text) } : { ok: false, why: r.status ? `HTTP ${r.status}` : r.error });
+      pages.set(url, r.ok ? { ok: true, text: pageText(r.text), exact: pageTextExact(r.text) } : { ok: false, why: r.status ? `HTTP ${r.status}` : r.error });
     }
     return pages.get(url);
   };
@@ -41,7 +44,10 @@ export async function checkSources(all, get) {
     if (!okPages.length) continue;
     for (const frag of quoteFragments(e.quote)) {
       checked++;
-      const results = okPages.map(([u, p]) => ({ url: u, ...findQuote(frag, p.text) }));
+      const results = okPages.map(([u, p]) => {
+        const r = findQuote(frag, p.text);
+        return { url: u, ...r, found: exact ? hasExactQuote(frag, p.exact) : r.found };
+      });
       if (results.some((r) => r.found)) continue;
       const best = results.find((r) => r.context) ?? results[0];
       changed.push({ pages: e.pages, url: best.url, urls: e.urls, quote: frag, context: best.context, origin: e.origin });
@@ -79,7 +85,8 @@ export function issueBody({ changed, unreachable, checked, manual }, date, runUr
 }
 
 export async function run(argv, io = {}) {
-  const { dryRun } = parseArgs(argv);
+  const { dryRun, flags } = parseArgs(argv);
+  const exact = flags.has('exact');
   const log = io.log ?? console.log;
   const env = io.env ?? process.env;
   const list = watchList(io.guides ?? readGuides(), io.presets ?? readPresets());
@@ -93,8 +100,18 @@ export async function run(argv, io = {}) {
     log(`  ${r.ok ? 'OK ' : 'ERR'} ${r.status || r.error} ${url}`);
     return r;
   };
-  const result = await checkSources(list, get);
+  const result = await checkSources(list, get, { exact });
   for (const line of manualTable(result.manual)) log(line);
+  if (exact) {
+    // Publish gate: report on the console only (never an issue); any non-verbatim or unreachable quote fails.
+    for (const c of result.changed) log(`NOT VERBATIM ${c.pages.join(', ')} ${c.url}
+  quote: ${c.quote}
+  page:  ${c.context ?? '(nothing close)'}`);
+    for (const u of result.unreachable) log(`UNREACHABLE ${u.pages.join(', ')} ${u.url} ${u.why}`);
+    const bad = result.changed.length + result.unreachable.length;
+    log(bad ? `source-watch --exact: ${bad} problem(s) in ${result.checked} quotes` : `source-watch --exact: ${result.checked} quotes verbatim`);
+    return bad ? 1 : 0;
+  }
   const date = isoDate(today(env));
   const runUrl = env.GITHUB_RUN_ID ? `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}` : '';
   const gh = io.github ?? createGitHub({ dryRun, log });

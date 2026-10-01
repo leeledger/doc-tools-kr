@@ -19,12 +19,12 @@ sources:
     retrieved: '2026-09-30'
   - url: https://www.q-net.or.kr/qnet/html/guideQnet/guide_02.html
     title: Q-Net 길라잡이 — 사진등록
-    quote: 얼굴형태(이마, 눈썹,눈,코, 입)가 잘 보여야 업로드가 가능 합니다.
-    retrieved: '2026-09-30'
+    quote: 얼굴형태(이마, 눈썹,눈,코, 입)가 잘 보여야 업로드가 가능합니다.
+    retrieved: '2026-10-02'
   - url: https://www.q-net.or.kr/qnet/html/guideQnet/guide_02.html
     title: Q-Net 길라잡이 — 사진등록
-    quote: 스캔 작업한 파일에 여백이 있는 경우 그림판 프로그램 등을 사용하여 사진파일의 여백을 제거 하시기 바랍니다.
-    retrieved: '2026-09-30'
+    quote: 스캔 작업한 파일에 여백이 있는 경우 그림판 프로그램 등을 사용하여 사진파일의 여백을 제거하시기 바랍니다.
+    retrieved: '2026-10-02'
 spec:
   - label: Q-Net 자격시험 원서 사진
     kind: photo

@@ -7,7 +7,7 @@ import { LIVE_TOOLS } from './tools';
 import { parseHref } from '../lib/ui/deeplink';
 import { specProblems } from './guide-facts';
 
-export const CATEGORIES = ['사진', 'PDF', '한글파일'] as const;
+export const CATEGORIES = ['사진', 'PDF', '한글파일', '서류'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 /** Reader-facing topics (G2 A1): the /guide/ index groups the guides by these, in this order. */

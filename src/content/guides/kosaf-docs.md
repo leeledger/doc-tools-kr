@@ -6,7 +6,7 @@ query: 국가장학금 서류 제출
 answer: 국가장학금 서류는 제출 대상일 때만 내면 되고, 대상인지는 신청 뒤 1일~3일(휴일 제외) 후 한국장학재단 홈페이지의 서류제출현황에서 확인해요.
 published: '2026-10-01'
 updated: '2026-10-01'
-category: 사진
+category: 서류
 topic: 입시·장학
 tools: [photo-compress]
 cta: { href: '/photo-compress/', label: '서류 사진 용량 줄이기' }
@@ -18,8 +18,8 @@ sources:
     retrieved: '2026-10-01'
   - url: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EB%AA%A8%EB%91%90+%EC%84%9C%EB%A5%98%EB%A5%BC
     title: 한국장학재단 FAQ — 국가장학금 신청자 모두 서류를 제출해야 하나요?
-    quote: 신청완료 후 1일~3일(휴일 제외) 후 제출대상여부를 확인 하실 수 있습니다.
-    retrieved: '2026-10-01'
+    quote: 신청완료 후 1일~3일(휴일 제외) 후 제출대상여부를 확인하실 수 있습니다.
+    retrieved: '2026-10-02'
   - url: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EB%AA%A8%EB%91%90+%EC%84%9C%EB%A5%98%EB%A5%BC
     title: 한국장학재단 FAQ — 국가장학금 신청자 모두 서류를 제출해야 하나요?
     quote: '2) 모바일 업로드(빠른접수) : 한국장학재단 앱다운 > 서류제출에서 사진파일 업로드'
@@ -30,20 +30,20 @@ sources:
     retrieved: '2026-10-01'
   - url: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EC%8B%A0%EC%B2%AD%EB%B0%A9%EB%B2%95+%EB%B0%8F+%ED%95%84%EC%9A%94%EC%84%9C%EB%A5%98
     title: 한국장학재단 FAQ — 국가장학금 신청방법 및 필요서류는 무엇인가요?
-    quote: '1) 홈페이지 업로드(빠른접수) : 로그인>장학금>장학금신청> 서류제출 현황 우측 하단 [ 서류제출 ]클릭 후 파일 업로드'
-    retrieved: '2026-10-01'
+    quote: '1) 홈페이지 업로드(빠른접수) : 로그인>장학금>장학금신청>서류제출현황 우측 하단 [서류제출]클릭 후 파일 업로드'
+    retrieved: '2026-10-02'
   - url: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EC%8B%A0%EC%B2%AD%EB%B0%A9%EB%B2%95+%EB%B0%8F+%ED%95%84%EC%9A%94%EC%84%9C%EB%A5%98
     title: 한국장학재단 FAQ — 국가장학금 신청방법 및 필요서류는 무엇인가요?
     quote: '- 미혼자는 부 또는 모 명의의 가족관계증명서 제출 - 기혼자는 본인명의의 가족관계증명서, 이혼자는 본인 명의의 혼인관계증명서 제출'
     retrieved: '2026-10-01'
   - url: https://www.kosaf.go.kr/ko/faq.do?searchType=a&searchStr=%EC%9A%A9%EB%9F%89
-    title: 한국장학재단 FAQ — 동의서를 홈페이지로 낼 때 주의할 점
+    title: 한국장학재단 FAQ (가구원 동의서 제출 주의사항)
     quote: 휴대폰 등의 사진 촬영 이미지는 유효하지 않습니다. 반드시 스캐너를 통해 TIF파일로 저장하여 업로드 해야 합니다.
     retrieved: '2026-10-01'
   - url: https://www.kosaf.go.kr/ko/faq.do?searchType=a&searchStr=%EC%9A%A9%EB%9F%89
-    title: 한국장학재단 FAQ — 동의서를 홈페이지로 낼 때 주의할 점
-    quote: '※ 규격: 300dpi로 흑백 스캔한 TIF 파일만 업로드 가능 ( 용량 400kb 이하)'
-    retrieved: '2026-10-01'
+    title: 한국장학재단 FAQ (가구원 동의서 제출 주의사항)
+    quote: '※ 규격: 300dpi로 흑백 스캔한 TIF 파일만 업로드 가능 (용량 400kb 이하)'
+    retrieved: '2026-10-02'
   - url: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EB%8B%A4%EB%A5%B8+%EB%B0%A9%EB%B2%95
     title: 한국장학재단 FAQ — 가구원이 공동인증서 외 다른 방법으로 동의가 가능한가요?
     quote: 가구원 동의는 온라인 동의가 원칙입니다.

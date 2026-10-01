@@ -4,7 +4,7 @@ import { generateKeyPairSync, createVerify } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { parseArgs } from '../../scripts/ops/lib/common.mjs';
 import { createGitHub } from '../../scripts/ops/lib/github.mjs';
-import { buildIdOf, buildMatches, changedUrls, findQuote, internalLinks, offSiteScripts, pageProblems, pageText, quoteFragments, sitemapEntries } from '../../scripts/ops/lib/html.mjs';
+import { buildIdOf, buildMatches, changedUrls, findQuote, hasExactQuote, internalLinks, offSiteScripts, pageProblems, pageText, pageTextExact, quoteFragments, sitemapEntries } from '../../scripts/ops/lib/html.mjs';
 import { parseFrontmatter, parsePresets, readGuides, readPresets, unquote, watchList } from '../../scripts/ops/lib/guides.mjs';
 import { accessToken, fetchGrowth, parseServiceAccount, signJwt } from '../../scripts/ops/lib/gsc.mjs';
 import { sumDays } from '../../scripts/ops/lib/cloudflare.mjs';
@@ -159,6 +159,29 @@ describe('quotes (A-3)', () => {
     expect(r.changed).toHaveLength(1);
     expect(r.changed[0]).toMatchObject({ quote: '배경은 흰색', url: 'https://a.go.kr/1', pages: ['/guide/g/'] });
     expect(r.unreachable).toEqual([{ pages: ['/guide/h/'], url: 'https://down.go.kr/', why: 'HTTP 503', quote: '아무 문구' }]);
+  });
+  it('G2 A1 publish gate: the exact check joins inline tags, breaks at block tags, folds whitespace runs and rejects an added space', () => {
+    // The live kosaf markup (2026-10-02): the menu path is split across <FONT>/<STRONG> with no space between.
+    const html = '<P>1) 홈페이지 업로드(빠른접수) : <FONT color=#ff0000>로그인&gt;장학금&gt;장학금신청&gt;서류제출현황</FONT></STRONG><FONT><STRONG> 우측 하단 [서류제출]클릭&nbsp;후 파일 업로드</STRONG></FONT></P><p>다음\n\n  줄</p>';
+    const text = pageTextExact(html);
+    expect(hasExactQuote('1) 홈페이지 업로드(빠른접수) : 로그인>장학금>장학금신청>서류제출현황 우측 하단 [서류제출]클릭 후 파일 업로드', text)).toBe(true);
+    // The A1 defect: three added spaces. The lenient watch matcher accepts it; the gate must not.
+    const bad = '1) 홈페이지 업로드(빠른접수) : 로그인>장학금>장학금신청> 서류제출 현황 우측 하단 [ 서류제출 ]클릭 후 파일 업로드';
+    expect(findQuote(bad, pageText(html)).found).toBe(true);
+    expect(hasExactQuote(bad, text)).toBe(false);
+    expect(hasExactQuote('업로드(빠른접수)', text)).toBe(true);
+    expect(hasExactQuote('업로드 (빠른접수)', text)).toBe(false);
+    // A whitespace run in the page or the quote counts as one space; a block tag is a break, not a join.
+    expect(hasExactQuote('다음 줄', text)).toBe(true);
+    expect(pageTextExact('<p>가</p><p>나</p>')).toBe('가 나');
+    expect(pageTextExact('가<b>나</b>다')).toBe('가나다');
+  });
+  it('G2 A1 publish gate: checkSources({ exact: true }) reports a quote with an added space as changed', async () => {
+    const page = { ok: true, status: 200, text: '<p>입은 다물어야 하며(치아 노출 불가)</p>' };
+    const entry = { urls: ['https://a.go.kr/p'], quote: '입은 다물어야 하며 (치아 노출 불가)', origin: 'guide p', pages: ['/guide/p/'] };
+    expect((await checkSources([entry], async () => page)).changed).toEqual([]);
+    expect((await checkSources([entry], async () => page, { exact: true })).changed).toHaveLength(1);
+    expect((await checkSources([{ ...entry, quote: '입은 다물어야 하며(치아 노출 불가)' }], async () => page, { exact: true })).changed).toEqual([]);
   });
   it('G2 A1: a browser-read quote is never fetched, changed or unreachable; it is listed for a manual check and opens no issue', async () => {
     const entry = { urls: ['https://shell.kr/faq'], quote: '사진은 3개월 이내', origin: 'guide b', pages: ['/guide/b/'], via: 'browser' };

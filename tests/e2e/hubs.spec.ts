@@ -18,7 +18,7 @@ test('the hubs and the new guides have no serious or critical axe findings', asy
 test('photo hub: a row links its guide and opens the tool with that preset', async ({ page }) => {
   await gotoReady(page, '/guide/photo-sizes/');
   const row = page.locator('.hub-table tbody tr', { hasText: 'Q-Net' });
-  await expect(row.locator('td').nth(1)).toHaveText('200 KB 이하');
+  await expect(row.locator('td').nth(1)).toHaveText('200KB 이하');
   await expect(row.getByRole('link', { name: '큐넷 사진 등록 규격과 안 될 때 확인할 점' })).toHaveAttribute('href', '/guide/qnet-photo/');
   await row.getByRole('link', { name: '규격 맞추기' }).click();
   await page.waitForURL(/\/id-photo\/\?preset=qnet$/);
@@ -29,7 +29,7 @@ test('photo hub: a row links its guide and opens the tool with that preset', asy
 test('upload hub: a file type we cannot make has no tool link', async ({ page }) => {
   await gotoReady(page, '/guide/upload-limits/');
   const row = page.locator('.hub-table tbody tr', { hasText: '가구원 동의서' });
-  await expect(row).toContainText('400 KB 이하');
+  await expect(row).toContainText('400kb 이하');
   await expect(row.getByRole('link')).toHaveCount(1);
   await expect(page.locator('.hub-table')).toHaveCount(2);
 });

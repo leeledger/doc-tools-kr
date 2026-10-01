@@ -1,3 +1,15 @@
+# Review Request — G2 A1 round 2 (Richard's A1 feedback)
+Date: 2026-10-02
+Ready for Review: YES — status DONE
+
+- Must Fix 1 + root cause: new exact publish gate `npm run check:quotes` (`scripts/ops/source-watch.mjs --exact`; `pageTextExact`, `hasExactQuote` in `scripts/ops/lib/html.mjs`). It found 6 non-verbatim quotes (kosaf ×3, passport-photo ×1, qnet-photo ×2); all fixed from the live pages, retrieved 2026-10-02. 78/78 verbatim. Tests: `tests/unit/ops.test.ts` (live kosaf markup; the 3-space version fails exact).
+- Must Fix 2 (Arch ruling): `src/data/hubs.ts` `quotedLimit()` prints each limit as the quote writes it (10MB, 5MB 이내, 25MB, 400kb 이하 …), build error if no quote holds the value; hub copy says so. Test: every limit is a substring of its own quotes.
+- Should Fix, all done: photo-sizes FAQ (two unsourced rules), univ-docs-upload + upload-limits FAQ (no "varies by university" claim), kosaf source title (labelled ours: the real heading contains 업로드, banned by the plain-language test), admission-photo full preset label, kosaf-docs/univ-docs-upload category `서류`.
+- Gates: check 0 errors; unit 682/682; both builds + check-dist OK (UI fonts unchanged); check:quotes 78/78; hubs e2e chromium + mobile-safari 12/12 on :4273.
+- Correction to round 1: tool pages and home differ from HEAD in their guide links (intended); their CSS/JS/fonts are identical.
+
+---
+
 # Review Request — G2 Sprint A, A1 (seasonal, unblocked drafts, structure, hubs H1/H2)
 Date: 2026-10-01
 Ready for Review: YES
