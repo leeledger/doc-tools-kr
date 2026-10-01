@@ -928,3 +928,23 @@ REVENUE-MODEL §3 as GitHub Actions + `scripts/ops/` (Node 22, no deps, no AI, n
 - **Live finding (A-4):** Cloudflare Email Address Obfuscation injects `/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js` into /licenses/ and rewrites an email link to `/cdn-cgi/l/email-protection` (404). Owner: Cloudflare → Scrape Shield → Email Address Obfuscation off. A-4 will open `ops:health` for it until then.
 - main protection (REVENUE-MODEL §3 safety) will block A-5's report push unless GitHub Actions is on the bypass list (runbook §2).
 - A-7 (Claude routine) and M-4 (AdSense API) not in scope.
+
+## G2 decisions (Arch, 2026-10-01; brief handoff/ARCHITECT-BRIEF-G2.md)
+Inputs: the three 2026-10-01 reports (traffic realism, multilingual, competitor revenue) in C:\dev\AGI_AGENT\reports.
+- **Target reset:** plan against 10–30k PV/month at 12 months (traffic report §4). 100k is a stretch goal, not a plan. Kill/continue checkpoints follow traffic report §6 (Google + Naver clicks combined).
+- **Order:** Sprint A (Korean guides, cluster D first) → Sprint B (English, gated). Sprint B starts only after A1 is live. Phase-0 revenue is notes only.
+- **Sprint A ships in 3 deploys:** A1 by 2026-10-20 (HWP guides x2, admission-photo, univ-docs-upload, kosaf-docs, 2 hubs, topics), A2 by 2026-11-05 (exam/ID photo cluster), A3 by 2026-11-25 (file-limit cluster, yearend-tax-pdf, kakao-photo). Ship rule: ≥ 30 indexable /guide/ URLs (hubs count) or a logged shortfall. No padding, no template pages; a duplicate-content test (Jaccard < 0.45, fixed) enforces it.
+- **Sources:** curl first; script-rendered official pages may be read through chrome-cdp on the owner's Chrome (PC session only, read-only, no login/captcha/form). They are tagged `via: browser`, and source-watch lists them for a manual weekly check instead of reporting them unreachable.
+- **Presets:** a new id-photo preset only where the official page states px, KB, or format + print size. Cap 8. Print-size-only sources get no preset.
+- **Schema additions:** `topic` (7-value enum, required), `spec` rows (fact-checked), `via` on url sources. Hubs /guide/photo-sizes/ and /guide/upload-limits/ are built only from preset and spec data; their prose lives in .md (outside the UI font scan).
+- **UI font:** Sprint A may grow the flag-on total by ≤ 2.0 KB (≤ 186.5 / 190 KB). Sprint B by 0.0 KB. The budget does not move.
+- **Probe 2026-10-01 (this PC, curl):** hancom.com 200 / 200,591 B (was blocked from the cloud proxy). Shells under 3 KB: topik.go.kr, hikorea.go.kr, kuksiwon.or.kr, license.korcham.net, kosaf.go.kr, gov.kr, mma.go.kr, easylaw.go.kr, mois.go.kr, immigration.go.kr. Larger: exam.toeic.co.kr 69 KB, teps.or.kr 50 KB, historyexam.go.kr 12 KB, visa.go.kr 85 KB, nts.go.kr 187 KB. Live home has no Cloudflare beacon (build-id d7e319a6cd0b); sitemap has 21 URLs.
+- **English (Sprint B):** /en/ subfolders, no Astro i18n config, extract only what /en/ renders. A ko snapshot gate (byte-identical after normalisation) is committed before any edit; B2 ko diffs must equal an exact allowlist. Pairs only /hwp-to-pdf/ ↔ /en/hwp-to-pdf/ and /privacy/ ↔ /en/privacy/, with x-default = the /en/ URL. Unpaired pages get no hreflang. /sitemap.xml keeps its URL list, /sitemap-en.xml is new, and robots.txt lists both. EN brand = 문서딱 (Hangul); no romanised name. An EN page is indexable only with a `reviewed` record (Richard back-translation counts).
+- **Gate 0:** the orchestrator measures volumes. K0 pass → full set (HWP tool + 5 guides + /en/ + /en/privacy/). Fail or no entry → minimal set (HWP tool + open-hwp-file + hwp-to-pdf-mac-phone + /en/ + /en/privacy/). Further languages wait for K1/K2 from GSC.
+- **B0 first:** the /hwp-to-pdf/ LCP gap (2,190 ms) is fixed before the EN page is built on the same component. The threshold does not change.
+- **Revenue Phase 0:** guide AdSlot placeholders (`guide-mid`, `guide-end`) render nothing while ads are off. Ads never go inside a tool flow. Paid tiers never remove existing free behaviour (photo multi-file, merge).
+- **Usage signal deferred:** any per-action count needs a reporting request, which is a beacon and breaks "쿠키와 방문 분석 도구도 쓰지 않아요". The chunk-fetch proxy was rejected: it undercounts, and Free-plan per-path analytics are unverified. A GSC "batch intent" query bucket in the A-5 report stands in.
+
+### Known Gaps (G2 planning)
+- Naver blog bridging (traffic lever 2) and backlinks (lever 5) are outside code: 사이티드/owner.
+- No measured Google volumes yet; Gate 0 is pending with the orchestrator.
