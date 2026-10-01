@@ -46,6 +46,8 @@ Expect conflicts in `src/data/tools.ts`, `scripts/check-dist.mjs` budgets, `lice
 - **Search:**
   - Google Search Console: domain property `sc-domain:docttak.com`, verified by DNS TXT (do not delete that TXT record). `https://docttak.com/sitemap.xml` has been submitted.
   - Naver 서치어드바이저: `https://docttak.com` verified (meta tag plus `public/naverab73ee2e778ed2f0eea14328733b50c9.html`). Sitemap submitted, and a crawl was requested for the home page and the 5 tools.
+  - 2026-10-01 (A0 ship, daad867): Naver crawl, GSC 색인 생성 요청 and Kakao cache reset done for /hwp-viewer/ and the 3 HWP guides. Naver's crawl field only accepts the **full URL typed key by key** (Playwright `pressSequentially('https://docttak.com/…')`); `fill` or a bare path is silently ignored. In Git Bash set `MSYS_NO_PATHCONV=1` or `/path/` args become Windows paths.
+  - Cloudflare zone Caching → Browser Cache TTL is **Respect Existing Headers** (was 4 hours, which overrode `sw.js` `no-cache`; fixed 2026-10-01). If smoke:assets flags sw.js cache-control again, check this setting first.
   - Kakao share cache was cleared for the home page and the 5 tools on 2026-09-30. Clear it again for new URLs at developers.kakao.com → 도구 → 공유 디버거.
 
 ## 5. Local-only things (not in git)
