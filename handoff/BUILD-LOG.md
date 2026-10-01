@@ -1157,3 +1157,7 @@ Status: see the CI line at the end.
 - **Fix:** `.idp-privacy` uses 800, a preloaded weight. This follows the existing rule that text in the first view uses a preloaded weight (`.prose h1` is 800).
   - Local /id-photo/ CLS: 0.0001–0.0006. The pill no longer shifts. LCP is unchanged (1,968–1,976 ms).
   - Visible change: the privacy pill on /id-photo/ is one step bolder.
+- **CI (status DONE):** https://github.com/leeledger/doc-tools-kr/actions/runs/36888794186 (d164c31) is **success** on all 6 jobs.
+  - checks: all Lighthouse assertions pass, on true medians.
+  - e2e firefox: 196 passed, 44 skipped, 17 flaky (the goto harness race), 0 failed. manual-firefox ran the id-photo suite.
+  - Not merged to main.
