@@ -59,8 +59,17 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - name: Build
+      # Same order as the local deploy gate: the shipping build (auto-frame off) goes to
+      # dist-noauto/ for the manual-chromium project, then dist/ is built with the flag on
+      # because the id-photo specs on the other projects need MediaPipe.
+      - name: Build (flag off → dist-noauto)
+        run: npm run build && mv dist dist-noauto
+        env:
+          PUBLIC_ID_PHOTO_AUTOFRAME: '0'
+      - name: Build (flag on → dist)
         run: npm run build
+        env:
+          PUBLIC_ID_PHOTO_AUTOFRAME: '1'
       - name: Install Playwright browser
         run: |
           case "${{ matrix.project }}" in
@@ -69,7 +78,12 @@ jobs:
             webkit|mobile-safari) npx playwright install --with-deps webkit ;;
           esac
       - name: E2E (no-upload assertion, axe)
-        run: npx playwright test --project=${{ matrix.project }}
+        run: |
+          if [ "${{ matrix.project }}" = chromium ]; then
+            npx playwright test --project=chromium --project=manual-chromium
+          else
+            npx playwright test --project=${{ matrix.project }}
+          fi
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
