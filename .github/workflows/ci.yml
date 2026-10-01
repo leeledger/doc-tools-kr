@@ -34,6 +34,8 @@ jobs:
         run: npm test
       - name: License gate
         run: npm run check:licenses
+      - name: Ink key regression (committed GT fixtures; real photos are local only)
+        run: npm run regress:ink -- --fixtures-only
       - name: Lighthouse CI
         run: npm run lhci
       - uses: actions/upload-artifact@v4

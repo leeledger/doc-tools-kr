@@ -1378,3 +1378,42 @@ Status: **DONE_WITH_CONCERNS** (shortfall 1; local /photo-compress/ LCP as in A2
   - unit: 691/691.
   - Both builds: check-dist OK; UI fonts 138.0 KB, delta 0.
   - e2e hubs + growth + site, chromium + mobile-safari: 117 passed.
+## Sprint C — C1-core: ink key, worker, fixtures, regress:ink (Bob, 2026-10-02; branch c1 from 3f738e4)
+Status: DONE (core only; page, tools.ts, guides, lighthouserc, e2e, check-dist rows = C1 integration, after A2 is on main).
+
+### Files
+- `src/lib/ink/key.ts` — the ink key (brief steps 1-10): planes, van Herk/Gil-Werman max/min filters (O(n), blocked transpose for the column pass), 3-box Gaussian (Kovesi widths), ramp + 진하기 (-2..2, ±0.03/step), mode filters, edge-only 3x3 sigma-0.6 AA, 8-connected despeckle, area check, colour guess, 색 맞추기 / 원래 색 (un-mix), auto-crop, sizes, premultiplied area-average downscale, `processInk` (whole photo-tab pipeline), `InkCache` (paper planes reused across control changes).
+- `src/lib/ink/worker-core.ts` + `src/lib/ink/ink.worker.ts` — `load` (pixels transferred once) / `run` (opts only) → `result` (out pixels transferred) | `error {noimage|engine}`. The core is a plain function so unit tests drive it.
+- `tests/unit/ink-key.test.ts` — 27 tests, exact expectations on tiny planes (filters vs brute force, ramp, modes, AA kernel, despeckle bounds, area bounds, colours, crop/padding, sizes, premultiplied resize, end-to-end stamp/signature/blank/dense page, worker protocol).
+- `tests/fixtures/build-ink.py` + `tests/fixtures/ink/` (13 JPEGs + 3 GT alphas + meta.json, 2.1 MB) — SOURCES.md section added.
+- `scripts/regress/ink.mjs`, `scripts/regress/ink-baseline.json`, `package.json` `regress:ink`, CI step `regress:ink -- --fixtures-only` in the checks job.
+
+### Decisions (never stop)
+1. **Paper estimate = gauss(closing(x, k), k/3), closing = minFilter(maxFilter(x, k), k)** instead of the brief's gauss(maxFilter(x, k)). k, sigma, lo, hi are unchanged. Evidence (IoU@0.5, auto): brief-literal max filter gives gt14-shadow 0.212, gt15-shadow 0.605, gt16-shadow 0.748 (all < 0.85) and gt15 0.894 (< 0.90): the max filter carries bright paper k/2 px into a shadow and biases the level up on grain and light gradients. With the closing every gate passes (table below). Variant tried and rejected: min(gauss(closing), closing) — gt16 (logo square larger than k) falls to 0.38. **Arch: confirm or redirect** (this is the one place the port leaves the brief's letter).
+2. Signature mode keys luma against a **luma** paper level (the brief says paper from `mn` in step 2 and x = lum in step 3; comparing luma with a min-channel paper on yellow paper mixes planes). gt14 in sign mode: 0.926.
+3. Fixtures: images are JPEG q92 as the spike's `save()` wrote them (the -jpeg variant q70); GT alpha is one PNG per family (variants share seed and alpha). Shadow = soft ellipse (Gaussian 25 px), -40 % light, 34.5 % of the frame. Font: Pretendard Black/Bold/Regular (OFL, the `pretendard` dependency); HANBatangB/malgunbd not used. stampOnText text is our own made-up sentences.
+4. Composite error (gate gt15 <= 0.046) is scored as the spike did: our alpha with the un-mixed colour (원래 색) on white, edge band only. Diagnostic with the default 색 맞추기 colour is in `regress-out/ink.json`.
+5. Area check counts a > 0.5. Crop rect may extend past the photo (transparent margin) rather than clamp.
+6. AA kept exactly as briefed although it costs ~0.009 IoU on gt15 (measured with/without); gt15 still passes at 0.9035.
+7. **No Korean UI strings in core.** The two area messages (도장이나 서명을 찾지 못했어요 / 종이 전체가 잡혔어요…) land with the page in C1 integration: gen-ui-font subsets every string in src/, and 잡혔어요 alone added the glyph 혔, which changed all UI font files and every page hash. With it deferred, dist is byte-identical to 3f738e4 (only deploy-manifest generatedAt differs; verified by sha256 of every dist file, flag-off build, with and without src/lib/ink). UI font delta for C1 integration: at least 1 glyph (혔).
+8. regress:ink runs in Node (Vite SSR loads the production key.ts; @napi-rs/canvas decodes), no browser, no server port, no network.
+
+### Results (regress:ink -- --fixtures-only, this PC)
+| Fixture | Gate | IoU@0.5 |
+|---|---|---|
+| gt14 | >= 0.90 | 0.9190 |
+| gt15 | >= 0.90 | 0.9035 (composite err white 0.0227 <= 0.046) |
+| gt16 | >= 0.98 | 0.9952 |
+| gt14 -shadow / -yellow / -jpeg | >= 0.85 | 0.9030 / 0.9884 / 0.9123 |
+| gt15 -shadow / -yellow / -jpeg | >= 0.85 | 0.8937 / 0.9148 / 0.8861 |
+| gt15-stampOnText (빨간 도장) | >= 0.85 | 0.8913 |
+| gt16 -shadow / -yellow / -jpeg | >= 0.85 | 0.9941 / 0.9979 / 0.9943 |
+Baseline written from this run (`ink-baseline.json`, slack 0.01). Pipeline at work res 2400x1800 (12 MP desktop): 541-580 ms median in Node/V8 on this PC (target 600 ms). Worker bundle: 11.4 KB min, **3.96 KB gzip → check-dist budget 4.75 KB** (gzip + 20 %) for C1 integration.
+Gates: `npm run check` 0 errors; `npm test` 42 files / 708 tests pass; `check:licenses` OK (no new dependency); both builds (flag 0 and 1) + check-dist OK, precache 413.5 / 415.9 KB.
+
+### Known Gaps (C1-core)
+- **Real photos (owner-only, needed by 2026-11-10):** 6 phone photos with uneven light (desk lamp or window, visible shadow; scribble signature + 홍길동 stamp; white, ruled, yellow paper), each with a JSON `{mode, paperRects, inkRect}` into `tests/corpus/ink-photos/` (or `INK_PHOTOS_DIR`). `regress:ink` without `--fixtures-only` fails until they exist; C1 waits for them per the brief.
+- **Risk for the real-photo residue gate (<= 0.2 %):** at a hard shadow edge the Gaussian (sigma k/3) still overshoots the closing by up to half the shadow depth, leaving a faint alpha 0.1-0.3 band along the shadow edge (non-ink pixels with a > 0.1: 1.15 % on gt14-shadow). Visible in `regress-out/ink-sheet.png`. If the owner photos fail on it, the fix is in the paper estimate (edge-aware smoothing), an Arch call.
+- gt15 margin is thin (0.9035 vs 0.90); deterministic, but any change to AA or despeckle must re-run regress:ink.
+- Spike l01/l04 (Commons) not added: licence check for redistribution not done in this step.
+- Text-to-도장 generator: out of scope (owner decision; brief).

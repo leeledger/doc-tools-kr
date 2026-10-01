@@ -1,0 +1,42 @@
+{
+ "gt14": {
+  "iou": 0.919
+ },
+ "gt14-shadow": {
+  "iou": 0.903
+ },
+ "gt14-yellow": {
+  "iou": 0.9884
+ },
+ "gt14-jpeg": {
+  "iou": 0.9123
+ },
+ "gt15": {
+  "iou": 0.9035,
+  "compErrWhite": 0.0227
+ },
+ "gt15-shadow": {
+  "iou": 0.8937
+ },
+ "gt15-yellow": {
+  "iou": 0.9148
+ },
+ "gt15-jpeg": {
+  "iou": 0.8861
+ },
+ "gt15-stampOnText": {
+  "iou": 0.8913
+ },
+ "gt16": {
+  "iou": 0.9952
+ },
+ "gt16-shadow": {
+  "iou": 0.9941
+ },
+ "gt16-yellow": {
+  "iou": 0.9979
+ },
+ "gt16-jpeg": {
+  "iou": 0.9943
+ }
+}
