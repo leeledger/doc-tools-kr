@@ -44,3 +44,22 @@ Built by `node tests/fixtures/build-photo.mjs` (Node MozJPEG/resize from `@jsqua
 | `anim.gif` | Synthetic | 16×16, 2 frames (hand-written LZW) | 0.4 KB |
 
 Generated at test time (`makePhotoRuntimeFixtures()` in `build-photo.mjs`, e2e global setup), never committed: `truncated.jpg` (portrait cut at 60 %), `not_image.txt`, `fake.heic` (an `ftypheic` box then zeros), `exif3.jpg` (exif6 with Orientation patched to 3), `zero.jpg` (0 bytes), `pano_20000x1000.jpg` and `big_5000x3750.jpg` (flat gradients, MozJPEG q75), `small_60k.jpg` (the portrait re-encoded to ≤ 62 KB plus EXIF with GPS and a comment), and copies named `사진.jpg`, `scene.jpg`, `scene.png` for the batch/ZIP test.
+
+## Ink fixtures (`ink/`, 전자서명·도장 이미지)
+
+Built by `python tests/fixtures/build-ink.py` (numpy + Pillow, HPND licence, dev only, never shipped; run `npm ci` first for the font). Port of the spike's `compose_gt.py` gt14 / gt15 / gt16, seeded (numpy `default_rng`, seed 7 for the 도장 speckle, `7000 + i` per paper family, 107 for the shadow). All synthetic: no third-party image.
+
+| Files | What | Notes |
+|---|---|---|
+| `gt14*.jpg`, `gt14.alpha.png` | Blue-ink signature (drawn polyline, 4x supersampled) on photographed-like paper (light falloff, grain, noise) | JPEG q92 like the spike |
+| `gt15*.jpg`, `gt15.alpha.png` | Red 도장 ring with 홍길 / 동인, ink gaps from a seeded speckle field | Glyphs: **Pretendard Black** (SIL OFL 1.1, the `pretendard` npm dependency). The spike's HANBatangB (Hancom) is not used. |
+| `gt16*.jpg`, `gt16.alpha.png` | Printed logo: rounded square + 문서딱 | Glyphs: Pretendard Bold (OFL); the spike's malgunbd (Microsoft) is not used |
+| `*-shadow.jpg` | Same pixels times a soft elliptical shadow, -40 % light, 34.5 % of the frame (`meta.json` `shadowShare`) | |
+| `*-yellow.jpg` | Paper tone #E9DDB5, same grain and noise | |
+| `*-jpeg.jpg` | Same pixels saved at JPEG q70 | |
+| `gt15-stampOnText.jpg` | gt15 over five lines of black printed text (Pretendard Regular, our own made-up sentences); GT = the stamp only | Scored in 빨간 도장 mode |
+
+`meta.json`: GT ink colour (composite error), scoring mode and variant per fixture. Every variant of a family shares the family's GT alpha. Total about 2.1 MB.
+
+Real photos for the C1 gates (6 phone photos with uneven light, owner-only item) are **not** committed; `regress:ink` reads them from `INK_PHOTOS_DIR` (default `tests/corpus/ink-photos/`) with one JSON per photo (`mode`, `paperRects`, `inkRect`).
+

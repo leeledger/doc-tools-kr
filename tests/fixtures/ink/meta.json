@@ -1,0 +1,177 @@
+{
+ "gt14": {
+  "gt": "gt14",
+  "ink": [
+   0.1,
+   0.14,
+   0.42
+  ],
+  "mode": "auto",
+  "desc": "synthetic blue-ink signature",
+  "variant": "base",
+  "jpegQ": 92,
+  "alpha": "gt14.alpha.png"
+ },
+ "gt14-shadow": {
+  "gt": "gt14",
+  "ink": [
+   0.1,
+   0.14,
+   0.42
+  ],
+  "mode": "auto",
+  "desc": "synthetic blue-ink signature",
+  "variant": "shadow",
+  "jpegQ": 92,
+  "shadowShare": 0.345,
+  "alpha": "gt14.alpha.png"
+ },
+ "gt14-yellow": {
+  "gt": "gt14",
+  "ink": [
+   0.1,
+   0.14,
+   0.42
+  ],
+  "mode": "auto",
+  "desc": "synthetic blue-ink signature",
+  "variant": "yellow",
+  "jpegQ": 92,
+  "paper": "#E9DDB5",
+  "alpha": "gt14.alpha.png"
+ },
+ "gt14-jpeg": {
+  "gt": "gt14",
+  "ink": [
+   0.1,
+   0.14,
+   0.42
+  ],
+  "mode": "auto",
+  "desc": "synthetic blue-ink signature",
+  "variant": "jpeg",
+  "jpegQ": 70,
+  "alpha": "gt14.alpha.png"
+ },
+ "gt15": {
+  "gt": "gt15",
+  "ink": [
+   0.8,
+   0.12,
+   0.12
+  ],
+  "mode": "auto",
+  "desc": "synthetic red 도장 impression with ink gaps (Pretendard Black 홍길/동인)",
+  "variant": "base",
+  "jpegQ": 92,
+  "alpha": "gt15.alpha.png"
+ },
+ "gt15-shadow": {
+  "gt": "gt15",
+  "ink": [
+   0.8,
+   0.12,
+   0.12
+  ],
+  "mode": "auto",
+  "desc": "synthetic red 도장 impression with ink gaps (Pretendard Black 홍길/동인)",
+  "variant": "shadow",
+  "jpegQ": 92,
+  "shadowShare": 0.345,
+  "alpha": "gt15.alpha.png"
+ },
+ "gt15-yellow": {
+  "gt": "gt15",
+  "ink": [
+   0.8,
+   0.12,
+   0.12
+  ],
+  "mode": "auto",
+  "desc": "synthetic red 도장 impression with ink gaps (Pretendard Black 홍길/동인)",
+  "variant": "yellow",
+  "jpegQ": 92,
+  "paper": "#E9DDB5",
+  "alpha": "gt15.alpha.png"
+ },
+ "gt15-jpeg": {
+  "gt": "gt15",
+  "ink": [
+   0.8,
+   0.12,
+   0.12
+  ],
+  "mode": "auto",
+  "desc": "synthetic red 도장 impression with ink gaps (Pretendard Black 홍길/동인)",
+  "variant": "jpeg",
+  "jpegQ": 70,
+  "alpha": "gt15.alpha.png"
+ },
+ "gt15-stampOnText": {
+  "gt": "gt15",
+  "ink": [
+   0.8,
+   0.12,
+   0.12
+  ],
+  "mode": "red",
+  "desc": "synthetic red 도장 impression with ink gaps (Pretendard Black 홍길/동인)",
+  "variant": "stampOnText",
+  "jpegQ": 92,
+  "alpha": "gt15.alpha.png"
+ },
+ "gt16": {
+  "gt": "gt16",
+  "ink": [
+   0.05,
+   0.2,
+   0.45
+  ],
+  "mode": "auto",
+  "desc": "synthetic printed logo (Pretendard Bold 문서딱)",
+  "variant": "base",
+  "jpegQ": 92,
+  "alpha": "gt16.alpha.png"
+ },
+ "gt16-shadow": {
+  "gt": "gt16",
+  "ink": [
+   0.05,
+   0.2,
+   0.45
+  ],
+  "mode": "auto",
+  "desc": "synthetic printed logo (Pretendard Bold 문서딱)",
+  "variant": "shadow",
+  "jpegQ": 92,
+  "shadowShare": 0.345,
+  "alpha": "gt16.alpha.png"
+ },
+ "gt16-yellow": {
+  "gt": "gt16",
+  "ink": [
+   0.05,
+   0.2,
+   0.45
+  ],
+  "mode": "auto",
+  "desc": "synthetic printed logo (Pretendard Bold 문서딱)",
+  "variant": "yellow",
+  "jpegQ": 92,
+  "paper": "#E9DDB5",
+  "alpha": "gt16.alpha.png"
+ },
+ "gt16-jpeg": {
+  "gt": "gt16",
+  "ink": [
+   0.05,
+   0.2,
+   0.45
+  ],
+  "mode": "auto",
+  "desc": "synthetic printed logo (Pretendard Bold 문서딱)",
+  "variant": "jpeg",
+  "jpegQ": 70,
+  "alpha": "gt16.alpha.png"
+ }
+}
