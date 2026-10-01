@@ -45,7 +45,7 @@ function hatch(g: CanvasRenderingContext2D, color: string, step: number): Canvas
 }
 
 function label(g: CanvasRenderingContext2D, text: string, x: number, y: number, px: number, color: string, below = false): void {
-  g.font = `600 ${px}px "Anolim UI Sans", "Pretendard Variable", sans-serif`;
+  g.font = `700 ${px}px "Anolim UI Sans", "Pretendard Variable", sans-serif`;
   const w = g.measureText(text).width;
   const pad = px * 0.3;
   const top = below ? y + pad : y - px - pad * 2;

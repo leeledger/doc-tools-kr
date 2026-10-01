@@ -1,3 +1,38 @@
+# Review Feedback — ci-green (f35b6b0, d164c31, ef816a0 on origin/main 315aa38)
+Date: 2026-10-02
+Ready for Builder: YES (no Must Fix)
+
+## What Richard ran
+- Flag-off (shipping) build into a scratch outDir. It has 3 UI faces (400/700/800). Every `font-weight` in `_astro/*.css` and the HTML is 400, 700 or 800. There is no 600 anywhere in the shipped CSS or HTML.
+- `qa:visual --only static` on that build. The full Chromium matrix completed: 11 pages × m360/m390/t768/d1280/d1440 × light/dark, plus the fold shots. The weight probe passed. The Firefox leg died on a `page.goto` timeout after 3 shots, which is the known Juggler harness flake and not a page fault. I looked at home (m390 fold, d1280 dark) and /id-photo/ (m390 fold, d1280 dark):
+  - The eyebrow and "사용하기" chips are one step bolder and look deliberate.
+  - The privacy pill is now visibly heavy.
+  - Nothing else moved: no overflow, no wrapping changes, and dark mode is intact.
+- CI skip counts, run 36888794186 against main's run 36864903124:
+  - chromium 27/27, mobile-chrome 21/21, mobile-safari 32/32 and webkit 23/23 skipped are identical. The WebGL skip fires on no non-Firefox project.
+  - firefox: skipped went from 23 to 44 and executed tests from 201 to 213. That fits manual-firefox adding the id-photo suite while the 7 face tests skip on the auto build. Shipping-config coverage on Firefox is real.
+- lighthouserc: all 7 assertions are `"median"`. Every minScore/maxNumericValue, URL and numberOfRuns is byte-identical to main. Nothing was loosened.
+- No-upload guard: the CSP/afterEach/`network` fixture lines are untouched by the diff. `skipWithoutWebGL` runs before `open()`, on about:blank, so it cannot mask a request.
+
+## Must Fix
+None.
+
+## Should Fix
+- src/tools/id-photo/overlay.ts:48 (confidence: 8/10) — `g.font = \`600 ${px}px "Anolim UI Sans", ...\`` is a remaining 600 consumer.
+  - check-dist only scans CSS, so it slipped through.
+  - With no 600 face, the canvas guide labels now resolve to 700 (or to a fallback if 700 isn't loaded yet; canvas does not trigger font loads). It is not broken, but the source still asks for a weight that doesn't exist.
+  - Fix: change it to `700` (or 800 if it must match first paint), and say in the comment that the UI weights are 400/700/800.
+- tests/e2e/id-photo.spec.ts `skipWithoutWebGL` (confidence: 6/10) — today nothing skips on Chromium (verified via the skip counts above). If a future Chromium drops the SwiftShader WebGL fallback, though, the 7 face tests would silently become skips on every engine.
+  - Cheap guard: `if (!gl && browserName === 'chromium') throw new Error('Chromium lost WebGL; face tests would skip')`. Or limit the skip to `browserName === 'firefox'`.
+
+## Escalate to Architect
+- /id-photo/ `.idp-privacy` at 800: the info pill now reads heavier than the primary "사진 선택" button (700). That is a hierarchy inversion in the first view. The CLS reason is sound. The choice between 800 (current), 400 (also preloaded, so also CLS-safe) and preloading 700 (costs LCP bytes) is a design call, not a code call.
+
+## Cleared
+I reviewed the 600-face removal, the lhci median aggregation, the CI upload/Firefox project changes and the WebGL-conditional skips, then rebuilt and ran visual QA. The behaviour matches the brief, no thresholds were loosened, and the no-upload guard is intact. ci-green is clear.
+
+---
+
 # Review Feedback — G2 Sprint A, A0 /hwp-viewer/ (d7e319a..be3d693)
 Date: 2026-10-01
 Ready for Builder: YES (no Must Fix). The deploy gate still waits on Arch's Lighthouse ruling (see Escalate).

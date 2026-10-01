@@ -46,10 +46,14 @@ const NEEDS_MODEL = 'Needs the face model; the manual-only build has none (this 
  * auto-framing is off in the shipping build, whose flow `manual-firefox` runs on Firefox (G2 ci-green, BUILD-LOG).
  */
 const NO_WEBGL = 'No WebGL in this browser (headless Firefox on the Linux CI runner): the face model cannot run, so the tool falls back to manual; manual-firefox covers the shipping build.';
-async function skipWithoutWebGL(page: Page): Promise<void> {
+// Only Firefox may skip: headless Firefox on the Linux runner has no WebGL. Anywhere else a missing WebGL is a
+// failure, so the face tests can never skip silently on every browser.
+async function skipWithoutWebGL(page: Page, browserName: string): Promise<void> {
   if (isManualBuild()) return;
   const gl = await page.evaluate(() => ['webgl2', 'webgl'].some((type) => document.createElement('canvas').getContext(type) !== null));
-  test.skip(!gl, NO_WEBGL);
+  if (gl) return;
+  if (browserName !== 'firefox') throw new Error(`no WebGL on ${browserName}: the face tests need it`);
+  test.skip(true, NO_WEBGL);
 }
 const skipIfManual = (): void => test.skip(isManualBuild(), NEEDS_MODEL);
 
@@ -172,8 +176,8 @@ test('the wasm is fetched once from the network; MediaPipe loads it from the HTT
 
 // ---------- 2 happy path ----------
 
-test('happy path: passport from portrait_pd — overlay, readout in band, save gated by the box, exact file', async ({ page }) => {
-  await skipWithoutWebGL(page);
+test('happy path: passport from portrait_pd — overlay, readout in band, save gated by the box, exact file', async ({ page, browserName }) => {
+  await skipWithoutWebGL(page, browserName);
   await open(page);
   await expect(page.locator('#idp-preset')).toHaveValue('passport_online');
   await pick(page, PORTRAIT, /^adjust$/);
@@ -240,8 +244,8 @@ test('custom size: invalid input (49 px, "abc") disables save and shows the mess
 
 // ---------- 4 adjust ----------
 
-test('adjust: keys, nudge buttons and a mouse drag move the frame; each change clears the box', async ({ page, isMobile }) => {
-  await skipWithoutWebGL(page);
+test('adjust: keys, nudge buttons and a mouse drag move the frame; each change clears the box', async ({ page, isMobile, browserName }) => {
+  await skipWithoutWebGL(page, browserName);
   await open(page);
   await pick(page, PORTRAIT);
   const stage = page.locator('#idp-stage');
@@ -429,9 +433,9 @@ test.describe('warnings', () => {
     ['no face (scene)', photoRuntime('scene_noface.jpg'), '얼굴을 찾지 못해 직접 맞추기로 바꿨습니다.'],
     ['background (portrait_pd)', PORTRAIT, '배경이 흰색이 아닌 것 같습니다.'],
   ] as const) {
-    test(`${label}`, async ({ page }) => {
+    test(`${label}`, async ({ page, browserName }) => {
       test.skip(isManualBuild() && !label.startsWith('background'), NEEDS_MODEL);
-      if (!label.startsWith('background')) await skipWithoutWebGL(page);
+      if (!label.startsWith('background')) await skipWithoutWebGL(page, browserName);
       await open(page);
       await pick(page, file);
       await expect(page.locator('#idp-checklist .warn')).toContainText([text], { timeout: 10_000 });
@@ -549,9 +553,9 @@ test('done: the headline, the chips and 내려받기 are fully below the sticky 
 
 // ---------- 13 keyboard only ----------
 
-test('keyboard only: preset, file, adjust, confirm, save, download', async ({ page, isMobile }) => {
+test('keyboard only: preset, file, adjust, confirm, save, download', async ({ page, isMobile, browserName }) => {
   test.skip(isMobile, 'Keyboard-only flow is a desktop scenario.');
-  await skipWithoutWebGL(page);
+  await skipWithoutWebGL(page, browserName);
   await open(page);
   await page.locator('#idp-preset').focus();
   await page.keyboard.press('ArrowDown');
