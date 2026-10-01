@@ -42,9 +42,9 @@ sources:
     retrieved: '2026-10-01'
   - preset: half_card
 spec:
-  - label: 대입 원서 사진 (진학사 원서접수)
+  - label: 대입 원서 사진 (진학사 원서접수, 반명함판 3×4)
     kind: photo
-    format: 반명함판(3×4), JPG·JPEG
+    format: JPG·JPEG
 faq:
   - q: 대입 원서 사진은 언제 찍은 것이어야 하나요?
     a: 진학사 원서접수 안내는 3개월 이내 찍은 반명함판(3×4) 사진을 올리라고 해요. 학교마다 따로 정한 사진 규정이 있을 수 있으니 모집요강도 확인하세요.

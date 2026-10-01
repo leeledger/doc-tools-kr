@@ -3,6 +3,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { TOPICS, type GuideData, type Topic } from './guide-schema';
 import type { HubData } from './hub-schema';
+import { orderToolGuides } from './tool-guide-order';
 
 /** A published guide (drafts carry a different, smaller frontmatter and are never rendered). */
 export type Guide = Omit<CollectionEntry<'guides'>, 'data'> & { data: GuideData };
@@ -52,10 +53,10 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'pdf-merge': ['univ-docs-upload'],
 };
 
-/** Published guides that point at a tool (the tool pages' "관련 안내"), then its next-step guides, at most `max`. */
+/** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */
 export async function guidesForTool(slug: string, max = 4): Promise<Guide[]> {
   const all = await publishedGuides();
-  const own = all.filter((g) => g.data.tools.includes(slug));
+  const own = orderToolGuides(slug, all.filter((g) => g.data.tools.includes(slug)));
   const next = (NEXT_GUIDES[slug] ?? []).map((s) => all.find((g) => g.id === s)).filter((g): g is Guide => !!g && !own.includes(g));
   return [...own, ...next].slice(0, max);
 }

@@ -13,19 +13,18 @@ cta: { href: '/id-photo/?preset=half_card', label: '반명함판 사진 크기�
 related: [gosi-photo, id-photo-size, admission-photo]
 sources:
   - url: https://public.jinhakapply.com/PoliceV2/useinfo/useinfo02_2.aspx
-    title: 사이버 경찰청 인터넷 원서접수 — 사진등록안내
+    title: 경찰청 인터넷 원서접수(진학어플라이 운영) — 사진등록안내
     quote: 최근 1년 이내에 촬영한 상반신 컬러사진(3cm X 4cm)을 업로드 해주세요.
     retrieved: '2026-10-02'
   - url: https://public.jinhakapply.com/PoliceV2/useinfo/useinfo02_2.aspx
-    title: 사이버 경찰청 인터넷 원서접수 — 사진등록안내
+    title: 경찰청 인터넷 원서접수(진학어플라이 운영) — 사진등록안내
     quote: ※ 배경 있는 사진, 모자나 선글라스 등을 착용한 사진 또는 스냅사진과 얼굴이 잘리거나 작아서 응시자 식별이 곤란한 사진은 등록할 수 없으며, 원서접수 기간 이후 사진교체 불가
     retrieved: '2026-10-02'
   - preset: half_card
 spec:
-  - label: 경찰 채용 원서 사진 (사이버 경찰청)
+  - label: 경찰 채용 원서 사진 (상반신 컬러)
     kind: photo
     mm: { w: 30, h: 40 }
-    format: 상반신 컬러 사진
 faq:
   - q: 경찰 원서 사진은 언제 찍은 것이어야 하나요?
     a: 최근 1년 이내에 찍은 사진이어야 해요. 상반신이 나온 컬러 사진을 쓰세요.
@@ -49,7 +48,7 @@ og: { title: '경찰 원서 사진', line: '최근 1년 이내 · 3×4 cm 상반
 
 ## 등록할 수 없는 사진
 
-사이버 경찰청 원서접수 안내는 이런 사진은 등록할 수 없다고 해요.
+경찰청 인터넷 원서접수 안내는 이런 사진은 등록할 수 없다고 해요.
 
 - 배경이 있는 사진
 - 모자나 선글라스 등을 쓴 사진

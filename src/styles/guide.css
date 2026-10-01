@@ -16,8 +16,9 @@
 /* Hubs (G2 A1): the table scrolls sideways on a phone instead of squeezing its columns. */
 .hub-table h2 { font-size: 21px; margin: 32px 0 10px; }
 .hub-scroll { overflow-x: auto; }
+/* The table scrolls sideways on phones: keep "350KB", "JPG·PNG" and Korean words whole (the body allows breaks anywhere). */
 .hub-table table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
-.hub-table th, .hub-table td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.hub-table th, .hub-table td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; overflow-wrap: normal; }
 .hub-table thead th { background: var(--brand-soft); }
 .hub-table a { color: var(--brand); display: inline-block; min-height: 24px; }
 .guide-qa h3 { font-size: 17px; margin: 18px 0 4px; }

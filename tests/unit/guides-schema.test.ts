@@ -15,6 +15,7 @@ import { specProblems } from '../../src/data/guide-facts';
 import { hubSchema } from '../../src/data/hub-schema';
 import { HUB_KIND, HUB_SLUGS, hubRows, quotedLimit } from '../../src/data/hubs';
 import { ID_PHOTO_LINK_MAX, ID_PHOTO_LINK_ORDER } from '../../src/data/quicklinks';
+import { TOOL_GUIDE_PINS, orderToolGuides } from '../../src/data/tool-guide-order';
 import { GUARD_PAGES, LIMITS as HWP_LIMITS, MB_DEC } from '../../src/lib/hwp/limits';
 
 const DIR = join(__dirname, '..', '..', 'src', 'content', 'guides');
@@ -276,5 +277,26 @@ describe('capacity guard (T6)', () => {
     expect(MAX_FILE).toBe(24 * 1024 * 1024);
     expect(WARN_FILES).toBe(10_000);
     expect(CF_MAX_FILES).toBe(20_000);
+  });
+});
+
+describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
+  it('pins move to the front in pin order; the rest keep their order; unknown tools are unchanged', () => {
+    const list = [{ id: 'a' }, { id: 'photo-kb' }, { id: 'b' }, { id: 'passport-photo' }];
+    expect(orderToolGuides('id-photo', list).map((g) => g.id)).toEqual(['passport-photo', 'photo-kb', 'a', 'b']);
+    expect(orderToolGuides('pdf-merge', list).map((g) => g.id)).toEqual(['a', 'photo-kb', 'b', 'passport-photo']);
+    expect(orderToolGuides('id-photo', [{ id: 'a' }, { id: 'photo-kb' }]).map((g) => g.id)).toEqual(['photo-kb', 'a']);
+  });
+
+  it('/id-photo/ lists passport-photo, then photo-kb, then the other guides naming the tool; every pin is a published guide naming its tool', () => {
+    for (const [tool, pins] of Object.entries(TOOL_GUIDE_PINS)) {
+      for (const id of pins) expect(published.find((g) => g.slug === id)?.parsed.tools, `${tool}: ${id}`).toContain(tool);
+    }
+    // The same stable order as publishedGuides(): category, then title (Korean collation).
+    const own = published
+      .filter((g) => g.parsed.tools.includes('id-photo'))
+      .sort((a, b) => a.parsed.category.localeCompare(b.parsed.category, 'ko') || a.parsed.title.localeCompare(b.parsed.title, 'ko'))
+      .map((g) => ({ id: g.slug }));
+    expect(orderToolGuides('id-photo', own).map((g) => g.id).slice(0, 2)).toEqual(['passport-photo', 'photo-kb']);
   });
 });
