@@ -17,7 +17,15 @@
  },
  {
   "file": "fb-math-2",
-  "range": "U+2300-23FF, U+25A0-25FF, U+300-36F"
+  "range": "U+2300-23FF, U+25A0-25FF, U+300-36F, U+27C0-27EF"
+ },
+ {
+  "file": "fb-math-3",
+  "range": "U+2980-29FF"
+ },
+ {
+  "file": "fb-math-4",
+  "range": "U+2A00-2AFF"
  },
  {
   "file": "fb-sym2",
@@ -25,6 +33,6 @@
  },
  {
   "file": "fb-sans",
-  "range": "U+2000-206F, U+2B0-36F"
+  "range": "U+2000-206F, U+2B0-36F, U+2070-209F"
  }
 ]

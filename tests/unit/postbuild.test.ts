@@ -640,6 +640,23 @@ describe('built output', () => {
     need();
     for (const f of walk(DIST, /\.html$/)) expect(() => jsonLdOf(readFileSync(f, 'utf8')), f).not.toThrow();
     const site = siteOf();
+    // Home (GEO audit): WebSite, Organization and an ItemList of the live tools, generated from tools.ts.
+    const homeLd = jsonLdOf(readFileSync(join(DIST, 'index.html'), 'utf8'));
+    const website = homeLd.filter((x) => x['@type'] === 'WebSite');
+    expect(website.length).toBe(1);
+    expect(website[0]).toMatchObject({ name: '문서딱', url: new URL('/', site).href });
+    expect(homeLd.filter((x) => x['@type'] === 'Organization').length).toBe(1);
+    const lists = homeLd.filter((x) => x['@type'] === 'ItemList');
+    expect(lists.length).toBe(1);
+    const entries = lists[0]!.itemListElement as { position: number; item: Record<string, unknown> }[];
+    expect(entries.map((e) => e.position)).toEqual(LIVE_TOOLS.map((_, i) => i + 1));
+    LIVE_TOOLS.forEach((t, i) => {
+      const it = entries[i]!.item;
+      expect(['WebApplication', 'SoftwareApplication']).toContain(it['@type']);
+      expect(it).toMatchObject({ name: t.name, url: new URL(`/${t.slug}/`, site).href, isAccessibleForFree: true });
+      expect(typeof it.applicationCategory).toBe('string');
+      expect((it.offers as { price: number }).price).toBe(0);
+    });
     for (const g of publishedGuides()) {
       const html = pageOf(`/guide/${g.slug}/`);
       const ld = jsonLdOf(html);
@@ -792,6 +809,17 @@ describe('built output', () => {
     // Negative fixture: a guide that says 업로드 fails the same check.
     const fixture = '<title>사진 올리기 | 문서딱</title><article class="guide"><p class="guide-answer">사진을 업로드하면 돼요.</p></article>';
     expect(hits(userText(fixture))).toEqual(['업로드']);
+  });
+
+  it('fix-forward: the 404 map is JSON with "<" escaped; guide source labels have no nested parentheses', () => {
+    need();
+    const nf = readFileSync(join(DIST, '404.html'), 'utf8').match(/<script type="application\/json" id="nf-map">([\s\S]*?)<\/script>/)![1]!;
+    expect(nf).not.toContain('<');
+    expect(() => JSON.parse(nf)).not.toThrow();
+    for (const g of publishedGuides()) {
+      const html = pageOf(`/guide/${g.slug}/`);
+      for (const m of html.matchAll(/<p class="guide-source"[^>]*>[\s\S]*?<\/p>|<section class="guide-sources"[\s\S]*?<\/section>/g)) expect(text(m[0]), g.slug).not.toMatch(/\([^()]*\(/);
+    }
   });
 });
 

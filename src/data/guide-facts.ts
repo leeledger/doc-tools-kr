@@ -93,13 +93,14 @@ export interface ResolvedSource {
   retrieved: string;
 }
 
-/** Sources as the page lists them: a preset resolves to its first source URL, its agency and its date. */
+/** Sources as the page lists them: a preset resolves to its first source URL, its agency and its date. The preset
+ * label loses its own parentheses inside the title's ("인사혁신처 공무원 채용시스템 (국가공무원 시험)"). */
 export function resolveSources(sources: readonly GuideSource[]): ResolvedSource[] {
   const out: ResolvedSource[] = [];
   for (const s of sources) {
     if ('preset' in s) {
       const p = getPreset(s.preset);
-      if (p?.sourceUrls[0]) out.push({ url: p.sourceUrls[0], title: `${p.source} (${p.label})`, retrieved: p.retrieved });
+      if (p?.sourceUrls[0]) out.push({ url: p.sourceUrls[0], title: `${p.source} (${p.label.replace(/\s*\([^)]*\)/g, '')})`, retrieved: p.retrieved });
     } else {
       out.push({ url: s.url, title: s.title, retrieved: s.retrieved });
     }

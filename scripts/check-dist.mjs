@@ -193,6 +193,8 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
   // after a document is shown or on the first click; everything it pulls in that the page does not.
   const exportChunk = match(/^_astro\/export-chunk[.-][^/]*\.js$/);
   budget('hwp PDF export chunk (export-chunk*.js)', [...new Set(exportChunk.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 360 * KB);
+  // Nothing else may import the export chunk statically (it would be loaded, and precached, with that code).
+  for (const js of match(/^_astro\/[^/]+\.js$/)) if (!exportChunk.includes(js) && exportChunk.some((e) => staticClosure(dist, js).includes(e))) errors.push(`${js} imports the HWP export chunk statically`);
   for (const js of exportChunk.flatMap((f) => staticClosure(dist, f))) if (read(js).includes('[ReadHuffmanCodeLengths]')) errors.push(`${js}: a Brotli decoder ships in the HWP export chunk (alias brotli/decompress.js)`);
 }
 count(/(^|\/)rhwp_bg[^/]*\.wasm$/, 1, 'rhwp_bg*.wasm');

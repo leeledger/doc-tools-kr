@@ -97,3 +97,24 @@ export function breadcrumbs(site: URL | undefined, items: readonly [string, stri
     itemListElement: items.map(([name, path], i) => ({ '@type': 'ListItem', position: i + 1, name, item: new URL(path, site).href })),
   };
 }
+
+/** ItemList of the live tools for the home page (Growth G, GEO audit), generated from tools.ts. */
+export function toolListJsonLd(tools: readonly Tool[], site: URL | undefined): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${SITE.name} 도구`,
+    itemListElement: tools.map((t, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'WebApplication',
+        name: t.name,
+        url: new URL(`/${t.slug}/`, site).href,
+        applicationCategory: 'UtilitiesApplication',
+        isAccessibleForFree: true,
+        offers: { '@type': 'Offer', price: 0, priceCurrency: 'KRW' },
+      },
+    })),
+  };
+}

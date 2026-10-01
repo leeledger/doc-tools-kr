@@ -45,7 +45,7 @@ const map = (
       <p><a class="btn primary" href="/">첫 화면으로</a></p>
     </div>
   </div>
-  <script is:inline type="application/json" id="nf-map" set:html={JSON.stringify(map).replaceAll('<', '\u003c')} />
+  <script is:inline type="application/json" id="nf-map" set:html={JSON.stringify(map).replaceAll('<', '\\u003c')} />
 </Base>
 
 <script>

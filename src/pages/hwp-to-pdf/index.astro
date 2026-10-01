@@ -6,6 +6,9 @@ import RelatedTools from '../../components/RelatedTools.astro';
 import EngineError from '../../components/EngineError.astro';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
 import { COPY, HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-to-pdf/messages';
 import '../../tools/hwp-to-pdf/hwp.css';
 
@@ -56,6 +59,7 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
           <div class="notice hw-done" id="hw-done" hidden>
             <p id="hw-done-text"></p>
             <p><a id="hw-again" download>다시 내려받기</a> · <a href="/pdf-compress/">저장한 PDF가 크면 PDF 용량 줄이기</a></p>
+            <Share name={tool.name} text={sharePreview('/hwp-to-pdf/', Astro.site!).description} id="hw-share" />
           </div>
           <div class="hw-preview" id="hw-preview" tabindex="0" role="region" aria-label="문서 미리보기"></div>
         </div>
@@ -65,6 +69,8 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
       <AdSlot id="hwp-to-pdf-result" size="rect" />
     </div>
   </section>
+
+  <QuickLinks slug={tool.slug} />
 
   <section class="howto" aria-labelledby="howto-title">
     <div class="wrap narrow">

@@ -480,7 +480,9 @@ test.describe('kill switch', () => {
   let server: { close(): Promise<void> } | null = null;
   test.use({ baseURL: `http://127.0.0.1:${NOAUTO_PORT}` });
   test.beforeAll(async ({ browserName }) => {
-    if (browserName !== 'chromium' || !existsSync(join(root, 'id-photo', 'index.html'))) return;
+    // Not on manual-chromium (its test skips): a second server on the same port, started while the chromium
+    // project's one is still open in a parallel worker, never resolved and hung the full run (Growth G gate).
+    if (browserName !== 'chromium' || isManualBuild() || !existsSync(join(root, 'id-photo', 'index.html'))) return;
     server = await startServer({ root, port: NOAUTO_PORT });
   });
   test.afterAll(async () => {

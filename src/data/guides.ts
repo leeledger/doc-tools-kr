@@ -27,9 +27,20 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
   return out;
 }
 
-/** Published guides that point at a tool (the tool pages' "관련 안내"), at most `max`. */
+/**
+ * The next step after a tool no published guide points at yet: HWP PDF 변환 → the PDF guides (its own guides
+ * stay drafts until an official Hancom source is fetched).
+ */
+const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
+  'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
+};
+
+/** Published guides that point at a tool (the tool pages' "관련 안내"), then its next-step guides, at most `max`. */
 export async function guidesForTool(slug: string, max = 4): Promise<Guide[]> {
-  return (await publishedGuides()).filter((g) => g.data.tools.includes(slug)).slice(0, max);
+  const all = await publishedGuides();
+  const own = all.filter((g) => g.data.tools.includes(slug));
+  const next = (NEXT_GUIDES[slug] ?? []).map((s) => all.find((g) => g.id === s)).filter((g): g is Guide => !!g && !own.includes(g));
+  return [...own, ...next].slice(0, max);
 }
 
 export const CATEGORY_ORDER: readonly Category[] = ['사진', 'PDF', '한글파일'];

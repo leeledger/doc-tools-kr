@@ -8,7 +8,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Download, Page } from '@playwright/test';
 import { expect, gotoReady, test } from './no-upload';
 import { hwpRuntime } from './hwp-fixtures';
-import { openPdf, pageText, unitSize } from '../../scripts/regress/lib.mjs';
+import { openPdf, pageText, pdfjs, renderRgba, unitSize } from '../../scripts/regress/lib.mjs';
 
 const CORPUS = join(process.cwd(), 'tests', 'corpus', 'hwp');
 const fx = (name: string): string => join(CORPUS, name);
@@ -194,6 +194,11 @@ test('law05: 「PDF 내려받기」 downloads law05.pdf in the page: 1 landscape
   await expect(page.locator('#hw-again')).toBeVisible();
   await expect(page.locator('#hw-again')).toHaveAttribute('download', 'law05.pdf');
   await expect(page.locator('#hw-done').getByRole('link', { name: '저장한 PDF가 크면 PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
+  // Share (the tool address, never the PDF) and the 관련 안내 links, as on the other tools.
+  await expect(page.locator('#hw-done [data-share-copy]')).toBeVisible();
+  await expect(page.locator('#hw-done [data-share]')).not.toHaveAttribute('data-url', /blob:/);
+  await expect(page.locator('.quick .quick-guides a')).toHaveCount(3);
+  expect(await page.locator('.quick .quick-guides a').evaluateAll((a) => a.map((x) => x.getAttribute('href')))).toEqual(['/guide/pdf-compress/', '/guide/pdf-merge/', '/guide/email-attachment-limit/']);
   await expect(page.locator('#hw-save')).toBeFocused();
   await expect(tool(page)).toHaveAttribute('data-state', 'convert');
   // The PDF fonts are same-origin GETs of our own files: the face list and .woff slices.
@@ -430,6 +435,76 @@ test('a tab killed mid-work: the in-flight flag shows the notice once on reload'
   await page.reload();
   await page.waitForFunction(() => document.readyState === 'complete');
   await expect(page.locator('#hw-notice')).toBeHidden();
+});
+
+// ---------- raster fallback ----------
+
+/** Dark pixels (luma < 128) of page 1 at 2× (144 dpi), and whether the page paints an image. */
+async function inkOf(bytes: Uint8Array): Promise<{ ink: Uint8Array; w: number; h: number; image: boolean; text: string }> {
+  const doc = await openPdf(bytes);
+  const { rgba, w, h } = await renderRgba(doc, 0, 2);
+  const ops = await (await doc.getPage(1)).getOperatorList();
+  const image = ops.fnArray.includes(pdfjs.OPS.paintImageXObject);
+  const text = await pageText(doc, 0);
+  await (doc as unknown as { close(): Promise<void> }).close();
+  const ink = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) ink[i] = 0.299 * rgba[i * 4]! + 0.587 * rgba[i * 4 + 1]! + 0.114 * rgba[i * 4 + 2]! < 128 ? 1 : 0;
+  return { ink, w, h, image, text };
+}
+
+/** Share of the dark pixels of `a` that are dark in `b` too. */
+function covered(a: Uint8Array, b: Uint8Array): number {
+  let n = 0;
+  let hit = 0;
+  for (let i = 0; i < a.length; i++) {
+    if (!a[i]) continue;
+    n++;
+    hit += b[i]!;
+  }
+  return n ? hit / n : 0;
+}
+
+// No fixture reaches the fallback (0 of 236 pages), so this test forces it: an init script appends an element
+// the vector writer does not draw (<switch>) to page 1 as it arrives from the worker. The page is then drawn
+// through <img> → canvas with the fonts inlined as data: @font-face, under the page CSP (font-src 'self').
+// If those fonts did not apply, the image would use a system face and its glyphs would not sit on the vector
+// page's glyphs.
+test('raster fallback (forced on page 1): an image page with the text layer, its glyphs on the vector glyphs; no CSP violation', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.addInitScript(() => {
+    const Base = window.Worker;
+    const w = window as unknown as { __forceRaster?: boolean };
+    window.Worker = class extends Base {
+      set onmessage(fn: ((ev: MessageEvent) => unknown) | null) {
+        super.onmessage = fn
+          ? (ev: MessageEvent) => {
+              const d = ev.data as { type?: string; i?: number; svg?: string };
+              if (w.__forceRaster && d?.type === 'page' && d.i === 0 && typeof d.svg === 'string') return fn({ data: { ...d, svg: d.svg.replace(/<\/svg>\s*$/, '<switch/></svg>') } } as MessageEvent);
+              return fn(ev);
+            }
+          : null;
+      }
+      get onmessage() {
+        return super.onmessage;
+      }
+    } as typeof Worker;
+  });
+  await open(page, fx('law05.hwp'), 'convert');
+  const vector = await inkOf(await pdfOf(await download(page, '#hw-save')));
+  expect(vector.image).toBe(false);
+  await page.evaluate(() => ((window as unknown as { __forceRaster: boolean }).__forceRaster = true));
+  const raster = await inkOf(await pdfOf(await download(page, '#hw-save')));
+  expect(raster.image, 'page 1 is an image').toBe(true);
+  expect(recall(raster.text, 'law05'), 'the invisible text layer').toBeGreaterThanOrEqual(0.99);
+  expect([raster.w, raster.h]).toEqual([vector.w, vector.h]);
+  const sum = (a: Uint8Array) => a.reduce((s, v) => s + v, 0);
+  expect(sum(raster.ink) / sum(vector.ink), 'ink ratio').toBeGreaterThan(0.6);
+  // Same pixel (144 dpi): 0.83–0.87 both ways with the inlined fonts in all 3 engines; 0.52–0.56 with the
+  // @font-face rules stripped (a system face, measured 2026-10-01). 0.75 tells the two apart.
+  const onVector = covered(raster.ink, vector.ink);
+  const ofVector = covered(vector.ink, raster.ink);
+  expect(onVector, 'raster ink on vector ink').toBeGreaterThanOrEqual(0.75);
+  expect(ofVector, 'vector ink on raster ink').toBeGreaterThanOrEqual(0.75);
 });
 
 // ---------- reset ----------

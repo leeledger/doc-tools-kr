@@ -27,6 +27,8 @@ export interface ExportStats {
   sanitizerRemovals: number;
   glyphs: number;
   missingGlyphs: number;
+  /** The code points no bundled face has (up to 40, as text), for the report. */
+  missingChars: string;
   nonFinite: number;
   /** What sent pages to the fallback: element or reason → pages. */
   unsupported: Record<string, number>;
@@ -69,7 +71,7 @@ export async function exportPdf(o: ExportOptions): Promise<{ blob: Blob; stats: 
   const writer = new SvgPdfWriter(pdf, fonts, images);
   const raster = o.raster ?? rasterPageWith(fonts, writer);
   const n = o.infos.length;
-  const stats: ExportStats = { pages: n, failedPages: 0, fallbackPages: 0, sanitizerRemovals: 0, glyphs: 0, missingGlyphs: 0, nonFinite: 0, unsupported: {}, images: images.stats, fontBytes: 0 };
+  const stats: ExportStats = { pages: n, failedPages: 0, fallbackPages: 0, sanitizerRemovals: 0, glyphs: 0, missingGlyphs: 0, missingChars: '', nonFinite: 0, unsupported: {}, images: images.stats, fontBytes: 0 };
   for (let i = 0; i < n; i++) {
     const info = o.infos[i]!;
     const p = await o.getPage(i);
@@ -103,5 +105,6 @@ export async function exportPdf(o: ExportOptions): Promise<{ blob: Blob; stats: 
   }
   const bytes = await pdf.save({ useObjectStreams: true });
   stats.fontBytes = fontBytes();
+  stats.missingChars = [...fonts.missing.keys()].slice(0, 40).map((c) => String.fromCodePoint(c)).join('');
   return { blob: new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }), stats };
 }

@@ -852,3 +852,67 @@ Published: passport-photo, id-photo-size, id-photo-kb, photo-kb, pdf-compress, p
 - Branch `claude/affectionate-wright-82i7wk` now = hwp-direct (1aa8874) + the precache fix + growth-g-wip merged (only BUILD-LOG conflicted; both sides kept). Gates on the merged tree: astro check 0 errors, unit 587/587 (37 files), both builds (flag off/on) check-dist + gen-sw OK (386 / 388 KB of 450), check:licenses OK.
 - Decision: `hwp-to-pdf` and `hwp-viewer` guides stay `draft: true`. hwp-direct is in, but a guide needs one fetched official quote and hancom.com / tech.hancom.com are blocked by the cloud proxy (search snippets are not verbatim). `tried` URLs recorded in both files. 11 guides are published (target was ≥ 12): publish these two from a PC session with Hancom access, or find another fetchable official source.
 - Still to do: Richard review of hwp-direct + growth-g, /hwp-to-pdf/ share button (Growth G, now unblocked), Lighthouse /hwp-to-pdf/, owner-PC full-corpus regress:hwp, then merge to main per CLOUD-HANDOFF §3.
+
+## Fix-forward 2026-10-01 (Bob; worktree doc-tools-kr-hotfix, branch cloud-handoff on origin/main 37aa511)
+Scope: Richard's post-hoc FIX FORWARD (handoff/REVIEW-FEEDBACK.md). Two local commits, nothing pushed. The first one, 73ea1ca, holds only the live bug fix (P1-2 + P1-3) so it can be pushed first. Status: **DONE_WITH_CONCERNS** (Lighthouse LCP on /hwp-to-pdf/, below).
+
+### What changed
+- **P1-2 bfcache hang** (controller.ts): `pageshow` with `persisted` calls `reset(false)` unless the state is empty or error. `send()` with no worker and a document on screen calls `fail('engine')`, which shows the engine panel with 새로고침 and releases every page waiter, so the first-page wait and the export end. Root cause, as Richard traced it: pagehide ended the worker, then `send()` returned before `watchdog.kick()`. New e2e tests: (1) pagehide mid-export then pageshow(persisted): state empty, no pages, no in-flight flag, no download in 2 s, then law05 downloads; (2) pagehide alone, then 「PDF 내려받기」: the engine error within 15 s.
+- **P1-3 WebKit keyboard test**: Alt+Tab was tried first and did not reach the link in Playwright WebKit on Windows. Ported the hwpdl fix: on WebKit, `.focus()` on #hw-again, then Enter. The product is unchanged.
+- **Port from hwpdl**:
+  - `ExportStats.missingChars` (up to 40 code points), carried into regress:hwp. The rule-7 message now lists the characters with their U+ codes.
+  - Fallback faces: fb-math-2 gains U+27C0-27EF. New fb-math-3 (U+2980-29FF) and fb-math-4 (U+2A00-2AFF). fb-sans gains U+2070-209F. These cover ₁ ₂ ⦁.
+    - The files were copied from doc-tools-kr-hwpdl/scripts/fonts. The unchanged faces are byte-identical.
+    - fontkit confirms the sources match SOURCES.md: Noto Sans Math 3.000 and Noto Sans 2.015, both OFL.
+    - SOURCES.md now lists fb-math-1..4 and the new blocks.
+  - check-dist fails when any _astro JS other than the export chunk imports it statically. `chunkOptimization: false` was skipped: precache is 388.8 / 391.2 KB of 450.
+- **Port from growth**:
+  - `toolListJsonLd` (an ItemList of LIVE_TOOLS as WebApplication) is on the home page, next to the existing WebSite and Organization nodes; nothing is duplicated.
+  - Growth T8 asserts exactly 1 WebSite, 1 Organization and 1 ItemList.
+  - id-photo kill-switch `beforeAll` skips manual-chromium.
+- **P2**:
+  - 404.astro uses the `'\u003c'` escape.
+  - The guide source title strips the preset label's own parentheses: "인사혁신처 공무원 채용시스템 (국가공무원 시험)". This also fixes the passport source.
+  - /hwp-to-pdf/ `updated` is now 2026-10-01 (sitemap lastmod).
+  - Share sits in #hw-done. QuickLinks shows 관련 안내 through a new `NEXT_GUIDES` map in guides.ts: pdf-compress, pdf-merge, email-attachment-limit. The tool has no options and its own guides are still drafts.
+  - New postbuild test: the 404 map is valid JSON with no "<", and no guide source line has nested parentheses.
+- **Raster fallback under the CSP**: added an e2e test that forces the fallback on page 1.
+  - How it works: an init script wraps `Worker.onmessage` and appends `<switch/>`, which the writer does not draw, to page 1. There is no product debug flag.
+  - What it asserts:
+    - page 1 paints an image, and the vector run does not;
+    - the text layer recall is ≥ 0.99;
+    - zero CSP violations;
+    - in the pixel overlap of the raster page against the vector page at 144 dpi, the inlined data: fonts give 0.83–0.87 in Chromium, Firefox and WebKit.
+  - Control run: a build with the @font-face rules stripped gave 0.52–0.56, and the test failed at 0.537. The threshold is 0.75.
+  - Result: the data: fonts do render under `font-src 'self'` in all 3 engines.
+
+### Gates (PUBLIC_SITE_URL=https://docttak.com)
+- astro check 0 errors (1 hint). Unit 588/588 (37 files).
+- Build flag off → dist-noauto: check-dist OK, 2,317 files. Precache 388.8 / 450 KB. UI fonts 183.1 / 190 KB. Export chunk 345.1 / 360 KB.
+- Build flag on: check-dist OK, 2,324 files. Precache 391.2 / 450 KB. **UI fonts 184.5 / 190 KB** (400 43.7, 600 46.7, 700 47.3, 800 46.8). The new glyphs are in the HWP fallback faces, not the UI font, so this is not over budget. Largest fallback face: fb-cjk-3.woff 52.2 / 60 KB. New: fb-math-3 40.9, fb-math-4 36.7, fb-sans 28.4 KB (woff).
+- check:licenses (flag off) OK: 36 packages, 5 components. Flag on still fails on fft2d LicenseRef-Ooura, the known Step 4 flag.
+- Full e2e on 5 projects + manual-chromium: **861 passed, 0 failed, 7 flaky** (all Firefox goto/load timeouts, passed on retry), 160 skipped. Per project: chromium 189, firefox 179, webkit 156, mobile-chrome 179, mobile-safari 145, manual-chromium 19.
+- **regress:hwp, full corpus** (120 files, CORPUS_DIR spikes/hwp/corpus, PRINT_DIR from hwpdl):
+  - Run 1: 119/120. law07 (a fixture) timed out at 30 s in waitForFunction. Alone it passed 2/2 (696 / 660 ms).
+  - Run 2: **120/120, all pass rules pass**:
+    - 0 fallback pages of 2,280; **0 missing glyphs in every file** (adm31, kr19 and kr29 included);
+    - SSIM against the print path: mean 0.996, worst page 0.934 (na07);
+    - memory max 1,439 MB (kr01), adm16 391 MB, budget 1,536 MB.
+  - The run-1 law07 timeout came after the heavy files and did not repeat. Logged as possible flakiness.
+- regress:merge 5/5 PASS. regress:compress 122/122. regress:photo 85/85 rows + 24/24 aggregate rules.
+- regress:idphoto 10/11: chin on p07 −1.11 mm against ≤ 1 mm. This is the known auto-frame-only gap and shows the same number as Step 4.
+- **Lighthouse** (lhci, 3 runs, median; Playwright Chromium 1243):
+  - Home: 99/100/100/100, LCP 1,956 ms.
+  - /guide/passport-photo/, /guide/pdf-merge/ and /guide/gosi-photo/: 99–100/100/100/100, LCP 1,651–1,710 ms, CLS 0.
+  - **/hwp-to-pdf/: 98/100/100/100, LCP 2,190 ms > 2,000 (FAIL)**.
+    - With the new 관련 안내 section removed from the built HTML: 2,101 ms, still over the limit.
+    - So the miss predates this work. The page was never Lighthouse-run before, and this section adds about 90 ms.
+    - Cause, from the network graph: compared with home, the page has a second render-blocking stylesheet (index.*.css from hwp.css, 1.2 KB) and 6.8 KB + 6.3 KB more initial JS. The LCP element is p.lead (render delay 1,740 ms against home's 1,504 ms).
+    - The threshold was not lowered. Escalated to Arch.
+- qa:visual (local): 0 hard failures, 215 PNGs. /hwp-to-pdf/ at 360 px looks right with the 관련 안내 list.
+
+### Known Gaps (fix-forward)
+- /hwp-to-pdf/ Lighthouse LCP 2,190 ms (above). Options for Arch: inline hwp.css (build.inlineStylesheets for that page), or defer the tool controller's import of ui-shared.
+- Not done here, owner/PC only: disabling the Cloudflare Web Analytics beacon and adding the live-smoke check for off-origin scripts (P1-1); the real-device checks.
+- Not in this task: the CLAUDE.md note "npm test needs a build first"; the rss content type; dropping the /hwp-to-pdf/ plain-language exemption (Growth G gap).
+- The regress:hwp law07 timeout happened once in 2 full runs.

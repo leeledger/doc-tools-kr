@@ -1,78 +1,42 @@
-# Review Request — Polish Q (UX-AUDIT-2 P1 fixes, plain language, brand 문서딱, share previews)
-Date: 2026-09-30
+# Review Request — Fix-forward 2026-10-01 (Richard's post-hoc FIX FORWARD)
+Date: 2026-10-01
 Ready for Review: YES
-Tree: main at 3358fd7 plus uncommitted work (nothing committed or pushed). Status: DONE.
-Note: the orchestrator pushed hotfix 76de652 (a plain sed 안올림 → 문서딱 plus a tagline change) to origin/main from another worktree. The orchestrator merges it into this work and resolves conflicts in favour of Polish Q copy.
-Previous REVIEW-REQUEST (Step 5 round 3) is in git history.
-
-Decisions and their reasons are in handoff/BUILD-LOG.md, "Polish Q build notes" and "Polish Q, added mid-build".
+Tree: branch cloud-handoff = origin/main 37aa511 + 73ea1ca (P1-2 and P1-3 only, which can be pushed first) + one follow-up commit (the ports and P2 items). Nothing is pushed.
+Status: DONE_WITH_CONCERNS. /hwp-to-pdf/ Lighthouse LCP is 2,190 ms against a 2,000 ms limit. The miss predates this work (2,101 ms without the new section). Details, gates and decisions are in BUILD-LOG, "Fix-forward 2026-10-01".
 
 ## Files Changed
-- src/data/site.ts — SITE is 문서딱 with the owner's tagline. TITLE_SUFFIX is "파일을 보내지 않고 무료로 | 문서딱". Plain defaultDescription. OPERATOR, PRIVACY_OFFICER and ogDescription are removed. contactLine returns null when unset; new footerContact(). New sharePreview(), which reads og.json; the home entry's {tools} expands to the live tools.
-- src/data/og.json (new) — share-preview copy: 7 images (title and line), and a per-path description of 80 characters or fewer, with "*" as the fallback.
-- src/layouts/Base.astro — brand from SITE. The footer has no operator or contact line unless one is set. It carries the full og and twitter tag set, per-page image, description and alt.
-- scripts/gen-brand.mjs — og-<image>.png for each og.json image: 1200×630, centred safe area 300–900 px, domain from PUBLIC_SITE_URL (docttak.com fallback). The build fails on overflow. Stale og*.png files are removed. The single og.png is gone.
-- scripts/check-dist.mjs — og-*.png budget: at least 7 images, each 300 KB or less. Guard comment updated (the guard itself is unchanged).
-- src/lib/ui/josa.ts (new) — particle choice (은/는, 이/가, 을/를, 과/와, 으로/로) for Hangul, numbers and Latin letters.
-- src/tools/photo-compress/headline.ts (new) — the done summary counts 줄임 / 그대로 / 늘어남 / 못 줄임 / 대기 separately.
-- src/tools/photo-compress/controller.ts:
-  - Kept rows now offer "원본 내려받기" with the target-mode or no-gain note.
-  - The ZIP includes the kept originals.
-  - The headline comes from headline.ts.
-  - Josa on row removal, the "빈 파일" message, and `li > span[role=note]`.
-- src/tools/photo-compress/queue.ts — summary() removed.
-- src/lib/image/messages.ts — keptSmall and keptNoGain replace kept. New `empty` message. Plain HEIC, OOM and EXIF copy. The scaled line uses josa (…1518로).
-- src/tools/id-photo/controller.ts:
-  - The done state scrolls #idp-done under the header, then focuses the headline with preventScroll.
-  - New headline "규격에 맞췄습니다 · N KB", chips in 픽셀.
-  - Own GIF copy, empty-file copy, josa.
-- src/styles/app.css:273 — #idp-headline gets scroll-margin-top.
-- Pages:
-  - src/pages/{index,pdf-merge,pdf-compress,photo-compress,id-photo}/…astro — the §7.2 rewrites. The developer-tools line becomes the airplane-mode check. id-photo H1 = the menu name. Home no longer says "준비하고 있습니다".
-  - privacy — short plain 해요체 statement.
-  - terms — no contact clause, no operator name.
-  - 404, offline, licenses — brand from SITE.
-- src/data/tools.ts — titles, descriptions and FAQs in plain words; id-photo h1. The HWP entry changes only in its title brand.
-- Limit copy moves to josa and plain words (no 메모리 or 브라우저):
-  - src/tools/{pdf-merge,pdf-compress,photo-compress,id-photo}/limits.ts
-  - src/tools/photo-compress/options.ts
-  - src/lib/idphoto/warnings.ts
-  - src/lib/ui/pdf-pick.ts
-  - the pdf-merge and pdf-compress controllers (oom)
-- src/data/id-photo-presets.ts — the 반명함판 note uses 해상도 and 픽셀.
-- src/lib/pdf/mergePlus.ts — PRODUCER is 문서딱. src/lib/face/landmarker.ts — the internal error string.
-- scripts/qa/visual.mjs — idpDoneInView() checks both edges and focus. There is a new 360/768/200 % pass. The weight probe text is updated.
-- docs/COPY.md — brand rule, tone exception, jargon → plain table, josa rule, title and description formats.
-- Tests:
-  - tests/unit/josa.test.ts (new)
-  - photo-tool: the headline tests
-  - polish: brand and titles, og.json, sharePreview, footerContact
-  - postbuild: plain-language dist scan, brand (안올림, 독딱, bare docttak), share-preview tags on every page, the gen-brand og set
-  - e2e: copy expectations; the new id-photo done-viewport test on all 5 projects; the merge bar at scrollY 0; og-*.png served as image/png; footer, privacy and terms without contact details
-
-## Gates
-| Gate | Result |
-|---|---|
-| check | 1 error, pre-existing at 3358fd7 (tests/e2e/hwp-to-pdf.spec.ts:183, HWP branch). My own 2 errors are fixed. |
-| unit | 523/523 |
-| build + budgets | dist-noauto (flag off) and dist (flag on) both pass check-dist. UI fonts 185.8/190 KB. og-*.png 29–42 KB each. |
-| licences | OK, 31 packages (flag off) |
-| e2e, full, 5 projects + manual-chromium | 785 passed, 16 flaky (the Firefox/WebKit goto race; all passed on retry), 172 skipped. The 5 failures were one test (home og:description must name every live tool). I fixed it, rebuilt, and re-ran polish.spec + site.spec on all 5 projects (379 passed, 0 failed) and id-photo.spec on chromium, mobile-chrome and manual-chromium (78 passed). The no-upload fixture runs on every test. |
-| Lighthouse (7 URLs × 3) | 99/100/100/100 everywhere. All assertions pass (/id-photo/ CLS 0.0018). |
-| qa:visual (local preview) | 215 PNGs, 0 hard failures. The id-photo done state is below the header and in view at 390, 360, 768, 200 % and 1280. |
-| regress | merge 5/5, compress 122/122, photo 85/85 + 24/24, idphoto 10/11 (the known p07 landmark miss, unchanged) |
+- src/tools/hwp-to-pdf/controller.ts (`send`, `pageshow`) — a page request with no worker while a document is shown calls fail('engine'), so no waiter is left hanging. pageshow(persisted) resets the tool.
+- tests/e2e/hwp-to-pdf.spec.ts:
+  - bfcache tests (pagehide mid-export + pageshow(persisted); pagehide alone);
+  - the WebKit keyboard fix (focus the link directly);
+  - the forced raster-fallback test (Worker.onmessage wrapper, pixel overlap against the vector page);
+  - share and 관련 안내 asserts in the law05 test.
+- src/lib/hwp/pdf/export.ts — `missingChars` in ExportStats.
+- scripts/regress/hwp.mjs — missingChars in the rows; the rule-7 message names the characters.
+- scripts/gen-hwp-fallback.mjs, scripts/fonts/fallback-ext.json, scripts/fonts/fb-math-{2,3,4}.woff(2), fb-sans.woff(2) — wider Noto Math / Noto Sans ranges. The fonts are copied from hwpdl. Unchanged faces are identical.
+- licenses/third-party/SOURCES.md — fb-math-1..4 and the fb-sans blocks.
+- scripts/check-dist.mjs — fails if any _astro JS statically imports the export chunk.
+- src/data/jsonld.ts (`toolListJsonLd`), src/pages/index.astro — the home ItemList of live tools. The existing WebSite and Organization nodes are kept, with no duplicates.
+- tests/unit/postbuild.test.ts:
+  - Growth T8 home JSON-LD asserts (1 WebSite, 1 Organization, 1 ItemList = LIVE_TOOLS);
+  - new test: the 404 map is JSON with "<" escaped, and no guide source line has nested parentheses.
+- tests/e2e/id-photo.spec.ts — the kill-switch beforeAll skips manual-chromium.
+- src/pages/404.astro — the backslash is doubled in the u003c escape.
+- src/data/guide-facts.ts (`resolveSources`) — the preset label loses its own parentheses inside the title's.
+- src/data/tools.ts — hwp-to-pdf updated 2026-10-01.
+- src/pages/hwp-to-pdf/index.astro — Share in #hw-done, and the QuickLinks section.
+- src/data/guides.ts — NEXT_GUIDES fallback for guidesForTool. hwp-to-pdf → pdf-compress, pdf-merge, email-attachment-limit.
 
 ## Open Questions
-- Tone mix: the body stays 합니다체. The owner's lines are 해요체: the home hero, privacy, the kept-photo note and the tagline. Is the mix acceptable, or should one style win?
-- Titles drop "업로드 없이" (the owner's rule), against the audit's SEO advice to keep it.
-- The home H1 is now the tagline. The privacy promise moved to the badge and lead.
-- The plain-language test exempts /hwp-to-pdf/ and any string found in the HWP sources. Remove that exemption once hwp-direct merges.
-- JSON-LD `operatingSystem: "웹 브라우저"` sits in a script and is not scanned. Keep it?
-- Internal identifiers (`anolim-*` cache prefix and font files) are kept on purpose so the SW update path is not broken.
+- The raster-fallback test has no product debug flag. It injects `<switch/>` into page 1 through a Worker wrapper. Is the 0.75 overlap threshold acceptable? With fonts: 0.83–0.87 in 3 engines. Fonts stripped: 0.52–0.56, and the test fails.
+- NEXT_GUIDES on /hwp-to-pdf/: these are next-step guides, not HWP guides. Is that the right reading of "quick links the way the other tools have them"? The tool has no deep-link options.
+- WebKit keyboard: Alt+Tab did not reach the link in Playwright WebKit (Windows), so the test uses .focus(). The Tab-only path stays covered on Chromium and Firefox.
+
+## Escalate to Architect
+- /hwp-to-pdf/ LCP is 2,190 ms against the 2,000 ms limit. It is 2,101 ms without the new 관련 안내 section. Likely cause: a second render-blocking stylesheet (hwp.css) and about 13 KB more initial JS than home. The threshold was not lowered.
 
 ## Out of Scope (logged in BUILD-LOG)
-- A full privacy policy with a contact and a privacy officer is needed before ads or the beacon go on.
-- /hwp-to-pdf/ copy.
-- The pre-existing check error in hwp-to-pdf.spec.
-- The "×" rendering in the id-photo "저장될 이름" line (calt off does not stop it; the file name itself is ASCII).
-- UX-AUDIT-2 P1-3, P1-4, P1-7, P1-8, P1-9 and P2 items other than P2-1.
+- P1-1 Cloudflare beacon (owner dashboard) and the live-smoke check; real-device checks.
+- The CLAUDE.md "build before npm test" note; the rss content type; the /hwp-to-pdf/ plain-language exemption.
+- regress:hwp law07 timed out once in 2 full-corpus runs (passed alone 2/2 and in run 2).
+- regress:idphoto p07 chin −1.11 mm (known auto-frame-only gap).

@@ -311,7 +311,7 @@ for (const key of keys) {
     delete res.pdf;
     Object.assign(r, res);
     if (res.ok && pdf) {
-      Object.assign(r, { failedPages: res.stats.failedPages, fallbackPages: res.stats.fallbackPages, missingGlyphs: res.stats.missingGlyphs, nonFinite: res.stats.nonFinite, sanitizerRemovals: res.stats.sanitizerRemovals, unsupported: res.stats.unsupported, fontBytes: res.stats.fontBytes, images: res.stats.images });
+      Object.assign(r, { failedPages: res.stats.failedPages, fallbackPages: res.stats.fallbackPages, missingGlyphs: res.stats.missingGlyphs, missingChars: res.stats.missingChars, nonFinite: res.stats.nonFinite, sanitizerRemovals: res.stats.sanitizerRemovals, unsupported: res.stats.unsupported, fontBytes: res.stats.fontBytes, images: res.stats.images });
       r.pdfBytes = pdf.length;
       if (args.includes('--keep-pdf')) {
         mkdirSync(join(root, 'regress-out', 'hwp-pdf'), { recursive: true });
@@ -442,7 +442,7 @@ for (const [k, lim] of Object.entries(TIME_HARD)) if (results[k]?.ok && results[
 // page on the spike's 40-file sample (fallback pages are reported for every file).
 for (const r of rows.filter((x) => x.ok)) {
   if (!r.valid) fails.push(`rule 7: ${r.key} PDF not valid (${r.badNumbers} content stream(s) with NaN/Infinity)`);
-  if (r.missingGlyphs > 0) fails.push(`rule 7: ${r.key} ${r.missingGlyphs} missing glyph(s)`);
+  if (r.missingGlyphs > 0) fails.push(`rule 7: ${r.key} ${r.missingGlyphs} missing glyph(s): ${[...(r.missingChars ?? '')].map((c) => `${c} U+${c.codePointAt(0).toString(16).toUpperCase()}`).join(', ')}`);
   if (r.recall != null && r.officialBytes != null && r.recall < RECALL_MIN) fails.push(`rule 7: ${r.key} recall ${r.recall.toFixed(4)} < ${RECALL_MIN}`);
   if (SAMPLE_40.includes(r.key) && r.fallbackPages > 0) fails.push(`rule 7: ${r.key} ${r.fallbackPages} fallback page(s) (${JSON.stringify(r.unsupported)})`);
 }

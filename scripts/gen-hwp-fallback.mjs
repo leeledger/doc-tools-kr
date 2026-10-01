@@ -24,12 +24,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export const FALLBACK_CODEPOINTS = [0x329e, 0x318d, 0x119e, 0x2027];
 export const MAX_SLICE = 58 * 1024;
 
-/** The extended faces: source file and inclusive code point ranges (SPIKE-HWP-DIRECT §6.5 table). */
+/** The extended faces: source file and inclusive code point ranges (SPIKE-HWP-DIRECT §6.5 table; the math face
+ * also takes the math symbol blocks and Noto Sans the super/subscripts after the full corpus run found ₁ ₂ ⦁ in adm31, kr19, kr29). */
 export const EXT = [
   { id: 'cjk', src: 'NotoSansCJKkr-Regular.otf', ranges: [[0x119e, 0x119e], [0x318d, 0x318d], [0x2000, 0x206f], [0x2190, 0x21ff], [0x2200, 0x22ff], [0x2300, 0x23ff], [0x2460, 0x24ff], [0x2500, 0x259f], [0x25a0, 0x25ff], [0x2600, 0x26ff], [0x2700, 0x27bf], [0x3000, 0x303f], [0x3200, 0x32ff], [0xff00, 0xffef]] },
-  { id: 'math', src: 'NotoSansMath-Regular.ttf', ranges: [[0x2190, 0x21ff], [0x2200, 0x22ff], [0x2300, 0x23ff], [0x25a0, 0x25ff], [0x0300, 0x036f]] },
+  { id: 'math', src: 'NotoSansMath-Regular.ttf', ranges: [[0x2190, 0x21ff], [0x2200, 0x22ff], [0x2300, 0x23ff], [0x25a0, 0x25ff], [0x0300, 0x036f], [0x27c0, 0x27ef], [0x2980, 0x29ff], [0x2a00, 0x2aff]] },
   { id: 'sym2', src: 'NotoSansSymbols2-Regular.ttf', ranges: [[0x2190, 0x21ff], [0x25a0, 0x25ff], [0x2600, 0x26ff], [0x2700, 0x27bf], [0x2b00, 0x2bff]] },
-  { id: 'sans', src: 'NotoSans-Regular.ttf', ranges: [[0x2000, 0x206f], [0x02b0, 0x036f]] },
+  { id: 'sans', src: 'NotoSans-Regular.ttf', ranges: [[0x2000, 0x206f], [0x02b0, 0x036f], [0x2070, 0x209f]] },
 ];
 
 export const rangeCss = (r) => r.map(([a, b]) => (a === b ? `U+${a.toString(16).toUpperCase()}` : `U+${a.toString(16).toUpperCase()}-${b.toString(16).toUpperCase()}`)).join(', ');

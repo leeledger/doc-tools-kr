@@ -199,7 +199,7 @@ export const TOOLS: Tool[] = [
     summary: '한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 내려받으세요.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 15h6M9 18h4"/>',
     status: 'live',
-    updated: '2026-09-30',
+    updated: '2026-10-01',
     faq: [
       {
         q: '한글 프로그램 없이 되나요?',
