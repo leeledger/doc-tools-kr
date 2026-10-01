@@ -1147,3 +1147,13 @@ Status: see the CI line at the end.
 - Photo-compress LCP: 2 of 5 local runs land at 2,112–2,116 ms (median 1,981). There is little margin on the tool pages (≈ 1,960–1,980 ms).
 - Firefox goto flake (Playwright harness): a double failure (first try and retry) can still fail the job.
 - The postbuild "plain language" test needs more than 60 s on a flag-on dist on Windows.
+
+### ci-green round 2: /id-photo/ CLS (CI run 36885169116)
+- That run had LCP green on all 14 URLs. CI LCP medians: home 1,817; tool pages 1,815–1,973; guides 1,660–1,671.
+- **New failure:** CLS on /id-photo/, true median 0.0122 > 0.01. The 5 runs were 0.0122, 0.0099, 0.0122, 0.0122 and 0.0096.
+  - The shifting node was `p.idp-privacy > a`, cause "Web font loaded". The pill is weight 700, and 700 is not preloaded, so it swaps in after the first paint and re-wraps the line.
+  - On the Linux runner the fallback font differs more than on this PC. Locally it was 0.0018.
+  - This was probably hidden before by `median-run`, which takes the CLS of one representative run.
+- **Fix:** `.idp-privacy` uses 800, a preloaded weight. This follows the existing rule that text in the first view uses a preloaded weight (`.prose h1` is 800).
+  - Local /id-photo/ CLS: 0.0001–0.0006. The pill no longer shifts. LCP is unchanged (1,968–1,976 ms).
+  - Visible change: the privacy pill on /id-photo/ is one step bolder.

@@ -346,7 +346,9 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .idp-preset .select { width: 100%; max-width: 100%; min-width: 0; }
 .idp-custom { display: grid; gap: 8px; margin-top: 4px; }
 .idp-source a { overflow-wrap: anywhere; }
-.idp-privacy { margin: 0 0 12px; padding: 8px 12px; border-radius: 999px; background: var(--brand-soft); color: var(--text); font-weight: 700; }
+/* 800, a preloaded weight: this line is in the first view of /id-photo/, and the 700 face arriving after the first
+   paint re-wrapped it (Lighthouse CLS 0.0096–0.0122 on the CI runner, over the 0.01 gate; G2 ci-green). */
+.idp-privacy { margin: 0 0 12px; padding: 8px 12px; border-radius: 999px; background: var(--brand-soft); color: var(--text); font-weight: 800; }
 .idp-adjust { display: grid; gap: 14px; }
 .idp-stage {
   position: relative; width: min(100%, 360px); aspect-ratio: var(--idp-ar, 413 / 531); margin-inline: auto;
