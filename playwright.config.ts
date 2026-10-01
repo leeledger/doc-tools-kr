@@ -33,7 +33,9 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    // Firefox on CI: Playwright's Firefox driver sometimes drops navigation events under load, so page.goto times out
+    // at 20 s although the page has loaded (ci-green BUILD-LOG). One extra retry on CI only; real failures still fail 3x.
+    { name: 'firefox', retries: process.env.CI ? 2 : 1, use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
     { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
@@ -42,7 +44,7 @@ export default defineConfig({
           { name: 'manual-chromium', testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } },
           // Firefox runs the id-photo suite on the shipping build too (G2 ci-green): headless Firefox on the Linux CI
           // runner has no WebGL, so on the auto-framing build the tests that need a detected face skip there.
-          { name: 'manual-firefox', testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Firefox'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } },
+          { name: 'manual-firefox', retries: process.env.CI ? 2 : 1, testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Firefox'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } },
         ]
       : []),
   ],
