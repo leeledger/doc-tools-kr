@@ -26,6 +26,11 @@ const IOU_MIN = { gt14: 0.9, gt15: 0.9, gt16: 0.98 };
 const IOU_HARD_MIN = 0.85;
 const COMP_ERR_MAX = { gt15: 0.046 };
 const BASELINE_SLACK = 0.01;
+/** Residue baseline slack: 0.05 percentage points (the gate itself is 0.2 %). */
+const RESIDUE_SLACK = 0.0005;
+/** Coordinator round 2: the default output keeps the ink colour, ΔE76 <= 10 on solid ink. */
+const DELTA_E_MAX = 10;
+const DELTA_E_SLACK = 1;
 const RESIDUE_MAX = 0.002;
 const INK_FOUND_MIN = 0.005;
 const CROP_PAD = 0.06;
@@ -33,7 +38,7 @@ const CROP_PAD = 0.06;
 const PERF_TARGET_MS = 600;
 
 const { createServer } = await import('vite');
-const server = await createServer({ root, configFile: false, logLevel: 'warn', server: { middlewareMode: true }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'warn', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 const ink = await server.ssrLoadModule('/src/lib/ink/key.ts');
 
 async function decode(path) {
@@ -110,6 +115,46 @@ function compErr(alpha, rgba, gt, ink, W, H, bg = [1, 1, 1]) {
   return s / n;
 }
 
+/** Share of paper pixels (Chebyshev distance > 6 px from any GT > 0.01) with a > 0.1. */
+function residue(alpha, gt, W, H) {
+  const near = ink.maxFilter(gt.map((v) => (v > 0.01 ? 1 : 0)), W, H, 13);
+  let r = 0;
+  let n = 0;
+  for (let i = 0; i < gt.length; i++) {
+    if (near[i] !== 0) continue;
+    n++;
+    if (alpha[i] > 0.1) r++;
+  }
+  return r / Math.max(n, 1);
+}
+
+/** sRGB 0..1 -> CIE Lab (D65). */
+function lab([r, g, b]) {
+  const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const [R, G, B] = [lin(r), lin(g), lin(b)];
+  const X = (0.4124 * R + 0.3576 * G + 0.1805 * B) / 0.95047;
+  const Y = 0.2126 * R + 0.7152 * G + 0.0722 * B;
+  const Z = (0.0193 * R + 0.1192 * G + 0.9505 * B) / 1.08883;
+  const f = (t) => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+  return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))];
+}
+
+/** ΔE76 between the mean output colour over solid GT ink (gt >= 0.9 x its max) and the true ink colour. */
+function meanDeltaE(rgba, gt, inkRgb) {
+  let gmax = 0;
+  for (const v of gt) if (v > gmax) gmax = v;
+  const s = [0, 0, 0];
+  let n = 0;
+  for (let i = 0; i < gt.length; i++) {
+    if (gt[i] < 0.9 * gmax || rgba[i * 4 + 3] === 0) continue;
+    for (let c = 0; c < 3; c++) s[c] += rgba[i * 4 + c] / 255;
+    n++;
+  }
+  const a = lab(s.map((v) => v / Math.max(n, 1)));
+  const b = lab(inkRgb);
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
 // ---------- contact sheet ----------
 const TILE = 320;
 const sheetRows = [];
@@ -171,20 +216,31 @@ for (const [id, m] of Object.entries(meta)) {
   const key = ink.keyInk(img, { mode: m.mode });
   const ms = performance.now() - t0;
   const v = iou(key.alpha, gt);
+  const rgbaOrig = ink.renderInk(img, key, 'original');
   const row = { iou: +v.toFixed(4), mode: m.mode, status: key.status, guess: key.guess, ms: Math.round(ms) };
   const min = m.variant === 'base' ? IOU_MIN[m.gt] : IOU_HARD_MIN;
   check(`${id} IoU@0.5 (${m.mode}) >= ${min}`, v >= min, v.toFixed(4));
   check(`${id} area status ok`, key.status === 'ok', `${key.status}, ink ${(key.inkShare * 100).toFixed(2)}%`);
   if (m.variant === 'base' && COMP_ERR_MAX[m.gt] !== undefined) {
-    // Spike definition: our alpha with the un-mixed ink colour (원래 색), composited on white, edge band only.
-    const orig = ink.renderInk(img, key.alpha, 'original', key.guess);
-    const ce = compErr(key.alpha, orig, gt, m.ink, img.width, img.height);
+    // Spike definition: our alpha with the photo's own ink colour (원래 색, the default), on white, edge band only.
+    const ce = compErr(key.alpha, rgbaOrig, gt, m.ink, img.width, img.height);
     row.compErrWhite = +ce.toFixed(4);
     check(`${id} composite error on white (원래 색) <= ${COMP_ERR_MAX[m.gt]}`, ce <= COMP_ERR_MAX[m.gt], ce.toFixed(4));
-    // Diagnostic: the default 색 맞추기 colour.
-    const fixed = ink.renderInk(img, key.alpha, 'auto', key.guess);
-    row.compErrWhiteFixed = +compErr(key.alpha, fixed, gt, m.ink, img.width, img.height).toFixed(4);
   }
+  // Paper residue (the real-photo gate on synthetic paper): pixels more than 6 px from any GT ink with a > 0.1.
+  const res = residue(key.alpha, gt, img.width, img.height);
+  row.residue = +res.toFixed(5);
+  check(`${id} paper residue (a > 0.1, >= 6 px from ink) <= ${RESIDUE_MAX * 100}%`, res <= RESIDUE_MAX, `${(res * 100).toFixed(3)}%`);
+  // Default colour = the photo's own ink colour: mean output colour over solid GT ink vs the colour solid ink
+  // shows in the fixture, gmax * ink + (1 - gmax) * paper. gt14 / gt15 cover 92 % / 90 % at most (spike recipe),
+  // so 8-10 % paper is in their densest pixels; no key can tell that from a lighter ink. The nominal ink colour
+  // (gmax = 1) is reported too (info).
+  const gmax = gt.reduce((a, v) => (v > a ? v : a), 0);
+  const paperBase = m.paper ? [1, 3, 5].map((k) => parseInt(m.paper.slice(k, k + 2), 16) / 255) : [0.93, 0.92, 0.89];
+  const de = meanDeltaE(rgbaOrig, gt, m.ink.map((c, k) => gmax * c + (1 - gmax) * paperBase[k]));
+  row.deltaE = +de.toFixed(2);
+  row.deltaENominal = +meanDeltaE(rgbaOrig, gt, m.ink).toFixed(2);
+  check(`${id} ink colour ΔE76 vs visible solid ink (default colour) <= ${DELTA_E_MAX}`, de <= DELTA_E_MAX, `${de.toFixed(2)} (nominal ink ${row.deltaENominal})`);
   // Diagnostic (not a brief gate): the base fixtures in their dedicated mode too.
   const own = { gt14: 'sign', gt15: 'red' }[m.gt];
   if (m.variant === 'base' && own) {
@@ -192,8 +248,8 @@ for (const [id, m] of Object.entries(meta)) {
     console.log(`INFO ${id} IoU@0.5 in ${own} mode: ${row[`iou_${own}`]}`);
   }
   metrics[id] = row;
-  const res = ink.processInk(img, { mode: m.mode });
-  if (res.out) addRow(`${id}  IoU ${v.toFixed(3)}  guess ${res.guess}`, img, res.out);
+  const out = ink.processInk(img, { mode: m.mode });
+  if (out.out) addRow(`${id}  IoU ${v.toFixed(3)}  residue ${(res * 100).toFixed(3)}%  dE ${de.toFixed(1)}`, img, out.out);
 }
 
 // Real photos with uneven light (owner-only item; brief gates).
@@ -266,7 +322,7 @@ for (const f of photos) {
 // Baseline: any fixture metric worse than baseline by > 0.01 fails.
 if (makeBaseline) {
   const base = {};
-  for (const [id, m] of Object.entries(metrics)) if (meta[id]) base[id] = { iou: m.iou, ...(m.compErrWhite !== undefined ? { compErrWhite: m.compErrWhite } : {}) };
+  for (const [id, m] of Object.entries(metrics)) if (meta[id]) base[id] = { iou: m.iou, residue: m.residue, deltaE: m.deltaE, ...(m.compErrWhite !== undefined ? { compErrWhite: m.compErrWhite } : {}) };
   writeFileSync(baselinePath, JSON.stringify(base, null, 1) + '\n');
   console.log(`regress:ink: baseline written to ${baselinePath}`);
 } else if (existsSync(baselinePath)) {
@@ -278,6 +334,8 @@ if (makeBaseline) {
       continue;
     }
     check(`${id} IoU vs baseline ${b.iou} (-${BASELINE_SLACK})`, m.iou >= b.iou - BASELINE_SLACK, String(m.iou));
+    if (b.residue !== undefined) check(`${id} paper residue vs baseline ${b.residue} (+${RESIDUE_SLACK})`, m.residue <= b.residue + RESIDUE_SLACK, String(m.residue));
+    if (b.deltaE !== undefined) check(`${id} ink colour ΔE76 vs baseline ${b.deltaE} (+${DELTA_E_SLACK})`, m.deltaE <= b.deltaE + DELTA_E_SLACK, String(m.deltaE));
     if (b.compErrWhite !== undefined) check(`${id} composite error vs baseline ${b.compErrWhite} (+${BASELINE_SLACK})`, m.compErrWhite <= b.compErrWhite + BASELINE_SLACK, String(m.compErrWhite));
   }
 } else {
@@ -292,11 +350,11 @@ writeFileSync(join(outDir, 'ink.json'), JSON.stringify({ partial, metrics, check
 const md = [
   `# regress:ink ${partial ? '(PARTIAL: fixtures only, no real photos)' : ''}`,
   '',
-  '| Fixture | Mode | IoU@0.5 | Composite err (white) | Status |',
-  '|---|---|---|---|---|',
+  '| Fixture | Mode | IoU@0.5 | Paper residue | ΔE76 visible solid ink (gate) | ΔE76 nominal ink (info) | Composite err (white) | Status |',
+  '|---|---|---|---|---|---|---|---|',
   ...Object.entries(metrics)
     .filter(([id]) => meta[id])
-    .map(([id, m]) => `| ${id} | ${m.mode} | ${m.iou} | ${m.compErrWhite ?? ''} | ${m.status} |`),
+    .map(([id, m]) => `| ${id} | ${m.mode} | ${m.iou} | ${(m.residue * 100).toFixed(3)}% | ${m.deltaE} | ${m.deltaENominal} | ${m.compErrWhite ?? ''} | ${m.status} |`),
   '',
   `Pipeline 2400x1800: ${metrics.perf2400.medianMs} ms (target ${PERF_TARGET_MS} ms).`,
   '',

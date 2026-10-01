@@ -1,13 +1,14 @@
 // Ink key for 전자서명·도장 이미지 (Sprint C, C1). Port of the spike's pp.ink_key: the paper level is estimated
-// locally (max filter + Gaussian), so shadows, uneven light and paper tone fall away and ink is keyed by its
+// locally (closing + Gaussian), so shadows, uneven light and paper tone fall away and ink is keyed by its
 // darkness relative to the paper around it. Pure functions on typed-array planes (0..1); no DOM, no model.
-// Every number below is pinned by the brief (ARCHITECT-BRIEF-C.md "Ink-key algorithm"); change none of them
-// without Arch.
+// The brief's numbers (ARCHITECT-BRIEF-C.md "Ink-key algorithm") are pinned; the additions of C1-core rounds 1-2
+// (closing, hysteresis, solid fill, ink colour) are logged in handoff/BUILD-LOG.md. Change none without Arch.
 
 export type InkMode = 'auto' | 'red' | 'sign';
-/** `auto` = the colour guess (빨강 or 검정); `original` = un-mixed ink colour (원래 색). */
-export type InkColor = 'auto' | 'red' | 'black' | 'blue' | 'original';
+/** `original` = the photo's own ink colour (default); the others are fixed colours (색 맞추기, opt-in). */
+export type InkColor = 'original' | 'red' | 'black' | 'blue';
 export type InkStatus = 'ok' | 'noink' | 'allpaper';
+export type InkPlane = 'mn' | 'lum';
 
 export const INK = {
   /** Alpha ramp at the default 진하기 (middle of 5 steps). */
@@ -19,6 +20,16 @@ export const INK = {
   strengthMax: 2,
   /** Auto colour guess: weighted redness above this = 도장 빨강. */
   redGuess: 0.15,
+  /** Hysteresis: strong ink is a > 0.5; weak alpha must lie within max(2, round(longEdge / 600)) px of it. */
+  strongAlpha: 0.5,
+  hystMinPx: 2,
+  hystPerPx: 600,
+  /** Paper for the paper colour: a = 0 and min(R,G,B) at least 45 % of its 90th percentile. */
+  paperDarkShare: 0.45,
+  /** Solid fill acts where the closing's paper level is more than 10 % below the paper around the ink. */
+  fillSink: 0.1,
+  /** Ink colour: coverage reference = 95th percentile of darkness on solid ink (a >= 0.99). */
+  refPercentile: 0.95,
   /** Despeckle: components of a > 0.25 smaller than max(12, 0.00002 * W * H) px are removed. */
   speckAlpha: 0.25,
   speckMinPx: 12,
@@ -64,11 +75,14 @@ export interface InkCache {
   red?: Float32Array;
   paperMn?: Float32Array;
   paperLum?: Float32Array;
-  paperRgb?: [Float32Array, Float32Array, Float32Array];
 }
 
 export interface KeyResult {
   alpha: Float32Array;
+  /** The plane that was keyed: min(R,G,B) (자동, 빨간 도장) or luma (검정·파란 서명). */
+  plane: InkPlane;
+  /** Paper colour from the paper pixels around the ink (paperColor); the ink colour uses it. */
+  paper: PaperGrid;
   /** Colour guess of the 자동 mode: weighted redness > 0.15. */
   guess: 'red' | 'black';
   /** Share of pixels with a > 0.5. */
@@ -206,13 +220,37 @@ function boxRows(p: Float32Array, w: number, h: number, r: number, cum: Float64A
 
 /** Gaussian blur (3 box passes per axis; box passes along the two axes commute), returns a new plane. */
 export function gaussBlur(src: Float32Array, w: number, h: number, sigma: number): Float32Array {
-  const p = src.slice();
-  const cum = new Float64Array(Math.max(w, h) + 1);
+  let p = src.slice();
+  const cum = new Float64Array(w + 1);
   const boxes = gaussBoxes(sigma);
   for (const bw of boxes) boxRows(p, w, h, (bw - 1) >> 1, cum);
-  const t = transpose(p, w, h);
-  for (const bw of boxes) boxRows(t, h, w, (bw - 1) >> 1, cum);
-  return transpose(t, h, w, p);
+  let q = new Float32Array(w * h);
+  for (const bw of boxes) {
+    boxCols(p, q, w, h, (bw - 1) >> 1);
+    [p, q] = [q, p];
+  }
+  return p;
+}
+
+/**
+ * Column box mean of radius r from `src` into `dst` (window cut at the ends), walking whole rows: a running
+ * column sum adds the row entering the window and drops the row leaving it (sequential memory, no transpose).
+ */
+function boxCols(src: Float32Array, dst: Float32Array, w: number, h: number, r: number): void {
+  if (r <= 0) {
+    dst.set(src);
+    return;
+  }
+  const sum = new Float64Array(w);
+  for (let y = 0; y < Math.min(r, h); y++) for (let x = 0, o = y * w; x < w; x++) sum[x] += src[o + x];
+  for (let y = 0; y < h; y++) {
+    const add = y + r;
+    const drop = y - r - 1;
+    if (add < h) for (let x = 0, o = add * w; x < w; x++) sum[x] += src[o + x];
+    if (drop >= 0) for (let x = 0, o = drop * w; x < w; x++) sum[x] -= src[o + x];
+    const inv = 1 / (Math.min(h - 1, y + r) - Math.max(0, y - r) + 1);
+    for (let x = 0, o = y * w; x < w; x++) dst[o + x] = sum[x] * inv;
+  }
 }
 
 /** Paper estimate window: k = max(31, round(longEdge / 8)) | 1 (always odd). */
@@ -237,22 +275,40 @@ export function rampFor(strength = 0): { lo: number; hi: number } {
   return { lo: INK.lo - s * INK.strengthStep, hi: INK.hi - s * INK.strengthStep };
 }
 
-/** a = clamp((d - lo) / (hi - lo)) with d = clamp((paper - x) / max(paper, 1e-3)). */
-export function rampAlpha(x: Float32Array, paper: Float32Array, lo: number, hi: number): Float32Array {
-  const a = new Float32Array(x.length);
-  const span = hi - lo;
+/** Darkness relative to the local paper: d = clamp((paper - x) / max(paper, 1e-3)). */
+export function darkness(x: Float32Array, paper: Float32Array): Float32Array {
+  const d = new Float32Array(x.length);
   for (let i = 0; i < x.length; i++) {
     const p = paper[i];
-    const d = clamp01((p - x[i]) / Math.max(p, 1e-3));
-    a[i] = clamp01((d - lo) / span);
+    d[i] = clamp01((p - x[i]) / Math.max(p, 1e-3));
   }
+  return d;
+}
+
+/** a = clamp((d - lo) / (hi - lo)). */
+export function rampFromDark(d: Float32Array, lo: number, hi: number): Float32Array {
+  const a = new Float32Array(d.length);
+  const span = hi - lo;
+  for (let i = 0; i < d.length; i++) a[i] = clamp01((d[i] - lo) / span);
   return a;
+}
+
+/** a = clamp((d - lo) / (hi - lo)) with d = clamp((paper - x) / max(paper, 1e-3)). */
+export function rampAlpha(x: Float32Array, paper: Float32Array, lo: number, hi: number): Float32Array {
+  return rampFromDark(darkness(x, paper), lo, hi);
 }
 
 /** Mode filters on redness: 빨간 도장 keeps red ink only; 검정·파란 서명 drops red ink. 자동 = no filter. */
 export function applyModeFilter(a: Float32Array, red: Float32Array, mode: InkMode): void {
-  if (mode === 'red') for (let i = 0; i < a.length; i++) a[i] *= clamp01((red[i] - 0.08) / 0.12);
-  else if (mode === 'sign') for (let i = 0; i < a.length; i++) a[i] *= 1 - clamp01((red[i] - 0.15) / 0.15);
+  if (mode === 'auto') return;
+  for (let i = 0; i < a.length; i++) a[i] *= modeFactor(red[i], mode);
+}
+
+/** The mode filter's factor for one pixel's redness. */
+export function modeFactor(red: number, mode: InkMode): number {
+  if (mode === 'red') return clamp01((red - 0.08) / 0.12);
+  if (mode === 'sign') return 1 - clamp01((red - 0.15) / 0.15);
+  return 1;
 }
 
 /** 3x3 Gaussian, sigma 0.6, normalised. */
@@ -294,6 +350,39 @@ export function smoothEdges(a: Float32Array, w: number, h: number): Float32Array
     }
   }
   return out;
+}
+
+/** Hysteresis radius: r = max(2, round(longEdge / 600)) px. */
+export function hysteresisRadius(w: number, h: number): number {
+  return Math.max(INK.hystMinPx, Math.round(Math.max(w, h) / INK.hystPerPx));
+}
+
+/**
+ * Hysteresis (Bob, C1-core round 2, BUILD-LOG): weak alpha (a <= 0.5) survives only within r px (square window)
+ * of strong ink (a > 0.5); elsewhere it becomes 0. A shadow-edge ghost is a smooth band of weak alpha away from
+ * any stroke; the anti-aliased rim of real ink always touches its strong core. In place.
+ */
+export function hysteresis(a: Float32Array, w: number, h: number, r: number): void {
+  // Strong pixels per (2r+1)^2 window: running counts along rows, then along columns.
+  const rows = new Int32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const o = y * w;
+    let c = 0;
+    for (let x = 0; x < r && x < w; x++) if (a[o + x] > INK.strongAlpha) c++;
+    for (let x = 0; x < w; x++) {
+      if (x + r < w && a[o + x + r] > INK.strongAlpha) c++;
+      if (x - r - 1 >= 0 && a[o + x - r - 1] > INK.strongAlpha) c--;
+      rows[o + x] = c;
+    }
+  }
+  const col = new Int32Array(w);
+  for (let y = 0; y < r && y < h; y++) for (let x = 0; x < w; x++) col[x] += rows[y * w + x];
+  for (let y = 0; y < h; y++) {
+    if (y + r < h) for (let x = 0; x < w; x++) col[x] += rows[(y + r) * w + x];
+    if (y - r - 1 >= 0) for (let x = 0; x < w; x++) col[x] -= rows[(y - r - 1) * w + x];
+    const o = y * w;
+    for (let x = 0; x < w; x++) if (col[x] === 0 && a[o + x] <= INK.strongAlpha) a[o + x] = 0;
+  }
 }
 
 /** Despeckle threshold in px for a w x h image. */
@@ -361,8 +450,8 @@ export function colorGuess(a: Float32Array, red: Float32Array): 'red' | 'black' 
 }
 
 /**
- * Ink key, steps 1-7 of the brief: planes -> paper estimate -> ramp -> mode filter -> edge AA -> despeckle
- * -> area check. `cache` keeps the planes and paper levels of one photo between re-runs.
+ * Ink key, steps 1-7 of the brief: planes -> paper estimate -> ramp -> mode filter -> edge AA -> hysteresis
+ * -> despeckle -> solid fill -> area check. `cache` keeps the planes and paper levels of one photo between re-runs.
  */
 export function keyInk(img: Rgba, opts: KeyOptions, cache: InkCache = {}): KeyResult {
   const { width: w, height: h } = img;
@@ -377,29 +466,280 @@ export function keyInk(img: Rgba, opts: KeyOptions, cache: InkCache = {}): KeyRe
     else cache.paperMn = paper;
   }
   const { lo, hi } = rampFor(opts.strength);
-  const ramp = rampAlpha(x, paper, lo, hi);
+  const dark = darkness(x, paper);
+  const ramp = rampFromDark(dark, lo, hi);
   applyModeFilter(ramp, cache.red as Float32Array, opts.mode);
   const alpha = smoothEdges(ramp, w, h);
+  hysteresis(alpha, w, h, hysteresisRadius(w, h));
   despeckle(alpha, w, h);
+  const plane: InkPlane = sign ? 'lum' : 'mn';
+  const pg = paperColor(img, alpha);
+  fillSolid(alpha, x, paper, cache.red as Float32Array, pg, plane, opts.mode, lo, hi, w, h);
   const { inkShare, status } = areaCheck(alpha);
-  return { alpha, guess: colorGuess(alpha, cache.red as Float32Array), inkShare, status };
+  return { alpha, plane, paper: pg, guess: colorGuess(alpha, cache.red as Float32Array), inkShare, status };
 }
 
-/** The fixed colour a 색 choice resolves to, or null for 원래 색. */
-export function resolveColor(color: InkColor, guess: 'red' | 'black'): readonly [number, number, number] | null {
-  if (color === 'original') return null;
-  return INK_COLORS[color === 'auto' ? guess : color];
+/** The fixed colour of a 색 choice, or null for 원래 색. */
+export function resolveColor(color: InkColor): readonly [number, number, number] | null {
+  return color === 'original' ? null : INK_COLORS[color];
+}
+
+/** Paper colour on a coarse grid: `cell` px per sample, gw x gh samples, R, G, B in 0..1. */
+export interface PaperGrid {
+  cell: number;
+  gw: number;
+  gh: number;
+  v: [Float32Array, Float32Array, Float32Array];
 }
 
 /**
- * Ink colour, step 8: fixed colour (alpha kept) or the un-mixed ink colour F = (I - (1 - a) P) / max(a, 0.05),
- * clamped, with P the per-channel paper colour (spike). Returns straight (not premultiplied) RGBA.
+ * Paper colour per channel from the paper pixels only (Bob, C1-core round 2): normalised convolution of the
+ * pixels with a = 0 that are not far darker than the paper (INK.paperDarkShare), on a coarse grid (cell f =
+ * max(1, round(longEdge / 320)) px) at two scales, sigma k / 12 and k / 3 (in cells). Where at least 20 % of the
+ * small window is paper the small scale is used (it follows a shadow edge), where under 5 % the large one (the
+ * inside of a large solid logo or stamp), blended between. The paper under ink is thus interpolated from the
+ * paper around it. Cells neither scale reaches take the image-wide mean paper colour.
  */
-export function renderInk(img: Rgba, alpha: Float32Array, color: InkColor, guess: 'red' | 'black', cache: InkCache = {}): Uint8ClampedArray {
+export function paperColor(img: Rgba, alpha: Float32Array): PaperGrid {
   const { width: w, height: h, data } = img;
+  const cell = Math.max(1, Math.round(Math.max(w, h) / 320));
+  const gw = Math.ceil(w / cell);
+  const gh = Math.ceil(h / cell);
+  const sums = [new Float32Array(gw * gh), new Float32Array(gw * gh), new Float32Array(gw * gh)];
+  const cnt = new Float32Array(gw * gh);
+  const area = new Float32Array(gw * gh);
+  const gx = new Int32Array(w);
+  for (let x = 0; x < w; x++) gx[x] = Math.floor(x / cell);
+  const tot = [0, 0, 0];
+  let totN = 0;
+  // A pixel far darker than the paper (min(R,G,B) under 45 % of its 90th percentile) is never paper, even with
+  // a = 0: the unkeyed middle of a solid area wider than the closing window would otherwise pose as paper.
+  const hist = new Int32Array(256);
+  for (let j = 0; j < data.length; j += 4) hist[Math.min(data[j], data[j + 1], data[j + 2])]++;
+  let ref = 255;
+  for (let v = 255, acc = 0; v >= 0; v--) {
+    acc += hist[v];
+    if (acc >= 0.1 * w * h) {
+      ref = v;
+      break;
+    }
+  }
+  const darkMax = INK.paperDarkShare * ref;
+  for (let y = 0; y < h; y++) {
+    const gy = Math.floor(y / cell) * gw;
+    for (let x = 0, i = y * w, j = i * 4; x < w; x++, i++, j += 4) {
+      const g = gy + gx[x];
+      area[g]++;
+      if (alpha[i] > 0 || Math.min(data[j], data[j + 1], data[j + 2]) < darkMax) continue;
+      sums[0][g] += data[j];
+      sums[1][g] += data[j + 1];
+      sums[2][g] += data[j + 2];
+      cnt[g]++;
+    }
+  }
+  for (let g = 0; g < cnt.length; g++) {
+    for (let c = 0; c < 3; c++) tot[c] += sums[c][g];
+    totN += cnt[g];
+  }
+  const mean = tot.map((t) => (totN > 0 ? t / totN / 255 : 1));
+  const k = paperWindow(w, h);
+  const sL = k / 3 / cell;
+  const sS = k / 12 / cell;
+  const cL = gaussBlur(cnt, gw, gh, sL);
+  const cS = gaussBlur(cnt, gw, gh, sS);
+  const aS = gaussBlur(area, gw, gh, sS);
+  const v = sums.map((s, c) => {
+    const bL = gaussBlur(s, gw, gh, sL);
+    const bS = gaussBlur(s, gw, gh, sS);
+    for (let g = 0; g < bL.length; g++) {
+      const large = cL[g] > 1e-3 ? bL[g] / cL[g] / 255 : mean[c];
+      const share = aS[g] > 0 ? cS[g] / aS[g] : 0;
+      const t = clamp01((share - 0.05) / 0.15);
+      bL[g] = t > 0 ? t * (bS[g] / cS[g] / 255) + (1 - t) * large : large;
+    }
+    return bL;
+  }) as [Float32Array, Float32Array, Float32Array];
+  return { cell, gw, gh, v };
+}
+
+/**
+ * Solid fill (Bob, C1-core round 2): the closing cannot fill an ink area wider than its window (a 220 px logo
+ * square at k = 161), so the alpha paper level sinks inside it and the middle turns semi-transparent or empty.
+ * From strong ink (a > 0.5) a region grows over 4-neighbours whose darkness against the paper around the ink
+ * (paperColor) keys strong too, only where the closing's level sank more than 10 % below that paper; every
+ * pixel of that region keeps the larger of its two alphas. Paper and shadows
+ * do not grow (paperColor follows them); thin strokes are unchanged. In place.
+ */
+export function fillSolid(a: Float32Array, x: Float32Array, paper: Float32Array, red: Float32Array, pg: PaperGrid, plane: InkPlane, mode: InkMode, lo: number, hi: number, w: number, h: number): void {
+  const S = INK.strongAlpha;
+  const pr = new Float32Array(3);
+  const span = hi - lo;
+  const alpha2 = (i: number): number => {
+    const xx = i % w;
+    readGrid3(pg, xx, (i - xx) / w, pr, 0);
+    const p = plane === 'mn' ? Math.min(pr[0], pr[1], pr[2]) : 0.299 * pr[0] + 0.587 * pr[1] + 0.114 * pr[2];
+    // Only where the closing's level sank well below the paper around the ink; elsewhere the key stands.
+    if (p - paper[i] <= INK.fillSink * p) return a[i];
+    return clamp01((clamp01((p - x[i]) / p) - lo) / span) * modeFactor(red[i], mode);
+  };
   const n = w * h;
+  const seen = new Uint8Array(n);
+  const stack = new Int32Array(n);
+  let sp = 0;
+  for (let i = 0; i < n; i++) {
+    if (a[i] > S) {
+      seen[i] = 1;
+      stack[sp++] = i;
+    }
+  }
+  while (sp > 0) {
+    const i = stack[--sp];
+    const a2 = alpha2(i);
+    if (a2 > a[i]) a[i] = a2;
+    const xx = i % w;
+    for (let t = 0; t < 4; t++) {
+      const q = t === 0 ? (xx > 0 ? i - 1 : -1) : t === 1 ? (xx < w - 1 ? i + 1 : -1) : t === 2 ? i - w : i + w;
+      if (q < 0 || q >= n || seen[q]) continue;
+      seen[q] = 1;
+      if (alpha2(q) > S) stack[sp++] = q;
+    }
+  }
+}
+
+/** Bilinear read of the 3 paper planes at full-res pixel (x, y) into out[o..o+2], at least 1e-3. */
+function readGrid3(P: { cell: number; gw: number; gh: number; v: Float32Array[] }, x: number, y: number, out: Float32Array, o: number): void {
+  const { cell, gw, gh } = P;
+  const fx = Math.min(gw - 1, Math.max(0, (x + 0.5) / cell - 0.5));
+  const fy = Math.min(gh - 1, Math.max(0, (y + 0.5) / cell - 0.5));
+  const x0 = Math.floor(fx);
+  const y0 = Math.floor(fy);
+  const x1 = Math.min(gw - 1, x0 + 1);
+  const y1 = Math.min(gh - 1, y0 + 1);
+  const tx = fx - x0;
+  const ty = fy - y0;
+  const a = (1 - ty) * (1 - tx);
+  const b = (1 - ty) * tx;
+  const c = ty * (1 - tx);
+  const d = ty * tx;
+  const i00 = y0 * gw + x0;
+  const i01 = y0 * gw + x1;
+  const i10 = y1 * gw + x0;
+  const i11 = y1 * gw + x1;
+  for (let ch = 0; ch < 3; ch++) {
+    const v = P.v[ch];
+    out[o + ch] = Math.max(1e-3, a * v[i00] + b * v[i01] + c * v[i10] + d * v[i11]);
+  }
+}
+
+/**
+ * The photo's own ink colour (원래 색), step 8 (Bob, C1-core round 2, BUILD-LOG).
+ * 1. Coverage: the paper mixes linearly into the keyed plane, so c = d / dSolid, with d the darkness of the
+ *    plane against the paper colour below (not the alpha's paper level, which a large solid area pulls down)
+ *    and dSolid the darkness of solid ink.
+ * 2. Where c >= 0.5 the ink colour is un-mixed against the local paper colour P (paperColor):
+ *    F = (I - (1 - c) P) / c.
+ * 3. Light: ink and paper share the light, so F is divided by P and multiplied by the brightest paper level in
+ *    the photo (per channel): a shadow or uneven light does not darken the ink; the paper tone is kept.
+ * 4. Those estimates (weight c^2) are averaged into a smooth local colour field on a coarse grid (cell =
+ *    max(1, round(longEdge / 400)) px, Gaussian sigma 5 cells) and read back bilinearly: every ink pixel,
+ *    partial ones included, gets its local ink colour and no paper tint.
+ * Writes the colour (0..255) into the RGB channels of `out` (straight RGBA) at every pixel with a > 0.
+ */
+export function inkColorField(img: Rgba, key: Pick<KeyResult, 'alpha' | 'plane' | 'paper'>, out: Uint8ClampedArray): void {
+  const { width: w, height: h, data } = img;
+  const { alpha, plane, paper: P } = key;
+  const n = w * h;
+  let m = 0;
+  for (let i = 0; i < n; i++) if (alpha[i] > 0) m++;
+  if (m === 0) return;
+  const idx = new Int32Array(m);
+  for (let i = 0, t = 0; i < n; i++) if (alpha[i] > 0) idx[t++] = i;
+  const white = P.v.map((p) => p.reduce((mx, v) => (v > mx ? v : mx), 1e-3));
+  const ofPlane = (r: number, g: number, b: number): number => (plane === 'mn' ? Math.min(r, g, b) : 0.299 * r + 0.587 * g + 0.114 * b);
+  // Per ink pixel: paper colour (bilinear) and darkness against it.
+  const pr = new Float32Array(m * 3);
+  const dark = new Float32Array(m);
+  const solidBuf = new Float32Array(m);
+  let ns = 0;
+  let dMax = 0;
+  for (let t = 0; t < m; t++) {
+    const i = idx[t];
+    const x = i % w;
+    const y = (i - x) / w;
+    readGrid3(P, x, y, pr, t * 3);
+    const px = ofPlane(pr[t * 3], pr[t * 3 + 1], pr[t * 3 + 2]);
+    const j = i * 4;
+    const d = clamp01((px - ofPlane(data[j] / 255, data[j + 1] / 255, data[j + 2] / 255)) / px);
+    dark[t] = d;
+    if (d > dMax) dMax = d;
+    if (alpha[i] >= 0.99) solidBuf[ns++] = d;
+  }
+  // dSolid: the 95th percentile of the darkness of solid ink (a >= 0.99); max darkness when there is none.
+  const solid = solidBuf.subarray(0, ns).sort();
+  const dSolid = Math.max(0.05, ns ? solid[Math.min(ns - 1, Math.floor(INK.refPercentile * ns))] : dMax);
+  const cell = Math.max(1, Math.round(Math.max(w, h) / 400));
+  const gw = Math.ceil(w / cell);
+  const gh = Math.ceil(h / cell);
+  const acc = [new Float32Array(gw * gh), new Float32Array(gw * gh), new Float32Array(gw * gh)];
+  const wt = new Float32Array(gw * gh);
+  const glob = [0, 0, 0];
+  let globW = 0;
+  for (let t = 0; t < m; t++) {
+    const c = Math.min(1, dark[t] / dSolid);
+    if (c < 0.5) continue;
+    const i = idx[t];
+    const x = i % w;
+    const y = (i - x) / w;
+    const k = c * c;
+    const g = Math.floor(y / cell) * gw + Math.floor(x / cell);
+    for (let ch = 0; ch < 3; ch++) {
+      const p = pr[t * 3 + ch];
+      const F = clamp01((data[i * 4 + ch] / 255 - (1 - c) * p) / c);
+      const lit = clamp01((F / p) * white[ch]);
+      acc[ch][g] += k * lit;
+      glob[ch] += k * lit;
+    }
+    wt[g] += k;
+    globW += k;
+  }
+  const fallback = globW > 0 ? glob.map((v) => v / globW) : [0, 0, 0];
+  const bw = gaussBlur(wt, gw, gh, 5);
+  // Field value per cell, or -1 where no ink weight reached it (read back as the image-wide ink colour).
+  const field = acc.map((p) => {
+    const b = gaussBlur(p, gw, gh, 5);
+    for (let i = 0; i < b.length; i++) b[i] = bw[i] > 1e-6 ? b[i] / bw[i] : -1;
+    return b;
+  });
+  for (let t = 0; t < m; t++) {
+    const i = idx[t];
+    const x = i % w;
+    const y = (i - x) / w;
+    const fx = Math.min(gw - 1, Math.max(0, (x + 0.5) / cell - 0.5));
+    const fy = Math.min(gh - 1, Math.max(0, (y + 0.5) / cell - 0.5));
+    const x0 = Math.floor(fx);
+    const y0 = Math.floor(fy);
+    const x1 = Math.min(gw - 1, x0 + 1);
+    const y1 = Math.min(gh - 1, y0 + 1);
+    const tx = fx - x0;
+    const ty = fy - y0;
+    for (let ch = 0; ch < 3; ch++) {
+      const f = field[ch];
+      const v00 = f[y0 * gw + x0];
+      const v01 = f[y0 * gw + x1];
+      const v10 = f[y1 * gw + x0];
+      const v11 = f[y1 * gw + x1];
+      const v = v00 < 0 || v01 < 0 || v10 < 0 || v11 < 0 ? fallback[ch] : (1 - ty) * ((1 - tx) * v00 + tx * v01) + ty * ((1 - tx) * v10 + tx * v11);
+      out[i * 4 + ch] = Math.round(v * 255);
+    }
+  }
+}
+
+/** Ink colour, step 8: the photo's own ink colour (default) or a fixed colour; alpha kept. Straight RGBA. */
+export function renderInk(img: Rgba, key: Pick<KeyResult, 'alpha' | 'plane' | 'paper'>, color: InkColor): Uint8ClampedArray {
+  const n = img.width * img.height;
+  const { alpha } = key;
   const out = new Uint8ClampedArray(n * 4);
-  const fixed = resolveColor(color, guess);
+  const fixed = resolveColor(color);
   if (fixed) {
     for (let i = 0, j = 0; i < n; i++, j += 4) {
       out[j] = fixed[0];
@@ -409,24 +749,8 @@ export function renderInk(img: Rgba, alpha: Float32Array, color: InkColor, guess
     }
     return out;
   }
-  if (!cache.paperRgb) {
-    const ch = (c: number): Float32Array => {
-      const p = new Float32Array(n);
-      for (let i = 0; i < n; i++) p[i] = data[i * 4 + c] / 255;
-      return paperLevel(p, w, h);
-    };
-    cache.paperRgb = [ch(0), ch(1), ch(2)];
-  }
-  const P = cache.paperRgb;
-  for (let i = 0, j = 0; i < n; i++, j += 4) {
-    const a = alpha[i];
-    for (let c = 0; c < 3; c++) {
-      const I = data[j + c] / 255;
-      const F = a > 0.05 ? (I - (1 - a) * P[c][i]) / Math.max(a, 0.05) : I;
-      out[j + c] = Math.round(clamp01(F) * 255);
-    }
-    out[j + 3] = Math.round(a * 255);
-  }
+  inkColorField(img, key, out);
+  for (let i = 0; i < n; i++) out[i * 4 + 3] = Math.round(alpha[i] * 255);
   return out;
 }
 
@@ -583,12 +907,12 @@ export interface ProcessResult {
 /** The whole photo-tab pipeline on a work copy: key -> colour -> crop -> size. */
 export function processInk(img: Rgba, opts: ProcessOptions, cache: InkCache = {}): ProcessResult & { alpha: Float32Array } {
   const key = keyInk(img, opts, cache);
-  const color = opts.color ?? 'auto';
-  const isRed = color === 'red' || (color === 'auto' && key.guess === 'red') || (color === 'original' && key.guess === 'red');
+  const color = opts.color ?? 'original';
+  const isRed = color === 'red' || (color === 'original' && key.guess === 'red');
   const fileName = isRed ? '도장.png' : '서명.png';
   const base = { status: key.status, guess: key.guess, inkShare: key.inkShare, fileName, alpha: key.alpha };
   const rect = key.status === 'ok' ? cropRect(key.alpha, img.width, img.height, opts.noPad) : null;
   if (!rect) return { ...base, status: key.status === 'ok' ? 'noink' : key.status, rect: null, out: null };
-  const rgba = renderInk(img, key.alpha, color, key.guess, cache);
+  const rgba = renderInk(img, key, color);
   return { ...base, rect, out: cropAndResize(rgba, img.width, img.height, rect, opts.size ?? null) };
 }

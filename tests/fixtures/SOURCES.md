@@ -59,6 +59,8 @@ Built by `python tests/fixtures/build-ink.py` (numpy + Pillow, HPND licence, dev
 | `*-jpeg.jpg` | Same pixels saved at JPEG q70 | |
 | `gt15-stampOnText.jpg` | gt15 over five lines of black printed text (Pretendard Regular, our own made-up sentences); GT = the stamp only | Scored in 빨간 도장 mode |
 
+Light model (round 2): the spike's room-light falloff lights the ink as well as the paper (the spike lit the paper only, so ink in the dim corner was brighter than physics allows). The shadow variants multiply ink and paper alike.
+
 `meta.json`: GT ink colour (composite error), scoring mode and variant per fixture. Every variant of a family shares the family's GT alpha. Total about 2.1 MB.
 
 Real photos for the C1 gates (6 phone photos with uneven light, owner-only item) are **not** committed; `regress:ink` reads them from `INK_PHOTOS_DIR` (default `tests/corpus/ink-photos/`) with one JSON per photo (`mode`, `paperRects`, `inkRect`).

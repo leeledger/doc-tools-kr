@@ -15,6 +15,9 @@ import {
   maxFilter,
   minFilter,
   outputSize,
+  paperColor,
+  hysteresis,
+  hysteresisRadius,
   paperLevel,
   paperWindow,
   planes,
@@ -185,6 +188,56 @@ describe('alpha ramp, modes, AA, despeckle', () => {
     expect(out[0]).toBe(0); // two pixels away: not an edge pixel
   });
 
+  it('hysteresis: weak alpha survives only within r px of strong ink; r = max(2, round(longEdge / 600))', () => {
+    expect(hysteresisRadius(1280, 960)).toBe(2);
+    expect(hysteresisRadius(2400, 1800)).toBe(4);
+    expect(hysteresisRadius(100, 50)).toBe(2);
+    const w = 20;
+    const a = new Float32Array(w * 10);
+    a[5 * w + 5] = 0.9; // strong
+    a[5 * w + 7] = 0.3; // 2 px away: kept
+    a[7 * w + 7] = 0.2; // 2 px diagonal (square window): kept
+    a[5 * w + 8] = 0.4; // 3 px away: cleared
+    a[2 * w + 15] = 0.45; // a weak band far from ink (shadow-edge ghost): cleared
+    a[3 * w + 15] = 0.45;
+    hysteresis(a, w, 10, 2);
+    expect(a[5 * w + 5]).toBeCloseTo(0.9, 6);
+    expect(a[5 * w + 7]).toBeCloseTo(0.3, 6);
+    expect(a[7 * w + 7]).toBeCloseTo(0.2, 6);
+    expect(a[5 * w + 8]).toBe(0);
+    expect(a[2 * w + 15]).toBe(0);
+    expect(a[3 * w + 15]).toBe(0);
+  });
+
+  it('a soft shadow edge leaves no alpha on the paper (no ghost)', () => {
+    // Paper with a soft -40 % shadow over the right half and one thin ink stroke in the lit half.
+    const W = 320;
+    const H = 240;
+    const img = image(W, H, (x, y) => {
+      const l = 1 - 0.4 / (1 + Math.exp(-(x - 200) / 8));
+      const ink = y >= 100 && y < 104 && x > 30 && x < 150;
+      const v = ink ? 40 : 230;
+      return [Math.round(v * l), Math.round(v * l), Math.round(v * l)];
+    });
+    const k = keyInk(img, { mode: 'auto' });
+    let ghost = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if ((y < 90 || y > 114) && k.alpha[y * W + x] > 0.1) ghost++;
+    expect(ghost).toBe(0);
+    expect(k.status).toBe('ok');
+  });
+
+  it('a solid area wider than the paper window stays opaque in the middle (solid fill)', () => {
+    // 120 px square at k = 31: the closing cannot fill it, the paper around it sets the level.
+    const W = 240;
+    const H = 180;
+    const img = image(W, H, (x, y) => (x >= 60 && x < 180 && y >= 30 && y < 150 ? [20, 50, 120] : [232, 228, 215]));
+    const k = keyInk(img, { mode: 'auto' });
+    expect(k.alpha[90 * W + 120]).toBe(1);
+    let partial = 0;
+    for (let y = 35; y < 145; y++) for (let x = 65; x < 175; x++) if (k.alpha[y * W + x] < 1) partial++;
+    expect(partial).toBe(0);
+  });
+
   it('despeckle removes 8-connected components of a > 0.25 under max(12, 0.00002 W H) px', () => {
     expect(speckMin(20, 20)).toBe(12);
     expect(speckMin(2400, 1800)).toBeCloseTo(86.4, 6);
@@ -224,27 +277,79 @@ describe('area check and colour guess', () => {
 });
 
 describe('colour, crop and size', () => {
-  it('fixed colours: 도장 #C8102E, 서명 검정 #111111, 서명 파랑 #1F3A93; 자동 follows the guess', () => {
+  it('fixed colours are opt-in: 도장 #C8102E, 서명 검정 #111111, 서명 파랑 #1F3A93; 원래 색 is no fixed colour', () => {
     expect(INK_COLORS).toEqual({ red: [200, 16, 46], black: [17, 17, 17], blue: [31, 58, 147] });
-    expect(resolveColor('auto', 'red')).toEqual([200, 16, 46]);
-    expect(resolveColor('auto', 'black')).toEqual([17, 17, 17]);
-    expect(resolveColor('blue', 'red')).toEqual([31, 58, 147]);
-    expect(resolveColor('original', 'red')).toBeNull();
+    expect(resolveColor('red')).toEqual([200, 16, 46]);
+    expect(resolveColor('black')).toEqual([17, 17, 17]);
+    expect(resolveColor('blue')).toEqual([31, 58, 147]);
+    expect(resolveColor('original')).toBeNull();
     const img = image(2, 1, () => [128, 128, 128]);
-    const out = renderInk(img, Float32Array.from([1, 0.5]), 'blue', 'black');
-    expect(Array.from(out)).toEqual([31, 58, 147, 255, 31, 58, 147, 128]);
+    const key = { alpha: Float32Array.from([1, 0.5]), plane: 'mn' as const, paper: paperColor(img, new Float32Array(2)) };
+    expect(Array.from(renderInk(img, key, 'blue'))).toEqual([31, 58, 147, 255, 31, 58, 147, 128]);
   });
 
-  it('원래 색 un-mixes the paper: F = (I - (1 - a) P) / max(a, 0.05)', () => {
-    // Uniform paper 200; one pixel with a = 0.5 of ink 40 over it: I = 120.
-    const w = 40;
-    const img = image(w, 40, (x, y) => (x === 20 && y === 20 ? [120, 120, 120] : [200, 200, 200]));
-    const a = new Float32Array(w * 40);
-    a[20 * w + 20] = 0.5;
-    const out = renderInk(img, a, 'original', 'black');
-    const j = (20 * w + 20) * 4;
-    expect(Array.from(out.subarray(j, j + 4))).toEqual([40, 40, 40, 128]);
-    expect(Array.from(out.subarray(0, 4))).toEqual([200, 200, 200, 0]); // a <= 0.05: the photo colour
+  /** ΔE76 between two sRGB 0..255 colours. */
+  const deltaE = (p: ArrayLike<number>, q: ArrayLike<number>): number => {
+    const lab = (c: ArrayLike<number>) => {
+      const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      const [R, G, B] = [lin(c[0]), lin(c[1]), lin(c[2])];
+      const f = (t: number) => (t > 216 / 24389 ? Math.cbrt(t) : ((24389 / 27) * t + 16) / 116);
+      const X = f((0.4124 * R + 0.3576 * G + 0.1805 * B) / 0.95047);
+      const Y = f(0.2126 * R + 0.7152 * G + 0.0722 * B);
+      const Z = f((0.0193 * R + 0.1192 * G + 0.9505 * B) / 1.08883);
+      return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)];
+    };
+    const [a, b] = [lab(p), lab(q)];
+    return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  };
+
+  it('원래 색 (default) keeps the ink colour: solid, anti-aliased rim and shadowed half alike, no paper tint', () => {
+    // Blue ink (30, 60, 150) on cream paper (236, 228, 205); a soft-edged bar; the right half under a -40 % shadow
+    // that lights ink and paper alike.
+    const W = 160;
+    const H = 120;
+    const ink = [30, 60, 150];
+    const pap = [236, 228, 205];
+    const cover = (x: number, y: number) => Math.max(0, Math.min(1, 6 - Math.abs(y - 60) / 1.5)) * (x > 20 && x < 140 ? 1 : 0);
+    const img = image(W, H, (x, y) => {
+      const c = cover(x, y);
+      const l = x < 80 ? 1 : 0.6;
+      return [0, 1, 2].map((k) => Math.round(l * (c * ink[k] + (1 - c) * pap[k]))) as [number, number, number];
+    });
+    const r = processInk(img, { mode: 'auto' });
+    expect(r.status).toBe('ok');
+    const key = keyInk(img, { mode: 'auto' });
+    const out = renderInk(img, key, 'original');
+    const px = (x: number, y: number) => Array.from(out.subarray((y * W + x) * 4, (y * W + x) * 4 + 4));
+    expect(deltaE(px(50, 60), ink)).toBeLessThanOrEqual(10); // solid, lit
+    expect(deltaE(px(110, 60), ink)).toBeLessThanOrEqual(10); // solid, in the shadow
+    // The rim (partial alpha) carries the same colour as the core: no paper tint.
+    const rim = px(50, 52);
+    expect(rim[3]).toBeGreaterThan(0);
+    expect(rim[3]).toBeLessThan(255);
+    expect(deltaE(rim, px(50, 60))).toBeLessThanOrEqual(3);
+    // Mean over solid ink against the true ink colour (the regress gate's measure on the GT fixtures).
+    const mean = [0, 0, 0];
+    let n = 0;
+    for (let y = 57; y <= 63; y++)
+      for (let x = 25; x < 135; x++) {
+        const p = px(x, y);
+        for (let k = 0; k < 3; k++) mean[k] += p[k];
+        n++;
+      }
+    expect(deltaE(mean.map((v) => v / n), ink)).toBeLessThanOrEqual(10);
+  });
+
+  it('paper colour under a large solid area is interpolated from the paper around it', () => {
+    const W = 200;
+    const H = 150;
+    const img = image(W, H, (x, y) => (x >= 50 && x < 150 && y >= 25 && y < 125 ? [20, 40, 120] : [230, 225, 210]));
+    const a = new Float32Array(W * H);
+    for (let y = 25; y < 125; y++) for (let x = 50; x < 150; x++) a[y * W + x] = 1;
+    const pg = paperColor(img, a);
+    const g = Math.floor(75 / pg.cell) * pg.gw + Math.floor(100 / pg.cell);
+    expect(pg.v[0][g] * 255).toBeCloseTo(230, 0);
+    expect(pg.v[2][g] * 255).toBeCloseTo(210, 0);
   });
 
   it('auto-crop: bbox of a > 0.1 plus max(8 px, 4 % of the long edge); 여백 없음 = 2 px; null when empty', () => {
@@ -304,7 +409,8 @@ describe('keyInk / processInk end to end', () => {
   };
   const ring = image(W, H, (x, y) => {
     const d = Math.hypot(x - 60, y - 45);
-    return d > 20 && d < 26 ? [200, 30, 30] : paperPx(x);
+    const l = 1 - 0.15 * (x / W);
+    return d > 20 && d < 26 ? [Math.round(200 * l), Math.round(30 * l), Math.round(30 * l)] : paperPx(x);
   });
   const stroke = image(W, H, (x, y) => (y >= 40 && y < 44 && x > 20 && x < 100 ? [25, 35, 110] : paperPx(x)));
 
@@ -317,7 +423,13 @@ describe('keyInk / processInk end to end', () => {
     expect(r.rect).toEqual({ x: 27, y: 12, w: 67, h: 67 });
     const at = (x: number, y: number) => Array.from(r.out?.data.subarray((y * 67 + x) * 4, (y * 67 + x) * 4 + 4) ?? []);
     expect(at(33, 33)[3]).toBe(0); // the paper inside the ring is transparent
-    expect(at(37 - 27, 45 - 12)).toEqual([200, 16, 46, 255]); // a ring pixel in 도장 빨강
+    // Default 원래 색: the ring's own red, lit back to the brightest paper (the photo's light falloff removed).
+    const ringPx = at(37 - 27, 45 - 12);
+    expect(ringPx[3]).toBe(255);
+    for (const [k, want] of [200, 30, 30].entries()) expect(Math.abs(ringPx[k] - want)).toBeLessThanOrEqual(4);
+    const red = processInk(ring, { mode: 'auto', color: 'red' });
+    const j = ((45 - 12) * 67 + 37 - 27) * 4;
+    expect(Array.from(red.out?.data.subarray(j, j + 4) ?? [])).toEqual([200, 16, 46, 255]); // opt-in 도장 빨강
   });
 
   it('signature: guessed black, 서명.png; 빨간 도장 mode drops it (no ink)', () => {

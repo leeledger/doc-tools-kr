@@ -1417,3 +1417,33 @@ Gates: `npm run check` 0 errors; `npm test` 42 files / 708 tests pass; `check:li
 - gt15 margin is thin (0.9035 vs 0.90); deterministic, but any change to AA or despeckle must re-run regress:ink.
 - Spike l01/l04 (Commons) not added: licence check for redistribution not done in this step.
 - Text-to-도장 generator: out of scope (owner decision; brief).
+
+### C1-core round 2 (Bob, 2026-10-02; Arch confirmed decisions 1 and 2; coordinator review of ink-sheet.png)
+Status: DONE. Two user-visible defects fixed in core; all gates re-run.
+
+**1. Shadow-edge ghost (grey / pink arc).** Root cause: the Gaussian (sigma k/3) after the closing overshoots on the dark side of a shadow edge, leaving a smooth band of weak alpha (0.1-0.4, never > 0.5; measured histogram) away from any ink.
+- Fix: **hysteresis** after the edge AA: weak alpha (a <= 0.5) survives only within r = max(2, round(longEdge / 600)) px (square window) of strong ink (a > 0.5). Evaluated alongside r = 1/2/3: IoU unchanged on every fixture, ghost gone. Rejected: true connected hysteresis (the ghost touches strokes and would survive along them).
+- New gate in regress:ink (and in the baseline, slack +0.05 pp): **paper residue** = share of pixels more than 6 px (Chebyshev) from any GT ink with a > 0.1, <= 0.2 % on every fixture (the real-photo gate on synthetic paper; pixels inside the 도장's speckle gaps are not paper). Before: gt14-shadow 1.08 %, gt15-shadow 0.66 %, gt16-shadow 0.43 %. Now 0.000 % on all 13.
+- **Solid fill** (found while checking the gt16 "blotch"): an ink area wider than the closing window (the 220 px logo square at k = 161) gets a sunk paper level in its middle, so the centre went semi-transparent (light dot on gt16-yellow / -jpeg). From strong ink, a region grows over 4-neighbours that key strong against the paper colour around the ink (below), only where the closing's level sank > 10 % below it; the larger alpha is kept. Unit test: a 120 px square at k = 31 is fully opaque.
+
+**2. Colour lost by default.** `원래 색` (the photo's own ink colour) is now the default; fixed colours (도장 빨강 / 검정 / 파랑) are opt-in. `InkColor` = `original | red | black | blue` (the old guess-driven `auto` colour is gone; the red/black guess still names the file and stays for the page's mode hint).
+- Paper colour for the ink colour = normalised convolution of paper pixels only (a = 0 and min(R,G,B) >= 45 % of its 90th percentile), on a coarse grid (cell = round(longEdge / 320)), two scales (sigma k/12 where >= 20 % of the window is paper, k/3 inside large ink, blended).
+- Coverage c = d / dSolid with d measured against that paper colour (not the alpha's paper level), dSolid = 95th percentile on solid ink. Un-mix F = (I - (1 - c) P) / c where c >= 0.5; divide by P and multiply by the brightest paper level (light and shadow removed, paper tone kept); average (weight c^2) into a local colour field (cell = round(longEdge / 400), sigma 5 cells), read back bilinearly. Partial-alpha pixels get the local ink colour: no paper tint (unit test: rim vs core ΔE <= 3).
+- New gate: **ΔE76 <= 10** between the mean default output colour over solid GT ink and the colour solid ink shows in the fixture (gmax · ink + (1 - gmax) · paper). Decision: gt14 / gt15 cover at most 92 % / 90 % (spike recipe), so their densest pixels hold 8-10 % paper, which no key can tell from a lighter ink; against the nominal ink colour gt14 sits at 9.8-10.5 and gt15 at 8.0-9.8 (reported as info in ink.md). gt16 (100 % coverage) is the same under both: 0.9-3.6. Also a unit test on a synthetic bar with a -40 % shadow half against the true ink colour.
+- **Fixture change:** the room-light falloff now lights the ink as well as the paper (the spike lit only the paper, which is not physical and made a light-corrected colour look wrong). Every fixture was rebuilt; IoU moved by <= 0.002 (gt15 0.9035 -> 0.9017). Baseline regenerated after the change.
+
+**Results (regress:ink -- --fixtures-only):**
+| Fixture | IoU@0.5 (gate) | Paper residue (<= 0.2 %) | ΔE76 visible solid ink (<= 10) |
+|---|---|---|---|
+| gt14 / -shadow / -yellow / -jpeg | 0.9189 / 0.9017 / 0.9888 / 0.9099 | 0 % all | 4.04 / 4.20 / 5.61 / 5.57 |
+| gt15 / -shadow / -yellow / -jpeg | 0.9017 / 0.8921 / 0.9119 / 0.8845 | 0 % all | 2.71 / 2.94 / 2.73 / 3.12 |
+| gt15-stampOnText (빨간 도장) | 0.8907 | 0 % | 4.53 |
+| gt16 / -shadow / -yellow / -jpeg | 0.9954 / 0.9941 / 0.9985 / 0.9944 | 0 % all | 0.92 / 3.62 / 1.12 / 1.80 |
+Composite error gt15 on white (원래 색, default): 0.0389 <= 0.046 (round 1: 0.0227 with per-pixel un-mixing against the keyed alpha; the uniform local colour trades a little edge fidelity for no paper tint).
+Pipeline 2400x1800 (key + default colour + crop): 663-768 ms median in Node on this PC, **over the 600 ms target** (round 1: 541-580 ms with the fixed colour, which skipped the colour work). Speed-ups taken: row-wise vertical box passes, coarse-grid paper colour, ink-pixel lists. Remaining cost is the full-res closing + Gaussian (~450 ms). Logged, not a gate.
+Vite in regress:ink now runs with `hmr: false, ws: false` (it had opened port 24678).
+
+**Known Gaps (round 2):**
+- A shadow edge that runs exactly along the edge of a large solid ink area (gt16-shadow: penumbra along the top of the logo square) leaves a darker band in the colour: the nearest paper is lit, the ink is not. ΔE still 3.6; visible on ink-sheet.png. Thin strokes (signatures, 도장) are not affected.
+- gt15 IoU margin is 0.0017 (0.9017 vs 0.90).
+- Faint ink keyed entirely below a = 0.5 is now dropped by the hysteresis (진하기 + raises it).
