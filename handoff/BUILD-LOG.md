@@ -1297,3 +1297,6 @@ Scope: ARCHITECT-BRIEF-G2.md "A2 — spec cluster D, exam and ID photos" (rows 6
 - Shortfall: 26 indexable; A3 (7 rows) must yield ≥ 4.
 
 Status: **DONE_WITH_CONCERNS** (local /photo-compress/ LCP equals HEAD's; CI is the source of truth).
+
+### A2 CI (run 36924527693 on 8b47d72)
+- checks (build, unit, licenses, Lighthouse), firefox, webkit and mobile-chrome were green. chromium failed `hwp-to-pdf.spec.ts:433` ("a tab killed mid-work") on both tries: after the reload, `#hw-notice` stayed hidden and empty. **Root cause (test race, not A2; A2 touches no HWP code):** the HWP controller loads after first paint plus idle (`bootHwpTool` → `afterFirstPaint(whenIdle(run))`). The test set `hwp-inflight` on /hwp-to-pdf/ right after `readyState === 'complete'`. When the first load's controller started after that, it consumed the flag on that load, so the reload found nothing. **Fix:** the flag is set on /terms/ (no HWP controller), then the test navigates to /hwp-to-pdf/ in the same tab (sessionStorage carries over). The second reload still checks that the notice shows only once. Locally: chromium, mobile-chrome, mobile-safari and firefox each pass 3× repeat (12/12).

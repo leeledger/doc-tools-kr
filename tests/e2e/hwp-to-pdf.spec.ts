@@ -431,10 +431,12 @@ test('a crashing worker is oom', async ({ page, context }) => {
 });
 
 test('a tab killed mid-work: the in-flight flag shows the notice once on reload', async ({ page }) => {
-  await gotoReady(page, '/hwp-to-pdf/');
+  // The flag is left by an earlier page of this tab. It is set on a page without the HWP controller: on
+  // /hwp-to-pdf/ itself the controller loads after first paint + idle and could take the flag on that very load,
+  // before the reload (CI run 36924527693, both tries).
+  await gotoReady(page, '/terms/');
   await page.evaluate(() => sessionStorage.setItem('hwp-inflight', JSON.stringify({ bytes: 64_000_000 })));
-  await page.reload();
-  await page.waitForFunction(() => document.readyState === 'complete');
+  await gotoReady(page, '/hwp-to-pdf/');
   await expect(page.locator('#hw-notice')).toHaveText('이전 문서가 너무 커서 이 페이지가 멈췄습니다. 컴퓨터에서 열거나 더 작은 문서로 다시 시도해 주세요.');
   await page.reload();
   await page.waitForFunction(() => document.readyState === 'complete');

@@ -17,6 +17,7 @@ Ready for Review: YES
   - `tests/unit/guides-schema.test.ts`: unit spellings; the A2 preset quotes state their pixels and limit; KST dates; quick-link order.
   - `tests/unit/idphoto-core.test.ts`, `tests/unit/ops.test.ts`: preset lists.
   - `tests/e2e/id-photo.spec.ts:228-241`: `?preset=<new>` is selected at load and saves the exact file.
+  - `tests/e2e/hwp-to-pdf.spec.ts:433-446`: CI fix for a pre-existing race. The in-flight flag is now set on /terms/ before the test opens /hwp-to-pdf/ (BUILD-LOG "A2 CI").
 
 ## Open Questions
 - Please re-check 3 quotes live. Suggested: TEPS 사진관련 (126*165 Pixel / 50KB), the 정부24 재발급 photo line (㎝), and the police 사진등록안내.
