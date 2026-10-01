@@ -28,10 +28,18 @@ W, H, S = 1280, 960, 4
 SEED = 7
 
 
-def paper(rng, base=(0.93, 0.92, 0.89)):
-    """Spike paper(): uneven light like a phone photo, low-frequency grain, fine noise."""
+def room_light():
+    """Spike paper() light falloff, like a phone photo under room light."""
     yy, xx = np.mgrid[0:H, 0:W] / max(W, H)
-    light = 1 - 0.10 * ((xx - 0.2) ** 2 + (yy - 0.1) ** 2) - 0.06 * xx
+    return 1 - 0.10 * ((xx - 0.2) ** 2 + (yy - 0.1) ** 2) - 0.06 * xx
+
+
+LIGHT = room_light()
+
+
+def paper(rng, base=(0.93, 0.92, 0.89)):
+    """Spike paper(): uneven light, low-frequency grain, fine noise."""
+    light = LIGHT
     g = (rng.normal(0, 1, (H // 4, W // 4)) * 40 + 128).clip(0, 255).astype(np.uint8)
     grain = np.array(Image.fromarray(g).resize((W, H), Image.BICUBIC)) / 255 - 0.5
     P = np.array(base)[None, None, :] * light[..., None] + 0.03 * grain[..., None] + rng.normal(0, 0.008, (H, W, 1))
@@ -97,7 +105,9 @@ def shadow_light(rng_shadow):
 
 
 def compose(A, ink, P):
-    F = np.broadcast_to(np.array(ink), (H, W, 3))
+    """Ink over paper. The ink is lit by the same room light as the paper (round 2: physical; the spike lit the
+    paper only, so ink in the dim corner looked brighter than the paper around it allowed)."""
+    F = np.array(ink)[None, None, :] * LIGHT[..., None]
     return A[..., None] * F + (1 - A[..., None]) * P
 
 
