@@ -3,6 +3,7 @@
 // fails the build when a ref is unknown or its value differs from this table, and the fact check only accepts
 // a number with a unit in a guide when it comes from the page's sources, presets or these facts.
 import { MB } from '../lib/ui/device';
+import { GUARD_PAGES, LIMITS as HWP_LIMITS, MB_DEC } from '../lib/hwp/limits';
 import { LIMITS as COMPRESS_LIMITS } from '../tools/pdf-compress/limits';
 import { LEVEL_COPY } from '../tools/pdf-compress/level-copy';
 import { TARGET_MB } from '../tools/pdf-compress/target';
@@ -36,6 +37,12 @@ export const TOOL_FACTS = {
   'pdf-merge.maxFiles': { value: MAX_FILES },
   'pdf-merge.maxTotalMb.desktop': { value: MERGE_LIMITS.desktop.hardBytes / MB, unit: 'MB' },
   'pdf-merge.maxTotalMb.mobile': { value: MERGE_LIMITS.mobile.hardBytes / MB, unit: 'MB' },
+  // HWP (1 MB = 1,000,000 bytes there): the largest file a device opens, the PDF caps on phones, the search span.
+  'hwp.maxMb.desktop': { value: HWP_LIMITS.desktop.hardBytes / MB_DEC, unit: 'MB' },
+  'hwp.maxMb.mobile': { value: HWP_LIMITS.mobile.hardBytes / MB_DEC, unit: 'MB' },
+  'hwp.pdfMb.mobile': { value: HWP_LIMITS.mobile.capBytes / MB_DEC, unit: 'MB' },
+  'hwp.pdfPages.mobile': { value: HWP_LIMITS.mobile.capPages },
+  'hwp-viewer.searchPages': { value: GUARD_PAGES },
 } as const satisfies Record<string, ToolFact>;
 
 export type ToolFactRef = keyof typeof TOOL_FACTS;

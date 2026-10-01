@@ -64,6 +64,7 @@ for (const [path, name] of [
   ['/pdf-compress/', 'PDF 용량 줄이기'],
   ['/photo-compress/', '사진 용량 줄이기'],
   ['/hwp-to-pdf/', 'HWP PDF 변환'],
+  ['/hwp-viewer/', 'hwp 뷰어'],
 ] as const) {
   test(`tool page JSON-LD, title and description on ${path}`, async ({ page }) => {
     await gotoReady(page, path);
@@ -84,15 +85,16 @@ for (const [path, name] of [
   });
 }
 
-test('related tools: each tool page links to the other live tools (HWP PDF 변환: the two PDF tools only)', async ({ page }) => {
+test('related tools: each tool page links to the other live tools (the HWP tools: each other and the PDF tools)', async ({ page }) => {
   const tools = [
     ['/pdf-merge/', 'PDF 합치기'],
     ['/pdf-compress/', 'PDF 용량 줄이기'],
     ['/photo-compress/', '사진 용량 줄이기'],
     ['/id-photo/', '여권·증명사진 규격 맞추기'],
     ['/hwp-to-pdf/', 'HWP PDF 변환'],
+    ['/hwp-viewer/', 'HWP·HWPX 파일 보기'],
   ] as const;
-  const related: Record<string, string[]> = { '/hwp-to-pdf/': ['/pdf-merge/', '/pdf-compress/'] };
+  const related: Record<string, string[]> = { '/hwp-to-pdf/': ['/hwp-viewer/', '/pdf-merge/', '/pdf-compress/'], '/hwp-viewer/': ['/hwp-to-pdf/', '/pdf-compress/'] };
   for (const [path] of tools) {
     await gotoReady(page, path);
     const others = tools.filter(([p]) => p !== path && (!related[path] || related[path].includes(p)));
@@ -107,7 +109,7 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
   const pages = locs.filter((p) => !p.startsWith('/guide/'));
-  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/id-photo/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
   // Growth G: /guide/ and every published guide (drafts never).
   const guides = locs.filter((p) => p.startsWith('/guide/'));
   expect(guides).toContain('/guide/');
@@ -136,14 +138,15 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(6);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 용량 줄이기' })).toHaveAttribute('href', '/photo-compress/');
   await expect(cards.getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
   await expect(cards.getByRole('link', { name: 'HWP PDF 변환' })).toHaveAttribute('href', '/hwp-to-pdf/');
-  await expect(cards.locator('.status')).toHaveText(['사용하기', '사용하기', '사용하기', '사용하기', '사용하기']);
-  await expect(page.locator('.card')).toHaveCount(5);
+  await expect(cards.getByRole('link', { name: 'HWP·HWPX 파일 보기' })).toHaveAttribute('href', '/hwp-viewer/');
+  await expect(cards.locator('.status')).toHaveText(Array(6).fill('사용하기'));
+  await expect(page.locator('.card')).toHaveCount(6);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
   // Every tool is live: the 준비 중 block is not rendered at all.
   await expect(page.locator('.soon')).toHaveCount(0);

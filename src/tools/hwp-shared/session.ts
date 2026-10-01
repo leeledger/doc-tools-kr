@@ -32,11 +32,40 @@ type State = 'empty' | 'loading' | Mode | 'exporting' | 'error';
 type Lazy = typeof import('./lazy');
 type ExportChunk = typeof import('./export-chunk');
 type Viewer = import('./lazy').Viewer;
+type ViewerOptions = import('./lazy').ViewerOptions;
 type PageMsg = Extract<HwpResponse, { type: 'page' }>;
+type TextMsg = Extract<HwpResponse, { type: 'text' }>;
 type Scanned = Extract<HwpResponse, { type: 'scanned' }>;
 type Parsed = Extract<HwpResponse, { type: 'parsed' }>;
 
 export const INFLIGHT_KEY = 'hwp-inflight';
+
+/** An open document, as the page that started the session sees it (/hwp-viewer/: toolbar, thumbnails, search). */
+export interface OpenDocument {
+  viewer: Viewer;
+  infos: PageInfo[];
+  mode: Mode;
+  /** The scroll box that holds the pages. */
+  preview: HTMLElement;
+  /** Page i's drawn text (rendered in the worker and dropped there); null when the document is gone. */
+  text(i: number): Promise<string | null>;
+  /** False once this document was closed, replaced or lost. */
+  alive(): boolean;
+}
+
+/** What a page adds to the shared session. /hwp-to-pdf/ passes none. */
+export interface HwpHooks {
+  /** Warm the PDF export chunk on idle once a document is shown (default true). */
+  warmExport?: boolean;
+  /** Passed on to the page window (zoom, per-page callbacks). */
+  viewer?: Pick<ViewerOptions, 'zoomable' | 'onRendered' | 'onCleared'>;
+  /** A file passed the size and type checks and starts opening. */
+  onOpening?(): void;
+  /** The first page is on screen. */
+  onDocument?(doc: OpenDocument): void;
+  /** The document is gone (reset, error, another file, back/forward cache). */
+  onClear?(): void;
+}
 const PROGRESS_INTERVAL_MS = 250;
 
 const createWorker = (): Worker => new Worker(new URL('../../lib/hwp/hwp.worker.ts', import.meta.url), { type: 'module' });
@@ -76,7 +105,7 @@ function whenIdle(fn: () => void): void {
   else setTimeout(fn, 1000);
 }
 
-export function startHwpSession(start: BootStart = {}): void {
+export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): void {
   const found = document.getElementById('hwp-tool');
   if (!found) return;
   const root: HTMLElement = found;
@@ -96,7 +125,8 @@ export function startHwpSession(start: BootStart = {}): void {
   const forceBtn = must<HTMLButtonElement>('hw-force');
   const resetBtn = must<HTMLButtonElement>('hw-reset');
   const eqNote = must<HTMLParagraphElement>('hw-eq-note');
-  const note = must<HTMLParagraphElement>('hw-note');
+  // Optional: /hwp-viewer/ shows its own always-visible line instead.
+  const note = document.getElementById('hw-note');
   const done = must<HTMLDivElement>('hw-done');
   const doneText = must<HTMLParagraphElement>('hw-done-text');
   const again = must<HTMLAnchorElement>('hw-again');
@@ -120,10 +150,15 @@ export function startHwpSession(start: BootStart = {}): void {
   let resultUrl: string | null = null;
   /** Pages awaited by the first-page wait or the export; a cancel or a reset answers them with null. */
   const waiters = new Map<number, (m: PageMsg | null) => void>();
+  /** Text requests of the viewer's search, answered in order per page. */
+  const textWaiters = new Map<number, ((t: string | null) => void)[]>();
   const releaseWaiters = (): void => {
     const all = [...waiters.values()];
     waiters.clear();
     for (const w of all) w(null);
+    const texts = [...textWaiters.values()].flat();
+    textWaiters.clear();
+    for (const t of texts) t(null);
   };
   const watchdog = createWatchdog(() => fail('timeout'));
 
@@ -149,7 +184,7 @@ export function startHwpSession(start: BootStart = {}): void {
       if (exporting) b.setAttribute('aria-disabled', 'true');
       else b.removeAttribute('aria-disabled');
     }
-    note.hidden = mode !== 'convert';
+    if (note) note.hidden = mode !== 'convert';
     eqNote.hidden = !(mode === 'convert' && equations > 0);
     banner.hidden = !(mode === 'viewer-first' || mode === 'viewer-only');
     if (exporting || (next !== 'convert' && next !== 'viewer-first')) done.hidden = true;
@@ -206,6 +241,7 @@ export function startHwpSession(start: BootStart = {}): void {
   function clearDocument(): void {
     stopExport();
     dropResult();
+    if (viewer) hooks.onClear?.();
     viewer?.destroy();
     viewer = null;
     infos = [];
@@ -270,6 +306,28 @@ export function startHwpSession(start: BootStart = {}): void {
     viewer?.insert(msg.i, msg.svg, msg.runs, msg.failed);
   }
 
+  function onText(msg: TextMsg): void {
+    outstanding = Math.max(0, outstanding - 1);
+    if (!outstanding) watchdog.stop();
+    const list = textWaiters.get(msg.i);
+    const w = list?.shift();
+    if (list && !list.length) textWaiters.delete(msg.i);
+    w?.(msg.failed ? '' : msg.text);
+  }
+
+  function requestText(i: number, id: number): Promise<string | null> {
+    // Another document (or none) is open now. With no worker at all (pagehide) send() below shows the engine
+    // panel instead, as for a page request.
+    if (id !== docId && worker) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const list = textWaiters.get(i) ?? [];
+      list.push(resolve);
+      textWaiters.set(i, list);
+      outstanding++;
+      send({ type: 'text', i });
+    });
+  }
+
   function request(i: number): void {
     outstanding++;
     send({ type: 'render', i });
@@ -296,7 +354,7 @@ export function startHwpSession(start: BootStart = {}): void {
     base = routed.mode;
     fileName.textContent = `${file?.name ?? ''} · ${msg.pages.toLocaleString('ko-KR')}쪽`;
     progress(COPY.firstPage(msg.pages), null, true);
-    viewer = lazy.createViewer({ root: preview, infos, request, pageFailedText: COPY.pageFailed });
+    viewer = lazy.createViewer({ ...hooks.viewer, root: preview, infos, request, pageFailedText: COPY.pageFailed });
     const first = await awaitPage(0);
     if (id !== docId || !first) return;
     const page0 = preview.querySelector('[data-page="0"]');
@@ -306,7 +364,8 @@ export function startHwpSession(start: BootStart = {}): void {
     setState(base);
     announce([COPY.ready(msg.pages), base === 'convert' ? '' : banner.textContent, base === 'convert' && equations ? COPY.equations : ''].filter(Boolean).join(' '));
     fileName.focus();
-    if (base !== 'viewer-only' && !preload.skipped) whenIdle(() => void loadExportChunk().catch(() => undefined));
+    if (hooks.warmExport !== false && base !== 'viewer-only' && !preload.skipped) whenIdle(() => void loadExportChunk().catch(() => undefined));
+    if (hooks.onDocument && viewer) hooks.onDocument({ viewer, infos, mode: base, preview, text: (i) => requestText(i, id), alive: () => id === docId });
   }
 
   // ---------- open ----------
@@ -335,6 +394,7 @@ export function startHwpSession(start: BootStart = {}): void {
       return;
     }
     setState('loading');
+    hooks.onOpening?.();
     lastProgress = 0;
     progress(COPY.opening, null, true);
     setInflight(f.size);
@@ -364,6 +424,10 @@ export function startHwpSession(start: BootStart = {}): void {
       const msg = ev.data;
       if (msg.type === 'page') {
         onPage(msg);
+        return;
+      }
+      if (msg.type === 'text') {
+        onText(msg);
         return;
       }
       watchdog.kick();

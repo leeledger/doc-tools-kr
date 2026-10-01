@@ -31,6 +31,7 @@ const PAGES = [
   ['compress', '/pdf-compress/'],
   ['photo', '/photo-compress/'],
   ['hwp', '/hwp-to-pdf/'],
+  ['hwpview', '/hwp-viewer/'],
   ['idphoto', '/id-photo/'],
   ['privacy', '/privacy/'],
   ['terms', '/terms/'],
@@ -435,6 +436,25 @@ async function toolStates(browser, f) {
       await page.setInputFiles('#idp-input', join(FIX, 'photo', 'anim.gif'));
       await page.locator('#idp-error').waitFor({ state: 'visible' });
       await shot(4, 'error');
+    });
+    // /hwp-viewer/ (G2 A0): empty → a document (toolbar, page list) → search with a hit marked; phones: the sheet.
+    await stateRun(browser, mode, 'hwpv', async (page, _ctx, shot) => {
+      await goto(page, '/hwp-viewer/');
+      await shot(1, 'empty');
+      await page.setInputFiles('#hw-input', join(process.cwd(), 'tests', 'corpus', 'hwp', 'law10.hwp'));
+      await page.locator('#hv-bar').waitFor({ state: 'visible', timeout: 150_000 });
+      await page.locator('#hw-result').scrollIntoViewIfNeeded();
+      await shot(2, 'document');
+      await page.locator('#hv-find-toggle').click();
+      await page.locator('#hv-q').fill('전산');
+      await page.locator('#hv-q').press('Enter');
+      await page.locator('#hw-preview .hv-mark').first().waitFor({ timeout: 120_000 });
+      await shot(3, 'search');
+      if (mode === 'm') {
+        await page.locator('#hv-thumbs-toggle').click();
+        await page.locator('#hv-thumbs').waitFor({ state: 'visible' });
+        await shot(4, 'page-list');
+      }
     });
     await stateRun(browser, mode, 'cmp', async (page, ctx, shot, m) => {
       await goto(page, '/pdf-compress/');

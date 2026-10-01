@@ -9,11 +9,15 @@
         "http://127.0.0.1:4173/pdf-compress/",
         "http://127.0.0.1:4173/photo-compress/",
         "http://127.0.0.1:4173/hwp-to-pdf/",
+        "http://127.0.0.1:4173/hwp-viewer/",
         "http://127.0.0.1:4173/id-photo/",
         "http://127.0.0.1:4173/terms/",
         "http://127.0.0.1:4173/guide/",
         "http://127.0.0.1:4173/guide/passport-photo/",
-        "http://127.0.0.1:4173/guide/pdf-merge/"
+        "http://127.0.0.1:4173/guide/pdf-merge/",
+        "http://127.0.0.1:4173/guide/open-hwp-without-hangul/",
+        "http://127.0.0.1:4173/guide/hwp-on-phone/",
+        "http://127.0.0.1:4173/guide/what-is-hwpx/"
       ],
       "numberOfRuns": 3,
       "settings": {

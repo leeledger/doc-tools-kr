@@ -25,6 +25,7 @@
     "regress:compress": "node scripts/regress/compress.mjs",
     "regress:photo": "node scripts/regress/photo.mjs",
     "regress:hwp": "node scripts/regress/hwp.mjs",
+    "regress:hwp-viewer": "node scripts/regress/hwp-viewer.mjs",
     "regress:idphoto": "node scripts/regress/idphoto.mjs"
   },
   "dependencies": {

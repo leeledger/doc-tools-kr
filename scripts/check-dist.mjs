@@ -197,6 +197,24 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
   for (const js of match(/^_astro\/[^/]+\.js$/)) if (!exportChunk.includes(js) && exportChunk.some((e) => staticClosure(dist, js).includes(e))) errors.push(`${js} imports the HWP export chunk statically`);
   for (const js of exportChunk.flatMap((f) => staticClosure(dist, f))) if (read(js).includes('[ReadHuffmanCodeLengths]')) errors.push(`${js}: a Brotli decoder ships in the HWP export chunk (alias brotli/decompress.js)`);
 }
+// /hwp-viewer/ (G2 A0 "Budgets"): its first load is at most 4 KB gzip over /hwp-to-pdf/'s, and the viewer
+// controls (page list, search, zoom: ui*.js and what it pulls in that the page does not) load with the first
+// file, never with the page.
+{
+  const viewerHtml = pageHtml.get('hwp-viewer/index.html');
+  const viewer = initialJs(viewerHtml ?? '');
+  const converter = initialJs(pageHtml.get('hwp-to-pdf/index.html') ?? '');
+  if (!viewerHtml) errors.push('hwp-viewer/index.html: no file found');
+  else {
+    const sum = (list) => list.reduce((a, p) => a + gz(p), 0);
+    const extra = sum(viewer) - sum(converter);
+    rows.push({ label: 'initial JS /hwp-viewer/ over /hwp-to-pdf/', size: Math.max(0, extra), limit: 4 * KB, unit: 'gzip' });
+    if (extra > 4 * KB) errors.push(`/hwp-viewer/ initial JS is ${(extra / KB).toFixed(1)} KB gzip over /hwp-to-pdf/ (budget 4 KB)`);
+    const ui = match(/^_astro\/ui\.[^/]*\.js$/);
+    if (ui.some((u) => viewer.includes(u))) errors.push('the /hwp-viewer/ controls (ui*.js) load with the page');
+    budget('hwp-viewer controls (ui*.js)', [...new Set(ui.flatMap((f) => staticClosure(dist, f)))].filter((f) => !viewer.includes(f)), 20 * KB);
+  }
+}
 count(/(^|\/)rhwp_bg[^/]*\.wasm$/, 1, 'rhwp_bg*.wasm');
 budget('vendor/rhwp/*/rhwp_bg.wasm', match(/^vendor\/rhwp\/[^/]+\/rhwp_bg\.wasm$/), 10.5 * 1024 * KB, raw, 'raw');
 // Quality 5 (about what a CDN uses on the fly; q11 takes a minute on 10 MB). q9 is 2.9 MiB, q4 3.3 MiB.

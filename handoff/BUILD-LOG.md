@@ -968,3 +968,112 @@ Inputs: the three 2026-10-01 reports (traffic realism, multilingual, competitor 
   - No redistribution of the spec, and no exclusive-rights claims.
   - HWPX is the OWPML national standard (KS X 6101); guides state it only with a fetched quote.
   - Users' documents are processed locally only, so there is no copyright or reproduction issue on our side.
+
+## A0 /hwp-viewer/ build notes (Bob, 2026-10-01; branch cloud-handoff: V0 d109a7f, V1 241a438, V2 the next commit)
+Status: **DONE_WITH_CONCERNS** (Lighthouse noise at the 2,000 ms line; see Known Gaps). Nothing pushed.
+
+### V0 — /hwp-to-pdf/ LCP (B0 moved here)
+- hwp.css is inlined on the page (`?inline` + `<style is:inline>`; CSP style-src already has 'unsafe-inline'), so there is one render-blocking stylesheet.
+- The page script is `hwp-shared/boot.ts`. It imports the controller after the first contentful paint (PerformanceObserver 'paint', 1.5 s fallback) and idle, or at once on the first interaction (pointerdown, keydown, focusin, touchstart, change, drag). A file picked or dropped before then is handed over. A press on the picker still starts the wasm prefetch. A controller that fails to load twice shows the engine panel. Unit test: hwp-boot.test.ts.
+- boot.ts sits in the `ui-shared` manual chunk (astro.config.mjs). As its own chunk it was one more request before first paint (LCP 1,966 → 2,040). Cost: ui-shared grows by 0.7 KB gzip on the other tool pages.
+- Gotcha: a *dynamic* import of a ui-shared module from the entry makes rolldown build a namespace object with its runtime helper, which lives in the export chunk. The entry then imported the 345 KB export chunk (initial JS 353 KB). Use static imports only.
+- Result (Lighthouse, 3 runs, this PC): /hwp-to-pdf/ median 2,105–2,190 ms at f6b40a6 → 1,953–1,955 ms.
+
+### V1 — src/tools/hwp-shared/ (behaviour-free, own commit 241a438)
+- Moved: boot, download, export-chunk, fonts, hwp.css, lazy, limits, messages, viewer and watchdog. controller.ts became session.ts (`startHwpSession`). hwp-to-pdf/controller.ts is a thin wrapper, so the lazy chunk keeps the `controller.*` name that the service worker precaches.
+- Every file under hwp-shared/ and hwp-viewer/ starts with the HANCOM_NOTICE comment (hwp-notice.test.ts).
+- Gates: the normalised /hwp-to-pdf/ dist HTML is byte-equal to V0; hwp-to-pdf e2e 104/104 on 5 projects; regress:hwp --fixtures-only 10/10; the check-dist export-chunk import rule holds.
+
+### V2 — the page
+- **Step 0 (search):** rhwp `getPageTextLayout()` does return text without an SVG. But on the 10 fixtures it misses characters the page draws on 116 of 236 pages (adm19 p8: 619 vs 725). So the worker gets `{type:'text', i}`: it renders the page, keeps only the drawn text (`glyphText` in svg-string.ts: every `<text>`, in drawing order) and drops the SVG. That order is the page DOM's, so a hit can be found again among the page's `<text>` elements and marked there.
+- **Session hooks (`HwpHooks`):**
+  - warmExport: false on the viewer, so the export chunk loads on the first 「PDF로 내려받기」;
+  - viewer options: zoomable, onRendered, onCleared;
+  - onOpening, onDocument, onClear.
+  - `requestText` has its own waiters, released together with the page waiters. With no worker it goes through send(), which shows the engine panel (the P1-2 rule). #hw-note is optional.
+- **Page window:** zoomable pages get a fixed box, `calc(w px * var(--hv-zoom))` by `calc(h px * …)`, so drawing or dropping a page never shifts the others. The preview has `overflow-anchor: none`; the controls keep the page in view themselves.
+- **Controls** (hwp-viewer/ui.ts, loaded when a file starts opening):
+  - 이전/다음, the page box, 너비 맞춤/쪽 맞춤, and −/+ in steps from 50 to 300 % (a fit may be smaller than 50 %), 쪽 목록 and 찾기;
+  - fit width under 768 px, fit page otherwise;
+  - after a page change or a zoom, that page stays current even when several pages fit in view.
+- **Page list:** a side list at 900 px and wider, a bottom sheet with 닫기 below that (Escape closes it; opening it scrolls the controls above the sheet).
+  - Tiles are DOM only. The mini preview is an `<svg><use href="#hv-p{i}">` of the page drawing already on screen; it is removed when the page leaves the window.
+  - Virtualised above 100 pages (fixed 104×150 tiles).
+- **Search:**
+  - NFC with every whitespace character removed; non-overlapping hits;
+  - pages 1..min(N, GUARD_PAGES); texts are cached per document;
+  - 멈추기 cancels. Status lines: 「n개 찾음」, 「찾기를 멈췄어요 · …」, 「… 처음 100쪽에서 …」;
+  - 이전/다음 walk the hits. The hit is marked over its glyphs (boxes in %, so zoom keeps them) and scrolled to the middle.
+- **Copy:** browsers copy a selection of rhwp's per-glyph `<text>` elements one glyph per line. The viewer answers the copy event itself (select.ts): the selected glyphs in drawing order, a line break on a new baseline, the text-layer spaces, and a space for any gap over 1.5 em.
+- **PDF CTA in-page (Arch):** 「PDF로 내려받기」 and 「그래도 PDF로 내려받기」 run the shared export for the open document.
+- The controls' CSS is imported `?inline` and added with the controls. An imported stylesheet would be linked in the page head by Astro and block rendering.
+- The app module is `hwp-viewer/app.ts`, not controller.ts, so the service worker precaches only the viewer HTML (plus the shared entry).
+- **tools.ts `hwp-viewer`:** live, updated 2026-10-01, title and H1 per the brief, FAQ including the HANCOM_NOTICE answer.
+  - OG image and description added. The home cards, ItemList, sitemap and llms.txt follow LIVE_TOOLS.
+  - RelatedTools: the viewer and the converter link each other; hwp-to-pdf now lists /hwp-viewer/ first.
+  - The home meta description and og:description templates are shortened to fit 6 tool names (≤ 120 and ≤ 80 characters).
+- **Guides:** all three are published, in category 한글파일 (the `topic` field is A1 work), with tools [hwp-viewer, hwp-to-pdf]; NEXT_GUIDES maps hwp-viewer → the three.
+  - The `hwp-viewer` draft is renamed `open-hwp-without-hangul` ("한글 없이 HWP 파일 여는 법").
+  - `hwp-on-phone` uses Apple sources only.
+    - Kakao help (cs.kakao.com via chrome-cdp; queries 파일 저장, 파일 저장 위치, 받은 파일, 파일 다운로드 경로, 저장 경로, 파일 전송, 채팅방 저장소) has PC and 톡클라우드 articles only.
+    - The samsung.com/sec support search returned an empty result page.
+    - So the Android steps describe our page only, and the Kakao FAQ says the source was not found (Growth G page-6 rule).
+  - `what-is-hwpx`: OWPML / KS X 6101, quoted from tech.hancom.com and from the Hancom FAQ.
+- **Tool facts:** hwp.maxMb.desktop/mobile, hwp.pdfMb.mobile, hwp.pdfPages.mobile and hwp-viewer.searchPages, read from LIMITS / GUARD_PAGES (MB = 1,000,000).
+- **docs/COPY.md:** the two 해요체 lines the brief fixes are logged as an exception; the rest of the viewer copy is 합니다체. UI-font glyphs: the copy was reworded until it added 0 new code points.
+- **Scripts:**
+  - check-dist: viewer initial JS ≤ converter + 4 KB; ui*.js never initial; controls ≤ 20 KB gzip;
+  - lighthouserc: adds /hwp-viewer/ and the 3 guides;
+  - qa:visual: adds the hwpview page and the hwpv states;
+  - new: `npm run regress:hwp-viewer`.
+- e2e: the viewer spec uses `reducedMotion: 'reduce'`. The site's smooth window scroll raced Playwright's scroll-into-view, and on Firefox the pointer landed mid-scroll (pointerdown on 「다음」, no click).
+
+### G2 A0 Step 0 sources (fetched 2026-10-01 from this PC)
+| URL | via | status / bytes | quotes used |
+|---|---|---|---|
+| https://tech.hancom.com/hwpxformat/ | curl | 200 / 144,696 | "한글의 표준 포맷 HWPX는 국가 표준(KS X 6101)인 OWPML을 따르는 개방형 문서 포맷입니다." · "HWP는 바이너리 포맷이고, HWPX는 XML 파일들이 ZIP 구조로 구성되어 있다는 점에서 가장 큰 차이가 있습니다." |
+| https://www.hancom.com/support/faqCenter/faq/detail/2784 | curl | 200 / 222,923 | "국가표준(KSX6101)으로 등록되어 있는 개방형 문서 포맷입니다." · "기존 설치된 한글 뷰어에서는 HWP뿐만 아니라 HWPX도 지원하고 있습니다." · "도구 > 환경설정 > 파일탭에서 …" · "…별도 기능 제한은 없습니다." |
+| https://www.hancom.com/support/downloadCenter/download (redirect from /cs_center/csDownload.do) | curl | 200 / 221,427 | "한글, 한셀, 한쇼 뿐만 아니라 MS 워드, 파워포인트, 엑셀 문서를 불러올 수 있는 한컴오피스 통합 뷰어입니다." · "운영 체제 : Windows 10 이상" |
+| https://support.apple.com/ko-kr/guide/iphone/iph7fe7a50a7/ios | curl | 200 / 1,388,625 | "메시지에서 첨부 파일을 길게 터치하고 다음 중 하나를 수행하십시오." · "파일 앱에 저장하기: 파일 앱에 저장을 선택하십시오." |
+| https://support.apple.com/ko-kr/guide/iphone/iphc9cd7266c/ios | curl | 200 / 1,381,618 | "파일 앱에서 인터넷 또는 메일 앱으로 다운로드한 문서, 이미지 및 기타 파일을 찾고 확인할 수 있습니다." · "다운로드 폴더를 탭하여 다운로드한 파일을 확인하십시오." |
+| cs.kakao.com search (7 queries) | chrome-cdp | rendered | none usable (PC / 톡클라우드 only) |
+| www.samsung.com/sec/support/search/?keyword=내 파일 다운로드 | chrome-cdp | rendered, 0 results | none |
+
+`node scripts/ops/source-watch.mjs --dry-run`: 15 sources; all 47 quotes found verbatim.
+
+### Gates (PUBLIC_SITE_URL=https://docttak.com)
+- astro check: 0 errors (1 hint). Unit: 669/669 (41 files).
+- **Build flag off → dist-noauto:** check-dist OK, 2,329 files. UI fonts 183.3 KB. Precache 416.6 / 450 KB.
+- **Build flag on:** check-dist OK, 2,336 files.
+  - **UI fonts 184.8 / 190 KB; A0 delta +0.0 KB** (400 43.8, 600 46.8, 700 47.3, 800 46.9).
+  - Precache 419.1 / 450 KB (was 391.3).
+  - Export chunk 345.1 / 360 KB. Viewer chunk 2.4 KB. Viewer controls 12.0 / 20 KB.
+  - Initial JS: /hwp-to-pdf/ and /hwp-viewer/ 7.7 KB each; viewer over converter 0.0 / 4 KB.
+- check:licenses (flag off): OK, 36 packages, 5 components.
+- **regress:hwp, full corpus** (CORPUS_DIR C:\dev\doc-tools-kr\spikes\hwp\corpus, PRINT_DIR from hwpdl): **120/120, all pass rules.**
+  - 0 fallback pages of 2,280.
+  - SSIM against the print path: mean 0.996, worst page 0.934 (na07).
+  - Memory max 1,466 MB (kr01), budget 1,536 MB.
+- **regress:hwp-viewer, full corpus: 120/120.** Every page of every file was drawn (2,280 pages), and the page count equals the converter's PDF on all 120 files. adm16 (411 pages, viewer-only) took 83 s, kr01 (viewer-only) 12 s. Fixtures-only: 10/10.
+- **e2e** (5 projects + manual-chromium, no-upload fixture on every test): 976 passed, 0 failed, 5 flaky, 172 skipped.
+  - The 5 flaky are Firefox in untouched specs (photo-compress ×2, polish ×2, site 360 px); all passed on retry.
+  - Two expectations were updated for the sixth tool and then re-run green on all projects (11/11): the hwp-to-pdf 관련 안내 list and the id-photo RelatedTools count.
+  - hwp-viewer.spec: 23 tests × 5 projects, 0 failures in the full run. It covers open .hwp/.hwpx, navigation and page list, mini preview pixels, virtualised list, zoom keeps the page, pinch not blocked, copy (and clipboard on Chromium), search with jump, mark and 멈추기 plus the 100-page guard, PDF CTA page count, viewer-first, KakaoTalk iOS/Android UAs, errors, engine 404, export-chunk 404, bfcache ×2, 360 px layout, axe and SEO/legal.
+- **Lighthouse** (lhci, 3 runs, Playwright Chromium 1243): perf 99–100, a11y/bp/seo 100, CLS ≤ 0.002 on all 14 URLs.
+  - Targeted runs (3×3): /hwp-viewer/ medians 1,954 / 1,959 / 1,951 ms; /hwp-to-pdf/ medians 1,954 / 1,954 / 1,954 ms.
+  - In the same runs at f6b40a6: /hwp-to-pdf/ 2,190 / 2,108 / 2,190 ms.
+  - Full 14-URL run: /hwp-to-pdf/ 1,953, /hwp-viewer/ **2,040** (1,953 / 2,040 / 2,040). Guides open-hwp-without-hangul 1,710, hwp-on-phone 1,710, what-is-hwpx 1,654.
+  - In that full run, untouched pages also had a 2,040 ms median: id-photo, pdf-compress, photo-compress. At f6b40a6, pdf-merge was 2,040 in 4 of 4 runs. See Known Gaps.
+- **qa:visual** (local dist): 236 PNGs, 0 hard failures. The new states are hwpv-d/m 01 empty, 02 document, 03 search, and m-04 page-list sheet.
+  - The hwpv-d document state records CLS 0.19. That is the result area replacing the picker after a programmatic setInputFiles (no input event); /hwp-to-pdf/ has the same layout change. Lighthouse CLS is 0.000.
+
+### Known Gaps (A0)
+- **Lighthouse is bimodal on this PC:** every tool page lands at about 1,953 or 2,040 ms per run, untouched pages included.
+  - At f6b40a6, /pdf-merge/ had medians of 2,040 ×3, and /photo-compress/ 2,040 in the full run.
+  - The 2,040 ms runs coincide with the 700 UI face (49 KB, needed by every .btn and summary) being requested before ui-shared and the manifest.
+  - A real fix is site-wide (fonts) and outside A0.
+- Owner-only: a real iPhone Safari and KakaoTalk in-app check of open, zoom, search, copy and PDF download on /hwp-viewer/.
+- Not done (scope):
+  - the 404 suggestion map and the ops `suggestTool` still send HWP queries to /hwp-to-pdf/ only;
+  - the hwp-to-pdf FAQ "HWP 뷰어로만 써도 되나요?" has no link to /hwp-viewer/, because the page template does not render FAQ links.
+- Post-deploy (PC or owner): Kakao share-cache refresh, Naver 수집 요청, and GSC inspection for /hwp-viewer/ and the 3 guides.

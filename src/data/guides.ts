@@ -28,11 +28,12 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
 }
 
 /**
- * The next step after a tool no published guide points at yet: HWP PDF 변환 → the PDF guides (its own guides
- * stay drafts until an official Hancom source is fetched).
+ * Next-step guides of a tool, after the guides that name it (at most 3 per tool): HWP PDF 변환 → the PDF guides;
+ * HWP·HWPX 파일 보기 → the three HWP guides (G2 A0).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
+  'hwp-viewer': ['open-hwp-without-hangul', 'hwp-on-phone', 'what-is-hwpx'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"), then its next-step guides, at most `max`. */

@@ -2,19 +2,21 @@
 // HWP PDF 변환 worker (brief Step 5 §2). One document per worker; cancel and reset terminate it.
 // In:  {type:'open', bytes, inflateCap}  (the file's ArrayBuffer, transferred; the device's inflate cap)
 //      {type:'render', i}    (one page; the page drives the order, so a cancel is a run token, not a restart)
+//      {type:'text', i}      (one page's drawn text for the viewer's search: rendered, read, discarded)
 //      {type:'close'}        (doc.free())
 //      {type:'warm'}         (preload: answers at once; loading this script was the point, never the 10 MB wasm)
-// Out: progress | scanned | parsed | page | error {code} | warm-done
+// Out: progress | scanned | parsed | page | text | error {code} | warm-done
 // The scan runs before the engine loads, so a non-HWP, password or damaged file never downloads the wasm.
 import init, { HwpDocument } from '@rhwp/core';
 import { HwpError, type HwpErrorCode } from './errors';
 import { openDocument, pageInfos, renderPage, type PageInfo, type RhwpDocument } from './engine';
+import { glyphText } from './svg-string';
 import { scanFeatures, type Features } from './features';
 import type { TextRun } from './svg-dom';
 import { withEngineRetry } from '../ui/engine-load';
 import { loadRhwpModule } from './wasm-browser';
 
-export type HwpRequest = { type: 'open'; bytes: ArrayBuffer; inflateCap?: number } | { type: 'render'; i: number } | { type: 'close' } | { type: 'warm' };
+export type HwpRequest = { type: 'open'; bytes: ArrayBuffer; inflateCap?: number } | { type: 'render'; i: number } | { type: 'text'; i: number } | { type: 'close' } | { type: 'warm' };
 
 export type HwpResponse =
   | { type: 'progress'; phase: 'engine'; loaded: number; total: number }
@@ -22,6 +24,7 @@ export type HwpResponse =
   | { type: 'scanned'; format: Features['format']; equations: number; textboxes: number; imageBytes: number; distribution: boolean }
   | { type: 'parsed'; pages: number; pageInfos: PageInfo[]; wasmBytes: number; measureCalls: number }
   | { type: 'page'; i: number; svg: string; runs: TextRun[]; failed: boolean; measureCalls: number; ms: number }
+  | { type: 'text'; i: number; text: string; failed: boolean }
   | { type: 'error'; code: HwpErrorCode }
   | { type: 'warm-done' };
 
@@ -98,6 +101,16 @@ function render(i: number): void {
   }
 }
 
+/** The page's drawn text only: the SVG string is dropped here, so a search never holds page drawings. */
+function text(i: number): void {
+  if (!doc) return;
+  try {
+    post({ type: 'text', i, text: glyphText(doc.renderPageSvg(i)), failed: false });
+  } catch {
+    post({ type: 'text', i, text: '', failed: true });
+  }
+}
+
 function codeOf(err: unknown): HwpErrorCode {
   if (err instanceof HwpError) return err.code;
   if ((err as { code?: unknown } | null)?.code === 'engine') return 'engine';
@@ -114,6 +127,8 @@ self.onmessage = async (ev: MessageEvent<HwpRequest>) => {
       await open(msg.bytes, msg.inflateCap);
     } else if (msg.type === 'render') {
       render(msg.i);
+    } else if (msg.type === 'text') {
+      text(msg.i);
     } else if (msg.type === 'close') {
       doc?.free();
       doc = null;

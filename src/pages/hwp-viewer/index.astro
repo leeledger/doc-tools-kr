@@ -1,0 +1,191 @@
+---
+// /hwp-viewer/ (G2 A0): open and read a .hwp/.hwpx in the page. The document session, caps, guards, worker
+// and PDF export are the ones of /hwp-to-pdf/ (src/tools/hwp-shared/); the controls are src/tools/hwp-viewer/.
+// Legal (G2 A0): the page is named descriptively, never after Hancom's products; HANCOM_NOTICE is shown, in
+// the help and in the FAQ; TRADEMARK_NOTICE is shown; "원본과 다르게 보일 수 있어요." is shown next to the
+// viewer and in the help.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { COPY, HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
+import { VIEWER_COPY } from '../../tools/hwp-viewer/copy';
+// The shared tool styles are inlined, as on /hwp-to-pdf/ (one render-blocking stylesheet; G2 A0/V0). The
+// controls' own styles load with them (src/tools/hwp-viewer/viewer.css).
+import hwpCss from '../../tools/hwp-shared/hwp.css?inline';
+
+const tool = getTool('hwp-viewer');
+const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
+const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx';
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={hwpCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">한글 프로그램을 설치하지 않아도 HWP·HWPX 문서를 바로 열어 볼 수 있습니다. 쪽을 넘겨 보고, 크게 보고, 글자를 찾아 복사하세요. 필요하면 PDF로도 내려받습니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="HWP·HWPX 파일 보기 도구">
+    <div class="wrap">
+      <div id="hwp-tool" class="hwp hv" data-state="empty">
+        <p class="notice" id="hw-notice" role="status" hidden></p>
+        <div class="drop" id="hw-drop">
+          <input id="hw-input" class="file-input" type="file" accept={accept}>
+          <label class="btn primary" for="hw-input" id="hw-pick">HWP 파일 열기</label>
+          <p class="drop-hint">또는 여기에 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱이나 다운로드 폴더에서 고를 수 있습니다.</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <div class="progress-box" id="hw-progress" hidden>
+          <p id="hw-progress-text">문서를 여는 중</p>
+          <progress id="hw-progress-bar" aria-labelledby="hw-progress-text"></progress>
+          <button type="button" class="btn ghost" id="hw-cancel">취소</button>
+        </div>
+
+        <EngineError />
+        <p class="error-box" id="hw-error" role="alert" data-live="alert" tabindex="-1" hidden></p>
+
+        <div class="hw-result" id="hw-result" hidden>
+          <p class="result-title" id="hw-file-name" tabindex="-1"></p>
+          <p class="hint hv-differ">{VIEWER_COPY.differ}</p>
+          <p class="notice warn" id="hw-banner" role="status" hidden></p>
+          <div class="row hw-actions">
+            <button type="button" class="btn primary" id="hw-save" hidden>PDF로 내려받기</button>
+            <button type="button" class="btn ghost" id="hw-force" hidden>그래도 PDF로 내려받기</button>
+            <button type="button" class="btn ghost" id="hw-reset">다른 문서 열기</button>
+          </div>
+          <p class="hint" id="hw-eq-note" hidden>{COPY.equations}</p>
+          <div class="notice hw-done" id="hw-done" hidden>
+            <p id="hw-done-text"></p>
+            <p><a id="hw-again" download>다시 내려받기</a> · <a href="/pdf-compress/">저장한 PDF가 크면 PDF 용량 줄이기</a></p>
+            <Share name={tool.name} text={sharePreview('/hwp-viewer/', Astro.site!).description} id="hv-share" />
+          </div>
+
+          <div class="hv-bar" id="hv-bar" role="toolbar" aria-label="문서 보기 도구" hidden>
+            <div class="hv-group">
+              <button type="button" class="btn ghost" id="hv-prev">이전</button>
+              <span class="hv-page">
+                <input id="hv-page" type="text" inputmode="numeric" autocomplete="off" aria-label="쪽 번호" value="1">
+                <span id="hv-total">/ 1</span>
+              </span>
+              <button type="button" class="btn ghost" id="hv-next">다음</button>
+            </div>
+            <div class="hv-group">
+              <button type="button" class="btn ghost" id="hv-fit-width" aria-pressed="false">너비 맞춤</button>
+              <button type="button" class="btn ghost" id="hv-fit-page" aria-pressed="false">쪽 맞춤</button>
+              <button type="button" class="btn ghost" id="hv-zoom-out" aria-label="축소">−</button>
+              <output class="hv-zoom" id="hv-zoom" aria-label="배율">100%</output>
+              <button type="button" class="btn ghost" id="hv-zoom-in" aria-label="확대">+</button>
+            </div>
+            <div class="hv-group">
+              <button type="button" class="btn ghost" id="hv-thumbs-toggle" aria-expanded="false" aria-controls="hv-thumbs">쪽 목록</button>
+              <button type="button" class="btn ghost" id="hv-find-toggle" aria-expanded="false" aria-controls="hv-find">찾기</button>
+            </div>
+          </div>
+
+          <form class="hv-find" id="hv-find" role="search" aria-label="문서에서 찾기" hidden>
+            <label for="hv-q">문서에서 찾기</label>
+            <input id="hv-q" type="search" enterkeyhint="search" autocomplete="off">
+            <button type="submit" class="btn primary">찾기</button>
+            <button type="button" class="btn ghost" id="hv-find-stop" hidden>멈추기</button>
+            <div class="hv-find-line">
+              <p id="hv-find-status"></p>
+              <p id="hv-hit-pos"></p>
+              <button type="button" class="btn ghost" id="hv-hit-prev" disabled>이전</button>
+              <button type="button" class="btn ghost" id="hv-hit-next" disabled>다음</button>
+            </div>
+          </form>
+
+          <div class="hv-body">
+            <nav class="hv-thumbs" id="hv-thumbs" aria-label="쪽 목록" hidden>
+              <div class="hv-sheet-head"><span>쪽 목록</span><button type="button" class="btn ghost" id="hv-thumbs-close">닫기</button></div>
+              <div class="hv-tiles" id="hv-tiles"></div>
+            </nav>
+            <div class="hw-preview" id="hw-preview" tabindex="0" role="region" aria-label="문서 보기"></div>
+          </div>
+        </div>
+
+        <p class="visually-hidden" id="hw-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="hwp-viewer-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>HWP 파일 열기</strong><span>HWP·HWPX 문서를 고르거나 여기에 끌어다 놓습니다.</span></li>
+        <li><strong>넘겨 보기·찾기</strong><span>쪽을 넘기고, 크게 보고, 「찾기」로 단어를 찾습니다. 글자를 골라 복사할 수도 있습니다.</span></li>
+        <li><strong>필요하면 PDF로</strong><span>「PDF로 내려받기」를 누르면 같은 문서가 PDF 파일로 저장됩니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">안전한 이유</h2>
+      <ul class="points">
+        <li><strong>밖으로 보내지 않습니다</strong><span>문서는 이 기기 안에서만 열리고, 인터넷으로 어디에도 보내지지 않습니다.</span></li>
+        <li><strong>설치하지 않습니다</strong><span>한글 프로그램이나 다른 앱을 설치하지 않아도 됩니다.</span></li>
+        <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="help" aria-labelledby="help-title">
+    <div class="wrap narrow">
+      <h2 id="help-title">도움말</h2>
+      <h3>원본과 다를 수 있는 문서</h3>
+      <p>{VIEWER_COPY.differ}</p>
+      <ul>
+        <li>문서에 쓴 글꼴이 없으면 다른 글꼴로 보여 드려 줄바꿈이나 쪽 나눔이 조금 다를 수 있습니다.</li>
+        <li>수식이 들어 있는 문서는 수식 모양이 원본과 다를 수 있습니다.</li>
+        <li>글상자·도형이 많은 문서는 도형의 위치가 원본과 다를 수 있습니다.</li>
+      </ul>
+      <h3>찾기</h3>
+      <p>「찾기」는 빈칸을 빼고 찾으므로 두 줄에 걸친 단어도 찾습니다. 100쪽이 넘는 문서는 처음 100쪽에서 찾습니다.</p>
+      <h3>한글(HWP) 문서 관련 고지</h3>
+      <p>{HANCOM_NOTICE}</p>
+      <p>{TRADEMARK_NOTICE}</p>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['hwp-to-pdf', 'pdf-compress']} />
+  <div class="wrap narrow"><AdSlot id="hwp-viewer-footer" size="leaderboard" /></div>
+  <aside class="tool-legal" aria-label="한글(HWP) 문서 관련 고지">
+    <div class="wrap narrow">
+      <p>{HANCOM_NOTICE}</p>
+      <p>{TRADEMARK_NOTICE}</p>
+    </div>
+  </aside>
+</Base>
+
+
+<script>
+  import { bootHwpTool } from '../../tools/hwp-shared/boot';
+  bootHwpTool('hwp-tool', () => import('../../tools/hwp-viewer/app').then((m) => m.initHwpViewer));
+</script>

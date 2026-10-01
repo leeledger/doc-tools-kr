@@ -16,3 +16,5 @@
 .help ol, .help ul { padding-left: 22px; }
 .tool-legal { margin-top: 12px; color: var(--muted); font-size: 14px; }
 .tool-legal p { margin: 4px 0; }
+/* /hwp-viewer/ (G2 A0): the tool box is wide for the pages; the picker and the messages keep the narrow width. */
+.hv > .drop, .hv > .progress-box, .hv > .error-box, .hv > .notice { max-width: 720px; margin-left: auto; margin-right: auto; }

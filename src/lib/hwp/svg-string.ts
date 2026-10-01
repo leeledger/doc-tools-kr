@@ -58,3 +58,23 @@ export function scopeIds(svg: string, pre: string): string {
     .replace(/url\(#([^)]+)\)/g, (_m, id: string) => `url(#${pre}${id})`)
     .replace(/(xlink:href|href)="#([^"]+)"/g, (_m, a: string, id: string) => `${a}="#${pre}${id}"`);
 }
+
+const ENTITY: Record<string, string> = { lt: '<', gt: '>', amp: '&', quot: '"', apos: "'" };
+const decode = (s: string): string =>
+  s.replace(/&(#x[0-9a-f]+|#\d+|lt|gt|amp|quot|apos);/gi, (m, e: string) => {
+    if (e[0] !== '#') return ENTITY[e.toLowerCase()] ?? m;
+    const cp = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+    return Number.isFinite(cp) && cp >= 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : m;
+  });
+
+/**
+ * The text a page shows, in drawing order: the content of every <text> element (inner tags dropped, entities
+ * decoded), joined. The search of /hwp-viewer/ reads this, not getPageTextLayout(): on the 10 fixtures the
+ * layout runs miss characters the page draws on 116 of 236 pages (G2 A0 Step 0, BUILD-LOG). The order is the
+ * order of the <text> elements in the page DOM, so a hit can be found again among them.
+ */
+export function glyphText(svg: string): string {
+  let out = '';
+  for (const m of svg.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g)) out += decode(m[1].replace(/<[^>]*>/g, ''));
+  return out;
+}

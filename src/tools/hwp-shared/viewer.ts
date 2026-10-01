@@ -29,6 +29,8 @@ export interface Viewer {
   isRendered(i: number): boolean;
   /** Inserts page i (a page that is no longer wanted in lazy mode is dropped). */
   insert(i: number, svg: string, runs: TextRun[], failed: boolean): void;
+  /** The placeholder of page i (it holds the page SVG while the page is in the window). */
+  pageElement(i: number): HTMLDivElement | undefined;
   destroy(): void;
 }
 
@@ -38,6 +40,12 @@ export interface ViewerOptions {
   /** Asks for page i; the controller answers with insert(). */
   request?: (i: number) => void;
   pageFailedText: string;
+  /** Page sizes follow the CSS variable --hv-zoom (1 = the page's own size) instead of the box width. */
+  zoomable?: boolean;
+  /** Page i was drawn (or shown as failed) in `el`. */
+  onRendered?: (i: number, el: HTMLDivElement) => void;
+  /** Page i left the window (its drawing was removed). */
+  onCleared?: (i: number) => void;
 }
 
 export function createViewer(opts: ViewerOptions): Viewer {
@@ -49,7 +57,11 @@ export function createViewer(opts: ViewerOptions): Viewer {
     el.setAttribute('role', 'group');
     el.setAttribute('aria-label', `${i + 1}쪽`);
     el.dataset.page = String(i);
-    el.style.maxWidth = `${p.w}px`;
+    if (opts.zoomable) {
+      // A fixed box per page: drawing or dropping a page never moves the pages after it.
+      el.style.width = `calc(${p.w}px * var(--hv-zoom, 1))`;
+      el.style.height = `calc(${p.h}px * var(--hv-zoom, 1))`;
+    } else el.style.maxWidth = `${p.w}px`;
     el.style.aspectRatio = `${p.w} / ${p.h}`;
     return { el, state: 'empty' };
   });
@@ -57,9 +69,11 @@ export function createViewer(opts: ViewerOptions): Viewer {
 
   const visible = new Set<number>();
   const clear = (s: Slot): void => {
+    const was = s.state === 'rendered';
     s.el.replaceChildren();
     s.el.classList.remove('rendered', 'failed');
     s.state = 'empty';
+    if (was) opts.onCleared?.(Number(s.el.dataset.page));
   };
   const wanted = (i: number): boolean => {
     // Before the first observer callback the preview shows its top: the first page and the window after it.
@@ -113,6 +127,7 @@ export function createViewer(opts: ViewerOptions): Viewer {
         s.el.replaceChildren(p);
         s.el.classList.add('rendered', 'failed');
         s.state = 'rendered';
+        opts.onRendered?.(i, s.el);
         return;
       }
       const svg = parsed.svg;
@@ -125,10 +140,15 @@ export function createViewer(opts: ViewerOptions): Viewer {
       stats.spacesAdded += addSpaces(adopted, runs);
       s.el.classList.add('rendered');
       s.state = 'rendered';
+      opts.onRendered?.(i, s.el);
     },
+    pageElement: (i) => slots[i]?.el,
     destroy() {
       io.disconnect();
-      for (const s of slots) clear(s);
+      for (const s of slots) {
+        s.el.replaceChildren();
+        s.state = 'empty';
+      }
       root.replaceChildren();
     },
   };
