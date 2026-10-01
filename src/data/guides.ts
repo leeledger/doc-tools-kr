@@ -1,9 +1,12 @@
-// Published guides (Growth G.1): drafts are never rendered, linked, listed or submitted.
+// Published guides (Growth G.1): drafts are never rendered, linked, listed or submitted. Hubs (G2 A1) live in
+// their own collection and are listed with the guides wherever all /guide/ pages are (sitemap, RSS, llms.txt).
 import { getCollection, type CollectionEntry } from 'astro:content';
-import type { Category, GuideData } from './guide-schema';
+import { TOPICS, type Category, type GuideData, type Topic } from './guide-schema';
+import type { HubData } from './hub-schema';
 
 /** A published guide (drafts carry a different, smaller frontmatter and are never rendered). */
 export type Guide = Omit<CollectionEntry<'guides'>, 'data'> & { data: GuideData };
+export type Hub = Omit<CollectionEntry<'hubs'>, 'data'> & { data: HubData };
 
 const isPublished = (e: CollectionEntry<'guides'>): e is Guide => e.data.draft === false;
 
@@ -13,6 +16,18 @@ export const guidePath = (slug: string): string => `/guide/${slug}/`;
 export async function publishedGuides(): Promise<Guide[]> {
   const all = (await getCollection('guides')).filter(isPublished);
   return all.sort((a, b) => a.data.category.localeCompare(b.data.category, 'ko') || a.data.title.localeCompare(b.data.title, 'ko'));
+}
+
+/** The hub pages, by slug. */
+export async function hubs(): Promise<Hub[]> {
+  return (await getCollection('hubs')).sort((a, b) => a.id.localeCompare(b.id)) as Hub[];
+}
+
+/** One hub; a missing file fails the build. */
+export async function hubBySlug(slug: string): Promise<Hub> {
+  const h = (await hubs()).find((x) => x.id === slug);
+  if (!h) throw new Error(`hub "${slug}" has no src/content/hubs/${slug}.md`);
+  return h;
 }
 
 /** Published guides by slug, in the given order; a missing or draft slug is dropped (with a build warning). */
@@ -29,11 +44,12 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
 
 /**
  * Next-step guides of a tool, after the guides that name it (at most 3 per tool): HWP PDF 변환 → the PDF guides;
- * HWP·HWPX 파일 보기 → the three HWP guides (G2 A0).
+ * HWP·HWPX 파일 보기 → the three HWP guides (G2 A0); PDF 합치기 → 대학 원서 서류 (G2 A1).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
   'hwp-viewer': ['open-hwp-without-hangul', 'hwp-on-phone', 'what-is-hwpx'],
+  'pdf-merge': ['univ-docs-upload'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"), then its next-step guides, at most `max`. */
@@ -45,3 +61,8 @@ export async function guidesForTool(slug: string, max = 4): Promise<Guide[]> {
 }
 
 export const CATEGORY_ORDER: readonly Category[] = ['사진', 'PDF', '한글파일'];
+
+/** The /guide/ index groups (G2 A1): TOPICS order, empty topics left out, each guide exactly once. */
+export function topicGroups(guides: readonly Guide[]): { topic: Topic; items: Guide[] }[] {
+  return TOPICS.map((topic) => ({ topic, items: guides.filter((g) => g.data.topic === topic) })).filter((g) => g.items.length > 0);
+}

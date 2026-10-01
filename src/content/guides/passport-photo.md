@@ -7,6 +7,7 @@ answer: 여권사진은 가로 3.5 cm·세로 4.5 cm이고, 온라인 신청용 
 published: '2026-09-30'
 updated: '2026-09-30'
 category: 사진
+topic: 여권·신분증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=passport_online', label: '여권사진 규격에 맞추기' }
 related: [id-photo-size, id-photo-kb, gosi-photo]
@@ -68,6 +69,11 @@ sources:
     title: 외교부 여권안내 — 여권사진 규격
     quote: 이어폰, 헤드폰 등 무선 핸즈프리는 착용 불가함
     retrieved: '2026-09-30'
+spec:
+  - label: 여권 사진 (온라인 신청·정부24, 권장 크기)
+    kind: photo
+    preset: passport_online
+    format: JPG·JPEG
 faq:
   - q: 여권사진에 귀가 보여야 하나요?
     a: 외교부는 얼굴을 너무 가까이서 찍어 이마가 크게 보이고 귀가 덜 보이는 사진을 실물과 다르게 보이는 예로 들어요. 알맞은 거리에서 얼굴 윤곽이 모두 보이게 찍어 주세요.

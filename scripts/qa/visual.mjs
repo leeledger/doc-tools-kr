@@ -37,6 +37,11 @@ const PAGES = [
   ['terms', '/terms/'],
   ['licenses', '/licenses/'],
   ['404', '/__qa-missing-page/'],
+  // G2 A1: the topic-grouped index, both hubs and a new guide.
+  ['guides', '/guide/'],
+  ['hubphoto', '/guide/photo-sizes/'],
+  ['hubupload', '/guide/upload-limits/'],
+  ['admission', '/guide/admission-photo/'],
 ];
 const MAIN = PAGES.slice(0, 3);
 const VIEWPORTS = {

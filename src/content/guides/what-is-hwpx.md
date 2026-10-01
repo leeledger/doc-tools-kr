@@ -7,6 +7,7 @@ answer: HWPX는 한글 문서를 XML 파일로 저장하는 개방형 문서 형
 published: '2026-10-01'
 updated: '2026-10-01'
 category: 한글파일
+topic: 한글파일
 tools: [hwp-viewer, hwp-to-pdf]
 cta: { href: '/hwp-viewer/', label: 'HWP·HWPX 파일 보기' }
 related: [open-hwp-without-hangul, hwp-on-phone]

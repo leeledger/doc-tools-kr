@@ -10,7 +10,7 @@ import { accessToken, fetchGrowth, parseServiceAccount, signJwt } from '../../sc
 import { sumDays } from '../../scripts/ops/lib/cloudflare.mjs';
 import { R1, isoWeek, parseReportData, r1Status, renderReport, weekMonday } from '../../scripts/ops/lib/report.mjs';
 import { coveredBy, findOpportunities, suggestTool } from '../../scripts/ops/opportunities.mjs';
-import { checkSources } from '../../scripts/ops/source-watch.mjs';
+import { checkSources, issueBody, run as sourceWatch } from '../../scripts/ops/source-watch.mjs';
 import { checkHealth } from '../../scripts/ops/health.mjs';
 import { run as waitDeploy } from '../../scripts/ops/wait-deploy.mjs';
 import { run as indexnowDiff } from '../../scripts/ops/indexnow-diff.mjs';
@@ -159,6 +159,26 @@ describe('quotes (A-3)', () => {
     expect(r.changed).toHaveLength(1);
     expect(r.changed[0]).toMatchObject({ quote: '배경은 흰색', url: 'https://a.go.kr/1', pages: ['/guide/g/'] });
     expect(r.unreachable).toEqual([{ pages: ['/guide/h/'], url: 'https://down.go.kr/', why: 'HTTP 503', quote: '아무 문구' }]);
+  });
+  it('G2 A1: a browser-read quote is never fetched, changed or unreachable; it is listed for a manual check and opens no issue', async () => {
+    const entry = { urls: ['https://shell.kr/faq'], quote: '사진은 3개월 이내', origin: 'guide b', pages: ['/guide/b/'], via: 'browser' };
+    const get = vi.fn(async () => ({ ok: false, status: 0, error: 'should not be called' }));
+    const r = await checkSources([entry], get);
+    expect(get).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ checked: 0, changed: [], unreachable: [], manual: [{ pages: ['/guide/b/'], url: 'https://shell.kr/faq', quote: '사진은 3개월 이내' }] });
+    expect(issueBody(r, '2026-10-01', '')).toContain('## 수동 확인 (브라우저 출처) (1)');
+    const fm = parseFrontmatter(`---\ntitle: T\nquery: q\nsources:\n  - url: https://shell.kr/faq\n    title: S\n    quote: '사진은 3개월 이내'\n    retrieved: '2026-10-01'\n    via: browser\n---\n`)!;
+    const guide = { slug: 'b', path: '/guide/b/', ...fm };
+    expect(watchList([guide], [])[0]).toMatchObject({ via: 'browser', pages: ['/guide/b/'] });
+    const upsert = vi.fn();
+    const commentOpen = vi.fn();
+    const logs: string[] = [];
+    const fetchImpl = vi.fn();
+    const code = await sourceWatch([], { guides: [guide], presets: [], log: (s: string) => logs.push(s), env: {}, fetchImpl, wait: async () => {}, github: { upsert, commentOpen } });
+    expect(code).toBe(0);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+    expect(logs.join('\n')).toContain('수동 확인 (브라우저 출처)');
   });
 });
 

@@ -3,10 +3,11 @@ import type { APIRoute } from 'astro';
 import { SITE } from '../data/site';
 import { josa } from '../lib/ui/josa';
 import { LIVE_TOOLS } from '../data/tools';
-import { guidePath, publishedGuides } from '../data/guides';
+import { guidePath, hubs, publishedGuides } from '../data/guides';
 
 export const GET: APIRoute = async ({ site }) => {
   const guides = await publishedGuides();
+  const hubList = await hubs();
   const abs = (p: string): string => new URL(p, site).href;
   const body = [
     `# ${SITE.name}`,
@@ -19,7 +20,7 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     '## 안내',
     '',
-    ...guides.map((g) => `- [${g.data.title}](${abs(guidePath(g.id))}): ${g.data.answer}`),
+    ...[...hubList, ...guides].map((g) => `- [${g.data.title}](${abs(guidePath(g.id))}): ${g.data.answer}`),
     '',
   ].join('\n');
   return new Response(body, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });

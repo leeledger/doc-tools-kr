@@ -7,6 +7,7 @@ answer: 증명사진 사이즈는 제출처마다 달라서 여권은 413×531�
 published: '2026-09-30'
 updated: '2026-09-30'
 category: 사진
+topic: 여권·신분증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/', label: '제출처 규격에 맞추기' }
 related: [passport-photo, id-photo-kb, resume-photo, gosi-photo]

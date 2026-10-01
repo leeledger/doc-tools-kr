@@ -7,6 +7,7 @@ answer: PDF 합치기에서 파일을 고르고 순서를 정한 뒤 합치기�
 published: '2026-09-30'
 updated: '2026-09-30'
 category: PDF
+topic: PDF·메일
 tools: [pdf-merge, pdf-compress]
 cta: { href: '/pdf-merge/', label: 'PDF 합치기' }
 related: [pdf-compress, email-attachment-limit, photo-kb]

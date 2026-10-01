@@ -7,6 +7,7 @@ answer: 개인 지메일과 Outlook.com은 첨부파일 한도가 25 MB라서, �
 published: '2026-09-30'
 updated: '2026-09-30'
 category: PDF
+topic: PDF·메일
 tools: [pdf-compress, photo-compress]
 cta: { href: '/pdf-compress/?target=10', label: 'PDF 용량 줄이기' }
 related: [pdf-compress, photo-kb, pdf-merge]
@@ -27,6 +28,13 @@ sources:
     title: Microsoft 지원 — Outlook.com의 보내기 제한
     quote: Outlook.com 의 첨부 파일 크기 제한은 어떻게 되나요? 파일의 첨부 파일 크기 제한은 25MB입니다.
     retrieved: '2026-09-30'
+spec:
+  - label: Gmail 첨부파일 (개인 계정)
+    kind: upload
+    mb: 25
+  - label: Outlook.com 첨부파일
+    kind: upload
+    mb: 25
 faq:
   - q: 첨부파일 용량을 초과하면 어떻게 하나요?
     a: PDF는 PDF 용량 줄이기로, 사진은 사진 용량 줄이기로 한도보다 작게 줄여서 다시 첨부하세요. 여러 파일이면 나눠서 보내도 돼요.

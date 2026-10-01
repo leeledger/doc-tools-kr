@@ -14,10 +14,14 @@ export const LABEL = 'ops:source-changed';
 const PAUSE_MS = 1500;
 
 /**
- * Checks a watch list against fetched pages. `get(url)` returns { ok, status, text, error }.
- * @returns {Promise<{ checked: number, changed: object[], unreachable: object[] }>}
+ * Checks a watch list against fetched pages. `get(url)` returns { ok, status, text, error }. A quote read in a
+ * browser (`via: 'browser'`, G2 A1: the HTML is a script shell, so a fetch can never find it) is not fetched; it
+ * goes to `manual` and is never counted as changed or unreachable.
+ * @returns {Promise<{ checked: number, changed: object[], unreachable: object[], manual: object[] }>}
  */
-export async function checkSources(list, get) {
+export async function checkSources(all, get) {
+  const manual = all.filter((e) => e.via === 'browser').map((e) => ({ pages: e.pages, url: e.urls[0], quote: e.quote }));
+  const list = all.filter((e) => e.via !== 'browser');
   const pages = new Map();
   const load = async (url) => {
     if (!pages.has(url)) {
@@ -43,10 +47,19 @@ export async function checkSources(list, get) {
       changed.push({ pages: e.pages, url: best.url, urls: e.urls, quote: frag, context: best.context, origin: e.origin });
     }
   }
-  return { checked, changed, unreachable };
+  return { checked, changed, unreachable, manual };
 }
 
-export function issueBody({ changed, unreachable, checked }, date, runUrl) {
+/** The "수동 확인 (브라우저 출처)" table: URL and quote of every browser-read source. */
+export function manualTable(manual) {
+  if (!manual?.length) return [];
+  const lines = [`## 수동 확인 (브라우저 출처) (${manual.length})`, '스크립트로 읽을 수 없는 페이지예요. 브라우저로 열어 문구가 그대로인지 확인해 주세요.', '', '| 페이지 | 출처 | 인용 문구 |', '|---|---|---|'];
+  for (const m of manual) lines.push(`| ${cell(m.pages.join(', '))} | ${cell(m.url)} | ${cell(m.quote)} |`);
+  lines.push('');
+  return lines;
+}
+
+export function issueBody({ changed, unreachable, checked, manual }, date, runUrl) {
   const lines = [`출처 감시(A-3) ${date}: 인용 문구 ${checked}개를 확인했습니다.`, ''];
   if (changed.length) {
     lines.push(`## 문구가 바뀐 것으로 보이는 출처 (${changed.length})`, '공식 페이지에서 인용 문구를 찾지 못했습니다. 규격이 바뀌었는지 확인하고 안내 페이지·프리셋을 고쳐 주세요.', '');
@@ -60,6 +73,7 @@ export function issueBody({ changed, unreachable, checked }, date, runUrl) {
     for (const u of unreachable) lines.push(`| ${cell(u.pages.join(', '))} | ${cell(u.url)} | ${cell(u.why)} |`);
     lines.push('');
   }
+  lines.push(...manualTable(manual));
   if (runUrl) lines.push(`실행 기록: ${runUrl}`);
   return lines.join('\n');
 }
@@ -80,6 +94,7 @@ export async function run(argv, io = {}) {
     return r;
   };
   const result = await checkSources(list, get);
+  for (const line of manualTable(result.manual)) log(line);
   const date = isoDate(today(env));
   const runUrl = env.GITHUB_RUN_ID ? `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}` : '';
   const gh = io.github ?? createGitHub({ dryRun, log });

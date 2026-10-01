@@ -7,8 +7,9 @@ import { HOME_TITLE, LIVE_TOOLS, TOOLS } from '../data/tools';
 import { guidePath, guidesBySlug } from '../data/guides';
 import { toolListJsonLd } from '../data/jsonld';
 
-// "자주 찾는 안내" (Growth G.2): six guides in this order.
-const homeGuides = await guidesBySlug(['passport-photo', 'pdf-compress', 'pdf-merge', 'photo-kb', 'gosi-photo', 'id-photo-size'], 'home');
+// "자주 찾는 안내" (Growth G.2): six guides in this order. G2 A1: the seasonal admission-photo takes the sixth slot
+// (id-photo-size stays one click away: /guide/ and /guide/photo-sizes/).
+const homeGuides = await guidesBySlug(['passport-photo', 'pdf-compress', 'pdf-merge', 'photo-kb', 'gosi-photo', 'admission-photo'], 'home');
 
 const soon = TOOLS.filter((t) => t.status !== 'live');
 

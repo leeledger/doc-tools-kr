@@ -5,6 +5,7 @@
 import Base from './Base.astro';
 import '../styles/guide.css';
 import Share from '../components/Share.astro';
+import AdSlot from '../components/AdSlot.astro';
 import { SITE } from '../data/site';
 import { LIVE_TOOLS } from '../data/tools';
 import { guideJsonLd, guideOgUrl } from '../data/jsonld';
@@ -27,6 +28,11 @@ const jsonLd = guideJsonLd(
   Astro.site,
 );
 const ext = { rel: 'noopener noreferrer', target: '_blank' };
+// Ad placeholders (G2 A1, Phase-0 §2): guide-mid at the end of the second H2 section, guide-end after the FAQ.
+// AdSlot renders nothing while ADS_ENABLED is false, so the page is byte-equal to one without them.
+const body = await Astro.slots.render('default');
+const h2At = [...body.matchAll(/<h2[\s>]/g)].map((m) => m.index!);
+const cut = h2At[2] ?? body.length;
 ---
 <Base
   title={`${g.title} | ${SITE.name}`}
@@ -49,7 +55,9 @@ const ext = { rel: 'noopener noreferrer', target: '_blank' };
       <Share name={g.title} text={g.ogDescription} id="guide-share" url={canonical} />
       <p class="guide-cta"><a class="btn primary" href={g.cta.href}>{g.cta.label}</a></p>
       <div class="guide-body">
-        <slot />
+        <Fragment set:html={body.slice(0, cut)} />
+        <AdSlot id="guide-mid" size="rect" />
+        <Fragment set:html={body.slice(cut)} />
       </div>
       <section class="guide-faq" aria-labelledby="guide-faq-title">
         <h2 id="guide-faq-title">자주 묻는 질문</h2>
@@ -60,6 +68,7 @@ const ext = { rel: 'noopener noreferrer', target: '_blank' };
           </div>
         ))}
       </section>
+      <AdSlot id="guide-end" size="leaderboard" />
     </article>
     <aside class="guide-more wrap narrow" aria-label="더 보기">
       {related.length > 0 && (

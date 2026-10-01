@@ -7,12 +7,22 @@ answer: 사람인은 100×140픽셀 권장에 JPG·GIF 10 MB까지, 잡코리아
 published: '2026-09-30'
 updated: '2026-09-30'
 category: 사진
+topic: 취업·이력서
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=saramin', label: '사람인 이력서 사진 맞추기' }
 related: [id-photo-size, id-photo-kb, passport-photo]
 sources:
   - preset: saramin
   - preset: jobkorea
+spec:
+  - label: 사람인 이력서 사진 (크기는 권장값)
+    kind: photo
+    preset: saramin
+    format: JPG·GIF
+  - label: 잡코리아 이력서 사진 (크기는 최대값)
+    kind: photo
+    preset: jobkorea
+    format: GIF·JPG·JPEG·PNG
 faq:
   - q: 사람인 이력서 사진 크기는요?
     a: 사람인 고객센터는 100×140픽셀을 권장하고, JPG와 GIF 파일을 10 MB까지 받는다고 안내해요.

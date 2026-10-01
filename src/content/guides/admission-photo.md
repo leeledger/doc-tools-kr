@@ -1,14 +1,87 @@
 ---
-draft: true
 title: 대입 원서 사진 규격과 올리는 법
-query: 대입 원서 사진
-blockedBy: Needs quotes from both the 진학사 and 유웨이 원서접수 photo guides; both sites render their content with scripts and frames.
-publishBy: '2026-11-10'
-tried:
-  - url: https://www.jinhakapply.com/
-    result: 'HTTP 200, 7,726 bytes: a script shell with no photo guide text or links.'
-    date: '2026-09-30'
-  - url: https://www.uwayapply.com/
-    result: 'HTTP 200, 2,358 bytes (EUC-KR): an iframe to main.htm only; no photo guide text.'
-    date: '2026-09-30'
+description: 수시·정시 대입 원서 사진 규격을 진학사·유웨이 원서접수 안내로 정리했어요. 3개월 이내 반명함판 사진, 파일 형식, 사진이 안 올라갈 때 확인할 점을 담았어요.
+ogDescription: 대입 원서 사진은 3개월 이내 찍은 반명함판(3×4) 사진이에요. 안 올라갈 때 확인할 점도 정리했어요.
+query: 정시 원서 사진
+answer: 진학사 원서접수 안내에 따르면 대입 원서 사진은 3개월 이내 찍은 반명함판(3×4) 사진을 JPG 파일로 올리면 되고, 학교마다 따로 정한 규정이 있을 수 있어요.
+published: '2026-10-01'
+updated: '2026-10-01'
+category: 사진
+topic: 입시·장학
+tools: [id-photo, photo-compress]
+cta: { href: '/id-photo/?preset=half_card', label: '반명함판 사진 크기로 맞추기' }
+related: [univ-docs-upload, kosaf-docs, id-photo-size]
+sources:
+  - url: https://apply.jinhakapply.com/Customer/Faq?categoryid=7
+    title: 진학어플라이 고객센터 FAQ — 원서작성
+    quote: 3개월 이내 촬영한 반명함판(3X4) 사진을 업로드해 주세요.
+    retrieved: '2026-10-01'
+  - url: https://apply.jinhakapply.com/Customer/Faq?categoryid=7
+    title: 진학어플라이 고객센터 FAQ — 원서작성
+    quote: 별도의 사진 규정이 있는 학교도 있습니다. 학교 모집요강을 확인해 주세요.
+    retrieved: '2026-10-01'
+  - url: https://apply.jinhakapply.com/Customer/Faq?categoryid=7
+    title: 진학어플라이 고객센터 FAQ — 원서작성
+    quote: 원서에 사진항목이 없으면 학교에서 받지 않는 것입니다.
+    retrieved: '2026-10-01'
+  - url: https://apply.jinhakapply.com/Customer/Faq?categoryid=7
+    title: 진학어플라이 고객센터 FAQ — 원서작성
+    quote: 증명사진(3x4)을 스캔 파일(jpg, jpeg)을 준비해 주세요.
+    retrieved: '2026-10-01'
+  - url: https://apply.jinhakapply.com/Customer/Faq?categoryid=12
+    title: 진학어플라이 고객센터 FAQ — 문제해결
+    quote: 사진 규격이 맞지 않을 경우 업로드가 되지 않습니다. 사진 업로드 창에서 파일 선택 후 '자동 조절'을 클릭하여 사진크기를 조정해 주세요.
+    retrieved: '2026-10-01'
+  - url: https://www.uwayapply.com/board/faq.htm
+    title: 유웨이 어플라이 도움말 FAQ
+    quote: 사진 업로드에 필요한 증명사진을 스캔 후 파일로 저장하시기 바랍니다. (각 대학의 사진 업로드 유의사항에 준하는 형태로 스캔)
+    retrieved: '2026-10-01'
+  - url: https://www.uwayapply.com/board/faq.htm
+    title: 유웨이 어플라이 도움말 FAQ
+    quote: '[자동크기조절](여백 존재 시 “자르기” 선택 후 영역 지정 및 완료 클릭)'
+    retrieved: '2026-10-01'
+  - preset: half_card
+spec:
+  - label: 대입 원서 사진 (진학사 원서접수)
+    kind: photo
+    format: 반명함판(3×4), JPG·JPEG
+faq:
+  - q: 대입 원서 사진은 언제 찍은 것이어야 하나요?
+    a: 진학사 원서접수 안내는 3개월 이내 찍은 반명함판(3×4) 사진을 올리라고 해요. 학교마다 따로 정한 사진 규정이 있을 수 있으니 모집요강도 확인하세요.
+  - q: 사진이 원서에 안 올라가요.
+    a: 진학사 안내에 따르면 사진 규격이 맞지 않으면 올라가지 않아요. 사진을 고르는 창에서 '자동 조절'을 눌러 크기를 맞춘 뒤 다시 등록해 보세요.
+  - q: 사진 테두리에 여백이 있어요.
+    a: 유웨이 안내는 사진을 등록할 때 [자동크기조절]을 누르고, 여백이 있으면 '자르기'로 사진 부분만 골라 완료하라고 해요. 문서딱 규격 맞추기에서 미리 잘라 둘 수도 있어요.
+  - q: 원서에 사진 칸이 없어요.
+    a: 진학사 안내에 따르면 원서에 사진 항목이 없으면 그 학교는 사진을 받지 않는 거예요.
+  - q: 사진 픽셀 크기는 몇으로 맞춰야 하나요?
+    a: 두 원서접수 사이트 안내에는 픽셀 크기가 없어요. 문서딱의 반명함판은 3×4 cm를 해상도 300으로 계산한 354×472픽셀(계산값)이에요. 원서접수 사이트가 정한 크기는 아니에요.
+season: { peak: '수시·정시 원서 접수', refresh: ['2027-08-01', '2027-11-15'] }
+og: { title: '대입 원서 사진', line: '3개월 이내 반명함판(3×4) · JPG' }
 ---
+
+## 한눈에 보는 규격
+
+| 항목 | 진학사 원서접수 안내 |
+|---|---|
+| 사진 | 3개월 이내 찍은 반명함판(3×4) |
+| 파일 형식 | JPG, JPEG |
+| 픽셀 크기 | 안내 없음 |
+| 학교별 규정 | 따로 정한 학교도 있음 (모집요강 확인) |
+
+유웨이 원서접수도 증명사진을 파일로 준비해 각 대학의 사진 유의사항에 맞춰 등록하라고 안내해요.
+
+## 원서에 사진 등록하는 법
+
+1. 증명사진을 파일로 준비해요. 진학사는 사진을 스캔한 JPG 파일을 준비하라고 안내해요.
+2. 원서 작성 화면의 사진 칸에서 사진을 불러와요.
+3. 크기가 맞지 않으면 '자동 조절'(유웨이는 [자동크기조절])을 눌러 맞춰요. 여백이 있으면 잘라 내요.
+4. 사진을 등록한 뒤 원서에 제대로 보이는지 확인해요.
+
+## 휴대폰으로 찍은 사진을 쓸 때
+
+[여권·증명사진 규격 맞추기](/id-photo/?preset=half_card)를 열면 제출처가 「반명함판 3×4 cm」로 골라져 있어요. 사진을 고르고 안내선에 얼굴을 맞추면 3:4 비율로 잘린 JPG 파일이 만들어져요. 반명함판 크기는 문서딱이 계산한 일반 크기이고, 원서접수 사이트가 정한 픽셀 크기는 아니에요. 사진이 3개월 이내에 찍은 것인지는 직접 확인해 주세요.
+
+## 학교 규정을 먼저 확인하세요
+
+진학사는 따로 사진 규정을 둔 학교도 있다고 안내해요. 지원하는 학교의 모집요강에 사진 규정이 있으면 그 규정을 따르세요.

@@ -1,3 +1,45 @@
+# Review Request — G2 Sprint A, A1 (seasonal, unblocked drafts, structure, hubs H1/H2)
+Date: 2026-10-01
+Ready for Review: YES
+
+**Tree:** branch `g2-a1` from 3dc0796 (one commit). Nothing pushed.
+**Status:** DONE_WITH_CONCERNS. Every gate passes for what A1 touches; the gate table is in BUILD-LOG "G2 A1 … Gates". Concern: local Lighthouse tool pages still sit on the 1,953/2,040 ms steps (A0 gap; A1 leaves their CSS/fonts/JS byte-identical, Base CSS hash = HEAD) — CI decides per the Arch ruling.
+
+## Files Changed
+- `src/data/guide-schema.ts` — `TOPICS` + required `topic`; `specRowSchema` (`preset` | literal px/kb/mb/mm, `format`, `fit`); `via: 'browser'` on URL sources; `guideProblems` runs `specProblems`.
+- `src/data/guide-facts.ts` — `SpecRow`, `specRowFacts` (mm checks as cm or mm), `specProblems` (preset row = official, cited by this guide, no literals; literal row = every number in this guide's quotes).
+- `src/data/hubs.ts` (new) — `hubRows(guides, kind)`: one row per spec row. A preset row shows px/cm **only when the preset's own quote states them** (Q-Net's 413×531 is our choice → shown as 안내 없음); limits via `presetLimit`. `HUB_KIND` = the link rule.
+- `src/data/hub-schema.ts`, `src/content/hubs/{photo-sizes,upload-limits}.md` (new) — hub frontmatter: answer, FAQ, column words, captions (Korean copy stays in .md → no UI-font growth).
+- `src/layouts/Hub.astro`, `src/pages/guide/{photo-sizes,upload-limits}/index.astro` (new) — tables, intro, FAQ, related, sources of every row's guide; JSON-LD Article + FAQPage + BreadcrumbList; build fails if the copy has a number the tables do not show or a spec guide lacks a row. `guide-end` AdSlot only.
+- `src/content.config.ts` — `hubs` collection.
+- `src/data/guides.ts` — `hubs()`, `hubBySlug()`, `topicGroups()`; NEXT_GUIDES `pdf-merge → univ-docs-upload`.
+- `src/pages/guide/index.astro` — hubs first, topic jump links (`#topic-n`), groups in TOPICS order; page-local `<style>` (system font for topic names; app.css untouched). `scripts/gen-ui-font.mjs` strips `TOPICS = [...]` from the scan (UI font delta 0.0 KB).
+- `src/layouts/Guide.astro` — `guide-mid` (before the 3rd H2 of the rendered body, via `Astro.slots.render`) and `guide-end` (after the FAQ). Off → byte-equal articles.
+- `src/pages/{sitemap.xml.ts,llms.txt.ts,guide/rss.xml.ts,og/guide/[slug].png.ts}` — hubs included.
+- `src/pages/index.astro` — home 6th guide: admission-photo (was id-photo-size).
+- `src/data/quicklinks.ts` — /id-photo/ order: passport, id_card, toeic, history, gosi, qnet, korcham, admission first (skipping unshipped), then the rest, ≤ 8 (today unchanged).
+- `src/data/tool-facts.ts` — `hwp.pdfMb.desktop`, `hwp.pdfPages.desktop` from LIMITS.
+- `src/content/guides/hwp-to-pdf.md`, `admission-photo.md` (draft → published), `univ-docs-upload.md`, `kosaf-docs.md` (new) — every quote fetched today (BUILD-LOG "G2 A1 … Step 0").
+- 14 existing guides — `topic:` added; spec rows on passport, gosi, qnet, resume (preset rows), driver-license (mm), email-attachment-limit (Gmail/Outlook MB); open-hwp-without-hangul related += hwp-to-pdf. Article HTML of all 14 byte-equal to the HEAD build.
+- `scripts/lib/shingles.mjs` (new), `scripts/check-dist.mjs` — duplicate guard (5-char shingles, Jaccard ≥ 0.45 fails, max pair printed) and "no ad-slot on /guide/ while off".
+- `scripts/ops/source-watch.mjs`, `scripts/ops/lib/guides.mjs` — `via: browser` → manual table, never fetched/changed/unreachable, no issue on its own.
+- `src/styles/guide.css` — hub table (scrolls sideways inside its box on phones).
+- `lighthouserc.json` (+ /guide/photo-sizes/, /guide/admission-photo/), `scripts/qa/visual.mjs` (+ /guide/, both hubs, admission-photo).
+- Tests: `tests/unit/guides-schema.test.ts` (topics, spec fact check ±, hub values = preset/spec values, hub copy check, new tool facts, quick-link order; base fixture pinned to driver-license-photo because published[0] is now dated today), `tests/unit/ops.test.ts` (via: browser), `tests/unit/postbuild.test.ts` (hubs in RSS/sitemap/llms, hub FAQPage, link graph + orphans, no ad-slot, duplicates), `tests/e2e/hubs.spec.ts` (new), `tests/e2e/site.spec.ts` (hwp-to-pdf no longer a draft; hubs in sitemap), `tests/e2e/hwp-to-pdf.spec.ts` (관련 안내 now the 4 HWP guides).
+
+## Open Questions
+- Please re-check 3 quotes live (deploy gate 2). Suggested: kosaf "※ 규격: 300dpi로 흑백 스캔한 TIF 파일만 업로드 가능 ( 용량 400kb 이하)" (faq.do?searchType=a&searchStr=용량), jinhak "3개월 이내 촬영한 반명함판(3X4) 사진을 업로드해 주세요." (Customer/Faq?categoryid=7), Hancom 2413 "- [파일 > PDF로 저장하기] - [파일 > 인쇄 > Hancom PDF]".
+- kosaf sources are FAQ **search** URLs (the FAQ has no per-item URL). They are stable GETs today; if 재단 reorders results the quote is still on page 1 because each search returns 1 item. source-watch will flag it if not.
+- hwp-to-pdf quotes Hancom's 한컴오피스 2014 FAQ (the only official PDF-save answer found); the page says "2014 기준 … 버전에 따라 메뉴 이름이 조금 다를 수 있어요". OK, or Arch prefers dropping that section?
+- `guide-end` sits after the FAQ inside the article, not literally "before the sources" (sources are in the aside after related). Zero output now; position matters only at ads switch-on.
+- Spec rows are hub data only (no auto spec table on guides) — keeps the 11 bodies unchanged.
+
+## Out of Scope (logged in BUILD-LOG)
+- No new id-photo preset in A1 (no px/KB on 진학사/유웨이). A2 owns the preset rows.
+- docs/OPS-RUNBOOK.md does not yet describe the manual "브라우저 출처" table (no browser source exists yet).
+
+---
+
 # Review Request — G2 Sprint A, A0 /hwp-viewer/ (round 2)
 
 ## Round 2 (Richard's 4 fixes + Arch LCP ruling) — the commit after be3d693

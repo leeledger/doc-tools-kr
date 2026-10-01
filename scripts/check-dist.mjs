@@ -9,6 +9,7 @@ import { autoframeOn } from './lib/autoframe.mjs';
 import { beaconPath } from './lib/beacon-path.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
+import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
 
 const dist = distDir();
 const KB = 1024;
@@ -176,6 +177,15 @@ for (const [path, html] of pageHtml) {
 }
 if (![...pageHtml.keys()].some((p) => /^guide\/[^/]+\/index\.html$/.test(p))) errors.push('no guide page in dist/guide/');
 for (const img of match(/^og\/guide\/[^/]+\.png$/)) budget(img, [img], 80 * KB, raw, 'raw');
+{
+  // G2 A1: no two guide or hub articles are near-duplicates (5-char shingles, Jaccard < DUP_LIMIT; rewrite, never raise).
+  const pages = [...pageHtml].filter(([p]) => /^guide\/[^/]+\/index\.html$/.test(p)).map(([p, html]) => [p.split('/')[1], articleText(html)]);
+  const { max, over } = duplicatePairs(pages);
+  console.log(`  guide similarity, max pair: ${max.a} ~ ${max.b} ${max.j.toFixed(3)} / ${DUP_LIMIT}`);
+  for (const o of over) errors.push(`near-duplicate guides: ${o.a} ~ ${o.b} Jaccard ${o.j.toFixed(3)} ≥ ${DUP_LIMIT}`);
+  // Phase-0 §2: the guide ad placeholders render nothing while ads are off.
+  for (const [p, html] of pageHtml) if (/^guide\//.test(p) && html.includes('ad-slot')) errors.push(`${p}: an ad slot is rendered while ads are off`);
+}
 {
   // The 404 suggestion script: the 404 page's JS minus the shared site script, ≤ 1 KB gzip.
   const site = new Set(initialJs(pageHtml.get('index.html') ?? ''));

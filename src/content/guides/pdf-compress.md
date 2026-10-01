@@ -7,6 +7,7 @@ answer: PDF 용량은 PDF 용량 줄이기에서 품질 단계나 목표 용량�
 published: '2026-09-30'
 updated: '2026-09-30'
 category: PDF
+topic: PDF·메일
 tools: [pdf-compress, pdf-merge]
 cta: { href: '/pdf-compress/?target=10', label: 'PDF 용량 줄이기' }
 related: [email-attachment-limit, pdf-merge, photo-kb]

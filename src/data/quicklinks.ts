@@ -34,9 +34,18 @@ const PHOTO_LINKS: readonly [string, string][] = [
   ['passport_online', '여권 온라인 신청 사진'],
 ];
 
+/**
+ * /id-photo/ quick links (G2 brief A step 6): at most 8, these preset ids first in this order (any that did not
+ * ship is skipped), then the other presets in PRESETS order.
+ */
+export const ID_PHOTO_LINK_ORDER = ['passport_online', 'id_card', 'toeic', 'history', 'gosi', 'qnet', 'korcham', 'admission'] as const;
+export const ID_PHOTO_LINK_MAX = 8;
+
 export function quickLinks(slug: string): QuickLink[] {
   if (slug === 'id-photo') {
-    return PRESETS.map((p) => ({ href: `/id-photo/?preset=${p.id}`, label: p.label, name: p.label }));
+    const first = ID_PHOTO_LINK_ORDER.map((id) => getPreset(id)).filter((p): p is IdPreset => !!p);
+    const ordered = [...first, ...PRESETS.filter((p) => !first.includes(p))].slice(0, ID_PHOTO_LINK_MAX);
+    return ordered.map((p) => ({ href: `/id-photo/?preset=${p.id}`, label: p.label, name: p.label }));
   }
   if (slug === 'photo-compress') {
     return PHOTO_LINKS.map(([id, name]) => {

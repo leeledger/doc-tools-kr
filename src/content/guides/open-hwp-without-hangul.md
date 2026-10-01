@@ -7,9 +7,10 @@ answer: 한글 프로그램이 없으면 문서딱 HWP·HWPX 파일 보기에서
 published: '2026-10-01'
 updated: '2026-10-01'
 category: 한글파일
+topic: 한글파일
 tools: [hwp-viewer, hwp-to-pdf]
 cta: { href: '/hwp-viewer/', label: 'HWP·HWPX 파일 보기' }
-related: [hwp-on-phone, what-is-hwpx]
+related: [hwp-on-phone, what-is-hwpx, hwp-to-pdf]
 sources:
   - url: https://www.hancom.com/support/downloadCenter/download
     title: 한컴 다운로드 센터 — 제품 설치·업데이트 파일

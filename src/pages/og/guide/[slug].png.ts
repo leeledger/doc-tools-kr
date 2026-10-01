@@ -1,12 +1,12 @@
-// Share image of a guide (Growth G.1): 1200×630, drawn at build with the gen-brand helpers (logo, colours,
-// fonts). A title or line that does not fit throws, so the build fails instead of shipping a cut image.
+// Share image of a guide or hub (Growth G.1; G2 A1): 1200×630, drawn at build with the gen-brand helpers (logo,
+// colours, fonts). A title or line that does not fit throws, so the build fails instead of shipping a cut image.
 import type { APIRoute } from 'astro';
 import { ogDomain, ogImage } from '../../../../scripts/gen-brand.mjs';
-import { publishedGuides } from '../../../data/guides';
+import { hubs, publishedGuides } from '../../../data/guides';
 
 export async function getStaticPaths() {
-  const guides = await publishedGuides();
-  return guides.map((g) => ({ params: { slug: g.id }, props: { og: g.data.og } }));
+  const pages = [...(await publishedGuides()), ...(await hubs())];
+  return pages.map((g) => ({ params: { slug: g.id }, props: { og: g.data.og } }));
 }
 
 export const GET: APIRoute = ({ props, site }) => {

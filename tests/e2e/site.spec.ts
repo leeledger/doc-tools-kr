@@ -110,11 +110,12 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
   const pages = locs.filter((p) => !p.startsWith('/guide/'));
   expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/photo-compress/', '/privacy/', '/terms/'].sort());
-  // Growth G: /guide/ and every published guide (drafts never).
+  // Growth G: /guide/ and every published guide (drafts never). G2 A1: hwp-to-pdf is published; both hubs are in.
   const guides = locs.filter((p) => p.startsWith('/guide/'));
   expect(guides).toContain('/guide/');
   expect(guides.length).toBeGreaterThanOrEqual(12);
-  for (const draft of ['/guide/hwp-to-pdf/', '/guide/kakao-photo/']) expect(guides).not.toContain(draft);
+  for (const hub of ['/guide/photo-sizes/', '/guide/upload-limits/', '/guide/hwp-to-pdf/']) expect(guides).toContain(hub);
+  for (const draft of ['/guide/kakao-photo/', '/guide/yearend-tax-pdf/']) expect(guides).not.toContain(draft);
   const robots = await (await request.get('/robots.txt')).text();
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
 });

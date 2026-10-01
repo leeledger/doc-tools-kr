@@ -10,6 +10,12 @@ import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
 import { TOOL_FACTS } from '../../src/data/tool-facts';
 import { parse as parseDeep } from '../../src/lib/ui/deeplink';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from '../../scripts/lib/capacity.mjs';
+import { TOPICS } from '../../src/data/guide-schema';
+import { specProblems } from '../../src/data/guide-facts';
+import { hubSchema } from '../../src/data/hub-schema';
+import { HUB_KIND, HUB_SLUGS, hubRows } from '../../src/data/hubs';
+import { ID_PHOTO_LINK_MAX, ID_PHOTO_LINK_ORDER } from '../../src/data/quicklinks';
+import { GUARD_PAGES, LIMITS as HWP_LIMITS, MB_DEC } from '../../src/lib/hwp/limits';
 
 const DIR = join(__dirname, '..', '..', 'src', 'content', 'guides');
 const files = readdirSync(DIR).filter((f) => f.endsWith('.md'));
@@ -51,7 +57,7 @@ describe('guides: schema (T4)', () => {
   });
 
   it('dates: updated ≥ published, never in the future; a year in the title equals the year of updated', () => {
-    const base = publishedGuideSchema.parse(published[0]!.data);
+    const base = publishedGuideSchema.parse(published.find((g) => g.slug === 'driver-license-photo')!.data);
     const now = new Date('2026-09-30T12:00:00Z');
     expect(guideProblems({ ...base, published: '2026-09-30', updated: '2026-09-29' }, now).join()).toContain('before published');
     expect(guideProblems({ ...base, published: '2026-09-30', updated: '2026-10-01' }, now).join()).toContain('in the future');
@@ -62,7 +68,7 @@ describe('guides: schema (T4)', () => {
   });
 
   it('bad refs fail: unknown tool, unknown preset, wrong toolFact value, a CTA with an invalid param', () => {
-    const base = publishedGuideSchema.parse(published[0]!.data);
+    const base = publishedGuideSchema.parse(published.find((g) => g.slug === 'driver-license-photo')!.data);
     expect(guideProblems({ ...base, tools: ['heic-to-jpg'] }).join()).toContain('not a live tool');
     expect(guideProblems({ ...base, sources: [{ preset: 'nope' }] }).join()).toContain('does not exist');
     expect(guideProblems({ ...base, toolFacts: [{ ref: 'pdf-merge.maxFiles', value: 60 }] }).join()).toContain('is 50');
@@ -142,6 +148,88 @@ describe('quick links (T5)', () => {
     for (const slug of ['id-photo', 'photo-compress', 'pdf-compress']) for (const l of quickLinks(slug)) expect(parseDeep(slug, new URL(l.href, 'https://x').searchParams), l.href).not.toBeNull();
     const guide = published.find((g) => g.slug === 'email-attachment-limit')!;
     expect(guide.parsed.sources.some((s) => 'quote' in s && s.quote === GMAIL_LIMIT.quote && s.url === GMAIL_LIMIT.url)).toBe(true);
+  });
+});
+
+describe('G2 A1: topics, spec rows, hubs', () => {
+  const HUB_DIR = join(__dirname, '..', '..', 'src', 'content', 'hubs');
+  const hubFiles = HUB_SLUGS.map((slug) => {
+    const raw = readFileSync(join(HUB_DIR, `${slug}.md`), 'utf8').replace(/\r\n/g, '\n');
+    const m = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(raw)!;
+    return { slug, data: hubSchema.parse(parseYaml(m[1]!)), body: m[2]! };
+  });
+  const hubGuides = published.map((g) => ({ id: g.slug, data: g.parsed }));
+
+  it('every published guide has a topic; every topic group the index shows is non-empty and lists each guide once', () => {
+    for (const g of published) expect(TOPICS, g.slug).toContain(g.parsed.topic);
+    const shown = TOPICS.map((t) => published.filter((g) => g.parsed.topic === t)).filter((x) => x.length);
+    expect(shown.flat().length).toBe(published.length);
+    expect(publishedGuideSchema.safeParse({ ...published[0]!.data, topic: undefined }).success).toBe(false);
+    expect(publishedGuideSchema.safeParse({ ...published[0]!.data, topic: '기타' }).success).toBe(false);
+  });
+
+  it('spec rows pass the fact check; a literal number without a quote, an uncited preset or a preset row with literals fails', () => {
+    for (const g of published) expect(specProblems(g.parsed), g.slug).toEqual([]);
+    const email = published.find((g) => g.slug === 'email-attachment-limit')!.parsed;
+    expect(specProblems({ ...email, spec: [{ label: 'Gmail', kind: 'upload', mb: 20 }] }).join()).toContain('20 MB has no source');
+    expect(specProblems({ ...email, spec: [{ label: 'Q-Net', kind: 'photo', preset: 'qnet' }] }).join()).toContain('not a source of this guide');
+    const qnet = published.find((g) => g.slug === 'qnet-photo')!.parsed;
+    expect(specProblems({ ...qnet, spec: [{ label: 'Q-Net', kind: 'photo', preset: 'qnet', kb: 200 }] }).join()).toContain('takes its numbers from the preset');
+    expect(specProblems({ ...qnet, spec: [{ label: 'Q-Net', kind: 'photo', preset: 'half_card' }] }).join()).toContain('not an official preset');
+    expect(specProblems({ ...qnet, spec: [{ label: 'Q-Net', kind: 'photo' }] }).join()).toContain('states nothing');
+    const dl = published.find((g) => g.slug === 'driver-license-photo')!.parsed;
+    expect(specProblems({ ...dl, spec: [{ label: '면허', kind: 'photo', mm: { w: 30, h: 40 } }] }).join()).toContain('has no source');
+  });
+
+  it('hub numbers are the preset and guide values; a preset size shows only when its own quote states it', () => {
+    const photo = hubRows(hubGuides, 'photo');
+    const row = (label: string) => photo.find((r) => r.label.startsWith(label))!;
+    const p = (id: string) => getPreset(id)!;
+    expect(row('여권 사진').size).toBe(`${p('passport_online').outW}×${p('passport_online').outH} 픽셀`);
+    expect(row('여권 사진').limit).toBe(`${presetLimit(p('passport_online'))!.kb} KB 이하`);
+    expect(row('국가공무원').size).toBe(`${p('gosi').mm!.w / 10}×${p('gosi').mm!.h / 10} cm · ${p('gosi').outW}×${p('gosi').outH} 픽셀`);
+    expect(row('국가공무원').limit).toBe(`${presetLimit(p('gosi'))!.kb} KB 미만`);
+    expect(row('Q-Net').size).toBe(''); // Q-Net states no pixel size: our 413×531 choice is never shown as theirs.
+    expect(row('Q-Net').fit).toBe('/id-photo/?preset=qnet');
+    expect(row('사람인').limit).toBe(`${presetLimit(p('saramin'))!.kb / 1000} MB 이하`);
+    const dl = published.find((g) => g.slug === 'driver-license-photo')!.parsed.spec[0]!;
+    expect(row('운전면허').size).toBe(`${dl.mm!.w / 10}×${dl.mm!.h / 10} cm`);
+    const upload = hubRows(hubGuides, 'upload');
+    const kosaf = published.find((g) => g.slug === 'kosaf-docs')!.parsed.spec[0]!;
+    expect(upload.find((r) => r.guide.slug === 'kosaf-docs')).toMatchObject({ limit: `${kosaf.kb} KB 이하`, fit: '' });
+    expect(upload.find((r) => r.label.startsWith('Gmail'))!.limit).toBe(`${GMAIL_LIMIT.mb} MB 이하`);
+    // Every number a row shows is backed by its guide (preset values or quotes).
+    for (const r of [...photo, ...upload]) {
+      const g = published.find((x) => x.slug === r.guide.slug)!.parsed;
+      expect(unsourcedFacts(g, `${r.size} ${r.limit}`), r.label).toEqual([]);
+    }
+  });
+
+  it('hubs: the copy passes the fact check against the tables; every spec guide has a row; slugs never clash with a guide', () => {
+    for (const h of hubFiles) {
+      const rows = h.data.tables.flatMap((t) => hubRows(hubGuides, t.kind).filter((r) => !t.limitOnly || r.limit));
+      const allowed = new Set(rows.flatMap((r) => r.facts));
+      const copy = [h.data.title, h.data.description, h.data.answer, h.body, ...h.data.faq.flatMap((f) => [f.q, f.a])].join('\n');
+      expect(numberUnits(copy).filter((f) => !allowed.has(f)), h.slug).toEqual([]);
+      const linked = new Set(rows.map((r) => r.guide.slug));
+      for (const g of published.filter((x) => x.parsed.spec.some((r) => r.kind === HUB_KIND[h.slug]))) expect(linked.has(g.slug), `${h.slug} → ${g.slug}`).toBe(true);
+      for (const r of h.data.related) expect(published.some((g) => g.slug === r), r).toBe(true);
+      expect(guides.some((g) => g.slug === h.slug)).toBe(false);
+    }
+  });
+
+  it('the new HWP tool facts are read from LIMITS', () => {
+    expect(TOOL_FACTS['hwp.pdfMb.desktop'].value).toBe(HWP_LIMITS.desktop.capBytes / MB_DEC);
+    expect(TOOL_FACTS['hwp.pdfPages.desktop'].value).toBe(HWP_LIMITS.desktop.capPages);
+    expect(TOOL_FACTS['hwp-viewer.searchPages'].value).toBe(GUARD_PAGES);
+  });
+
+  it('/id-photo/ quick links: at most 8, the brief order first (skipping presets that did not ship), then the rest', () => {
+    const ids = quickLinks('id-photo').map((l) => new URL(l.href, 'https://x').searchParams.get('preset'));
+    expect(ids.length).toBeLessThanOrEqual(ID_PHOTO_LINK_MAX);
+    const shipped = ID_PHOTO_LINK_ORDER.filter((id) => getPreset(id));
+    expect(ids.slice(0, shipped.length)).toEqual(shipped);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 

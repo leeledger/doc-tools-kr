@@ -197,9 +197,9 @@ test('law05: 「PDF 내려받기」 downloads law05.pdf in the page: 1 landscape
   // Share (the tool address, never the PDF) and the 관련 안내 links, as on the other tools.
   await expect(page.locator('#hw-done [data-share-copy]')).toBeVisible();
   await expect(page.locator('#hw-done [data-share]')).not.toHaveAttribute('data-url', /blob:/);
-  // G2 A0: the three HWP guides first, then the first PDF next-step guide (at most 4).
+  // G2 A1: the four HWP guides that name the tool (the hwp-to-pdf guide is published now); at most 4.
   await expect(page.locator('.quick .quick-guides a')).toHaveCount(4);
-  expect(await page.locator('.quick .quick-guides a').evaluateAll((a) => a.map((x) => x.getAttribute('href')))).toEqual(['/guide/open-hwp-without-hangul/', '/guide/hwp-on-phone/', '/guide/what-is-hwpx/', '/guide/pdf-compress/']);
+  expect(await page.locator('.quick .quick-guides a').evaluateAll((a) => a.map((x) => x.getAttribute('href')))).toEqual(['/guide/open-hwp-without-hangul/', '/guide/hwp-on-phone/', '/guide/hwp-to-pdf/', '/guide/what-is-hwpx/']);
   await expect(page.locator('#hw-save')).toBeFocused();
   await expect(tool(page)).toHaveAttribute('data-state', 'convert');
   // The PDF fonts are same-origin GETs of our own files: the face list and .woff slices.

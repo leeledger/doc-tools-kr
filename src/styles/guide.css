@@ -13,6 +13,13 @@
 .guide-body th, .guide-body td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
 .guide-body a { color: var(--brand); }
 .guide-body li + li { margin-top: 6px; }
+/* Hubs (G2 A1): the table scrolls sideways on a phone instead of squeezing its columns. */
+.hub-table h2 { font-size: 21px; margin: 32px 0 10px; }
+.hub-scroll { overflow-x: auto; }
+.hub-table table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+.hub-table th, .hub-table td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.hub-table thead th { background: var(--brand-soft); }
+.hub-table a { color: var(--brand); display: inline-block; min-height: 24px; }
 .guide-qa h3 { font-size: 17px; margin: 18px 0 4px; }
 .guide-qa p { margin: 0; }
 .guide-sources ul { padding-left: 20px; }

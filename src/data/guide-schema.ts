@@ -5,9 +5,14 @@ import { getPreset } from './id-photo-presets';
 import { TOOL_FACTS, isToolFactRef } from './tool-facts';
 import { LIVE_TOOLS } from './tools';
 import { parseHref } from '../lib/ui/deeplink';
+import { specProblems } from './guide-facts';
 
 export const CATEGORIES = ['사진', 'PDF', '한글파일'] as const;
 export type Category = (typeof CATEGORIES)[number];
+
+/** Reader-facing topics (G2 A1): the /guide/ index groups the guides by these, in this order. */
+export const TOPICS = ['여권·신분증', '시험·자격증', '취업·이력서', '입시·장학', '세금·민원', 'PDF·메일', '한글파일'] as const;
+export type Topic = (typeof TOPICS)[number];
 
 /** A source older than this at build time fails the dist test (T9): re-verify it (runbook, every January). */
 export const MAX_SOURCE_AGE_DAYS = 400;
@@ -29,6 +34,30 @@ const urlSource = z
     title: len(2, 80),
     quote: len(2, 300),
     retrieved: isoDate,
+    /** The quote was read from the rendered page in a browser (the HTML is a script shell): source-watch lists it
+     * for a manual check instead of fetching it (G2 A1). */
+    via: z.literal('browser').optional(),
+  })
+  .strict();
+
+const size = z.object({ w: z.number().positive(), h: z.number().positive() }).strict();
+/**
+ * A spec row (G2 A1): what the hubs (/guide/photo-sizes/, /guide/upload-limits/) build their tables from. Either
+ * `preset` (every number comes from src/data/id-photo-presets.ts) or literal values, each of which the guide's own
+ * quotes must back (the fact check). A row is data for the hubs; the guide body keeps its own table.
+ */
+export const specRowSchema = z
+  .object({
+    label: len(2, 40),
+    kind: z.enum(['photo', 'upload']),
+    preset: z.string().optional(),
+    px: size.optional(),
+    kb: z.number().positive().optional(),
+    mb: z.number().positive().optional(),
+    mm: size.optional(),
+    format: len(2, 30).optional(),
+    /** false: no tool of ours makes this file (e.g. a TIF scan), so the hub shows no tool link for the row. */
+    fit: z.boolean().optional(),
   })
   .strict();
 
@@ -42,11 +71,13 @@ export const publishedGuideSchema = z
     published: isoDate,
     updated: isoDate,
     category: z.enum(CATEGORIES),
+    topic: z.enum(TOPICS),
     tools: z.array(z.string()).min(1),
     cta: z.object({ href: z.string(), label: len(2, 30) }).strict(),
     related: z.array(z.string()).min(2).max(4),
     sources: z.array(z.union([presetSource, urlSource])).min(1),
     toolFacts: z.array(z.object({ ref: z.string(), value: z.union([z.number(), z.string()]) }).strict()).default([]),
+    spec: z.array(specRowSchema).default([]),
     faq: z.array(z.object({ q: len(4, 80), a: len(10, 400) }).strict()).min(3).max(6),
     og: z.object({ title: len(2, 14), line: len(4, 34) }).strict(),
     season: z.object({ peak: z.string(), refresh: z.array(isoDate) }).strict().optional(),
@@ -79,7 +110,7 @@ export type DraftGuideData = z.infer<typeof draftGuideSchema>;
 
 /** Rules across fields (also run by the unit test). Empty when the guide is valid. */
 export function guideProblems(
-  g: Pick<GuideData, 'title' | 'answer' | 'published' | 'updated' | 'tools' | 'cta' | 'sources' | 'toolFacts'>,
+  g: Pick<GuideData, 'title' | 'answer' | 'published' | 'updated' | 'tools' | 'cta' | 'sources' | 'toolFacts'> & Partial<Pick<GuideData, 'spec'>>,
   now: Date = new Date(),
 ): string[] {
   const e: string[] = [];
@@ -111,5 +142,6 @@ export function guideProblems(
     if (!isToolFactRef(f.ref)) e.push(`toolFact "${f.ref}" is not in src/data/tool-facts.ts`);
     else if (TOOL_FACTS[f.ref].value !== f.value) e.push(`toolFact "${f.ref}" is ${String(TOOL_FACTS[f.ref].value)}, the guide says ${String(f.value)}`);
   }
+  e.push(...specProblems(g));
   return e;
 }

@@ -7,6 +7,7 @@ answer: 사진 용량 줄이기에서 목표 용량을 고르면 결과 파일�
 published: '2026-09-30'
 updated: '2026-09-30'
 category: 사진
+topic: PDF·메일
 tools: [photo-compress, id-photo]
 cta: { href: '/photo-compress/?target=500', label: '사진 용량 줄이기' }
 related: [id-photo-kb, email-attachment-limit, pdf-compress]

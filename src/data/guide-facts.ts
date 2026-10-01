@@ -7,11 +7,57 @@ import { TOOL_FACTS, isToolFactRef } from './tool-facts';
 
 export type Unit = 'KB' | 'MB' | '픽셀' | 'cm' | 'mm' | '개월';
 
-export type GuideSource = { preset: string } | { url: string; title: string; quote: string; retrieved: string };
+export type GuideSource = { preset: string } | { url: string; title: string; quote: string; retrieved: string; via?: 'browser' };
 
 export interface FactInput {
   sources: readonly GuideSource[];
   toolFacts?: readonly { ref: string; value: number | string }[];
+}
+
+/** A spec row (G2 A1; the zod shape is in guide-schema.ts). */
+export interface SpecRow {
+  label: string;
+  kind: 'photo' | 'upload';
+  preset?: string;
+  px?: { w: number; h: number };
+  kb?: number;
+  mb?: number;
+  mm?: { w: number; h: number };
+  format?: string;
+  fit?: boolean;
+}
+
+/**
+ * The "number unit" facts a literal spec row states; a print size counts in cm (how the agencies write it) or mm.
+ * Each entry lists the spellings that back it: one of them must be allowed.
+ */
+export function specRowFacts(r: SpecRow): string[][] {
+  const out: string[][] = [];
+  if (r.px) out.push([key(r.px.w, '픽셀')], [key(r.px.h, '픽셀')]);
+  if (r.kb !== undefined) out.push([key(r.kb, 'KB')]);
+  if (r.mb !== undefined) out.push([key(r.mb, 'MB')]);
+  if (r.mm) for (const v of [r.mm.w, r.mm.h]) out.push([key(v / 10, 'cm'), key(v, 'mm')]);
+  return out;
+}
+
+/** Spec-row problems of a guide (empty = ok): a preset row cites an official preset of this guide and states no
+ * literal value; a literal row states something, and every number is backed by this guide's quotes. */
+export function specProblems(g: FactInput & { spec?: readonly SpecRow[] }): string[] {
+  const e: string[] = [];
+  const allowed = allowedFacts(g);
+  for (const r of g.spec ?? []) {
+    const literal = r.px || r.kb !== undefined || r.mb !== undefined || r.mm;
+    if (r.preset) {
+      const p = getPreset(r.preset);
+      if (!p || p.status !== 'official') e.push(`spec "${r.label}": preset "${r.preset}" is not an official preset`);
+      if (!g.sources.some((s) => 'preset' in s && s.preset === r.preset)) e.push(`spec "${r.label}": preset "${r.preset}" is not a source of this guide`);
+      if (literal) e.push(`spec "${r.label}": a preset row takes its numbers from the preset`);
+      continue;
+    }
+    if (!literal && !r.format) e.push(`spec "${r.label}": states nothing`);
+    for (const alts of specRowFacts(r)) if (!alts.some((f) => allowed.has(f))) e.push(`spec "${r.label}": ${alts[0]} has no source`);
+  }
+  return e;
 }
 
 const NUM = String.raw`\d[\d,]*(?:\.\d+)?`;

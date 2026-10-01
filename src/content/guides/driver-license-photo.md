@@ -7,6 +7,7 @@ answer: 운전면허 적성검사와 갱신에는 6개월 이내에 찍은 3.5×
 published: '2026-09-30'
 updated: '2026-09-30'
 category: 사진
+topic: 여권·신분증
 tools: [id-photo]
 cta: { href: '/id-photo/', label: '사진 규격 맞추기' }
 related: [passport-photo, id-photo-size]
@@ -35,6 +36,11 @@ sources:
     title: 도로교통공단 안전운전 통합민원 — 정기적성검사/면허갱신
     quote: 정확한 갱신기간 확인을 위해서는 "공단 홈페이지(안전운전 통합민원) 마이페이지" 또는 경찰청 홈페이지(www.efine.go.kr) "경찰청교통민원24-운전면허" 확인바랍니다.
     retrieved: '2026-09-30'
+spec:
+  - label: 운전면허 적성검사·갱신 사진 (종이)
+    kind: photo
+    mm: { w: 35, h: 45 }
+    format: 컬러 사진 (여권용)
 faq:
   - q: 운전면허 갱신 사진 크기는요?
     a: 3.5×4.5 cm 여권용 컬러 사진이에요. 6개월 이내에 찍은 사진이어야 해요.

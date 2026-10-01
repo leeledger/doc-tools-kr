@@ -1161,3 +1161,70 @@ Status: see the CI line at the end.
   - checks: all Lighthouse assertions pass, on true medians.
   - e2e firefox: 196 passed, 44 skipped, 17 flaky (the goto harness race), 0 failed. manual-firefox ran the id-photo suite.
   - Not merged to main.
+## G2 A1 build notes (Bob, 2026-10-01; branch g2-a1 from 3dc0796)
+Scope: ARCHITECT-BRIEF-G2.md "A1 — seasonal, unblocked drafts, structure", hubs H1/H2, and the A1 structure items (topic, spec rows, via: browser, guide AdSlots, home swap, NEXT_GUIDES, /id-photo/ quick-link order). Nothing pushed.
+
+### G2 Step 0 (A1 rows; fetched 2026-10-01 from this PC; quotes verbatim up to whitespace)
+| Row | URL | via | status / bytes | quotes used |
+|---|---|---|---|---|
+| 1 hwp-to-pdf | https://www.hancom.com/support/faqCenter/faq/detail/2413 | curl | 200 / 187,927 | "한컴오피스 2014는 자체적으로 PDF 변환 드라이버를 탑재하고 있어 아래와 같은 두 가지 방법으로 변환이 가능합니다." · "- [파일 > PDF로 저장하기] - [파일 > 인쇄 > Hancom PDF]" |
+| 1 hwp-to-pdf | https://www.hancom.com/support/faqCenter/faq/detail/2857 | curl | 200 / 193,156 | "해당 증상은 한글 프로그램의 인쇄 옵션 선택 사항의 '그림 개체' 체크박스가 선택 해제 상태인 경우 나타날 수 있습니다." · "2) 인쇄 옵션의 선택 사항 “그림 개체” 체크박스 클릭 (OFF > ON으로 변경)" |
+| 3 admission-photo | https://apply.jinhakapply.com/Customer/Faq?categoryid=7 | curl | 200 / 34,821 | "3개월 이내 촬영한 반명함판(3X4) 사진을 업로드해 주세요." · "별도의 사진 규정이 있는 학교도 있습니다. 학교 모집요강을 확인해 주세요." · "원서에 사진항목이 없으면 학교에서 받지 않는 것입니다." · "증명사진(3x4)을 스캔 파일(jpg, jpeg)을 준비해 주세요." |
+| 3 admission-photo | https://apply.jinhakapply.com/Customer/Faq?categoryid=12 | curl | 200 / 31,459 | "사진 규격이 맞지 않을 경우 업로드가 되지 않습니다. 사진 업로드 창에서 파일 선택 후 '자동 조절'을 클릭하여 사진크기를 조정해 주세요." |
+| 3, 4 | https://www.uwayapply.com/board/faq.htm (EUC-KR) | curl | 200 / 77,514 | photo: "사진 업로드에 필요한 증명사진을 스캔 후 파일로 저장하시기 바랍니다. (각 대학의 사진 업로드 유의사항에 준하는 형태로 스캔)" · "[자동크기조절](여백 존재 시 “자르기” …)"; documents: the three failure causes, the file-name rule, the Windows/Chrome·Edge-only line, "서류 제출 방법은 대학에 따라 차이가 있습니다…", the A4 re-save steps, ZIP (8 quotes in univ-docs-upload.md) |
+| 4 univ-docs-upload | https://apply.jinhakapply.com/Customer/Faq?categoryid=7 | curl | 200 | "진학어플라이는 제출서류 상담이 불가합니다. 대학 모집요강을 확인하거나 학교 입학처로 문의하시기 바랍니다." |
+| 5 kosaf-docs | https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=모두 서류를 (and 신청방법 및 필요서류, 다른 방법; searchType=a&searchStr=용량) | curl | 200 / ~1.1 MB each | 제출 대상일 때만, 1일~3일 후 확인, app/homepage paths, 미혼/기혼/이혼 서류, "휴대폰 등의 사진 촬영 이미지는 유효하지 않습니다…TIF파일로…", "※ 규격: 300dpi로 흑백 스캔한 TIF 파일만 업로드 가능 ( 용량 400kb 이하)", "가구원 동의는 온라인 동의가 원칙입니다." |
+- How the shells were opened: jinhakapply.com / uwayapply.com home pages are script/iframe shells (the drafts' tried[]), but their FAQ pages are static HTML: the jinhak FAQ link came from the rendered apply.jinhakapply.com page (chrome-cdp, read-only), the uway FAQ path from `goApply('709')` in /js/uway2012.js. kosaf.go.kr's FAQ search is a plain GET. So **no A1 quote needs `via: browser`**; all are curl-checkable.
+- Hancom FAQ search (chrome-cdp, read-only, 2026-10-01): "PDF 저장" 0 hits; "PDF", "PDF로", "PDF 변환" and "PDF 파일" listed 2413 and 2857 (used). The 2413 answer is written for 한컴오피스 2014; the guide says so ("한컴오피스 2014 기준", "버전에 따라 메뉴 이름이 조금 다를 수 있어요").
+- `node scripts/ops/source-watch.mjs --dry-run`: 24 sources, **78 quotes, all found verbatim** (after the A1 guides were written).
+- chrome-cdp note: the Playwright attach (`cdp.cjs`) started timing out after a uwayapply.com tab hung; I closed only my own tab via the DevTools HTTP endpoint and used a raw-CDP read (Runtime.evaluate on my own tab) for the one check left. No login, form submit or cookie use.
+
+### Result: 4 guides published (hwp-to-pdf, admission-photo, univ-docs-upload, kosaf-docs) + 2 hubs; drafts left: kakao-photo, yearend-tax-pdf (A3 rows, untouched)
+- Indexable /guide/ URLs: 18 guides + 2 hubs = **20** (was 14). A2 + A3 must add ≥ 10 for the ≥ 30 ship rule.
+- **No new preset.** Neither 진학사 nor 유웨이 states pixels or KB; 진학사 states "반명함판(3X4)" and JPG/JPEG. admission-photo links the existing `half_card` preset and calls it 문서딱's 계산값, not the sites' size (qnet-photo wording). The `admission` quick-link slot is skipped (did not ship).
+- kosaf-docs: the only file spec is the 가구원 동의서 (TIF, 흑백 스캔, 400 KB 이하). We cannot make TIF, so the guide says "문서딱은 TIF 파일을 만들지 않아요" and the hub row has no tool link (`fit: false`).
+
+### Structure
+- `guide-schema.ts`: `topic` (required, TOPICS order), `spec` rows (preset row = numbers from the preset; literal row = every number must be in this guide's quotes; `fit: false` = no tool link), `via: 'browser'` on URL sources. `specProblems` (guide-facts.ts) runs inside the schema, so a bad row fails the build.
+- `hubs.ts` builds the rows. A preset row shows a size only when **the preset's own quote** states both numbers (so Q-Net's 413×531, our choice, is never shown as Q-Net's; passport shows 413×531 px but not 3.5×4.5 cm, which is not in its quote). Hub copy lives in `src/content/hubs/<slug>.md` (table words too, so no UI-font growth); `Hub.astro` fails the build if the copy has a number the tables do not show, or if a spec guide has no row.
+- /guide/: hubs first, then topic jump links (`#topic-n`) and groups. Their CSS is a page-local `<style>` in guide/index.astro (system font for the topic names), so app.css, which every tool page blocks on, is byte-unchanged; `TOPICS = [...]` is stripped from the UI-font scan (gen-ui-font.mjs, like `keywords`), so the UI font is unchanged too (the only new glyph had been 학). Result: the shared Base CSS has the same hash as the HEAD build (Base.BPftrZwD.css).
+- Guide AdSlots: `Guide.astro` renders the slot body via `Astro.slots.render`, splits it before the 3rd H2 (= after the second H2 section) for `guide-mid`, and puts `guide-end` after the FAQ (the sources sit in the aside after "함께 보면 좋은 안내", so "after the FAQ" is the closest point before them that stays in the article). Hubs: `guide-end` only. Off = nothing rendered: the 14 existing guide `<article>` blocks are **byte-equal** to the HEAD build (scratch compare, 14/14).
+- Duplicate guard: `scripts/lib/shingles.mjs` (5-char shingles of the article incl. FAQ, Jaccard); check-dist fails at ≥ 0.45 and prints the max pair; postbuild test repeats it. Max pair: photo-sizes ~ upload-limits **0.256**.
+- source-watch: `via: browser` entries are never fetched or counted; they print as "수동 확인 (브라우저 출처)" and join the issue body only when an issue is opened anyway (ops.test).
+- Tool facts: `hwp.pdfMb.desktop` (80) and `hwp.pdfPages.desktop` (300) from LIMITS.
+- Home "자주 찾는 안내": admission-photo replaces id-photo-size (6th slot). NEXT_GUIDES: pdf-merge → univ-docs-upload. /id-photo/ quick links: brief order first, then the other presets, ≤ 8 (today the same 6 in the same order).
+- hwp-to-pdf guide `tools: [hwp-to-pdf, pdf-compress]` (not hwp-viewer), so /hwp-viewer/ keeps its 3 HWP guides; /hwp-to-pdf/ now lists the 4 HWP guides (hwp-to-pdf.spec expectation updated).
+- lighthouserc adds /guide/photo-sizes/ and /guide/admission-photo/; qa:visual adds /guide/, both hubs and admission-photo.
+
+### Decisions (never stop)
+- Spec rows are hub data, not rendered on the guide (the brief's "[spec table]" slot is optional; rendering it would have changed the 11 existing articles, which the brief's regression test forbids). Drift guard: hub values come from the same rows/presets, and the rows pass the same fact check.
+- Seasonal pages: admission-photo and kosaf-docs carry `season` (peak as words, refresh = our own re-check dates 2027-08-01/2027-11-15 and 2026-11-15/2027-05-15). Not rendered; no exam or application dates appear on the pages (none are quoted).
+- Topic mapping of the existing guides: id-photo-size → 여권·신분증, id-photo-kb → 시험·자격증, photo-kb → PDF·메일 (closest of the fixed 7). 세금·민원 is empty until A3 and is not shown.
+- e2e port: another worktree (doc-tools-kr-ci) was running lhci on :4173, so Playwright's `reuseExistingServer` silently tested *its* dist. All A1 e2e numbers below are from `E2E_PORT=4273` runs; Lighthouse used a scratch copy of lighthouserc on :4373.
+
+### Gates (PUBLIC_SITE_URL=https://docttak.com; final tree)
+| Gate | Result |
+|---|---|
+| astro check | 0 errors, 0 warnings, 1 hint (pre-existing) |
+| unit (vitest) | 680/680, 41 files |
+| build flag off → dist-noauto | check-dist OK, 2,342 files; UI fonts 183.3 KB; precache 416.8 KB |
+| build flag on → dist | check-dist OK, 2,349 files; **UI fonts 184.8 / 190 KB, A1 delta +0.0 KB** (400 43.8, 600 46.8, 700 47.3, 800 46.9; 604 characters, same as HEAD); precache 419.3 / 450 KB; hubs 5.2 / 5.5 KB gzip HTML, 1.5 KB initial JS; guide similarity max photo-sizes ~ upload-limits 0.256 / 0.45 |
+| 14 existing guide articles vs HEAD build | byte-equal 14/14 |
+| check:licenses | OK, 36 packages, 5 components |
+| source-watch --dry-run | 24 sources, 78/78 quotes found |
+| e2e hubs.spec (new) chromium + mobile-safari | 12/12 |
+| e2e hwp-to-pdf + hwp-viewer specs, chromium + mobile-safari | 96 passed, 10 skipped, 0 failed |
+| e2e site + growth, 5 projects | 263 passed, 2 skipped, 0 failed, 0 flaky (final CSS); after the font-scan change growth + hubs on chromium + mobile-safari: 33 passed, 1 flaky (pdf-merge share test, untouched, passed on retry) |
+| Lighthouse, 5 runs/URL, median, 16 URLs (scratch runner, see below) | all guide/hub/index URLs pass: /guide/ 1,710 ms, photo-sizes 1,710, admission-photo 1,651, other guides 1,654–1,710; perf ≥ 0.99, a11y/bp/seo 1, CLS ≤ 0.002. Tool pages + home land on the 1,953 / 2,040 ms steps (A0 Known Gap); 4 of 7 had a 2,040 median in the last run (different ones each run). CI decides (Arch ruling). |
+| qa:visual (local dist, own port) | 292 PNGs, 0 hard failures; new shots guides/hubphoto/hubupload/admission |
+| regress --fixtures-only | compress 28/28, photo 11/11 + 18/18, idphoto 10/11 (known p07 chin −1.11 mm, unchanged), hwp all pass, hwp-viewer 10/10, merge 5/5 (CORPUS_DIR = C:\dev\doc-tools-kr\spikes\pdf\corpus; the hotfix worktree has no corpus) |
+
+### Known Gaps (A1)
+- **Shared machine:** another worktree (doc-tools-kr-ci, lhci; and an `lhexp2.sh` loop) held :4173 and later :4373. Playwright's `reuseExistingServer` would test the other dist without a word; I ran e2e on `E2E_PORT=4273` and Lighthouse on :47391 with a probe that the server has the hubs. lhci itself aborted twice on a transient `NO_NAVSTART` (and an EBUSY temp-dir cleanup crash), so the Lighthouse numbers come from a scratch runner: lighthouse CLI × 5 per lighthouserc URL, a run with a runtimeError retried, thresholds checked on the per-metric median (lhci's median-run picks one representative run; close but not identical).
+- Lighthouse tool pages: the A0 bimodal 1,953/2,040 ms gap is unchanged; A1 does not touch tool-page CSS, fonts or JS (Base CSS hash = HEAD).
+- No new presets; the /id-photo/ quick-link order code is in place for A2.
+- docs/OPS-RUNBOOK.md does not yet describe the manual "브라우저 출처" table (no browser source exists yet).
+- Post-deploy (owner/PC): Naver 수집 요청 + Kakao cache refresh for the 4 guides and 2 hubs; GSC inspection for both hubs.
+- Shortfall toward ≥ 30: 20 indexable now; A2 (10 rows) + A3 (7 rows) must yield ≥ 10 more.
+
+Status: **DONE_WITH_CONCERNS** (local Lighthouse tool-page LCP noise per the A0 ruling; everything A1 touches passes).

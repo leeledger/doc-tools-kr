@@ -7,6 +7,7 @@ answer: 큐넷 원서 사진은 JPG 파일에 200 KB 이하면 되고, 정면이
 published: '2026-09-30'
 updated: '2026-09-30'
 category: 사진
+topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=qnet', label: '큐넷 사진 규격에 맞추기' }
 related: [id-photo-kb, id-photo-size, gosi-photo]
@@ -24,6 +25,11 @@ sources:
     title: Q-Net 길라잡이 — 사진등록
     quote: 스캔 작업한 파일에 여백이 있는 경우 그림판 프로그램 등을 사용하여 사진파일의 여백을 제거 하시기 바랍니다.
     retrieved: '2026-09-30'
+spec:
+  - label: Q-Net 자격시험 원서 사진
+    kind: photo
+    preset: qnet
+    format: JPG·JPEG
 faq:
   - q: 큐넷 사진 등록이 안 돼요.
     a: 파일이 JPG인지, 200 KB 이하인지 먼저 확인하세요. 그래도 안 되면 정면 사진인지, 배경이 단순한지, 얼굴이 한쪽으로 치우치지 않았는지, 좌우와 위에 여백이 충분한지 살펴보세요.

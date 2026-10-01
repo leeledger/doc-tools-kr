@@ -7,11 +7,17 @@ answer: 국가공무원 시험 원서 사진은 3.5×4.5 cm 기준 137×177픽�
 published: '2026-09-30'
 updated: '2026-09-30'
 category: 사진
+topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=gosi', label: '공무원 시험 사진 규격에 맞추기' }
 related: [id-photo-size, id-photo-kb, passport-photo]
 sources:
   - preset: gosi
+spec:
+  - label: 국가공무원 시험 원서 사진
+    kind: photo
+    preset: gosi
+    format: JPG·PNG
 faq:
   - q: 공무원 시험 원서 사진 크기는 몇 픽셀인가요?
     a: 인사혁신처 공무원 채용시스템 안내 기준으로 3.5×4.5 cm에 해당하는 137×177픽셀이에요.

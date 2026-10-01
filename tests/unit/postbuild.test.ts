@@ -19,6 +19,8 @@ import { MAX_SOURCE_AGE_DAYS, publishedGuideSchema } from '../../src/data/guide-
 import { resolveSources, unsourcedFacts } from '../../src/data/guide-facts';
 import { LIVE_TOOLS } from '../../src/data/tools';
 import { parseHref } from '../../src/lib/ui/deeplink';
+import { HUB_KIND, HUB_SLUGS } from '../../src/data/hubs';
+import { DUP_LIMIT, articleText, duplicatePairs, jaccard, shingles } from '../../scripts/lib/shingles.mjs';
 
 const ROOT = join(__dirname, '..', '..');
 const DIST = join(ROOT, 'dist');
@@ -757,7 +759,8 @@ describe('built output', () => {
     expect(stack).toEqual([]);
     const items = [...rss.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => m[1]!);
     const links = items.map((i) => new URL(decode(i.match(/<link>([^<]+)<\/link>/)![1]!)).pathname).sort();
-    expect(links).toEqual(guides.map((g) => `/guide/${g.slug}/`).sort());
+    expect(links).toEqual([...guides.map((g) => `/guide/${g.slug}/`), ...HUB_SLUGS.map((h) => `/guide/${h}/`)].sort());
+    for (const h of HUB_SLUGS) expect(locs, h).toContain(`/guide/${h}/`);
     for (const i of items) expect(i.match(/<pubDate>([^<]+)<\/pubDate>/)![1]).toMatch(/^\w{3}, \d{2} \w{3} \d{4} 09:00:00 \+0900$/);
     const sw = readFileSync(join(DIST, 'sw.js'), 'utf8');
     const precache = JSON.parse(sw.match(/const __PRECACHE__ = (\[[^\n]*\]);/)![1]!) as string[];
@@ -809,6 +812,55 @@ describe('built output', () => {
     // Negative fixture: a guide that says 업로드 fails the same check.
     const fixture = '<title>사진 올리기 | 문서딱</title><article class="guide"><p class="guide-answer">사진을 업로드하면 돼요.</p></article>';
     expect(hits(userText(fixture))).toEqual(['업로드']);
+  });
+
+  it('G2 A1: hubs are articles with a FAQPage equal to the visible FAQ, in sitemap, RSS and llms.txt, plain language, linked from /guide/', () => {
+    need();
+    const index = pageOf('/guide/');
+    const llms = readFileSync(join(DIST, 'llms.txt'), 'utf8');
+    const hits = (s: string) => [...s.replace(/픽셀\(px\)/g, '').matchAll(JARGON)].map((m) => m[0]);
+    for (const h of HUB_SLUGS) {
+      const html = pageOf(`/guide/${h}/`);
+      const ld = jsonLdOf(html);
+      expect(ld.filter((x) => x['@type'] === 'Article').length, h).toBe(1);
+      const faq = ld.find((x) => x['@type'] === 'FAQPage')!;
+      const visible = [...html.matchAll(/<div class="guide-qa"[^>]*>\s*<h3[^>]*>([\s\S]*?)<\/h3>\s*<p[^>]*>([\s\S]*?)<\/p>/g)].map((m) => ({ q: decode(m[1]!), a: decode(m[2]!) }));
+      expect((faq.mainEntity as { name: string; acceptedAnswer: { text: string } }[]).map((e) => ({ q: e.name, a: e.acceptedAnswer.text }))).toEqual(visible);
+      expect(visible.length).toBeGreaterThanOrEqual(3);
+      expect(index, h).toContain(`href="/guide/${h}/"`);
+      expect(llms, h).toContain(`/guide/${h}/`);
+      expect(hits(userText(html)), h).toEqual([]);
+      expect(html).toContain('<table>');
+    }
+  });
+
+  it('G2 A1 link graph: a hub links every guide with a spec row of its kind; no guide is an orphan (index + another guide or hub)', () => {
+    need();
+    const guides = publishedGuides();
+    const inLinks = new Map<string, Set<string>>();
+    const linksOf = (html: string) => new Set([...html.matchAll(/href="\/guide\/([a-z0-9-]+)\/"/g)].map((m) => m[1]!));
+    for (const from of [...guides.map((g) => g.slug), ...HUB_SLUGS]) {
+      for (const to of linksOf(pageOf(`/guide/${from}/`))) if (to !== from) (inLinks.get(to) ?? inLinks.set(to, new Set()).get(to)!).add(from);
+    }
+    for (const h of HUB_SLUGS) {
+      const links = linksOf(pageOf(`/guide/${h}/`));
+      for (const g of guides.filter((x) => x.data.spec.some((r) => r.kind === HUB_KIND[h]))) expect(links.has(g.slug), `${h} → ${g.slug}`).toBe(true);
+    }
+    for (const g of guides) expect(inLinks.get(g.slug)?.size ?? 0, `${g.slug}: links from other guides or hubs`).toBeGreaterThanOrEqual(1);
+  });
+
+  it('G2 A1: no ad slot is rendered on a guide or hub while ads are off; no two articles are near-duplicates (max pair reported)', () => {
+    need();
+    const pages = [...publishedGuides().map((g) => g.slug), ...HUB_SLUGS].map((s) => [s, pageOf(`/guide/${s}/`)] as const);
+    for (const [s, html] of pages) expect(html.includes('ad-slot'), s).toBe(false);
+    const { max, over } = duplicatePairs(pages.map(([s, html]) => [s, articleText(html)]));
+    console.log(`guide similarity max pair: ${max.a} ~ ${max.b} ${max.j.toFixed(3)}`);
+    expect(over).toEqual([]);
+    expect(max.j).toBeLessThan(DUP_LIMIT);
+    // The measure itself: identical text is 1, unrelated text 0.
+    expect(jaccard(shingles('여권사진 규격과 사이즈'), shingles('여권사진 규격과 사이즈'))).toBe(1);
+    expect(jaccard(shingles('여권사진 규격'), shingles('PDF 합치기 방법'))).toBe(0);
+    expect(articleText('<p>밖</p><article><h1>제목 &amp; 본문</h1><script>x</script></article>')).toBe('제목&본문');
   });
 
   it('fix-forward: the 404 map is JSON with "<" escaped; guide source labels have no nested parentheses', () => {

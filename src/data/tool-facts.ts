@@ -42,6 +42,8 @@ export const TOOL_FACTS = {
   'hwp.maxMb.mobile': { value: HWP_LIMITS.mobile.hardBytes / MB_DEC, unit: 'MB' },
   'hwp.pdfMb.mobile': { value: HWP_LIMITS.mobile.capBytes / MB_DEC, unit: 'MB' },
   'hwp.pdfPages.mobile': { value: HWP_LIMITS.mobile.capPages },
+  'hwp.pdfMb.desktop': { value: HWP_LIMITS.desktop.capBytes / MB_DEC, unit: 'MB' },
+  'hwp.pdfPages.desktop': { value: HWP_LIMITS.desktop.capPages },
   'hwp-viewer.searchPages': { value: GUARD_PAGES },
 } as const satisfies Record<string, ToolFact>;
 

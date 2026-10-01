@@ -1,15 +1,18 @@
 ---
-// /guide/ (Growth G.2): every published guide, grouped by category, with its one-sentence answer.
+// /guide/ (Growth G.2; G2 A1): the two hubs, then every published guide grouped by topic (TOPICS order) with a
+// jump-link list on top, each guide once with its one-sentence answer.
 import Base from '../../layouts/Base.astro';
 import { SITE } from '../../data/site';
 import { breadcrumbs } from '../../data/jsonld';
-import { CATEGORY_ORDER, guidePath, publishedGuides } from '../../data/guides';
+import { guidePath, hubs, publishedGuides, topicGroups } from '../../data/guides';
 
 const guides = await publishedGuides();
-const groups = CATEGORY_ORDER.map((c) => ({ category: c, items: guides.filter((g) => g.data.category === c) })).filter((g) => g.items.length);
+const hubList = await hubs();
+const groups = topicGroups(guides);
 const title = '문서·사진 규격과 용량 안내';
 const description = '여권사진·증명사진 규격, 사진과 PDF 용량 줄이기, 메일 첨부 한도를 기관 안내를 확인해 정리했어요. 확인일과 출처를 함께 적어 두었어요.';
 const url = new URL('/guide/', Astro.site).href;
+const article = (headline: string, slug: string) => ({ '@type': 'Article', headline, url: new URL(guidePath(slug), Astro.site).href });
 const jsonLd = [
   {
     '@context': 'https://schema.org',
@@ -19,7 +22,7 @@ const jsonLd = [
     description,
     inLanguage: 'ko-KR',
     isPartOf: { '@type': 'WebSite', name: SITE.name, url: new URL('/', Astro.site).href },
-    hasPart: guides.map((g) => ({ '@type': 'Article', headline: g.data.title, url: new URL(guidePath(g.id), Astro.site).href })),
+    hasPart: [...hubList.map((h) => article(h.data.title, h.id)), ...guides.map((g) => article(g.data.title, g.id))],
   },
   breadcrumbs(Astro.site, [
     [SITE.name, '/'],
@@ -32,9 +35,22 @@ const jsonLd = [
     <div class="wrap narrow">
       <h1>문서·사진 제출 안내</h1>
       <p class="meta-line">기관 안내를 직접 확인하고 정리했어요. 각 안내에 확인일과 원문 링크가 있어요.</p>
-      {groups.map((grp) => (
-        <section aria-labelledby={`cat-${grp.category}`}>
-          <h2 id={`cat-${grp.category}`}>{grp.category}</h2>
+      <ul class="related-list guide-hubs">
+        {hubList.map((h) => (
+          <li>
+            <a href={guidePath(h.id)}>{h.data.title}</a>
+            <span>{h.data.answer}</span>
+          </li>
+        ))}
+      </ul>
+      <nav class="guide-topics" aria-label="주제">
+        <ul>
+          {groups.map((grp, i) => <li><a href={`#topic-${i + 1}`}>{grp.topic}</a></li>)}
+        </ul>
+      </nav>
+      {groups.map((grp, i) => (
+        <section aria-labelledby={`topic-${i + 1}`}>
+          <h2 id={`topic-${i + 1}`}>{grp.topic}</h2>
           <ul class="related-list">
             {grp.items.map((g) => (
               <li>
@@ -49,3 +65,14 @@ const jsonLd = [
     </div>
   </div>
 </Base>
+<style>
+  /* G2 A1: topic jump links; topic names render in the system Korean font like the guide titles (not in the UI
+     font subset). Page-local, so the shared app.css every tool page blocks on does not grow. */
+  .guide-topics ul { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .guide-topics a {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--brand); font-size: 15px; text-decoration: none;
+  }
+  .guide-topics, section h2 { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+  section h2 { scroll-margin-top: 16px; }
+</style>

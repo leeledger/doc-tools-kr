@@ -1,7 +1,7 @@
 // RSS 2.0 of the published guides (Growth G.3), hand-written: no dependency. 네이버 서치어드바이저 takes it.
 import type { APIRoute } from 'astro';
 import { SITE } from '../../data/site';
-import { guidePath, publishedGuides } from '../../data/guides';
+import { guidePath, hubs, publishedGuides } from '../../data/guides';
 
 const xml = (s: string): string =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!);
@@ -15,7 +15,7 @@ function rfc822(iso: string): string {
 }
 
 export const GET: APIRoute = async ({ site }) => {
-  const guides = (await publishedGuides()).sort((a, b) => b.data.published.localeCompare(a.data.published) || a.id.localeCompare(b.id));
+  const guides = [...(await publishedGuides()), ...(await hubs())].sort((a, b) => b.data.published.localeCompare(a.data.published) || a.id.localeCompare(b.id));
   const items = guides
     .map((g) => {
       const url = new URL(guidePath(g.id), site).href;

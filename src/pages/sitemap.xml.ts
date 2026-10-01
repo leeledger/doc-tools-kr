@@ -1,14 +1,14 @@
 import type { APIRoute } from 'astro';
 import { LIVE_TOOLS } from '../data/tools';
 import { LEGAL_UPDATED } from '../data/legal';
-import { guidePath, publishedGuides } from '../data/guides';
+import { guidePath, hubs, publishedGuides } from '../data/guides';
 
 // Every indexable page with its lastmod (Growth G.3). Never a query URL: deep links canonicalize to the tool page.
 export const GET: APIRoute = async ({ site }) => {
   const guides = await publishedGuides();
   const max = (dates: string[]): string => dates.reduce((a, b) => (b > a ? b : a));
   const tools = LIVE_TOOLS.map((t) => [`/${t.slug}/`, t.updated] as const);
-  const guideRows = guides.map((g) => [guidePath(g.id), g.data.updated] as const);
+  const guideRows = [...(await hubs()), ...guides].map((g) => [guidePath(g.id), g.data.updated] as const);
   const guideIndex = guideRows.length ? [['/guide/', max(guideRows.map((r) => r[1]))] as const] : [];
   const rows: (readonly [string, string])[] = [
     ['/', max([...tools, ...guideIndex].map((r) => r[1]))],

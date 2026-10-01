@@ -1,0 +1,114 @@
+---
+// A hub page (G2 A1): /guide/photo-sizes/ and /guide/upload-limits/. H1, the answer, the tables built from the
+// guides' spec rows (src/data/hubs.ts), the intro body, the FAQ, then related guides and every source behind a
+// row. No ad inside or above the tables (Phase-0 §2): guide-end only, after the FAQ. The fact check: every number
+// with a unit in the hub's own copy must be one the tables show; otherwise the build fails.
+import { render } from 'astro:content';
+import Base from './Base.astro';
+import '../styles/guide.css';
+import AdSlot from '../components/AdSlot.astro';
+import Share from '../components/Share.astro';
+import { SITE } from '../data/site';
+import { guideJsonLd, guideOgUrl } from '../data/jsonld';
+import { numberUnits, resolveSources } from '../data/guide-facts';
+import { guidePath, guidesBySlug, hubBySlug, publishedGuides } from '../data/guides';
+import { HUB_KIND, hubRows, type HubSlug } from '../data/hubs';
+
+interface Props {
+  slug: HubSlug;
+}
+const { slug } = Astro.props;
+const hub = await hubBySlug(slug);
+const h = hub.data;
+const guides = await publishedGuides();
+const tables = h.tables.map((t) => ({ ...t, rows: hubRows(guides, t.kind).filter((r) => !t.limitOnly || r.limit) }));
+const linked = guides.filter((g) => g.data.spec.some((r) => r.kind === HUB_KIND[slug]));
+const rowGuides = [...new Set(tables.flatMap((t) => t.rows.map((r) => r.guide.slug)))];
+const sources = resolveSources(guides.filter((g) => rowGuides.includes(g.id)).flatMap((g) => g.data.sources));
+const allowed = new Set(tables.flatMap((t) => t.rows.flatMap((r) => r.facts)));
+const copy = [h.title, h.description, h.ogDescription, h.answer, h.og.title, h.og.line, hub.body ?? '', ...h.faq.flatMap((f) => [f.q, f.a])].join('\n');
+const unsourced = [...new Set(numberUnits(copy).filter((f) => !allowed.has(f)))];
+if (unsourced.length) throw new Error(`hub "${slug}": numbers not in its tables: ${unsourced.join(', ')}`);
+for (const g of linked) if (!rowGuides.includes(g.id)) throw new Error(`hub "${slug}": guide "${g.id}" has a spec row but no table row`);
+const related = await guidesBySlug(h.related, slug);
+const { Content } = await render(hub);
+const canonical = new URL(guidePath(slug), Astro.site).href;
+const jsonLd = guideJsonLd({ slug, title: h.title, description: h.description, published: h.published, updated: h.updated, faq: h.faq, citations: sources.map((s) => s.url) }, Astro.site);
+const ext = { rel: 'noopener noreferrer', target: '_blank' };
+const c = h.columns;
+---
+<Base
+  title={`${h.title} | ${SITE.name}`}
+  description={h.description}
+  ogImage={guideOgUrl(slug, Astro.site)}
+  ogAlt={`${SITE.name}: ${h.og.title} — ${h.og.line}`}
+  ogDescription={h.ogDescription}
+  ogType="article"
+  jsonLd={jsonLd}
+  rss
+>
+  <div class="guide-page">
+    <article class="guide hub wrap" aria-labelledby="guide-title">
+      <p class="guide-crumbs"><a href="/guide/">안내</a></p>
+      <h1 id="guide-title">{h.title}</h1>
+      <div class="guide-answer-box">
+        <p class="guide-answer">{h.answer}</p>
+      </div>
+      <Share name={h.title} text={h.ogDescription} id="guide-share" url={canonical} />
+      {tables.map((t, i) => (
+        <section class="hub-table" aria-labelledby={`hub-t${i + 1}`}>
+          <h2 id={`hub-t${i + 1}`}>{t.caption}</h2>
+          <div class="hub-scroll">
+            <table>
+              <thead>
+                <tr><th scope="col">{c.label}</th><th scope="col">{c.size}</th><th scope="col">{c.limit}</th><th scope="col">{c.format}</th><th scope="col">{c.guide}</th></tr>
+              </thead>
+              <tbody>
+                {t.rows.map((r) => (
+                  <tr>
+                    <th scope="row">{r.label}</th>
+                    <td>{r.size || h.none}</td>
+                    <td>{r.limit || h.none}</td>
+                    <td>{r.format || h.none}</td>
+                    <td><a href={guidePath(r.guide.slug)}>{r.guide.title}</a>{r.fit && <><br /><a href={r.fit}>{c.fit}</a></>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+      <div class="guide-body">
+        <Content />
+      </div>
+      <section class="guide-faq" aria-labelledby="guide-faq-title">
+        <h2 id="guide-faq-title">자주 묻는 질문</h2>
+        {h.faq.map((f) => (
+          <div class="guide-qa">
+            <h3>{f.q}</h3>
+            <p>{f.a}</p>
+          </div>
+        ))}
+      </section>
+      <AdSlot id="guide-end" size="leaderboard" />
+    </article>
+    <aside class="guide-more wrap narrow" aria-label="더 보기">
+      <section aria-labelledby="guide-related-title">
+        <h2 id="guide-related-title">함께 보면 좋은 안내</h2>
+        <ul class="related-list">
+          {related.map((r) => <li><a href={guidePath(r.id)}>{r.data.title}</a></li>)}
+        </ul>
+      </section>
+      <section class="guide-sources" aria-labelledby="guide-sources-title">
+        <h2 id="guide-sources-title">확인일과 출처</h2>
+        <ul>
+          {sources.map((s) => (
+            <li><a href={s.url} {...ext}>{s.title} (새 창)</a> · 확인일 <time datetime={s.retrieved}>{s.retrieved}</time></li>
+          ))}
+        </ul>
+        <p class="guide-note">규격은 기관 사정에 따라 바뀔 수 있어요. 내기 전에 원문을 한 번 더 확인해 주세요.</p>
+        <p class="guide-dates">처음 쓴 날 <time datetime={h.published}>{h.published}</time> · 고친 날 <time datetime={h.updated}>{h.updated}</time></p>
+      </section>
+    </aside>
+  </div>
+</Base>

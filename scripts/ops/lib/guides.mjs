@@ -20,7 +20,7 @@ export function unquote(v) {
 }
 
 /**
- * @typedef {{ url?: string, title?: string, quote?: string, retrieved?: string, preset?: string }} Source
+ * @typedef {{ url?: string, title?: string, quote?: string, retrieved?: string, preset?: string, via?: string }} Source
  * @typedef {{ title: string, query: string, draft: boolean, sources: Source[] }} Frontmatter
  */
 
@@ -111,13 +111,14 @@ export const readPresets = (root = ROOT) => parsePresets(readFileSync(join(root,
 /**
  * What the source watch checks: one entry per (quote, url set), with the pages that cite it. A guide's URL
  * source must hold its quote at that URL; a preset quote must be found across the preset's URLs (it joins
- * sentences from more than one official page). Presets are also cited by the /id-photo/ tool itself.
+ * sentences from more than one official page). Presets are also cited by the /id-photo/ tool itself. A quote
+ * read in a browser (`via: browser`, G2 A1) carries `via` so the watch lists it for a manual check.
  */
 export function watchList(guides, presets) {
   const byKey = new Map();
-  const add = (pagePath, urls, quote, origin) => {
+  const add = (pagePath, urls, quote, origin, via) => {
     const key = `${urls.join(' ')}\n${quote}`;
-    const e = byKey.get(key) ?? { urls, quote, origin, pages: [] };
+    const e = byKey.get(key) ?? { urls, quote, origin, pages: [], ...(via ? { via } : {}) };
     if (!e.pages.includes(pagePath)) e.pages.push(pagePath);
     byKey.set(key, e);
   };
@@ -126,7 +127,7 @@ export function watchList(guides, presets) {
   for (const g of guides) {
     if (g.draft) continue;
     for (const s of g.sources) {
-      if (s.url && s.quote) add(g.path, [s.url], s.quote, `guide ${g.slug}`);
+      if (s.url && s.quote) add(g.path, [s.url], s.quote, `guide ${g.slug}`, s.via);
       else if (s.preset && presetById.has(s.preset)) {
         const p = presetById.get(s.preset);
         add(g.path, p.urls, p.quote, `preset ${p.id}`);

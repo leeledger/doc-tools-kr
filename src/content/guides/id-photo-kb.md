@@ -7,6 +7,7 @@ answer: 증명사진은 픽셀 크기까지 정해져 있으면 여권·증명�
 published: '2026-09-30'
 updated: '2026-09-30'
 category: 사진
+topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=qnet', label: 'Q-Net 원서 사진 규격에 맞추기' }
 related: [id-photo-size, photo-kb, qnet-photo, gosi-photo]
