@@ -17,6 +17,9 @@ Read this first in any new session (local or cloud). It supersedes `SESSION-CHEC
 
 **Snapshots pushed 2026-09-30 (uncommitted work at that moment, not reviewed):** `growth-g-wip` (Growth G working tree on top of a01af5e) and `hwp-direct-wip` (HWP direct working tree on top of `hwp-direct` a4f8abd). If `growth-g`/`hwp-direct` later appear with a newer 'WIP state' commit from the builders, prefer those; otherwise continue from the `-wip` snapshots.
 
+
+**Update 2026-10-01:** `hwp-direct` = 1aa8874 (builder's WIP commit; BUILD-LOG 'HWP direct — WIP state' lists done/left; known blocker: with PUBLIC_ID_PHOTO_AUTOFRAME=1 the SW precache hits 1,235 KB because rolldown places its runtime helper in the HWP export chunk — fix idea: make the export chunk a tiny entry that dynamically imports the writer). `hwp-direct-wip` is obsolete. `growth-g-wip` = 2c8e4a0: the Growth G builder was cut off by the weekly usage limit while 'rebuilding both dists' — its WIP-state notes were NOT written; first step in a new session: diff it against a01af5e, list what exists vs ARCHITECT-BRIEF-GROWTH.md, then run all gates.
+
 **Merge order:**
 1. Finish `hwp-direct`, then Richard review, then merge to main and deploy.
 2. Rebase or merge `growth-g` on the new main, finish it (including the two HWP guides it held back), then Richard review, then merge and deploy.
