@@ -16,3 +16,6 @@ public/brand/
 public/favicon.ico
 public/fonts/hwp/
 dist-noauto/
+test-results-live/
+playwright-report-live/
+.ops-state/

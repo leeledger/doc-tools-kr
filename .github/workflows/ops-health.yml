@@ -1,0 +1,42 @@
+name: Ops A-4 site health
+
+# Daily: every sitemap URL 200; canonical, OG, JSON-LD; no off-site or Cloudflare-injected script; internal
+# links; time to first byte. Opens/updates the ops:health issue, closes it once a run is clean.
+# docs/OPS-RUNBOOK.md. No secrets needed.
+on:
+  schedule:
+    - cron: '17 22 * * *' # 07:17 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (print the issue, send nothing)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ops-health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Check the live site
+        run: node scripts/ops/health.mjs --url https://docttak.com $DRY
+      - name: Report a failed run
+        if: failure()
+        run: |
+          echo "사이트 건강 점검(A-4) 작업 자체가 실패했습니다: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > fail.md
+          node scripts/ops/issue.mjs open --label ops:health --title "사이트 건강 점검 작업 실패" --body-file fail.md $DRY

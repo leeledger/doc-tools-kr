@@ -1,0 +1,63 @@
+name: Ops A-5/A-6/M-3 weekly growth
+
+# Monday: A-5 growth report (Search Console + Cloudflare) committed to reports/growth/YYYY-WW.md with an
+# ops:growth summary issue; A-6 new-guide candidates (ops:opportunity); M-3 the AdSense trigger (ops:monetize).
+# Secrets (each optional; a missing one is skipped with a note): GSC_SERVICE_ACCOUNT_JSON, CF_API_TOKEN,
+# CF_ZONE_ID. docs/OPS-RUNBOOK.md.
+on:
+  schedule:
+    - cron: '23 0 * * 1' # Monday 09:23 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (no commit, no issue)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: ops-weekly
+  cancel-in-progress: false
+
+jobs:
+  growth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: A-5 growth report
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+        run: node scripts/ops/growth.mjs --out-json .ops-state/growth.json $DRY
+      # [skip ci]: a report is not site content, so neither CI nor Cloudflare Pages rebuilds for it. A push
+      # with the workflow token never starts other workflows anyway.
+      - name: Commit the report to main
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add reports/growth
+          if git diff --cached --quiet; then echo 'no report change'; exit 0; fi
+          git commit -m "ops: 성장 리포트 $(ls reports/growth | sort | tail -n 1 | sed 's/\.md$//') [skip ci]"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: A-6 new guide candidates
+        run: node scripts/ops/opportunities.mjs --data .ops-state/growth.json $DRY
+      - name: M-3 AdSense trigger
+        run: node scripts/ops/monetize.mjs $DRY
+      - name: Report a failed run
+        if: failure()
+        run: |
+          echo "주간 성장 작업(A-5/A-6/M-3)이 실패했습니다: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > fail.md
+          node scripts/ops/issue.mjs open --label ops:growth --title "주간 성장 작업 실패" --body-file fail.md $DRY
