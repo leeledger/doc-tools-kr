@@ -176,7 +176,12 @@ export function initHwpTool(): void {
   }
 
   function send(msg: HwpRequest, transfer: Transferable[] = []): void {
-    if (!worker) return;
+    if (!worker) {
+      // The worker is gone (pagehide) while a document is still on screen: say so instead of waiting forever.
+      // fail() releases every page waiter, so the first-page wait and the export end with it.
+      if (state !== 'empty' && state !== 'error') fail('engine');
+      return;
+    }
     watchdog.kick();
     worker.postMessage(msg, transfer);
   }
@@ -500,6 +505,10 @@ export function initHwpTool(): void {
     docId++;
     stopExport();
     stopWorker();
+  });
+  window.addEventListener('pageshow', (ev) => {
+    // Back from the bfcache: pagehide ended the worker and the export, so the document is gone. Start over.
+    if (ev.persisted && state !== 'empty' && state !== 'error') reset(false);
   });
 
   if (takeInflight()) {

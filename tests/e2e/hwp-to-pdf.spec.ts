@@ -450,6 +450,41 @@ test('다른 문서 열기 after a download: no page, the PDF URL revoked, 다�
   await expect(pages(page)).toHaveCount(1);
 });
 
+// Back/forward cache: pagehide ends the worker and any export; a restored page must not wait for it forever.
+const pagehide = (page: Page) => page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
+const pageshow = (page: Page) => page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+
+test('bfcache: pagehide mid-export then pageshow(persisted) starts over (no download); then law05 downloads', async ({ page }) => {
+  test.setTimeout(240_000);
+  const downloads: string[] = [];
+  page.on('download', (d) => downloads.push(d.suggestedFilename()));
+  await open(page, fx('law10.hwp'), 'convert');
+  await page.locator('#hw-save').click();
+  await expect(tool(page)).toHaveAttribute('data-state', 'exporting');
+  await pagehide(page);
+  await pageshow(page);
+  await expect(tool(page)).toHaveAttribute('data-state', 'empty');
+  await expect(pages(page)).toHaveCount(0);
+  await expect(page.locator('#hw-progress')).toBeHidden();
+  expect(await page.evaluate(() => sessionStorage.getItem('hwp-inflight'))).toBeNull();
+  await page.waitForTimeout(2000);
+  expect(downloads).toEqual([]);
+  await open(page, fx('law05.hwp'), 'convert');
+  const d = await download(page, '#hw-save');
+  expect(d.suggestedFilename()).toBe('law05.pdf');
+});
+
+test('bfcache: a page request with no worker (pagehide, no restore event) is an engine error, not a hang', async ({ page }) => {
+  test.setTimeout(180_000);
+  await open(page, fx('law05.hwp'), 'convert');
+  await pagehide(page);
+  await page.locator('#hw-save').click();
+  await expect(tool(page)).toHaveAttribute('data-state', 'error', { timeout: 15_000 });
+  await expect(page.locator('#engine-error')).toBeVisible();
+  await expect(page.locator('#engine-error').getByRole('button', { name: '새로고침' })).toBeVisible();
+  await expect(page.locator('#hw-progress')).toBeHidden();
+});
+
 // ---------- keyboard ----------
 
 test('keyboard only: pick, scroll the preview, 그래도 PDF 내려받기, then 다시 내려받기', async ({ page, browserName, isMobile }) => {
@@ -475,7 +510,11 @@ test('keyboard only: pick, scroll the preview, 그래도 PDF 내려받기, then 
   const [d] = await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), page.keyboard.press('Enter')]);
   expect(d.suggestedFilename()).toBe('law17.pdf');
   await expect(page.locator('#hw-force')).toBeFocused();
-  await tabTo(`document.activeElement?.id === 'hw-again'`);
+  // WebKit leaves links out of the Tab order unless the user turns that on (Safari's "Press Tab to highlight each
+  // item", which Playwright cannot set; Option+Tab did not reach it either); there the link is focused directly
+  // and still activated with the keyboard.
+  if (browserName === 'webkit') await page.locator('#hw-again').focus();
+  else await tabTo(`document.activeElement?.id === 'hw-again'`);
   const [again] = await Promise.all([page.waitForEvent('download', { timeout: 30_000 }), page.keyboard.press('Enter')]);
   expect(again.suggestedFilename()).toBe('law17.pdf');
 });
