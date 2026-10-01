@@ -1,5 +1,5 @@
 {
-  "$comment": "G2 A0 (Arch, 2026-10-01): LCP stays at 2,000 ms; the gate is the median of 5 runs per URL, and the CI runner result is the source of truth (local runs quantise to about 1,953 or 2,040 ms under simulated throttling).",
+  "$comment": "G2 A0 (Arch, 2026-10-01): LCP stays at 2,000 ms; the gate is the median of 5 runs per URL, and the CI runner result is the source of truth (local runs quantise to about 1,953 or 2,040 ms under simulated throttling). Aggregation is \"median\" (the median value of the 5 runs per assertion); \"median-run\" asserted every metric on one representative run picked by FCP and TTI, which is not the median LCP (G2 ci-green).",
   "ci": {
     "collect": {
       "startServerCommand": "node tests/e2e/serve.mjs",
@@ -37,49 +37,49 @@
           "error",
           {
             "minScore": 0.95,
-            "aggregationMethod": "median-run"
+            "aggregationMethod": "median"
           }
         ],
         "categories:accessibility": [
           "error",
           {
             "minScore": 1,
-            "aggregationMethod": "median-run"
+            "aggregationMethod": "median"
           }
         ],
         "categories:best-practices": [
           "error",
           {
             "minScore": 0.95,
-            "aggregationMethod": "median-run"
+            "aggregationMethod": "median"
           }
         ],
         "categories:seo": [
           "error",
           {
             "minScore": 1,
-            "aggregationMethod": "median-run"
+            "aggregationMethod": "median"
           }
         ],
         "cumulative-layout-shift": [
           "error",
           {
             "maxNumericValue": 0.01,
-            "aggregationMethod": "median-run"
+            "aggregationMethod": "median"
           }
         ],
         "largest-contentful-paint": [
           "error",
           {
             "maxNumericValue": 2000,
-            "aggregationMethod": "median-run"
+            "aggregationMethod": "median"
           }
         ],
         "resource-summary:script:size": [
           "error",
           {
             "maxNumericValue": 30720,
-            "aggregationMethod": "median-run"
+            "aggregationMethod": "median"
           }
         ]
       }

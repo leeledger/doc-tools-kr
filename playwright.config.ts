@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = Number(process.env.E2E_PORT ?? 4173);
 /**
  * The shipping configuration of /id-photo/ (PUBLIC_ID_PHOTO_AUTOFRAME=0, built into dist-noauto/): the id-photo
- * suite runs against it as its own project, manual flow end to end (Step 4 round 2, Arch). Only when the
+ * suite runs against it as its own projects (manual-chromium, manual-firefox), manual flow end to end (Step 4 round 2, Arch). Only when the
  * folder exists (the gate run builds it).
  */
 const MANUAL_PORT = Number(process.env.E2E_MANUAL_PORT ?? 4181);
@@ -38,7 +38,12 @@ export default defineConfig({
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
     { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
     ...(MANUAL
-      ? [{ name: 'manual-chromium', testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } }]
+      ? [
+          { name: 'manual-chromium', testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } },
+          // Firefox runs the id-photo suite on the shipping build too (G2 ci-green): headless Firefox on the Linux CI
+          // runner has no WebGL, so on the auto-framing build the tests that need a detected face skip there.
+          { name: 'manual-firefox', testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Firefox'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } },
+        ]
       : []),
   ],
   webServer: [

@@ -67,10 +67,11 @@ const font = readFileSync(join(root, 'node_modules', 'pretendard', 'dist', 'web'
 
 // Static instances (Polish P.12): WebKit ignores the variation axis of a variable face, so every weight the
 // CSS uses gets its own fully instanced face (no fvar). check-dist rejects any other weight in the CSS.
-const UI_WEIGHTS = [400, 600, 700, 800];
+// No 600: every face the page uses is fetched before LCP, and a fourth file put home LCP over 2,000 ms (G2 ci-green).
+const UI_WEIGHTS = [400, 700, 800];
 // Only the OpenType features browsers apply by default (HarfBuzz's horizontal defaults). The CSS enables no
 // other feature, so rendering is unchanged, and the alternates (ss01…, case, sups, aalt) no longer ship:
-// about 20 % smaller per instance, which keeps the four faces inside the 170 KB budget.
+// about 20 % smaller per instance, which keeps the faces inside the font budget.
 const KEEP_FEATURES = ['abvm', 'blwm', 'ccmp', 'locl', 'mark', 'mkmk', 'rlig', 'calt', 'clig', 'curs', 'dist', 'kern', 'liga', 'rclt'];
 
 // unicode-range as merged runs, so the browser knows exactly which characters this face covers.

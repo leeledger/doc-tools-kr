@@ -13,7 +13,7 @@ import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mj
 const dist = distDir();
 const KB = 1024;
 /** The UI font weights (Polish P.12): one static instance each; no other weight may appear in the CSS. */
-const UI_WEIGHTS = new Set(['400', '600', '700', '800']);
+const UI_WEIGHTS = new Set(['400', '700', '800']);
 /** Copy that describes auto-framing; none of it may ship when PUBLIC_ID_PHOTO_AUTOFRAME is off. */
 const AUTOFRAME_PHRASES = ['자동으로 잡아', '자동으로 맞춘', '자동 맞춤', '건너뛰고 직접 맞추기', '6 MB의 프로그램'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -125,9 +125,9 @@ else {
   if (age > 180) warnings.push(`id-photo presets were last checked ${retrieved} (${age} days ago): re-verify every source`);
 }
 
-// UI fonts (Polish P.12): four static instances, ≤ 50 KB each and ≤ 190 KB together; exactly two preloads.
+// UI fonts (Polish P.12; 600 dropped in G2 ci-green): three static instances, ≤ 50 KB each and ≤ 190 KB together; exactly two preloads.
 const uiFonts = match(/^_astro\/anolim-ui-\d+[^/]*\.woff2$/);
-if (uiFonts.length !== 4) errors.push(`UI fonts: ${uiFonts.length} file(s), expected 4 (400, 600, 700, 800)`);
+if (uiFonts.length !== 3) errors.push(`UI fonts: ${uiFonts.length} file(s), expected 3 (400, 700, 800)`);
 for (const f of uiFonts) budget(`UI font ${f.slice(7)}`, [f], 50 * KB, raw, 'raw');
 // 190 KB (Arch, Step 4 round 2; was 180, and 170 before Polish round 2): with the /id-photo/ copy the four
 // faces are 179.1 KB, ~1 KB under 180, so the next tool's copy would have failed the build.
@@ -140,7 +140,7 @@ for (const css of match(/^_astro\/[^/]*\.css$/)) {
   for (const m of read(css).toString('utf8').matchAll(/font-weight\s*:\s*([^;}]+)/g)) {
     const v = m[1].trim().replace(/\s*!important$/, '');
     const n = v === 'normal' ? '400' : v === 'bold' ? '700' : v;
-    if (!['inherit', 'initial', 'unset'].includes(n) && !UI_WEIGHTS.has(n)) errors.push(`${css}: font-weight ${v} is not a UI font instance (400, 600, 700, 800)`);
+    if (!['inherit', 'initial', 'unset'].includes(n) && !UI_WEIGHTS.has(n)) errors.push(`${css}: font-weight ${v} is not a UI font instance (400, 700, 800)`);
   }
 }
 

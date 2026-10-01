@@ -41,6 +41,8 @@ jobs:
         with:
           name: reports-checks
           path: .lighthouseci/
+          # upload-artifact v4 skips dot-folders by default; without this the Lighthouse reports never upload.
+          include-hidden-files: true
           retention-days: 7
 
   # One job per Playwright project, run in parallel. The full 5-project suite in a
@@ -60,7 +62,7 @@ jobs:
           cache: npm
       - run: npm ci
       # Same order as the local deploy gate: the shipping build (auto-frame off) goes to
-      # dist-noauto/ for the manual-chromium project, then dist/ is built with the flag on
+      # dist-noauto/ for the manual-chromium and manual-firefox projects, then dist/ is built with the flag on
       # because the id-photo specs on the other projects need MediaPipe.
       - name: Build (flag off → dist-noauto)
         run: npm run build && mv dist dist-noauto
@@ -81,6 +83,8 @@ jobs:
         run: |
           if [ "${{ matrix.project }}" = chromium ]; then
             npx playwright test --project=chromium --project=manual-chromium
+          elif [ "${{ matrix.project }}" = firefox ]; then
+            npx playwright test --project=firefox --project=manual-firefox
           else
             npx playwright test --project=${{ matrix.project }}
           fi

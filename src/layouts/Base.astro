@@ -6,7 +6,8 @@ import { SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } f
 import { BUILD_ID } from '../data/build';
 import { LIVE_TOOLS } from '../data/tools';
 import JsonLd from '../components/JsonLd.astro';
-// Preloaded UI weights (Polish P.12): 400 (body) and 800 (every H1, the LCP element). 600 and 700 load on demand.
+// Preloaded UI weights (Polish P.12): 400 (body) and 800 (every H1). 700 loads on demand. There is no 600 face: a
+// fourth file on the critical path put home LCP over 2,000 ms (G2 ci-green; BUILD-LOG).
 import uiFont400 from '../generated/anolim-ui-400.woff2?url';
 import uiFont800 from '../generated/anolim-ui-800.woff2?url';
 

@@ -75,7 +75,7 @@ a { color: inherit; }
 .hero { padding: 88px 0 72px; }
 .eyebrow {
   display: inline-block; margin: 0 0 18px;
-  font-size: 14px; font-weight: 600; color: var(--brand);
+  font-size: 14px; font-weight: 700; color: var(--brand);
   background: var(--brand-soft); padding: 6px 12px; border-radius: 999px;
 }
 .hero h1 {
@@ -109,7 +109,7 @@ section h2 { font-size: clamp(24px, 3.2vw, 32px); letter-spacing: -0.02em; line-
 .card p { margin: 0 0 16px; color: var(--muted); font-size: 15.5px; }
 .icon { width: 44px; height: 44px; border-radius: 12px; background: var(--brand-soft); display: grid; place-items: center; }
 .icon svg { width: 24px; height: 24px; fill: none; stroke: var(--brand); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.status { display: inline-block; font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+.status { display: inline-block; font-size: 13px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
 
 .privacy { padding: 72px 0; background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .two-col { display: grid; gap: 40px; grid-template-columns: 1.1fr 1fr; align-items: start; }

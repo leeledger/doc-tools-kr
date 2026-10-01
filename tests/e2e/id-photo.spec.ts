@@ -33,12 +33,24 @@ const CONFIRM = '규격 확인은 제출처 기준을 따릅니다. 정수리(�
 test.describe.configure({ timeout: 150_000 });
 
 /**
- * The `manual-chromium` project runs this suite against the shipping build (PUBLIC_ID_PHOTO_AUTOFRAME=0,
- * dist-noauto/): every test that needs the face model skips there with the reason, every other one runs, and
- * each test also asserts that no MediaPipe request was made (Step 4 round 2).
+ * The `manual-chromium` and `manual-firefox` projects run this suite against the shipping build
+ * (PUBLIC_ID_PHOTO_AUTOFRAME=0, dist-noauto/): every test that needs the face model skips there with the reason,
+ * every other one runs, and each test also asserts that no MediaPipe request was made (Step 4 round 2).
  */
-const isManualBuild = (): boolean => test.info().project.name === 'manual-chromium';
+const isManualBuild = (): boolean => test.info().project.name.startsWith('manual-');
 const NEEDS_MODEL = 'Needs the face model; the manual-only build has none (this is the auto-framing build).';
+/**
+ * MediaPipe needs a WebGL context (2, else 1) even with the CPU delegate; without one it throws and the tool falls back
+ * to 직접 맞추기 (the designed fallback; reproduced locally with Firefox webgl.disabled). Headless Firefox on the
+ * Linux CI runner has no WebGL, so the tests that need a detected face skip there with this reason;
+ * auto-framing is off in the shipping build, whose flow `manual-firefox` runs on Firefox (G2 ci-green, BUILD-LOG).
+ */
+const NO_WEBGL = 'No WebGL in this browser (headless Firefox on the Linux CI runner): the face model cannot run, so the tool falls back to manual; manual-firefox covers the shipping build.';
+async function skipWithoutWebGL(page: Page): Promise<void> {
+  if (isManualBuild()) return;
+  const gl = await page.evaluate(() => ['webgl2', 'webgl'].some((type) => document.createElement('canvas').getContext(type) !== null));
+  test.skip(!gl, NO_WEBGL);
+}
 const skipIfManual = (): void => test.skip(isManualBuild(), NEEDS_MODEL);
 
 // CSP: every test records violations from the first script on; the afterEach requires none.
@@ -161,6 +173,7 @@ test('the wasm is fetched once from the network; MediaPipe loads it from the HTT
 // ---------- 2 happy path ----------
 
 test('happy path: passport from portrait_pd — overlay, readout in band, save gated by the box, exact file', async ({ page }) => {
+  await skipWithoutWebGL(page);
   await open(page);
   await expect(page.locator('#idp-preset')).toHaveValue('passport_online');
   await pick(page, PORTRAIT, /^adjust$/);
@@ -228,6 +241,7 @@ test('custom size: invalid input (49 px, "abc") disables save and shows the mess
 // ---------- 4 adjust ----------
 
 test('adjust: keys, nudge buttons and a mouse drag move the frame; each change clears the box', async ({ page, isMobile }) => {
+  await skipWithoutWebGL(page);
   await open(page);
   await pick(page, PORTRAIT);
   const stage = page.locator('#idp-stage');
@@ -417,6 +431,7 @@ test.describe('warnings', () => {
   ] as const) {
     test(`${label}`, async ({ page }) => {
       test.skip(isManualBuild() && !label.startsWith('background'), NEEDS_MODEL);
+      if (!label.startsWith('background')) await skipWithoutWebGL(page);
       await open(page);
       await pick(page, file);
       await expect(page.locator('#idp-checklist .warn')).toContainText([text], { timeout: 10_000 });
@@ -480,7 +495,7 @@ test.describe('kill switch', () => {
   let server: { close(): Promise<void> } | null = null;
   test.use({ baseURL: `http://127.0.0.1:${NOAUTO_PORT}` });
   test.beforeAll(async ({ browserName }) => {
-    // Not on manual-chromium (its test skips): a second server on the same port, started while the chromium
+    // Not on manual-* (its test skips): a second server on the same port, started while the chromium
     // project's one is still open in a parallel worker, never resolved and hung the full run (Growth G gate).
     if (browserName !== 'chromium' || isManualBuild() || !existsSync(join(root, 'id-photo', 'index.html'))) return;
     server = await startServer({ root, port: NOAUTO_PORT });
@@ -491,7 +506,7 @@ test.describe('kill switch', () => {
 
   test('the PUBLIC_ID_PHOTO_AUTOFRAME=0 build requests nothing of MediaPipe and exports manually', async ({ page, browserName, network }) => {
     test.skip(browserName !== 'chromium', 'One engine (brief: chromium).');
-    test.skip(isManualBuild(), 'The manual-chromium project already runs the whole suite on this build.');
+    test.skip(isManualBuild(), 'The manual-* projects already run the whole suite on this build.');
     test.skip(!server, 'dist-noauto/ is built by the gate run (PUBLIC_ID_PHOTO_AUTOFRAME=0 astro build --outDir dist-noauto).');
     await open(page);
     await expect(page.getByText('약 6 MB의 프로그램 파일')).toHaveCount(0);
@@ -536,6 +551,7 @@ test('done: the headline, the chips and 내려받기 are fully below the sticky 
 
 test('keyboard only: preset, file, adjust, confirm, save, download', async ({ page, isMobile }) => {
   test.skip(isMobile, 'Keyboard-only flow is a desktop scenario.');
+  await skipWithoutWebGL(page);
   await open(page);
   await page.locator('#idp-preset').focus();
   await page.keyboard.press('ArrowDown');

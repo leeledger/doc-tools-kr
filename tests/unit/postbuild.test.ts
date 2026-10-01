@@ -339,7 +339,7 @@ describe('UI font static instances (P.12)', () => {
     return out;
   };
 
-  it.each([400, 600, 700, 800])('%d: no fvar, usWeightClass = %d, the name guard passes, ≤ 50 KB', async (w) => {
+  it.each([400, 700, 800])('%d: no fvar, usWeightClass = %d, the name guard passes, ≤ 50 KB', async (w) => {
     const woff2 = readFileSync(join(gen, `anolim-ui-${w}.woff2`));
     expect(woff2.length).toBeLessThanOrEqual(50 * 1024);
     const sfnt = Buffer.from(await fontverter.convert(woff2, 'truetype', 'woff2'));
@@ -350,13 +350,13 @@ describe('UI font static instances (P.12)', () => {
     expect(reservedNameProblems(new Uint8Array(sfnt), 'Pretendard')).toEqual([]);
   });
 
-  it('the CSS has four faces, each with a single weight and format("woff2")', () => {
+  it('the CSS has three faces (no 600, G2 ci-green), each with a single weight and format("woff2")', () => {
     const css = readFileSync(join(gen, 'anolim-ui.css'), 'utf8');
     const faces = css.match(/@font-face \{[^}]+\}/g) ?? [];
-    expect(faces).toHaveLength(4);
-    expect(faces.map((f) => f.match(/font-weight: ([^;]+);/)![1])).toEqual(['400', '600', '700', '800']);
+    expect(faces).toHaveLength(3);
+    expect(faces.map((f) => f.match(/font-weight: ([^;]+);/)![1])).toEqual(['400', '700', '800']);
     for (const f of faces) expect(f).toContain("format('woff2')");
-    const total = [400, 600, 700, 800].reduce((a, w) => a + statSync(join(gen, `anolim-ui-${w}.woff2`)).size, 0);
+    const total = [400, 700, 800].reduce((a, w) => a + statSync(join(gen, `anolim-ui-${w}.woff2`)).size, 0);
     // 190 KB since Step 4 round 2 (Arch; check-dist has the same limit).
     expect(total).toBeLessThanOrEqual(190 * 1024);
   });

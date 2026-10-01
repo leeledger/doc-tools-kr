@@ -1085,3 +1085,65 @@ Status: **DONE_WITH_CONCERNS** (Lighthouse noise at the 2,000 ms line; see Known
 - LCP: the earlier font-order explanation is withdrawn (see Known Gaps above). lighthouserc `numberOfRuns: 5` plus a `$comment` with the ruling; CLOUD-HANDOFF §3 updated.
 - Gates: check 0 errors; unit 670/670; build flag on: check-dist OK, UI fonts 184.8 KB (+0 new glyphs), precache 419.1 KB; viewer e2e chromium + mobile-safari 42 passed, 4 skipped, 0 flaky.
 - Lighthouse, 5 runs, this PC: /hwp-to-pdf/ median 1,956 (1,951 / 1,956 / 1,956 / 2,040 / 2,040); /hwp-viewer/ median **2,040** (1,951 / 2,040 ×4). Per the ruling, the CI runner's result decides; it runs on push, which is pending the orchestrator's go-ahead.
+
+## ci-green: main CI to green (Bob, 2026-10-02; branch ci-green from origin/main 315aa38)
+Status: see the CI line at the end.
+
+### 1. Lighthouse: home LCP 2,116 ms > 2,000 (checks job)
+- **Reproduced locally:** 5 runs on / at 315aa38 (flag off): 2,111–2,122 ms, every run. The same code passed in the run before (daad867): the page sat on the edge, and Lighthouse's quantisation decided.
+- **LCP element:** p.lead. TTFB 456 ms, load delay 0, **render delay 1,663 ms**. FCP 1,514 ms.
+- **Cause: font bytes on the critical path.** Lantern counts every request that starts before the LCP paint. On home that is all four UI faces: 400 and 800 (preloaded), plus 600 and 700, found through the CSS (≈ 190 KB of woff2 together).
+  - Experiment 1: preload 600 and 700 as well. FCP went to 913 ms, LCP stayed at 2,113 ms. Request order is not the problem; the bytes are.
+  - Experiment 2: drop the 600 and 700 faces. LCP 1,510–1,669 ms.
+  - Experiment 3: drop 600 only, so its two rules use 700. LCP 1,816–1,963 ms (median 1,834).
+- **Fix: there is no 600 face any more.** Only `.eyebrow` and `.status` used 600 (global.css); they now use 700.
+  - gen-ui-font makes 3 static instances (400, 700, 800). check-dist expects 3 files and rejects weight 600 in CSS. The postbuild unit test checks the 3 faces. Comments updated in Base.astro and gen-sw.
+  - UI fonts 136.9 KB (flag off) / 138.0 KB (flag on), was 184.8. The 190 KB budget is unchanged (Arch's number).
+  - Visible change: the home eyebrow chip and the "사용하기" status chips are one step bolder. qa:visual not re-run (Known Gaps).
+- **Aggregation:** `median-run` does not assert the median LCP. lhci picks one "representative" run, the one closest to the median FCP and TTI (@lhci/utils representative-runs.js), and asserts every audit on that run alone. Every assertion is now `aggregationMethod: "median"`, the median value of the 5 runs (assertions.js `getValueForAggregationMethod`). `$comment` updated. Threshold and URLs unchanged.
+- **Upload:** upload-artifact v4 skips dot-folders, so `.lighthouseci/` never uploaded (run 36864903124 had no reports-checks artifact). Added `include-hidden-files: true`.
+- **Lighthouse after the fix** (this PC, flag off, 14 URLs × 5, all assertions pass). LCP medians in ms:
+
+  | URL | median | (runs) |
+  |---|---|---|
+  | / | 1,962 | (1,813 / 1,814 / 1,962 / 1,965 / 1,973) |
+  | /pdf-merge/ | 1,970 | |
+  | /pdf-compress/ | 1,968 | |
+  | /photo-compress/ | 1,981 | (1,970 / 1,972 / 1,981 / 2,112 / 2,116) |
+  | /hwp-to-pdf/ | 1,960 | |
+  | /hwp-viewer/ | 1,963 | |
+  | /id-photo/ | 1,967 | |
+  | /terms/ | 1,813 | |
+  | /guide/ | 1,819 | |
+  | guides | 1,660–1,672 | |
+
+### 2. e2e (firefox)
+- **id-photo, 7 tests (happy path, adjust, 4 warnings, keyboard only): the cause is no WebGL.** On the CI runner the readout was "직접 맞추기", so the tool had fallen back to manual.
+  - MediaPipe needs a WebGL context (2, then 1) even with `delegate: 'CPU'`. Headless Firefox on the Linux runner has none. Chromium has SwiftShader.
+  - Reproduced locally with Firefox `webgl.disabled: true`: the same readout and `emscripten_webgl_create_context() returned error 0`. With WebGL, local Firefox frames the face in 2.5 s and all 7 tests pass.
+  - The product behaves as designed (manual fallback). Auto-framing is off in the shipping build.
+- **Coverage decision:**
+  - New project `manual-firefox`: the id-photo suite on dist-noauto (the shipping build), like manual-chromium. `isManualBuild()` is now any `manual-*` project. The CI firefox job runs `--project=firefox --project=manual-firefox`.
+  - On the auto-framing build, the tests that need a detected face skip when the browser has no WebGL (`skipWithoutWebGL`, with the stated reason). The check is on the capability, not the browser name, so they still run wherever WebGL exists (local Firefox, Chromium).
+  - Local results: firefox + manual-firefox, id-photo: 48 passed, 18 skipped, 0 flaky. chromium + manual-chromium, id-photo: 51 passed, 15 skipped.
+- **polish.spec.ts:160 (privacy): a flake, not a bug.** The CI trace (reports-firefox artifact) shows:
+  - every request served within 50 ms, the page rendered (snapshot has the full privacy text), and the page's own script ran;
+  - the SW register shim's console line appears, and that only runs after `load`;
+  - but Playwright never received the navigation's commit/lifecycle events, so `goto` waited for "domcontentloaded" until the 20 s timeout. It hit twice in a row (first try and retry).
+- **The 18 Firefox flakies:** all are the same `page.goto: Timeout 20000ms`, every one through `gotoReady`, on random pages. The shared cause is the Playwright Firefox (Juggler) harness losing navigation events under load. It is not in our code.
+  - Tried: racing goto against the navigation response plus in-page readyState. Reverted, because later locator calls still block on "waiting for navigation to finish".
+  - Tried: `fission.autostart: false`. It still flaked locally, so no effect could be shown.
+  - No fix applied (no clean shared cause in our code). retries stays 1, and flakies stay reported.
+
+### Gates (this PC)
+- check: 0 errors.
+- unit: 668/669 on the flag-on dist. The one failure is the postbuild "plain language" scan timing out at 60 s; it scans the MediaPipe bundles, which exist only in the flag-on build. On the flag-off dist, which is what the CI checks job builds, postbuild.test.ts is 39/39. Pre-existing, see Known Gaps.
+- Both builds in order: flag off → dist-noauto, flag on → dist. check-dist OK on both.
+- lhci: as above.
+- e2e: firefox + manual-firefox id-photo; chromium + manual-chromium id-photo (above); firefox polish/site/growth: no new failures, only the goto flakies.
+
+### Known Gaps (ci-green)
+- qa:visual was not re-run for the 600 → 700 chip weight.
+- Photo-compress LCP: 2 of 5 local runs land at 2,112–2,116 ms (median 1,981). There is little margin on the tool pages (≈ 1,960–1,980 ms).
+- Firefox goto flake (Playwright harness): a double failure (first try and retry) can still fail the job.
+- The postbuild "plain language" test needs more than 60 s on a flag-on dist on Windows.
