@@ -1,3 +1,32 @@
+# Review Feedback — G2 A2 (8b47d72, 51191f5 on g2-a2)
+Date: 2026-10-02
+Ready for Builder: NO → fixed in 0005334
+
+Written by Bob for Richard: his Bash calls failed (permission-checker outage), so the coordinator relayed his items. Passed his review: facts, presets, the unit reader (`unitSpellings`), the KST date check, the hwp-to-pdf :433 test fix, check:quotes 113/113.
+
+## Must Fix
+1. police-exam-photo.md: both source titles must name the operator. Arch ruling 2 wording: "경찰청 인터넷 원서접수(진학어플라이 운영) — 사진등록안내". **Fixed.** The body line now says "경찰청 인터넷 원서접수 안내" too.
+2. id-card-photo.md: the source excludes "분실, 파기 등". 파기 means destroyed or discarded, not damaged, and a damaged card is still handed in. Use "(잃어버렸거나 없앤 경우 제외)", as in the FAQ. **Fixed** in the table, and the FAQ now says "잃어버렸거나 없앤 경우" (it had said "망가져서 없앤").
+3. korcham-photo.md: the quoted rejection list includes "얼굴만 나온 사진", but the guide list and FAQ 5 omit it. **Fixed** in both.
+
+## Should Fix
+- kuksiwon-photo.md: "그 뒤에는 국시원의 정정 신청 안내를 따라 주세요" goes beyond the source. **Dropped.**
+- photo-sizes hub 형식 column: "상반신 사진" and "상반신 컬러 사진" are not file formats. **Fixed:** 형식 now holds only file formats. Other wording moved into the row label:
+  - id-card: "(신규·재발급, 상반신)"
+  - police: "(상반신 컬러)"
+  - driver-license: "(종이, 여권용 컬러)"
+  - admission: "(진학사 원서접수, 반명함판 3×4)", 형식 "JPG·JPEG"
+  - Rows with no stated file format show 안내 없음.
+
+## Arch ruling 1
+- /id-photo/ 관련 안내 follows search demand: passport-photo, then photo-kb, then the rest. **Done:** `src/data/tool-guide-order.ts` (`TOOL_GUIDE_PINS`, pure `orderToolGuides`) is used by `guidesForTool`. Unit tests cover the pin order, unknown tools, and the real /id-photo/ order from the guide files. Built /id-photo/ shows passport-photo, photo-kb, kuksiwon-photo, police-exam-photo.
+
+## Done for Richard (by Bob)
+- Visual QA at 390 and 1280 px, light and dark, for the 6 new guides and both hubs (Playwright Chromium, 32 full-page shots, checked by eye). The guides were clean, with no horizontal page scroll. The hub tables at 390 px broke inside words ("350K B", "JP G") because the body's `overflow-wrap: anywhere` applies inside the side-scrolling table. **Fixed:** `.hub-table th, td { overflow-wrap: normal }` (guide.css), so values stay whole and the table scrolls. Re-shot and checked.
+- Local e2e on E2E_PORT=4273, chromium + mobile-safari: id-photo + hubs 75 passed, 11 skipped (platform); site + growth 105 passed, 1 skipped.
+
+---
+
 # Review Feedback — ci-green (f35b6b0, d164c31, ef816a0 on origin/main 315aa38)
 Date: 2026-10-02
 Ready for Builder: YES (no Must Fix)
