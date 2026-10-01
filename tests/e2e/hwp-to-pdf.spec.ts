@@ -92,6 +92,9 @@ async function noSwap<T>(page: Page, run: () => Promise<T>): Promise<T> {
       }
       if (!w.__swap.titles.includes(document.title)) w.__swap.titles.push(document.title);
     };
+    // One sample now: a fast 「다시 내려받기」 (an anchor to a ready blob) can finish before the first 25 ms tick,
+    // which left `titles` empty (CI mobile-chrome, G2 A1 run 36906140363).
+    tick();
     setInterval(tick, 25);
   });
   try {

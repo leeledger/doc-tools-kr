@@ -49,7 +49,9 @@ jobs:
   # single job ran past the 30-minute limit.
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 60, not 45 (G2 A1): on 2026-10-01 the webkit job's `playwright install --with-deps` spent 34 min on slow
+    # azure.archive.ubuntu.com downloads (5 min on ci-green the same day), twice in a row; the tests take ~13 min.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
