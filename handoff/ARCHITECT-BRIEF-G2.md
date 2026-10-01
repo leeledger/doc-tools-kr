@@ -2,7 +2,7 @@
 
 Staged 2026-10-01 by Arch on `cloud-handoff` (= origin/main d7e319a). Decisions are logged in BUILD-LOG "G2 decisions (Arch, 2026-10-01)".
 Inputs: `C:\dev\AGI_AGENT\reports\문서딱 트래픽 현실성 검증.md` (traffic), `...\문서딱 다국어 확장 검토.md` (i18n), `...\문서딱 경쟁사 매출 분석.md` (revenue).
-Order is by expected traffic per unit of effort. Sprint A ships in three deploys (A1, A2, A3). Sprint B does not start until A1 is live.
+Order is by expected traffic per unit of effort. Sprint A ships in four deploys (A0 /hwp-viewer/, A1, A2, A3). Sprint B does not start until A1 is live.
 Standing rules apply unchanged: CLAUDE.md owner rules, the guide fact contract (Growth G), plain language (docs/COPY.md), the 문서딱 brand, no tracking, and never lowering a threshold to pass.
 
 ## Why this order
@@ -10,7 +10,107 @@ The traffic model's two biggest levers are cluster D (ID/exam photo specs, x4.5 
 
 ---
 
-# Sprint A — Korean guides 11 → 30+, hubs, topics
+# Sprint A — /hwp-viewer/ first, then Korean guides 11 → 30+, hubs, topics
+
+## A0 — /hwp-viewer/ (owner request 2026-10-01; FIRST item of Sprint A; own deploy, target 2026-10-12)
+
+### Goal
+People open and read a .hwp/.hwpx on /hwp-viewer/ in the browser, with no PDF step and nothing to install, the way a desktop viewer install would. It works well on phones, including the KakaoTalk in-app browser. Nothing leaves the device.
+
+### SEO targets (Naver volumes measured by the owner)
+- hwp 뷰어 3,560; hwpx 열기 130; 한글파일 열기 (orchestrator measures it in the Gate-0 browser session; not a blocker). Long tail: 한글 없이 hwp 열기, 휴대폰 hwp 열기, 아이폰 hwp 열기.
+- Title "HWP 뷰어 — 한글 파일(.hwp·.hwpx) 설치 없이 열기 | 문서딱"; H1 "HWP·HWPX 파일 보기". "HWP 뷰어" is used only descriptively, as the search phrase (see Legal).
+- **Cannibalisation fix:** the tool /hwp-viewer/ owns "hwp 뷰어". The draft guide `hwp-viewer` (never published, so no URL breaks) is renamed `open-hwp-without-hangul` and targets "한글 없이 hwp 열기", with its CTA to /hwp-viewer/.
+- **Two new guides (ship in A0; topic 한글파일; in NEXT_GUIDES for both HWP tools; count toward the 30):**
+  - `hwp-on-phone` "휴대폰·아이폰에서 HWP 열기". Sources: official Apple / Samsung / Kakao help on saving a received file. If none can be fetched, the device steps describe our page only (Growth G page-6 rule).
+  - `what-is-hwpx` "HWPX가 뭔가요? 여는 법". The "OWPML, KS X 6101" statement ships only with a fetched official quote (standard.go.kr KS entry or a hancom.com tech page).
+
+### Flow
+```
+V0  B0 LCP fix (moved here from Sprint B; same component) --> /hwp-to-pdf/ median LCP <= 2,000 ms
+V1  refactor only: shared pieces of src/tools/hwp-to-pdf/* --> src/tools/hwp-shared/
+      (load, guards, worker, lazy page window, text layer, engine error, watchdog, bfcache)
+      /hwp-to-pdf/ output and e2e unchanged; its own commit
+V2  /hwp-viewer/
+  pick/drop .hwp|.hwpx --sniff + LIMITS[device] + GUARD_PAGES/TEXTBOXES--> over cap: existing error panel
+        | ok
+        v
+  worker parse --> placeholders (pageInfos) --> IntersectionObserver window (render +-2, keep +-6)
+     +-> toolbar: [< 이전] [n / N] [다음 >] [너비 맞춤 | 쪽 맞춤] [- 확대 +] [쪽 목록] [찾기]
+     +-> thumbnails: number + aspect tiles; mini preview only while that page is rendered in the window
+     +-> text layer (TextRun spans) --> select + copy
+     +-> search: pages 1..N text runs (cancellable, "n / N쪽") --> hits --> jump + highlight
+     +-> [PDF로 내려받기] --> dynamic import of the existing export chunk, same open document
+  engine error / watchdog / pagehide-pageshow --> shared paths (P1-2 fix included)
+```
+
+### Build order
+1. **V0:** the B0 LCP fix (moved from Sprint B, which now treats B0 as done). The viewer reuses hwp.css and the controller, so it would inherit the 2,190 ms miss.
+2. **V1 refactor (behaviour-free):** move the shared pieces to `src/tools/hwp-shared/`.
+   - Gates: /hwp-to-pdf/ normalised dist HTML equal before/after; full hwp-to-pdf e2e; regress:hwp `--fixtures-only`; the check-dist export-chunk import rule still holds.
+3. **V2 page:**
+   - `src/pages/hwp-viewer/index.astro` + `src/tools/hwp-viewer/` (toolbar, thumbnails, search).
+   - `tools.ts` entry (live, updated, title, h1). Home cards, ItemList JSON-LD, OG, sitemap and llms.txt follow, and the "every live tool" tests extend.
+   - Share; QuickLinks 관련 안내 = the 3 HWP guides.
+4. **Zoom:** fit width by default under 768 px, fit page otherwise; steps 50–300%. Re-fit keeps the current page in view. Browser pinch zoom is never blocked.
+5. **Thumbnails:** a side list on desktop and a bottom sheet behind 「쪽 목록」 on phones. Tiles are DOM-only (no extra render passes, so phone memory stays inside the caps); virtualised above 100 pages.
+6. **Search:**
+   - Step 0: check whether the worker can return a page's text runs without keeping its SVG; log the answer. If not, render and discard each page.
+   - Cancellable; stops at GUARD_PAGES; NFC + whitespace-folded match; 「n개 찾음」 with prev/next; the hit is highlighted in the text layer.
+7. **PDF CTA:** 「PDF로 내려받기」 runs the existing export in-page (dynamic import of the export chunk), with no re-pick. Arch decision: the owner's "link to the converter" would lose the open file. The intent (offer a PDF) is kept.
+8. **Copy:** plain-language list. "원본과 다르게 보일 수 있어요." is visible next to the viewer, plus the existing privacy line. FAQ: phone, hwpx, why it can look different, copying text, no install.
+- Flag: no UA sniffing for KakaoTalk; standard APIs only (file input; no `showOpenFilePicker`; reuse the /hwp-to-pdf/ download path).
+- Flag: page name, title, OG and JSON-LD never say 한컴뷰어 / 한컴 뷰어 / 한컴오피스. No Hancom or 한글 logo or icon.
+
+### Legal (owner-checked 2026-10-01 at store.hancom.com/etc/hwpDownload.do; Arch probe the same day: HTTP 200, 43,972 B, notice text present verbatim)
+- The exact notice "본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다." (`HANCOM_NOTICE`) must appear in three places: visibly on /hwp-viewer/, in its FAQ/help, and as the first-line comment of every new file under hwp-shared/ and hwp-viewer/.
+- `TRADEMARK_NOTICE` is shown on the page. No affiliation is implied.
+- No warranty: "원본과 다르게 보일 수 있어요." is shown plainly.
+- No spec redistribution and no exclusive-rights claims. HWPX = OWPML national standard (KS X 6101), stated only with a fetched quote.
+- Documents are processed on the device only.
+
+### Failure modes
+| Path | Realistic failure | Handling | User sees |
+|---|---|---|---|
+| Search on a large file, phone | Memory pressure | Discard per page; GUARD_PAGES cap; cancel; device LIMITS | 「찾기를 멈췄어요」 + partial hits, no crash |
+| Thumbnails, long doc | Hundreds of tiles | DOM-only tiles; virtualised above 100 pages | Smooth list |
+| Zoom with the lazy window | Lands on the wrong page after re-fit | Anchor page index kept; e2e asserts it | Same page in view |
+| PDF CTA | Export chunk fails to load (offline) | Existing engine-error path with 새로고침 | Clear error |
+| KakaoTalk in-app | Picker or download restricted | Same download path as /hwp-to-pdf/; UA e2e; owner real-device check | Existing guidance text |
+| bfcache restore | Worker ended at pagehide | Shared P1-2 handling | Empty state or retry panel, no hang |
+| Text layer order | Copy returns scrambled text | Text-layer recall test extended to the viewer | — |
+
+### Test map
+| Branch / flow | Status | Test |
+|---|---|---|
+| V1 keeps /hwp-to-pdf/ identical | [GAP] | normalised dist HTML equality + full hwp-to-pdf e2e |
+| Open .hwp and .hwpx fixtures, page count N | [GAP] | hwp-viewer.spec, 5 projects + mobile emulation |
+| Prev/next, page input, thumbnail → page | [GAP] | e2e |
+| Fit width / fit page / ± zoom keep the page | [GAP] | e2e |
+| Select + copy on page k = expected fixture text | [GAP] | e2e (clipboard on chromium; selection text elsewhere) |
+| Search: known word on page k → count, jump, highlight; cancel | [GAP] | e2e |
+| PDF CTA → valid PDF with N pages, no re-pick | [GAP] | e2e |
+| Over-cap file → same error panel as /hwp-to-pdf/ | [GAP] | e2e |
+| Engine error + pagehide/pageshow | [GAP] | e2e ported from hwp-to-pdf.spec |
+| KakaoTalk UA (iOS, Android): open fixture + download | [GAP] | e2e with UA override on mobile-safari / mobile-chrome |
+| HANCOM_NOTICE, TRADEMARK_NOTICE, "원본과 다르게 보일 수 있어요" visible; no 한컴뷰어/한컴 뷰어/한컴오피스 outside the disclaimer | [GAP] | postbuild dist test |
+| New source files start with the notice comment | [GAP] | unit scan of hwp-shared/, hwp-viewer/ |
+| No upload, 0 console errors, axe | [TESTED] | fixtures apply to the new spec |
+| Home/meta/JSON-LD name every live tool | [TESTED] | existing tests (expectations extend) |
+| regress:hwp | [TESTED] | fixtures-only + full corpus on this PC (CORPUS_DIR) |
+
+### Budgets
+- **LCP:** /hwp-viewer/ and /hwp-to-pdf/ median ≤ 2,000 ms; both in lighthouserc; thresholds unchanged.
+- /hwp-viewer/ initial JS ≤ /hwp-to-pdf/ + 4 KB gzip. Search and thumbnail code loads after the first file opens. Export chunk ≤ 360 KB, lazy, unchanged.
+- Precache ≤ 450 KB (viewer HTML + small entry only).
+- **UI font:** A0 ≤ 1.0 KB. The Sprint A allowance becomes ≤ 2.5 KB total (≤ 187.0 / 190 KB flag-on); guides, topics and presets share the remaining ≤ 1.5 KB. The 190 KB budget does not move.
+
+### Deploy gate (A0)
+- All CLOUD-HANDOFF §3 gates plus a full-corpus regress:hwp on this PC. Richard clear. Local commit; push on the orchestrator's go-ahead.
+- Live smoke drives /hwp-viewer/ with a fixture (Chromium, WebKit, Firefox + Pixel/iPhone emulation).
+- Kakao share-cache refresh, Naver 수집 요청, GSC inspection for /hwp-viewer/ and the 3 HWP guides.
+- Owner-only: real iPhone Safari + KakaoTalk in-app check of open, zoom, search and PDF download.
+
 
 ## Goal
 At least 30 indexable guide URLs under /guide/, each with fetched official quotes. They are grouped by topic and linked from two hub pages. New id-photo presets ship only where an official page states a file-level spec. Seasonal pages go live 6–8 weeks before their season.
@@ -40,7 +140,7 @@ ops:    source-watch (weekly) --via:browser quotes--> "수동 확인" list (not 
 | # | slug | query | sources to fetch | preset? | publishBy |
 |---|---|---|---|---|---|
 | 1 | hwp-to-pdf (draft→pub) | 한글파일 pdf 변환 | hancom.com HWP format / viewer pages (curl 200, 200 KB from this PC, 2026-10-01; the cloud proxy blocked it before) | – | 2026-10-20 |
-| 2 | hwp-viewer (draft→pub) | hwp 뷰어, 한글 없이 열기 | hancom.com official viewer download page | – | 2026-10-20 |
+| 2 | open-hwp-without-hangul (draft `hwp-viewer` renamed, →pub; ships in A0) | 한글 없이 hwp 열기 | hancom.com official viewer download page | – | 2026-10-12 |
 | 3 | admission-photo (draft→pub) | 정시 원서 사진 | jinhakapply.com, uwayapply.com photo guides (curl = shells → chrome-cdp) | if px/KB stated (`jinhak`, `uway`) | 2026-11-10 |
 | 4 | univ-docs-upload (new) | 대학 원서 서류 업로드 용량 | same two sites, 서류제출 guides | – | 2026-11-10 |
 | 5 | kosaf-docs (new) | 국가장학금 서류 제출 | kosaf.go.kr 서류 제출 FAQ/notice (format, size) | – | 2026-11-10 |
@@ -73,7 +173,7 @@ Also in A1: `topic` + grouped /guide/ index, `spec` rows, `via: browser` in sour
 | 21 | epeople-upload-limit | 국민신문고 첨부 용량 | epeople.go.kr help |
 | 22 | kakao-photo (draft→pub) | 카톡 사진 용량 | cs.kakao.com via chrome-cdp |
 
-Count: 11 live + 22 candidates + 2 hubs = 35. **Ship rule: ≥ 30 indexable /guide/ URLs (hubs count) after A3.** If source gating leaves fewer, ship what is sourced and log the shortfall with every `tried[]`. Never pad; never a template page.
+Count: 11 live + 22 candidates + 2 A0 guides + 2 hubs = 37. **Ship rule: ≥ 30 indexable /guide/ URLs (hubs count) after A3.** If source gating leaves fewer, ship what is sourced and log the shortfall with every `tried[]`. Never pad; never a template page.
 
 ## Build order
 1. **Step 0 before any code.** For every row: fetch sources (curl first, then chrome-cdp); log URL, status, bytes and the verbatim quote in BUILD-LOG "G2 Step 0". No copy for a page without a quote.
@@ -102,7 +202,7 @@ Count: 11 live + 22 candidates + 2 hubs = 35. **Ship rule: ≥ 30 indexable /gui
 - Backlink outreach. GSC/Naver dashboard work beyond the post-deploy list.
 - Foreign visa specs for Koreans (US, Schengen…): red ocean, per-country source maintenance.
 - Any new tool capability (e.g. images → PDF). Guides describe only what the tools do today.
-- UX-AUDIT-2 leftovers. /hwp-to-pdf/ LCP (Sprint B step B0).
+- UX-AUDIT-2 leftovers. (The /hwp-to-pdf/ LCP fix is now A0 step V0.)
 
 ## Failure modes
 | New path | Realistic failure | Handling | User sees |
@@ -135,7 +235,7 @@ No untested-and-silent path remains.
 | Existing 11 guides: body unchanged | regression | before/after rendered article text equality for the 11 |
 
 ## Budgets
-- **UI fonts** (flag-on, 184.5 / 190 KB now): Sprint A total growth **≤ 2.0 KB (≤ 186.5 KB)**; Bob reports per-face before/after. Over → move strings to md + system font. The budget does not move.
+- **UI fonts** (flag-on, 184.5 / 190 KB now): Sprint A total growth **≤ 2.5 KB (≤ 187.0 KB), of which A0 ≤ 1.0 KB**; Bob reports per-face before/after. Over → move strings to md + system font. The budget does not move.
 - Guide/hub HTML ≤ 30 KB gzip; guide initial JS ≤ 4 KB; OG PNG ≤ 80 KB raw (existing).
 - Precache ≤ 450 KB, unchanged (`NOT_PRECACHED` already covers /guide/*, hubs included).
 - dist files about +50, guard 15,000.
@@ -151,7 +251,7 @@ No untested-and-silent path remains.
 ## Acceptance
 - ≥ 30 indexable /guide/ URLs after A3, or a logged shortfall with `tried[]` per draft. admission-photo, univ-docs-upload, kosaf-docs live by 2026-11-10; yearend-tax-pdf by 2026-11-30.
 - Every number on every guide and hub traces to a quote, preset or tool fact (build-enforced).
-- All gates green; UI fonts ≤ 186.5 KB.
+- All gates green; UI fonts ≤ 187.0 KB.
 
 ---
 
@@ -190,7 +290,7 @@ Ops: health / growth / indexnow-diff read every Sitemap: line in robots.txt
 ```
 
 ## Build order
-- **B0 — /hwp-to-pdf/ LCP** (Known Gap: 2,190 ms). The EN page shares the component, so this comes first. Try in order: inline that page's own stylesheet (hwp.css, 1.2 KB) for that page only; then defer the controller's `ui-shared` import past first paint. Median LCP ≤ 2,000 ms; the threshold does not move.
+- **B0 — /hwp-to-pdf/ LCP: moved to Sprint A step A0/V0** (the viewer shares the component). If it has not landed when Sprint B starts, do it first. Original note: Known Gap 2,190 ms. Try in order: inline that page's own stylesheet (hwp.css, 1.2 KB) for that page only; then defer the controller's `ui-shared` import past first paint. Median LCP ≤ 2,000 ms; the threshold does not move.
 - **B1 — i18n foundation (refactor only, zero output change)**
   1. Before any edit: add `scripts/qa/snapshot-ko.mjs` and commit a baseline from the current build. Contents: for every non-/en/ dist HTML, sha256 of normalised HTML (build-id meta removed; `/_astro/<name>.<hash>.<ext>` → `<name>.*.<ext>`; SW revision hashes removed); the sorted set of Hangul-containing string literals across `_astro/*.js`; the gen-ui-font codepoint list; sitemap.xml, robots.txt, llms.txt, rss.xml verbatim.
   2. `src/i18n/ko.ts` (source of truth, typed) and `src/i18n/en.ts` (`satisfies` the ko key type; a missing key is a type error). `src/i18n/locale.ts`: htmlLang, ogLocale, date format. `josa.ts` stays ko-only.
@@ -212,7 +312,7 @@ Ops: health / growth / indexnow-diff read every Sitemap: line in robots.txt
 - Flag — Hangul in /en/ visible text only from an allowlist: 문서딱, 한글, 한컴, 하이코리아, and Korean names in parentheses after their English form.
 
 ## Out of scope
-- vi, zh-Hans, ja (gated on K2/K3). The other four tools in English. A `navigator.language` banner. Auto-redirects (Google: avoid).
+- /en/hwp-viewer/ (candidate after K1 if EN HWP impressions show "open/view" intent). vi, zh-Hans, ja (gated on K2/K3). The other four tools in English. A `navigator.language` banner. Auto-redirects (Google: avoid).
 - EN presets for Korea visa/ARC/TOPIK: the guide links /id-photo/ only if the official px/KB spec equals an existing preset; otherwise text-only and the preset goes to Known Gaps.
 - Naver registration of /en/. CMP/consent (needed only when ads go on).
 
@@ -252,7 +352,7 @@ Ops: health / growth / indexnow-diff read every Sitemap: line in robots.txt
 - Lighthouse: add /en/hwp-to-pdf/ and /en/guide/open-hwp-file/; thresholds unchanged.
 
 ## Deploy gate
-- **B0 + B1 deploy together**: no visible change except faster HWP LCP. All §3 gates + snapshot-ko exact.
+- **B1 deploys alone** (B0 already shipped in A0): no visible change. All §3 gates + snapshot-ko exact.
 - **B2**: all gates; Richard clear including the EN back-translation review recorded in `reviewed`; local commit; push on the orchestrator's go-ahead.
 - Post-deploy (PC session): submit /sitemap-en.xml in GSC; URL inspection for /en/hwp-to-pdf/; IndexNow via A-2; log the K1 date (index + 3 months) and K2 date (+ 6 months) in BUILD-LOG.
 

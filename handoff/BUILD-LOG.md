@@ -948,3 +948,23 @@ Inputs: the three 2026-10-01 reports (traffic realism, multilingual, competitor 
 ### Known Gaps (G2 planning)
 - Naver blog bridging (traffic lever 2) and backlinks (lever 5) are outside code: 사이티드/owner.
 - No measured Google volumes yet; Gate 0 is pending with the orchestrator.
+
+## G2 amendment: A0 /hwp-viewer/ (Arch, 2026-10-01; owner request via coordinator)
+- **A0 is the first item of Sprint A** (own deploy, target 2026-10-12). It is a standalone HWP/HWPX viewer on the existing rhwp render path:
+  - page navigation, fit width/page and zoom steps
+  - thumbnails (DOM tiles only, no extra renders)
+  - text select/copy and in-document search (cancellable, GUARD_PAGES cap)
+  - in-page 「PDF로 내려받기」 through the existing export chunk
+  - the same caps, guards, bfcache handling and no-upload rule
+  - KakaoTalk in-app browser via standard APIs (no UA sniffing)
+- **Order:** V0 = the /hwp-to-pdf/ LCP fix (moved from Sprint B B0; shared component). V1 = a behaviour-free refactor into src/tools/hwp-shared/ (its own commit, /hwp-to-pdf/ output equal). V2 = the page.
+- **PDF CTA in-page instead of a link** (Arch, minor UX call): a link to /hwp-to-pdf/ would lose the open file.
+- **SEO:** /hwp-viewer/ owns "hwp 뷰어" (Naver 3,560, owner-measured) and "hwpx 열기" (130). The never-published draft guide `hwp-viewer` is renamed `open-hwp-without-hangul` ("한글 없이 hwp 열기") to avoid cannibalisation. New guides: `hwp-on-phone` and `what-is-hwpx`.
+- **Budgets:** viewer LCP ≤ 2,000 ms, initial JS ≤ /hwp-to-pdf/ + 4 KB gzip. Sprint A UI-font allowance is now ≤ 2.5 KB total (≤ 187.0 / 190), of which A0 ≤ 1.0 KB.
+- **Legal summary** (owner fetched store.hancom.com/etc/hwpDownload.do on 2026-10-01; Arch curl the same day: HTTP 200, 43,972 B, notice text present verbatim):
+  - Commercial and non-commercial use of the published HWP spec is allowed, with the exact notice "본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다." in the UI, help and source. It goes on /hwp-viewer/ (visible + FAQ), and as the first-line comment of every new hwp-shared/hwp-viewer file; it reuses HANCOM_NOTICE.
+  - No trademark rights are granted. Never name the page or brand 한컴뷰어 (or 한컴 뷰어 / 한컴오피스). No Hancom or 한글 logos, no implied affiliation. Descriptive use only: "HWP·HWPX 파일 보기", "한글 파일(.hwp) 열기", "HWP 뷰어" as the search phrase. TRADEMARK_NOTICE stays on the page. A dist test enforces this.
+  - No warranty: "원본과 다르게 보일 수 있어요" is shown plainly.
+  - No redistribution of the spec, and no exclusive-rights claims.
+  - HWPX is the OWPML national standard (KS X 6101); guides state it only with a fetched quote.
+  - Users' documents are processed locally only, so there is no copyright or reproduction issue on our side.
