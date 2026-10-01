@@ -139,6 +139,8 @@ details p { margin: 0 0 18px; color: var(--muted); }
   .two-col { grid-template-columns: 1fr; gap: 28px; }
   .tools, .privacy, .faq { padding-top: 48px; padding-bottom: 56px; }
   .btn { flex: 1 1 auto; }
+  /* /hwp-viewer/ page-list sheet: 「닫기」 keeps its own width next to the title (G2 A0 round 2). */
+  .hv .hv-sheet-head .btn { flex: 0 0 auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

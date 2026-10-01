@@ -975,7 +975,7 @@ Status: **DONE_WITH_CONCERNS** (Lighthouse noise at the 2,000 ms line; see Known
 ### V0 — /hwp-to-pdf/ LCP (B0 moved here)
 - hwp.css is inlined on the page (`?inline` + `<style is:inline>`; CSP style-src already has 'unsafe-inline'), so there is one render-blocking stylesheet.
 - The page script is `hwp-shared/boot.ts`. It imports the controller after the first contentful paint (PerformanceObserver 'paint', 1.5 s fallback) and idle, or at once on the first interaction (pointerdown, keydown, focusin, touchstart, change, drag). A file picked or dropped before then is handed over. A press on the picker still starts the wasm prefetch. A controller that fails to load twice shows the engine panel. Unit test: hwp-boot.test.ts.
-- boot.ts sits in the `ui-shared` manual chunk (astro.config.mjs). As its own chunk it was one more request before first paint (LCP 1,966 → 2,040). Cost: ui-shared grows by 0.7 KB gzip on the other tool pages.
+- boot.ts sits in the `ui-shared` manual chunk (astro.config.mjs). As its own chunk it was one more request before first paint. (The 1,966 → 2,040 ms seen then is within Lighthouse's quantisation step, so it does not prove an effect; the saved request is the reason.) Cost: ui-shared grows by 0.7 KB gzip on the other tool pages.
 - Gotcha: a *dynamic* import of a ui-shared module from the entry makes rolldown build a namespace object with its runtime helper, which lives in the export chunk. The entry then imported the 345 KB export chunk (initial JS 353 KB). Use static imports only.
 - Result (Lighthouse, 3 runs, this PC): /hwp-to-pdf/ median 2,105–2,190 ms at f6b40a6 → 1,953–1,955 ms.
 
@@ -1070,10 +1070,18 @@ Status: **DONE_WITH_CONCERNS** (Lighthouse noise at the 2,000 ms line; see Known
 ### Known Gaps (A0)
 - **Lighthouse is bimodal on this PC:** every tool page lands at about 1,953 or 2,040 ms per run, untouched pages included.
   - At f6b40a6, /pdf-merge/ had medians of 2,040 ×3, and /photo-compress/ 2,040 in the full run.
-  - The 2,040 ms runs coincide with the 700 UI face (49 KB, needed by every .btn and summary) being requested before ui-shared and the manifest.
-  - A real fix is site-wide (fonts) and outside A0.
+  - Cause (corrected in round 2, per Richard): the two values are Lighthouse's simulated-throttling quantisation (Lantern), not the order in which the fonts are requested. A run lands on one step or the other; the page did not change between runs.
+  - Arch ruling (2026-10-01): the 2,000 ms threshold is unchanged; the gate takes the median of 5 runs per URL (lighthouserc `numberOfRuns: 5`), and the CI runner's result is the source of truth.
 - Owner-only: a real iPhone Safari and KakaoTalk in-app check of open, zoom, search, copy and PDF download on /hwp-viewer/.
 - Not done (scope):
   - the 404 suggestion map and the ops `suggestTool` still send HWP queries to /hwp-to-pdf/ only;
   - the hwp-to-pdf FAQ "HWP 뷰어로만 써도 되나요?" has no link to /hwp-viewer/, because the page template does not render FAQ links.
 - Post-deploy (PC or owner): Kakao share-cache refresh, Naver 수집 요청, and GSC inspection for /hwp-viewer/ and the 3 guides.
+
+### A0 round 2 (Bob, 2026-10-01; Richard's fixes + Arch LCP ruling)
+- global.css (phone media block): `.hv .hv-sheet-head .btn { flex: 0 0 auto; }`, so 「닫기」 no longer stretches. The viewer e2e "phone width" test asserts the button is narrower than 40 % of the sheet header (mobile-chrome and mobile-safari).
+- Guides: removed the unsourced "내용은 같은 한글 문서예요." (what-is-hwpx). The hwp-on-phone KakaoTalk FAQ no longer points to a save menu; it says the Kakao source was not found and that a saved file can be picked with 「HWP 파일 열기」.
+- tools.ts: the /hwp-viewer/ FAQ numbers (25 MB, 150 MB, 10 MB, 60쪽) are built from `LIMITS` / `MB_DEC` (lib/hwp/limits.ts). A unit test checks the text against the limits.
+- LCP: the earlier font-order explanation is withdrawn (see Known Gaps above). lighthouserc `numberOfRuns: 5` plus a `$comment` with the ruling; CLOUD-HANDOFF §3 updated.
+- Gates: check 0 errors; unit 670/670; build flag on: check-dist OK, UI fonts 184.8 KB (+0 new glyphs), precache 419.1 KB; viewer e2e chromium + mobile-safari 42 passed, 4 skipped, 0 flaky.
+- Lighthouse, 5 runs, this PC: /hwp-to-pdf/ median 1,956 (1,951 / 1,956 / 1,956 / 2,040 / 2,040); /hwp-viewer/ median **2,040** (1,951 / 2,040 ×4). Per the ruling, the CI runner's result decides; it runs on push, which is pending the orchestrator's go-ahead.

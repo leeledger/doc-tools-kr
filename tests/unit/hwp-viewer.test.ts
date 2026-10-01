@@ -12,6 +12,7 @@ import { joinGlyphs } from '../../src/tools/hwp-viewer/select';
 import { TILE_H, VIRTUAL_ABOVE, visibleRows } from '../../src/tools/hwp-viewer/thumbs';
 import { fitPage, fitWidth, initialMode, pageAt, percent, stepIn, stepOut, ZOOM_MAX, ZOOM_MIN } from '../../src/tools/hwp-viewer/zoom';
 import { getTool } from '../../src/data/tools';
+import { LIMITS, MB_DEC } from '../../src/lib/hwp/limits';
 
 describe('zoom', () => {
   it('fit width uses the widest page; fit page the page in view', () => {
@@ -101,6 +102,14 @@ describe('tool entry and copy (legal)', () => {
     const all = [t.title, t.name, t.h1, t.description, t.summary, ...t.faq.flatMap((f) => [f.q, f.a])].join('\n');
     expect(all).not.toMatch(/한컴\s*뷰어|한컴오피스/);
     expect(t.faq.some((f) => f.a.includes(HANCOM_NOTICE))).toBe(true);
+  });
+  it('the FAQ numbers are the limits the tool uses (25 MB / 150 MB to open, 10 MB or 60쪽 for a PDF on phones)', () => {
+    const faq = t.faq.map((f) => f.a).join(' ');
+    const mb = (b: number) => `${(b / MB_DEC).toLocaleString('ko-KR')} MB`;
+    expect(faq).toContain(`${mb(LIMITS.mobile.hardBytes)}가 넘는 파일은 열 수 없습니다`);
+    expect(faq).toContain(`PC에서는 ${mb(LIMITS.desktop.hardBytes)}까지 열 수 있습니다`);
+    expect(faq).toContain(`${mb(LIMITS.mobile.capBytes)} 또는 ${LIMITS.mobile.capPages}쪽이 넘는 문서는 보기만`);
+    expect([LIMITS.mobile.hardBytes, LIMITS.desktop.hardBytes, LIMITS.mobile.capBytes, LIMITS.mobile.capPages]).toEqual([25e6, 150e6, 10e6, 60]);
   });
   it('the line the brief fixes word for word', () => {
     expect(VIEWER_COPY.differ).toBe('원본과 다르게 보일 수 있어요.');

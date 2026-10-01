@@ -1,4 +1,14 @@
 import { PASSPORT_CHECK_URL, PASSPORT_RULE_URL, RETRIEVED, presetSummary } from './id-photo-presets';
+import { LIMITS as HWP_LIMITS, MB_DEC } from '../lib/hwp/limits';
+
+/** HWP numbers in the /hwp-viewer/ FAQ, read from the limits the tool uses (MB = 1,000,000 bytes). */
+const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
+const HWP_FAQ = {
+  openPhone: hwpMb(HWP_LIMITS.mobile.hardBytes),
+  openPc: hwpMb(HWP_LIMITS.desktop.hardBytes),
+  pdfPhone: hwpMb(HWP_LIMITS.mobile.capBytes),
+  pdfPhonePages: `${HWP_LIMITS.mobile.capPages.toLocaleString('ko-KR')}쪽`,
+} as const;
 
 export type ToolStatus = 'live' | 'soon';
 
@@ -250,7 +260,7 @@ export const TOOLS: Tool[] = [
     faq: [
       {
         q: '휴대폰에서도 열 수 있나요?',
-        a: '네. 휴대폰에서도 같은 방법으로 열어 볼 수 있습니다. 휴대폰의 「파일」 앱이나 다운로드 폴더에서 문서를 고르세요. 휴대폰은 PC보다 한 번에 처리할 수 있는 양이 적어 25 MB가 넘는 파일은 열 수 없습니다. PC에서는 150 MB까지 열 수 있습니다.',
+        a: `네. 휴대폰에서도 같은 방법으로 열어 볼 수 있습니다. 휴대폰의 「파일」 앱이나 다운로드 폴더에서 문서를 고르세요. 휴대폰은 PC보다 한 번에 처리할 수 있는 양이 적어 ${HWP_FAQ.openPhone}가 넘는 파일은 열 수 없습니다. PC에서는 ${HWP_FAQ.openPc}까지 열 수 있습니다.`,
       },
       {
         q: 'HWPX 파일도 열 수 있나요?',
@@ -270,7 +280,7 @@ export const TOOLS: Tool[] = [
       },
       {
         q: 'PDF로도 저장할 수 있나요?',
-        a: '네. 문서를 연 뒤 「PDF로 내려받기」를 누르면 문서를 다시 고르지 않고 PDF 파일로 저장됩니다. 휴대폰에서는 10 MB 또는 60쪽이 넘는 문서는 보기만 할 수 있습니다.',
+        a: `네. 문서를 연 뒤 「PDF로 내려받기」를 누르면 문서를 다시 고르지 않고 PDF 파일로 저장됩니다. 휴대폰에서는 ${HWP_FAQ.pdfPhone} 또는 ${HWP_FAQ.pdfPhonePages}이 넘는 문서는 보기만 할 수 있습니다.`,
       },
       {
         q: '제 문서가 어디로 보내지나요?',

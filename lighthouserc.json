@@ -1,4 +1,5 @@
 {
+  "$comment": "G2 A0 (Arch, 2026-10-01): LCP stays at 2,000 ms; the gate is the median of 5 runs per URL, and the CI runner result is the source of truth (local runs quantise to about 1,953 or 2,040 ms under simulated throttling).",
   "ci": {
     "collect": {
       "startServerCommand": "node tests/e2e/serve.mjs",
@@ -19,7 +20,7 @@
         "http://127.0.0.1:4173/guide/hwp-on-phone/",
         "http://127.0.0.1:4173/guide/what-is-hwpx/"
       ],
-      "numberOfRuns": 3,
+      "numberOfRuns": 5,
       "settings": {
         "onlyCategories": [
           "performance",

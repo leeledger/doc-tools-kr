@@ -36,7 +36,7 @@ export default defineConfig({
             if (/[\/]src[\/]lib[\/]ui[\/](announce|beacon|device|engine-error|engine-load|font|format|preload|josa|deeplink|quicklinks)\.ts$/.test(id)) return 'ui-shared';
             if (/[\/]src[\/]data[\/]preset-ids\.ts$/.test(id)) return 'ui-shared';
             // G2 A0: the HWP page script (shared by /hwp-to-pdf/ and /hwp-viewer/) joins the chunk those pages load
-            // anyway; as its own chunk it was one more request before the first paint (Lighthouse LCP 1,966 → 2,040 ms).
+            // anyway; as its own chunk it was one more request before the first paint.
             if (/[\/]src[\/]tools[\/]hwp-shared[\/]boot\.ts$/.test(id)) return 'ui-shared';
             if (/[\/]src[\/]lib[\/]pdf[\/]errors\.ts$/.test(id) || id.includes('vite/preload-helper')) return 'ui-shared';
             return undefined;

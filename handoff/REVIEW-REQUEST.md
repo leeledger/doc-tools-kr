@@ -1,4 +1,15 @@
-# Review Request — G2 Sprint A, A0 /hwp-viewer/
+# Review Request — G2 Sprint A, A0 /hwp-viewer/ (round 2)
+
+## Round 2 (Richard's 4 fixes + Arch LCP ruling) — the commit after be3d693
+- `src/styles/global.css` (phone media block): `.hv .hv-sheet-head .btn { flex: 0 0 auto; }`. Covered by `tests/e2e/hwp-viewer.spec.ts` "phone width": 닫기 is narrower than 40 % of the sheet header.
+- `src/content/guides/what-is-hwpx.md`: "내용은 같은 한글 문서예요." removed. `hwp-on-phone.md`: the KakaoTalk save-menu claim removed.
+- `src/data/tools.ts`: `HWP_FAQ` builds the viewer FAQ numbers from `LIMITS` / `MB_DEC`. `tests/unit/hwp-viewer.test.ts` checks them.
+- BUILD-LOG: the font-order theory is withdrawn (Lantern quantisation), and the Arch ruling is logged. `lighthouserc.json`: `numberOfRuns: 5` + `$comment`. `handoff/CLOUD-HANDOFF.md` §3 updated. The unproven "1,966 → 2,040" causal note is softened (BUILD-LOG V0, astro.config.mjs comment).
+- Gates: check 0 errors; unit 670/670; build OK (UI fonts 184.8 KB, +0 glyphs); viewer e2e chromium + mobile-safari 42/42 (4 skipped).
+- Lighthouse, 5 runs locally: /hwp-to-pdf/ median 1,956 ms; /hwp-viewer/ median 2,040 ms (1,951 / 2,040 ×4). CI decides per the ruling; it runs on push.
+
+---
+
 Date: 2026-10-01
 Ready for Review: YES
 
@@ -50,7 +61,7 @@ The full numbers, decisions and sources are in BUILD-LOG, "A0 /hwp-viewer/ build
 - source-watch: 47/47 quotes found verbatim.
 
 ## Open Questions
-- **Lighthouse noise (above).** Please judge it against the f6b40a6 numbers. The site-wide lever is the 700 UI face (49 KB), which every .btn and summary requests before first paint.
+- **Lighthouse (above).** Superseded by the Arch ruling: median of 5 runs, CI is the source of truth.
 - **Search text comes from the rendered SVG, not getPageTextLayout** (the layout misses text on 116 of 236 fixture pages). The cost is one worker render per page, limited to 100 pages and cancellable. Is that the right trade-off?
 - **Copy is answered by the page** (select.ts) because browsers copy one glyph per line from rhwp's per-glyph `<text>`. Line and space heuristics: new baseline > 0.5 em; gap > 1.5 em.
 - **hwp-on-phone has no Kakao or Samsung source** (tried[] in BUILD-LOG). The Kakao FAQ says so plainly.

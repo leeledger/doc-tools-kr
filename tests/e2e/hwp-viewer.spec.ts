@@ -467,6 +467,10 @@ test('phone width: nothing scrolls sideways at 360 px; the page list is a bottom
   const sheet = await page.locator('#hv-thumbs').boundingBox();
   expect(sheet!.y + sheet!.height).toBeGreaterThan(700);
   expect(sheet!.width).toBeGreaterThanOrEqual(359);
+  // 「닫기」 keeps its own width; the phone rule that stretches buttons does not apply in the sheet header.
+  const head = await page.locator('.hv-sheet-head').boundingBox();
+  const close = await page.locator('#hv-thumbs-close').boundingBox();
+  expect(close!.width).toBeLessThan(head!.width * 0.4);
   await page.locator('#hv-thumbs-close').click();
   await expect(page.locator('#hv-thumbs')).toBeHidden();
   await expect(page.locator('#hv-thumbs-toggle')).toBeFocused();
