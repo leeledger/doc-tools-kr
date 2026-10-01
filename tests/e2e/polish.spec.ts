@@ -13,7 +13,7 @@ const SCAN = fixturePath('gen_scan_a6.pdf');
 const SMALL = fixturePath('gen_already_small.pdf');
 const NOTES = join(RUNTIME_DIR, 'notes.txt');
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-const LIVE = ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기', '여권·증명사진 규격 맞추기', 'HWP PDF 변환', 'HWP·HWPX 파일 보기'];
+const LIVE = ['PDF 합치기', 'PDF 용량 줄이기', '사진 용량 줄이기', '여권·증명사진 규격 맞추기', '전자서명·도장 이미지 만들기', 'HWP PDF 변환', 'HWP·HWPX 파일 보기'];
 const SOON: string[] = [];
 
 const serious = async (page: Page): Promise<string[]> =>
@@ -122,7 +122,7 @@ test.describe('engine load failure (P.1)', () => {
 
 // ---------- P.4 operator, contact, 이용약관 ----------
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/hwp-to-pdf/', '/hwp-viewer/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwp-to-pdf/', '/hwp-viewer/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
   test(`footer on ${path}: no operator or contact line (owner, Polish Q), 이용약관·개인정보·라이선스 links`, async ({ page }) => {
     await gotoReady(page, path);
     const foot = page.locator('footer');
@@ -215,14 +215,15 @@ test.describe('compress done order on a small screen (P.5)', () => {
 
 // ---------- P.6 live-only copy ----------
 
-test('home, meta, og and JSON-LD name every live tool and no soon tool; the soon list has no links', async ({ page }) => {
+test('home, meta and JSON-LD name every live tool and no soon tool (og: no soon tool); the soon list has no links', async ({ page }) => {
   await gotoReady(page, '/');
   const lead = (await page.locator('.hero .lead').textContent()) ?? '';
   const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
   const og = (await page.locator('meta[property="og:description"]').getAttribute('content')) ?? '';
   const ld = (await page.locator('script[type="application/ld+json"]').allTextContents()).join('');
   for (const text of [lead, desc, og, ld]) {
-    for (const name of LIVE) expect(text).toContain(name);
+    // Sprint C: the share preview no longer lists the tools (seven names alone pass its 80 characters).
+    if (text !== og) for (const name of LIVE) expect(text).toContain(name);
     for (const name of SOON) expect(text).not.toContain(name);
     expect(text).not.toMatch(/한글 파일/);
   }
@@ -253,7 +254,7 @@ test('icons, manifest and OG image are served; the head links them', async ({ pa
   expect(ico.status()).toBe(200);
   expect(ico.headers()['content-type']).toMatch(/^image\//);
   // Polish Q: one share image per tool, home and a default, all served as PNG.
-  for (const name of ['home', 'default', 'pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer']) {
+  for (const name of ['home', 'default', 'pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'stamp-signature', 'hwp-to-pdf', 'hwp-viewer']) {
     const og = await request.get(`/brand/og-${name}.png`);
     expect(og.status(), name).toBe(200);
     expect(og.headers()['content-type'], name).toBe('image/png');

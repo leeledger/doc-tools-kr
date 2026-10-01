@@ -503,8 +503,10 @@ describe('share previews (Polish Q, src/data/og.json)', () => {
       alt: '문서딱: PDF 합치기. 여러 PDF를 한 파일로 — 무료, 내 폰·PC 안에서만',
     });
     expect(sharePreview('/404.html', 'https://docttak.com').image).toBe('https://docttak.com/brand/og-default.png');
-    // The home preview names the live tools (the same rule as the meta description).
-    for (const t of LIVE_TOOLS) expect(sharePreview('/', 'https://docttak.com').description).toContain(t.name);
+    // The home preview no longer lists the tools (Sprint C: seven names alone pass 80 characters); it never names a
+    // tool that is not live.
+    const home = sharePreview('/', 'https://docttak.com').description;
+    for (const t of TOOLS.filter((x) => x.status !== 'live')) expect(home).not.toContain(t.name);
   });
 });
 

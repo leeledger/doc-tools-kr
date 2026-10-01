@@ -1447,3 +1447,45 @@ Vite in regress:ink now runs with `hmr: false, ws: false` (it had opened port 24
 - A shadow edge that runs exactly along the edge of a large solid ink area (gt16-shadow: penumbra along the top of the logo square) leaves a darker band in the colour: the nearest paper is lit, the ink is not. ΔE still 3.6; visible on ink-sheet.png. Thin strokes (signatures, 도장) are not affected.
 - gt15 IoU margin is 0.0017 (0.9017 vs 0.90).
 - Faint ink keyed entirely below a = 0.5 is now dropped by the hysteresis (진하기 + raises it).
+
+## Sprint C — C1 integration: /stamp-signature/ (Bob, 2026-10-02; branch c1 rebased onto main d277beb)
+Status: DONE_WITH_CONCERNS (all gates pass on this PC; the real-photo gate is pending on the owner's 6 photos, allowed by Arch before 11-15; CI decides Lighthouse).
+
+### Files
+- `src/pages/stamp-signature/index.astro` — the page: tabs `사진으로 만들기` / `직접 그리기`, honest limits box (brief wording, 합니다체), 사용 방법, 안전한 이유, FAQ, RelatedTools `only` = photo-compress, hwp-to-pdf, pdf-merge. Page CSS inlined from `src/tools/stamp-signature/stamp.css` (the /hwp-viewer/ pattern; no other page carries it).
+- `src/tools/stamp-signature/entry.ts` — tabs (ARIA tabs, arrow/Home/End) and lazy loading: `photo.ts` on the first interaction with the photo tab, `pad.ts` on the first opening of the draw tab; engine panel when a module cannot load.
+- `src/tools/stamp-signature/photo.ts` — photo tab: sniff, size limits, decode to the work copy (2,400 px PC / 1,600 px phone), pixels to `ink.worker` once, each control change re-runs with options only (150 ms debounce), previews on checkerboard and on white, area messages (no download), size options bigger than the crop disabled, worker crash -> error + `다시 시도`, worker that never loads -> engine panel. A new photo resets the controls to their defaults.
+- `src/tools/stamp-signature/pad.ts` — Pointer Events, DPR-aware canvas, quadratic smoothing through midpoints, 3 pen colours (INK_COLORS), 되돌리기/지우기, export renders at 1,500×600 and goes through key.ts `cropRect` + `cropAndResize` (steps 9-10); download disabled with a reason until there is a stroke.
+- `src/tools/stamp-signature/png.ts` — PNG encode, `toBlob` null -> one retry at the next smaller size -> error; save through a temporary link.
+- `src/tools/stamp-signature/{copy,limits}.ts` — strings and limits (desktop 50 MB / 100 MP, phone 30 MB / 40 MP so a 50 MP scan on a phone gets the limit message).
+- `src/data/tools.ts` (entry after id-photo), `src/data/og.json` (image + page), `src/data/guides.ts` (NEXT_GUIDES), `src/data/guide-schema.ts` (topic `서명·도장`), `src/data/site.ts` (defaultDescription), `docs/COPY.md`.
+- Guides: `src/content/guides/stamp-image.md` (published; Word section from 4 Microsoft support quotes), `src/content/guides/e-signature-law.md` (published; 4 verbatim 전자서명법 quotes, 제2조 1·2호 and 제3조 ①②, from law.go.kr).
+- `lighthouserc.json` (+ /stamp-signature/, /guide/stamp-image/), `scripts/check-dist.mjs` (ink worker + lazy controls rows), `scripts/qa/visual.mjs` (page + `ss-light/dark` states).
+- Tests: `tests/unit/stamp-signature.test.ts` (new, 13), `tests/e2e/stamp-signature.spec.ts` (new, 8), list updates in `tests/e2e/{site,polish}.spec.ts`, `tests/unit/{postbuild,polish}.test.ts`.
+
+### Decisions (never stop; Arch please confirm the ones marked)
+1. **name = h1 = `전자서명·도장 이미지 만들기`** (brief: name `전자서명·도장 이미지`). COPY.md and a unit test require name = h1; the H1 carries the keyword.
+2. **Arch: home share preview no longer lists the tools.** With 7 tools the names alone are 85 characters, over the 80-character og:description limit. `/` og description = the tagline sentence (same as `*`); the polish unit/e2e tests now check "no soon tool" for og instead of "every live tool". The meta description keeps every name: template shortened to `{names}. 파일은 내 폰·컴퓨터 밖으로 나가지 않아요. 무료.` (115 chars, limit 120).
+3. **Arch: precache.** The page adds ~28 KB (HTML + entry) to the precache: 444.3 KB of 450. Precaching the photo controller as well (the /id-photo/ rule, gen-sw matches `controller*`) would be 455 KB, so the controller is named `photo.ts` and is not precached; after a first use it is in the runtime cache. Offline on a first-ever visit, the page shows the engine panel (tested path). FAQ JSON-LD left out of this page (id-photo has none either) to save ~3 KB.
+4. **Arch: check-dist ink worker budget 6.1 KB** (C1-core recorded 4.75 KB from round 1; round 2's ink colour grew the worker to 5.05 KB gzip; budget = measured + 20 %). Lazy controls (photo + pad + what only they import) 11.3 KB gzip, budget 13.5 KB.
+5. Area messages in 합니다체 (tool copy rule), same meaning as the brief: `도장이나 서명을 찾지 못했습니다. 진하기를 높이거나, 환한 곳에서 종이를 가까이 다시 찍어 주세요.` / `종이 전체를 도장이나 서명으로 읽었습니다. 종이만 나오게 환한 곳에서 다시 찍어 주세요.` (`잡혔` would add a glyph).
+6. UI copy written onto existing glyphs: **UI font delta +208 bytes (1 glyph, 빨)** on the shipping build (flag 0: 140,136 -> 140,344 bytes). Avoided: 밝/잘/룩/짝/뿐/혔/듭/랑/탕/점/펜. C2 has ~1.8 KB left of the 2.0 KB.
+7. e-signature-law renders the statute text verbatim (brief: "the page quotes and links"); the postbuild "no quote is rendered" rule now exempts law.go.kr sources only. Source URL is law.go.kr `lsInfoR.do` (the article text; the friendly /법령/전자서명법 page is a script shell, check:quotes cannot read it), pinned to the version in force since 2022-10-20.
+8. stamp-image: Hancom help pages tried (help.hancom.com picture paths -> 302 to 404); only the Word section ships ("워드 문서에 넣기"). No pixel numbers in the guide (the fact check has no 픽셀 tool facts).
+9. No /remove-background/ hook (the brief puts the link on the C2 page, which does not exist yet).
+10. Size labels say `긴 변 1,000픽셀` (no "px": plain-language test).
+
+### Gates (this PC)
+- `npm run check` 0 errors; `npm test` 43 files / 731 tests pass.
+- Both builds + check-dist OK; precache 444.3 KB (flag 0) / 446.6 KB (flag 1) of 450; initial JS /stamp-signature/ 8.3 KB gzip; ink worker 5.0 / 6.1 KB; controls 11.3 / 13.5 KB.
+- `check:licenses` OK (no new dependency); `check:quotes` 121/121 verbatim (+8: 4 law.go.kr, 4 Microsoft).
+- `regress:ink -- --fixtures-only` 94/94 (PARTIAL: real photos pending).
+- e2e (port 4573): stamp-signature.spec on chromium, firefox, webkit, mobile-chrome, mobile-safari: 40 run, 38 passed, 2 skipped (the keyboard-tabs test is desktop-only); webkit/mobile-safari photo test repeated 5× clean after fixing a test race. site + growth + hubs + polish (chromium, mobile-safari) pass; sw + preload chromium pass. One mobile-safari growth share test flaked once and passed on rerun (not touched by C1).
+- qa:visual (port 4575): 0 hard failures, 332 shots; /stamp-signature/ looked at by me at 390 and 1280, light and dark (empty, 도장 result, no-ink message, draw).
+- Lighthouse (lhci, 5 runs, median, served on 4575): /stamp-signature/ LCP 1,959 ms perf 0.99; /guide/stamp-image/ 1,656 ms perf 1; home 1,960; every other URL ≤ 1,971 except /photo-compress/ 2,110 ms, the same local value A2 reproduced on HEAD 659c04a (2,113 ms; CI is the source of truth). Accessibility, best practices, SEO, CLS and script size pass on all 19 URLs.
+
+### Known Gaps (C1 integration)
+- **Real-photo gate pending (owner-only, needed by 2026-11-10, before 11-15):** 6 photos + JSON into `tests/corpus/ink-photos/`; then `npm run regress:ink` (without --fixtures-only) and the contact sheet for Richard.
+- Hancom "한글에 넣기" section: no fetchable official Hancom help page found; add when one is quoted.
+- Offline first-ever visit of /stamp-signature/ shows the engine panel (controller not precached, decision 3).
+- Text-to-도장 generator: out of scope (owner decision).

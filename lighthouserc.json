@@ -12,6 +12,7 @@
         "http://127.0.0.1:4173/hwp-to-pdf/",
         "http://127.0.0.1:4173/hwp-viewer/",
         "http://127.0.0.1:4173/id-photo/",
+        "http://127.0.0.1:4173/stamp-signature/",
         "http://127.0.0.1:4173/terms/",
         "http://127.0.0.1:4173/guide/",
         "http://127.0.0.1:4173/guide/passport-photo/",
@@ -21,7 +22,8 @@
         "http://127.0.0.1:4173/guide/what-is-hwpx/",
         "http://127.0.0.1:4173/guide/photo-sizes/",
         "http://127.0.0.1:4173/guide/admission-photo/",
-        "http://127.0.0.1:4173/guide/teps-photo/"
+        "http://127.0.0.1:4173/guide/teps-photo/",
+        "http://127.0.0.1:4173/guide/stamp-image/"
       ],
       "numberOfRuns": 5,
       "settings": {

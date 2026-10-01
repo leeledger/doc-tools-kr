@@ -33,6 +33,7 @@ const PAGES = [
   ['hwp', '/hwp-to-pdf/'],
   ['hwpview', '/hwp-viewer/'],
   ['idphoto', '/id-photo/'],
+  ['stamp', '/stamp-signature/'],
   ['privacy', '/privacy/'],
   ['terms', '/terms/'],
   ['licenses', '/licenses/'],
@@ -261,9 +262,9 @@ async function staticMatrix(browsers) {
 
 // ---------- tool states ----------
 
-async function stateRun(browser, mode, prefix, steps) {
+async function stateRun(browser, mode, prefix, steps, scheme = 'light') {
   const vp = mode === 'm' ? VIEWPORTS.m390 : VIEWPORTS.d1280;
-  const ctx = await newContext(browser, vp, 'light');
+  const ctx = await newContext(browser, vp, scheme);
   recorder(ctx, `${prefix}-${mode}`);
   const page = await ctx.newPage();
   const errors = withErrors(page);
@@ -448,6 +449,35 @@ async function toolStates(browser, f) {
       await page.locator('#idp-error').waitFor({ state: 'visible' });
       await shot(4, 'error');
     });
+    // /stamp-signature/ (Sprint C, C1): 도장 result, the area message, a signature on the pad; light and dark.
+    for (const scheme of ['light', 'dark']) {
+      await stateRun(
+        browser,
+        mode,
+        `ss-${scheme}`,
+        async (page, _ctx, shot) => {
+          await goto(page, '/stamp-signature/');
+          await page.setInputFiles('#ss-input', join(FIX, 'ink', 'gt15.jpg'));
+          await page.locator('#ss-download:not([disabled])').waitFor({ timeout: 60_000 });
+          await page.locator('#ss-previews').scrollIntoViewIfNeeded();
+          await shot(1, 'stamp');
+          await page.getByRole('radio', { name: '검정·파란 서명' }).check();
+          await page.locator('#ss-error').waitFor({ state: 'visible', timeout: 30_000 });
+          await shot(2, 'no-ink');
+          await page.getByRole('tab', { name: '직접 그리기' }).click();
+          const pad = page.locator('#ss-pad');
+          await pad.scrollIntoViewIfNeeded();
+          const b = await pad.boundingBox();
+          await page.mouse.move(b.x + b.width * 0.15, b.y + b.height * 0.6);
+          await page.mouse.down();
+          for (let i = 1; i <= 24; i++) await page.mouse.move(b.x + b.width * (0.15 + i * 0.03), b.y + b.height * (0.5 + 0.2 * Math.sin(i / 2)));
+          await page.mouse.up();
+          await page.locator('#ss-pad-download:not([disabled])').waitFor();
+          await shot(3, 'draw');
+        },
+        scheme,
+      );
+    }
     // /hwp-viewer/ (G2 A0): empty → a document (toolbar, page list) → search with a hit marked; phones: the sheet.
     await stateRun(browser, mode, 'hwpv', async (page, _ctx, shot) => {
       await goto(page, '/hwp-viewer/');

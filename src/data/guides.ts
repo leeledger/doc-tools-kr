@@ -45,12 +45,13 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
 
 /**
  * Next-step guides of a tool, after the guides that name it (at most 3 per tool): HWP PDF 변환 → the PDF guides;
- * HWP·HWPX 파일 보기 → the three HWP guides (G2 A0); PDF 합치기 → 대학 원서 서류 (G2 A1).
+ * HWP·HWPX 파일 보기 → the three HWP guides (G2 A0); PDF 합치기 → 대학 원서 서류 (G2 A1); 전자서명·도장 이미지 만들기 → its two guides (Sprint C, C1).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
   'hwp-viewer': ['open-hwp-without-hangul', 'hwp-on-phone', 'what-is-hwpx'],
   'pdf-merge': ['univ-docs-upload'],
+  'stamp-signature': ['stamp-image', 'e-signature-law'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */

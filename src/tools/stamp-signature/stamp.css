@@ -1,0 +1,44 @@
+/* 전자서명·도장 이미지 (/stamp-signature/, Sprint C C1). Inlined on that page only. */
+.ss { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.ss-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.ss-tabs [role="tab"] {
+  min-height: 48px; padding: 0 18px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--muted);
+  font: inherit; font-weight: 700; cursor: pointer; margin-bottom: -1px;
+}
+.ss-tabs [role="tab"][aria-selected="true"] { color: var(--text); border-bottom-color: var(--brand); }
+.ss-tabs [role="tab"]:focus-visible, .ss-panel:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.ss-panel { display: grid; gap: 14px; min-width: 0; }
+.ss-panel[hidden] { display: none; }
+.ss-panel .error-box, .ss-panel .progress-box { margin: 0; }
+.ss-privacy { margin: 0 0 12px; padding: 8px 12px; border-radius: 999px; background: var(--brand-soft); color: var(--text); }
+.ss-retry-row:has(> [hidden]) { display: none; }
+.ss-work { display: grid; gap: 14px; min-width: 0; }
+.ss-work[hidden] { display: none; }
+#ss-photo[data-busy] .ss-previews { opacity: .6; }
+.ss-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ss-previews[hidden] { display: none; }
+.ss-pv { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.ss-pv figcaption { color: var(--muted); font-size: 14.5px; text-align: center; }
+.ss-pv-box {
+  display: grid; place-items: center; min-height: 140px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+}
+.ss-pv-box canvas { display: block; max-width: 100%; max-height: 260px; width: auto; height: auto; }
+.ss-checker { background: repeating-conic-gradient(#d9dcdb 0 25%, #ffffff 0 50%) 0 0 / 16px 16px; }
+.ss-white { background: #ffffff; }
+.ss-save-row { gap: 10px; }
+.ss-controls { display: grid; gap: 12px; }
+.ss-controls .levels, .ss-panel > .levels { display: grid; gap: 8px; }
+.ss .ss-help { margin: 0; }
+.ss-help-line { margin: 0; }
+.ss-pad-box {
+  position: relative; width: 100%; aspect-ratio: 5 / 2; border: 2px dashed var(--line); border-radius: var(--radius);
+  background: #ffffff; overflow: hidden;
+}
+.ss-pad-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+.ss-pad-row { gap: 8px; }
+.ss-limits { margin: 0; }
+.ss-limits-title { margin: 0 0 6px; font-weight: 700; }
+.ss-limits ul { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+@media (max-width: 480px) {
+  .ss-tabs [role="tab"] { flex: 1 1 0; padding: 0 8px; }
+}

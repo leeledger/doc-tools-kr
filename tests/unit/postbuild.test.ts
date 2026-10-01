@@ -315,7 +315,7 @@ describe('gen-brand (P.10)', () => {
     expect(pngSize(out['brand/icon-maskable-512.png'])).toMatchObject({ w: 512, h: 512 });
     // One share image per og.json image (Polish Q), 1200×630, ≤ 300 KB; no single og.png any more.
     const og = Object.keys(out).filter((k) => /^brand\/og-[a-z-]+\.png$/.test(k)).sort();
-    expect(og).toEqual(['default', 'home', 'hwp-to-pdf', 'hwp-viewer', 'id-photo', 'pdf-compress', 'pdf-merge', 'photo-compress'].map((n) => `brand/og-${n}.png`));
+    expect(og).toEqual(['default', 'home', 'hwp-to-pdf', 'hwp-viewer', 'id-photo', 'pdf-compress', 'pdf-merge', 'photo-compress', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
     expect(out).not.toHaveProperty(['brand/og.png']);
     for (const k of og) {
       expect(pngSize(out[k]), k).toMatchObject({ w: 1200, h: 630, png: true });
@@ -535,7 +535,7 @@ describe('built output', () => {
     }
     // Each tool page has its own image; the legal pages share the default one.
     const imageOf = (path: string) => readFileSync(join(DIST, path, 'index.html'), 'utf8').match(/<meta property="og:image" content="[^"]*\/brand\/(og-[a-z-]+)\.png"/)![1];
-    for (const slug of ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer']) expect(imageOf(slug)).toBe(`og-${slug}`);
+    for (const slug of ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'stamp-signature', 'hwp-to-pdf', 'hwp-viewer']) expect(imageOf(slug)).toBe(`og-${slug}`);
     expect(imageOf('')).toBe('og-home');
     for (const p of ['privacy', 'terms', 'licenses']) expect(imageOf(p)).toBe('og-default');
   });
@@ -705,8 +705,11 @@ describe('built output', () => {
         expect((Date.now() - Date.parse(`${s.retrieved}T00:00:00Z`)) / 86_400_000, `${g.slug}: ${s.url}`).toBeLessThanOrEqual(MAX_SOURCE_AGE_DAYS);
       }
       const page = text(html);
+      // Statute text is the one exception (Sprint C brief, C1-G2 e-signature-law: "the page quotes and links"):
+      // a law article from law.go.kr is shown verbatim; every other quote stays the audit trail only.
+      const statute = (url: string): boolean => new URL(url).host === 'www.law.go.kr';
       const quotes = [
-        ...g.data.sources.flatMap((s) => ('quote' in s ? [s.quote] : [])),
+        ...g.data.sources.flatMap((s) => ('quote' in s && !statute(s.url) ? [s.quote] : [])),
         ...g.data.sources.flatMap((s) => ('preset' in s ? [getPreset(s.preset)?.quote ?? ''] : [])),
       ].filter(Boolean);
       for (const q of quotes) expect(page.includes(q.replace(/\s+/g, ' ')), `${g.slug}: quote rendered`).toBe(false);

@@ -1,0 +1,223 @@
+---
+// /stamp-signature/ (Sprint C, C1): a photo of a 도장 or a paper signature -> a cropped, transparent PNG (ink key in a
+// worker, no model), plus a pad to draw a signature. Two tabs; both controllers load lazily (entry.ts).
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { INK, INK_SIZES } from '../../lib/ink/key';
+import { COPY, sizeLabel, strengthLabel } from '../../tools/stamp-signature/copy';
+// Page-only styles, inlined (the /hwp-viewer/ pattern): no other page carries them.
+import stampCss from '../../tools/stamp-signature/stamp.css?inline';
+
+const tool = getTool('stamp-signature');
+const jsonLd = toolJsonLd(tool, Astro.site);
+const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+const modes = [
+  { value: 'auto', label: '자동', desc: '도장인지 서명인지 알아서 찾습니다.' },
+  { value: 'red', label: '빨간 도장', desc: '빨간 도장만 남기고 검은 글자는 지웁니다.' },
+  { value: 'sign', label: '검정·파란 서명', desc: '서명만 남기고 빨간 도장이나 줄은 지웁니다.' },
+];
+const colors = [
+  { value: 'original', label: '사진 속 색' },
+  { value: 'red', label: '빨간색' },
+  { value: 'black', label: '검은색' },
+  { value: 'blue', label: '파란색' },
+];
+const pens = [
+  { value: 'black', label: '검은색' },
+  { value: 'blue', label: '파란색' },
+  { value: 'red', label: '빨간색' },
+];
+const sizes = INK_SIZES.map((s) => ({ value: String(s ?? 0), label: sizeLabel(s) }));
+const limits = [
+  '질감 있는 종이나 색지 위의 흐린 도장은 번지거나 끊겨 보일 수 있습니다.',
+  '도장이 글자 위에 찍혀 있으면 겹친 부분이 비어 보일 수 있습니다.',
+  '광택 있는 종이의 빛 반사, 아주 어두운 사진은 제대로 안 될 수 있습니다.',
+  '이 도구는 이미지만 만들고, 법적 효력을 정하거나 본인 확인을 하지 않습니다. 본인 도장과 서명만 쓰세요.',
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={stampCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">종이에 찍은 도장이나 쓴 서명을 사진으로 찍어 고르면, 종이를 지우고 도장·서명만 남긴 투명 배경 PNG 파일로 저장합니다. 서명은 화면에 직접 그려도 됩니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div class="ss" id="ss-tool">
+        <div class="ss-tabs" id="ss-tabs" role="tablist" aria-label="만드는 방법">
+          <button type="button" role="tab" id="ss-tab-photo" aria-controls="ss-photo" aria-selected="true">사진으로 만들기</button>
+          <button type="button" role="tab" id="ss-tab-draw" aria-controls="ss-draw" aria-selected="false" tabindex="-1">직접 그리기</button>
+        </div>
+
+        <div class="ss-panel" id="ss-photo" role="tabpanel" aria-labelledby="ss-tab-photo" tabindex="0" data-state="empty">
+          <div class="drop" id="ss-drop">
+            <p class="ss-privacy">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+            <input id="ss-input" class="file-input" type="file" accept={accept}>
+            <label class="btn primary" for="ss-input">사진 선택</label>
+            <p class="drop-hint">또는 여기에 사진 한 장을 끌어다 놓으세요 (JPG·PNG·WebP)</p>
+            <p class="drop-hint-touch">휴대폰의 사진 보관함이나 「파일」 앱에서 고를 수 있습니다 (JPG·PNG·WebP).</p>
+            <p class="privacy-note">흰 종이에 찍은 도장이나 서명을 환한 곳에서 가까이 찍어 주세요.</p>
+          </div>
+
+          <p class="error-box" id="ss-error" role="alert" data-live="alert" hidden></p>
+          <div class="row ss-retry-row"><button type="button" class="btn primary" id="ss-retry" hidden>다시 시도</button></div>
+
+          <div class="progress-box" id="ss-loading" hidden>
+            <p id="ss-loading-text">{COPY.opening}</p>
+            <progress aria-labelledby="ss-loading-text"></progress>
+          </div>
+
+          <div class="ss-work" id="ss-work" hidden>
+            <div class="ss-previews" id="ss-previews" hidden>
+              <figure class="ss-pv">
+                <div class="ss-pv-box ss-checker"><canvas id="ss-on-checker" role="img" aria-label="결과 미리보기, 투명 배경"></canvas></div>
+                <figcaption>투명 배경</figcaption>
+              </figure>
+              <figure class="ss-pv">
+                <div class="ss-pv-box ss-white"><canvas id="ss-on-white" role="img" aria-label="결과 미리보기, 흰 종이에 놓았을 때"></canvas></div>
+                <figcaption>흰 종이에 놓았을 때</figcaption>
+              </figure>
+            </div>
+
+            <div class="row ss-save-row">
+              <button type="button" class="btn primary" id="ss-download" disabled>PNG로 내려받기</button>
+              <button type="button" class="btn ghost" id="ss-new">다른 사진 고르기</button>
+            </div>
+            <p class="save-name" id="ss-save-name"></p>
+            <Share name={tool.name} text={sharePreview('/stamp-signature/', Astro.site!).description} id="ss-share" />
+
+            <div class="ss-controls">
+              <fieldset class="levels">
+                <legend>찾을 것</legend>
+                {modes.map((m, i) => (
+                  <div class="level">
+                    <label class="radio"><input type="radio" name="ss-mode" value={m.value} checked={i === 0} aria-describedby={`ss-mode-${m.value}`}><span>{m.label}</span></label>
+                    <p class="level-desc" id={`ss-mode-${m.value}`}>{m.desc}</p>
+                  </div>
+                ))}
+              </fieldset>
+              <div class="ph-range ss-strength">
+                <label for="ss-strength">진하기</label>
+                <input id="ss-strength" type="range" min={INK.strengthMin} max={INK.strengthMax} step="1" value="0" aria-describedby="ss-strength-help">
+                <output id="ss-strength-out" for="ss-strength">{strengthLabel(0)}</output>
+              </div>
+              <p class="level-desc ss-help" id="ss-strength-help">흐린 도장이 끊겨 보이면 진하게, 종이에 지저분한 것이 남으면 연하게 고르세요.</p>
+              <fieldset class="levels">
+                <legend>색</legend>
+                <div class="chips">
+                  {colors.map((c, i) => <label class="chip"><input type="radio" name="ss-color" value={c.value} checked={i === 0}><span>{c.label}</span></label>)}
+                </div>
+              </fieldset>
+              <fieldset class="levels">
+                <legend>크기</legend>
+                <div class="chips">
+                  {sizes.map((s, i) => <label class="chip"><input type="radio" name="ss-size" value={s.value} checked={i === 0}><span>{s.label}</span></label>)}
+                </div>
+                <p class="level-desc ss-help">도장·서명보다 큰 크기는 고를 수 없습니다.</p>
+                <label class="check"><input type="checkbox" id="ss-nopad"><span>여백 없이 자르기</span></label>
+              </fieldset>
+            </div>
+          </div>
+
+          <EngineError />
+          <p class="visually-hidden" id="ss-status" aria-live="polite" data-live="status"></p>
+        </div>
+
+        <div class="ss-panel" id="ss-draw" role="tabpanel" aria-labelledby="ss-tab-draw" tabindex="0" hidden>
+          <p class="ss-help-line" id="ss-pad-help">손가락이나 마우스로 아래 칸에 서명하세요. 키보드만 쓴다면 종이에 서명한 뒤 「사진으로 만들기」를 쓰세요.</p>
+          <div class="ss-pad-box" id="ss-pad-box">
+            <canvas id="ss-pad" role="img" aria-label="서명 칸" aria-describedby="ss-pad-help"></canvas>
+          </div>
+          <div class="row ss-pad-row">
+            <button type="button" class="btn ghost" id="ss-undo" disabled>되돌리기</button>
+            <button type="button" class="btn ghost" id="ss-clear" disabled>지우기</button>
+          </div>
+          <fieldset class="levels">
+            <legend>색</legend>
+            <div class="chips">
+              {pens.map((p, i) => <label class="chip"><input type="radio" name="ss-pen" value={p.value} checked={i === 0}><span>{p.label}</span></label>)}
+            </div>
+          </fieldset>
+          <fieldset class="levels">
+            <legend>크기</legend>
+            <div class="chips">
+              {sizes.map((s, i) => <label class="chip"><input type="radio" name="ss-pad-size" value={s.value} checked={i === 0}><span>{s.label}</span></label>)}
+            </div>
+            <label class="check"><input type="checkbox" id="ss-pad-nopad"><span>여백 없이 자르기</span></label>
+          </fieldset>
+          <div class="row ss-save-row">
+            <button type="button" class="btn primary" id="ss-pad-download" disabled aria-describedby="ss-pad-reason">PNG로 내려받기</button>
+          </div>
+          <p class="hint" id="ss-pad-reason">{COPY.padEmpty}</p>
+          <p class="error-box" role="alert" data-live="alert" hidden></p>
+          <p class="visually-hidden" aria-live="polite" data-live="status"></p>
+        </div>
+
+        <div class="notice ss-limits" role="note" aria-labelledby="ss-limits-title">
+          <p class="ss-limits-title" id="ss-limits-title">이럴 때는 제대로 안 될 수 있습니다</p>
+          <ul>
+            {limits.map((t) => <li>{t}</li>)}
+          </ul>
+        </div>
+      </div>
+      <AdSlot id="stamp-signature-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>도장·서명 사진 고르기</strong><span>흰 종이에 찍은 도장이나 쓴 서명을 환한 곳에서 가까이 찍어 고릅니다. 서명은 「직접 그리기」에서 그려도 됩니다.</span></li>
+        <li><strong>미리보기 확인</strong><span>종이를 지운 결과를 투명 배경과 흰 종이 위에서 확인하고, 필요하면 진하기·색·크기를 바꿉니다.</span></li>
+        <li><strong>PNG로 내려받기</strong><span>도장은 도장.png, 서명은 서명.png로 저장됩니다. 한글·워드 문서에 그림으로 넣어 쓰세요.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">안전한 이유</h2>
+      <ul class="points">
+        <li><strong>밖으로 보내지 않습니다</strong><span>사진과 서명은 이 기기 안에서만 처리되고 어디에도 보내지지 않습니다.</span></li>
+        <li><strong>저장하지 않습니다</strong><span>만든 이미지는 내려받은 파일에만 남고, 창을 닫으면 사라집니다.</span></li>
+        <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => (
+            <p><a href={l.href} {...(l.href.startsWith('http') ? { rel: 'noopener noreferrer', target: '_blank' } : {})}>{l.text}</a></p>
+          ))}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['photo-compress', 'hwp-to-pdf', 'pdf-merge']} />
+  <div class="wrap narrow"><AdSlot id="stamp-signature-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import '../../tools/stamp-signature/entry';
+</script>
