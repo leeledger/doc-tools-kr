@@ -6,6 +6,9 @@ import RelatedTools from '../../components/RelatedTools.astro';
 import EngineError from '../../components/EngineError.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
 
 const tool = getTool('pdf-merge');
 const jsonLd = toolJsonLd(tool, Astro.site);
@@ -71,6 +74,7 @@ const jsonLd = toolJsonLd(tool, Astro.site);
             <button type="button" class="btn ghost" id="merge-reset">다른 파일 처리하기</button>
           </div>
           <p class="save-name" id="merge-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/pdf-merge/', Astro.site!).description} id="merge-share" />
           <ul class="result-notes" id="merge-notes"></ul>
           <p class="related-line">합친 파일의 용량이 크다면 <a href="/pdf-compress/">PDF 용량 줄이기</a>에서 줄일 수 있습니다.</p>
         </div>
@@ -81,6 +85,8 @@ const jsonLd = toolJsonLd(tool, Astro.site);
       <AdSlot id="pdf-merge-result" size="rect" />
     </div>
   </section>
+
+  <QuickLinks slug={tool.slug} />
 
   <section class="howto" aria-labelledby="howto-title">
     <div class="wrap narrow">

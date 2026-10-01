@@ -30,13 +30,16 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
 })()));
 `;
 
-/** Sitemap pages that are not precached (fetched from the network when visited). */
-export const NOT_PRECACHED = ['/licenses/'];
+/**
+ * Sitemap pages that are not precached (fetched from the network when visited): /licenses/, and the guides and
+ * their share images (Growth G.3): gen-sw would otherwise precache every guide and pass the 450 KB limit.
+ */
+export const NOT_PRECACHED = (path) => path === '/licenses/' || path.startsWith('/guide/') || path.startsWith('/og/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {
   const xml = readFileSync(join(dist, 'sitemap.xml'), 'utf8');
-  const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname).filter((p) => !NOT_PRECACHED.includes(p));
+  const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname).filter((p) => !NOT_PRECACHED(p));
   return [...paths, '/offline/'];
 }
 

@@ -1,0 +1,29 @@
+---
+// "링크 보내기 / 링크 복사" (Growth G.7). On a tool page it sits in the result state and shares the tool address
+// with its option; on a guide it shares the canonical URL. src/lib/ui/share.ts does the work.
+import { SITE } from '../data/site';
+
+interface Props {
+  /** The page name without the site suffix ("PDF 합치기", a guide title). */
+  name: string;
+  /** The share text (the page's og:description). */
+  text: string;
+  /** Unique on the page. */
+  id: string;
+  /** A fixed address (a guide's canonical); tools leave it out and share their current address. */
+  url?: string;
+}
+const { name, text, id, url } = Astro.props;
+---
+<div class="share" data-share data-title={`${name} | ${SITE.name}`} data-text={text} data-url={url}>
+  <div class="row share-row">
+    <button type="button" class="btn ghost share-btn" data-share-copy>링크 복사</button>
+    <button type="button" class="btn ghost share-btn" data-share-send hidden>링크 보내기</button>
+  </div>
+  <div class="share-fallback" data-share-fallback hidden>
+    <label for={`${id}-field`}>이 페이지 주소</label>
+    <input class="share-field" id={`${id}-field`} type="text" readonly data-share-field aria-describedby={`${id}-help`}>
+    <p class="level-desc" id={`${id}-help`}>길게 누르거나 Ctrl+C로 복사해 주세요</p>
+  </div>
+  <p class="visually-hidden" aria-live="polite" data-share-status></p>
+</div>

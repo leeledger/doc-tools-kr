@@ -423,3 +423,30 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+/* Growth G: share, quick links, guides */
+.share { margin: 16px 0 0; }
+.share-row { gap: 8px; }
+/* The copy button comes first and keeps its size, so 링크 보내기 appearing after it (Web Share only) moves nothing. */
+.share-row .share-btn { flex: 0 0 auto; }
+.share-fallback { margin-top: 12px; display: grid; gap: 6px; }
+.share-fallback label { font-weight: 700; font-size: 15px; }
+.share-field { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 15px; background: var(--surface); color: var(--text); }
+.quick { padding: 40px 0 8px; }
+.quick h2 { font-size: 21px; margin: 0 0 12px; }
+.quick-sub { font-size: 17px; margin: 24px 0 8px; }
+.quick-list, .quick-guides { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.quick-list a, .quick-guides a {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--brand); font-size: 15px; text-decoration: none;
+}
+.quick-list a:hover, .quick-guides a:hover { border-color: var(--brand); }
+.guide-feed a, .more-link a { color: var(--brand); display: inline-block; min-height: 24px; }
+.home-guides { padding: 24px 0 56px; }
+.guide-grid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.guide-grid li { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
+.guide-grid a { font-weight: 700; color: var(--brand); display: inline-block; min-height: 24px; }
+.guide-grid span { color: var(--muted); font-size: 15px; }
+/* Guide titles and answers listed outside the guide pages: the system Korean font, like the guides themselves
+   (their text is not in the UI font subset; BUILD-LOG Growth G). */
+.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }

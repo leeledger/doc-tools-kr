@@ -1,0 +1,22 @@
+/* Guide pages (Growth G.1): loaded by src/layouts/Guide.astro only. */
+.guide-page { padding: 40px 0 72px; }
+.guide h1 { margin: 0 0 16px; font-size: clamp(28px, 4vw, 38px); line-height: 1.3; letter-spacing: -0.02em; font-weight: 800; }
+.guide-crumbs { margin: 0 0 8px; font-size: 15px; color: var(--muted); }
+.guide-crumbs a { color: var(--brand); display: inline-block; min-height: 24px; }
+.guide-answer-box { border-left: 4px solid var(--brand); background: var(--brand-soft); border-radius: 0 12px 12px 0; padding: 14px 18px; }
+.guide-answer { margin: 0; font-size: 18px; }
+.guide-source { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+.guide-source a, .guide-sources a { color: var(--brand); display: inline-block; min-height: 24px; }
+.guide-cta { margin: 20px 0 0; }
+.guide-body h2, .guide-faq h2, .guide-more h2 { font-size: 21px; margin: 36px 0 10px; }
+.guide-body table { border-collapse: collapse; width: 100%; font-size: 15px; margin: 12px 0; }
+.guide-body th, .guide-body td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.guide-body a { color: var(--brand); }
+.guide-body li + li { margin-top: 6px; }
+.guide-qa h3 { font-size: 17px; margin: 18px 0 4px; }
+.guide-qa p { margin: 0; }
+.guide-sources ul { padding-left: 20px; }
+.guide-note, .guide-dates { color: var(--muted); font-size: 15px; }
+/* Guide text is outside the UI font subset (its budget and the preloaded bytes, BUILD-LOG Growth G): the whole
+   guide page below the header renders in the system Korean font. */
+.guide-page { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }

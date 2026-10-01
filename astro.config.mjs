@@ -30,7 +30,10 @@ export default defineConfig({
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (/[\/]src[\/]lib[\/]ui[\/](announce|beacon|device|engine-error|engine-load|font|format|preload)\.ts$/.test(id)) return 'ui-shared';
+            // Growth G: the deep-link modules (and josa, which they share with every tool) join the chunk, so a
+            // tool page loads no extra request for them (Lighthouse LCP on /photo-compress/ and /pdf-compress/).
+            if (/[\/]src[\/]lib[\/]ui[\/](announce|beacon|device|engine-error|engine-load|font|format|preload|josa|deeplink|quicklinks)\.ts$/.test(id)) return 'ui-shared';
+            if (/[\/]src[\/]data[\/]preset-ids\.ts$/.test(id)) return 'ui-shared';
             if (/[\/]src[\/]lib[\/]pdf[\/]errors\.ts$/.test(id) || id.includes('vite/preload-helper')) return 'ui-shared';
             return undefined;
           },

@@ -32,7 +32,11 @@ function stripComments(s) {
     .replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/^[ \t]*\/\/.*$/gm, '')
-    .replace(/[ \t]\/\/ .*$/gm, '');
+    .replace(/[ \t]\/\/ .*$/gm, '')
+    // Growth G (UI font budget): data that is never shown either: the official preset quotes (the audit trail)
+    // and the tools' copywriting keywords.
+    .replace(/\bquote:\s*'(?:[^'\\\n]|\\.)*'/g, '')
+    .replace(/\bkeywords:\s*\[[^\]]*\]/g, '');
 }
 
 const texts = [];

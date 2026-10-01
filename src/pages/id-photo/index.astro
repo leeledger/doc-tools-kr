@@ -6,6 +6,9 @@ import RelatedTools from '../../components/RelatedTools.astro';
 import EngineError from '../../components/EngineError.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
 import { CUSTOM_BOUNDS, DEFAULT_PRESET, PASSPORT_CHECK_URL, PASSPORT_RULE_URL, PRESETS, RETRIEVED } from '../../data/id-photo-presets';
 
 const tool = getTool('id-photo');
@@ -159,6 +162,7 @@ const nudges = [
             <a class="btn primary" id="idp-download" tabindex="0">내려받기</a>
           </div>
           <p class="save-name" id="idp-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/id-photo/', Astro.site!).description} id="idp-share" />
           <p class="notice" id="idp-fallback" hidden></p>
           <div class="row">
             <button type="button" class="btn ghost" id="idp-again">다른 규격으로 다시 만들기</button>
@@ -176,6 +180,8 @@ const nudges = [
       <AdSlot id="id-photo-result" size="rect" />
     </div>
   </section>
+
+  <QuickLinks slug={tool.slug} />
 
   <section class="howto" aria-labelledby="howto-title">
     <div class="wrap narrow">

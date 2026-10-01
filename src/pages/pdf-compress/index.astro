@@ -6,17 +6,16 @@ import RelatedTools from '../../components/RelatedTools.astro';
 import EngineError from '../../components/EngineError.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { LEVEL_COPY, TARGET_CHIPS } from '../../tools/pdf-compress/level-copy';
 
 const tool = getTool('pdf-compress');
 const jsonLd = toolJsonLd(tool, Astro.site);
 
-const levels = [
-  { value: 'high', label: '고화질 (적게 줄이기)', desc: '인쇄용 선명도 (약 200 ppi). 원본과 거의 구분되지 않아 인쇄할 문서에 알맞습니다.' },
-  { value: 'recommended', label: '권장', desc: '제출용 선명도 (약 150 ppi). 화면과 일반 인쇄에서 선명하게 읽혀 제출용 서류에 알맞습니다.' },
-  { value: 'strong', label: '강력', desc: '화면용 선명도 (약 110 ppi). 화면에서는 읽을 수 있지만 확대하면 흐려질 수 있습니다.' },
-];
-// 목표 용량 chips (Polish P.13); MB × 1,000,000 bytes.
-const targets = ['3', '5', '10', '20'];
+const levels = LEVEL_COPY;
+const targets = TARGET_CHIPS;
 ---
 <Base title={tool.title} description={tool.description}>
   <JsonLd slot="head" data={jsonLd} />
@@ -133,6 +132,7 @@ const targets = ['3', '5', '10', '20'];
             <button type="button" class="btn ghost" id="cmp-again">다른 단계로 다시 줄이기</button>
           </div>
           <p class="save-name" id="cmp-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/pdf-compress/', Astro.site!).description} id="cmp-share" />
           <div class="warn-box" id="cmp-miss" role="note" hidden></div>
           <div class="warn-box" id="cmp-signed" role="note" hidden>이 파일에는 전자서명이 들어 있습니다. 용량을 줄인 파일에서는 서명이 더 이상 유효하지 않습니다. 발급받은 증명서처럼 서명이 필요한 문서는 원본을 제출하세요.</div>
           <ul class="result-notes" id="cmp-notes"></ul>
@@ -159,6 +159,8 @@ const targets = ['3', '5', '10', '20'];
       <AdSlot id="pdf-compress-result" size="rect" />
     </div>
   </section>
+
+  <QuickLinks slug={tool.slug} />
 
   <section class="howto" aria-labelledby="howto-title">
     <div class="wrap narrow">

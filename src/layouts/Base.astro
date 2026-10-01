@@ -5,6 +5,7 @@ import '../styles/app.css';
 import { SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } from '../data/site';
 import { BUILD_ID } from '../data/build';
 import { LIVE_TOOLS } from '../data/tools';
+import JsonLd from '../components/JsonLd.astro';
 // Preloaded UI weights (Polish P.12): 400 (body) and 800 (every H1, the LCP element). 600 and 700 load on demand.
 import uiFont400 from '../generated/anolim-ui-400.woff2?url';
 import uiFont800 from '../generated/anolim-ui-800.woff2?url';
@@ -16,6 +17,16 @@ interface Props {
   skipTarget?: string;
   isHome?: boolean;
   noindex?: boolean;
+  /** Share image (absolute URL) and its alt text; default: the page's og.json image (Growth G: guides have their own). */
+  ogImage?: string;
+  ogAlt?: string;
+  /** og:description and twitter:description; default: og.json. */
+  ogDescription?: string;
+  ogType?: 'website' | 'article';
+  /** JSON-LD blocks for the head. */
+  jsonLd?: Record<string, unknown>[];
+  /** The guide RSS feed as a head alternate link (/guide/ and every guide). */
+  rss?: boolean;
 }
 
 const {
@@ -24,10 +35,18 @@ const {
   skipTarget = 'main',
   isHome = false,
   noindex = false,
+  ogType = 'website',
+  jsonLd,
+  rss = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const share = sharePreview(Astro.url.pathname, Astro.site!);
+const preview = sharePreview(Astro.url.pathname, Astro.site!);
+const share = {
+  image: Astro.props.ogImage ?? preview.image,
+  alt: Astro.props.ogAlt ?? preview.alt,
+  description: Astro.props.ogDescription ?? preview.description,
+};
 const nav = isHome ? '' : '/';
 const path = Astro.url.pathname;
 const footOp = footerContact();
@@ -45,7 +64,7 @@ const favicon =
 {!noindex && <link rel="canonical" href={canonical}>}
 <meta name="build-id" content={BUILD_ID}>
 <meta name="theme-color" content={SITE.themeColor}>
-<meta property="og:type" content="website">
+<meta property="og:type" content={ogType}>
 <meta property="og:locale" content={SITE.locale}>
 <meta property="og:site_name" content={SITE.name}>
 <meta property="og:title" content={title}>
@@ -67,8 +86,10 @@ const favicon =
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
+{rss && <link rel="alternate" type="application/rss+xml" title={`${SITE.name} 안내`} href="/guide/rss.xml">}
 <link rel="preload" href={uiFont400} as="font" type="font/woff2" crossorigin>
 <link rel="preload" href={uiFont800} as="font" type="font/woff2" crossorigin>
+{jsonLd && <JsonLd data={jsonLd} />}
 <slot name="head" />
 </head>
 <body>
@@ -99,6 +120,7 @@ const favicon =
           </ul>
         </div>
       </div>
+      <a class="nav-guide" href="/guide/" aria-current={path.startsWith('/guide/') ? 'page' : undefined}>안내</a>
       <a class="nav-extra" href={`${nav}#privacy`}>보안</a>
       <a class="nav-extra" href={`${nav}#faq`}>자주 묻는 질문</a>
     </nav>
@@ -113,6 +135,7 @@ const favicon =
   <div class="wrap foot-inner">
     {footOp && <p class="foot-op" set:html={footOp} />}
     <nav class="foot-links" aria-label="사이트 정보">
+      <a href="/guide/">안내</a>
       <a href="/terms/">이용약관</a>
       <a href="/privacy/">개인정보 처리방침</a>
       <a href="/licenses/">오픈소스 라이선스</a>

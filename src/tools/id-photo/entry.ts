@@ -6,6 +6,9 @@
 // that cannot load (offline, a new deploy) shows the shared engine panel.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { bindQuickLinks, readUrl, writeUrl } from '../../lib/ui/quicklinks';
+import { getPreset } from '../../data/id-photo-presets';
+import { renderSource } from './source';
 
 type Api = { open(file: File): void } | null;
 
@@ -44,4 +47,29 @@ if (root && drop) {
   for (const ev of EVENTS) root.addEventListener(ev, start, { passive: true });
   drop.addEventListener('dragover', onDragOver);
   drop.addEventListener('drop', onDrop);
+
+  // Deep links (Growth G.5, G.6): ?preset=<id> picks that 제출처 before the controller loads (the controller reads
+  // the select when it starts), and the address follows the select from then on.
+  const select = document.getElementById('idp-preset') as HTMLSelectElement | null;
+  const source = document.getElementById('idp-source');
+  if (select && source) {
+    const deep = readUrl('id-photo');
+    const preset = deep?.preset ? getPreset(deep.preset) : undefined;
+    if (preset && select.value !== preset.id) {
+      select.value = preset.id;
+      renderSource(source, preset);
+    }
+    select.addEventListener('change', () => writeUrl('id-photo', select.value === 'custom' ? null : { preset: select.value }));
+    bindQuickLinks(
+      'id-photo',
+      (s) => {
+        if (!s.preset || select.disabled) return false;
+        select.value = s.preset;
+        // The controller (loaded now if it was not yet) and the address both follow the change event.
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      },
+      root,
+    );
+  }
 }

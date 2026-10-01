@@ -6,6 +6,9 @@ import RelatedTools from '../../components/RelatedTools.astro';
 import EngineError from '../../components/EngineError.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
 
 const tool = getTool('photo-compress');
 const jsonLd = toolJsonLd(tool, Astro.site);
@@ -73,6 +76,7 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
             <button type="button" class="btn ghost" id="ph-again">이 설정으로 다시 줄이기</button>
             <button type="button" class="btn ghost" id="ph-reset">다른 사진 처리하기</button>
           </div>
+          <Share name={tool.name} text={sharePreview('/photo-compress/', Astro.site!).description} id="ph-share" />
           <p class="error-box" id="ph-zip-error" role="alert" data-live="alert" hidden></p>
         </div>
 
@@ -203,6 +207,8 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
       <AdSlot id="photo-compress-result" size="rect" />
     </div>
   </section>
+
+  <QuickLinks slug={tool.slug} />
 
   <section class="howto" aria-labelledby="howto-title">
     <div class="wrap narrow">

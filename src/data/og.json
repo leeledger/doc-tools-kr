@@ -19,6 +19,7 @@
     "/hwp-to-pdf/": { "image": "hwp-to-pdf", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 저장해요. 파일은 밖으로 안 나가요." },
     "/privacy/": { "image": "default", "description": "문서딱은 가입이 없고 개인정보를 받지 않아요. 파일은 내 폰·PC 안에서만 처리해요." },
     "/terms/": { "image": "default", "description": "문서딱 이용약관: 무료로 쓰는 문서·사진 도구의 이용 조건과 책임의 범위를 알려 드려요." },
+    "/guide/": { "image": "default", "description": "여권사진·증명사진 규격과 사진·PDF 용량 제한을 기관 안내로 확인해 정리했어요. 확인일과 원문 링크 포함." },
     "/licenses/": { "image": "default", "description": "문서딱이 쓰는 오픈소스 소프트웨어와 글꼴의 목록, 버전, 라이선스 전문이에요." },
     "*": { "image": "default", "description": "내야 하는 문서·사진, 용량과 규격에 딱 맞춰 드려요. 파일은 내 폰·PC 밖으로 안 나가요. 무료." }
   }
