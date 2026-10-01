@@ -1,3 +1,4 @@
+/* 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다. */
 /* HWP PDF 변환: tool styles (brief Step 5 §3.2). No print CSS since HWP direct: the PDF is written in the page,
    and Ctrl/Cmd+P prints the page like any web page. */
 .hwp .hw-result { margin-top: 20px; display: grid; gap: 12px; }

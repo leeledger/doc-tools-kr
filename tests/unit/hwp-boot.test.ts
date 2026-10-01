@@ -2,7 +2,7 @@
 // The HWP page script (G2 A0/V0): nothing loads before the first paint or an interaction; what happened before
 // the controller ran is handed to it; a controller that cannot load shows the engine panel.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { bootHwpTool, type BootInit, type BootStart } from '../../src/tools/hwp-to-pdf/boot';
+import { bootHwpTool, type BootInit, type BootStart } from '../../src/tools/hwp-shared/boot';
 
 function page(): { root: HTMLElement; input: HTMLInputElement; label: HTMLLabelElement } {
   document.body.innerHTML = `<div id="engine-error" hidden></div><div id="tool"><input id="in" type="file"><label for="in" id="pick">고르기</label></div>`;

@@ -1,3 +1,4 @@
+// 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 // The page script of the HWP tool (G2 A0/V0: Lighthouse LCP ≤ 2,000 ms). It imports nothing at load: the
 // controller and the shared UI chunk are requested after the first paint (then on idle), or at once on the
 // first interaction with the tool, so they stay off the critical path of the lead text. The picker is a native

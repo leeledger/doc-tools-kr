@@ -1,3 +1,4 @@
+// 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 // The paged preview (brief Step 5 §3.2 "Lazy viewer", "Screen scaling"; HWP direct: always lazy, the PDF is
 // written from the worker's pages, not from the preview). Every page gets a placeholder sized from pageInfos.
 // An IntersectionObserver on the preview renders the visible pages ±2 and evicts pages beyond ±6. Each

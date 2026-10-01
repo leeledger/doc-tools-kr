@@ -1,3 +1,4 @@
+// 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 // Copy of HWP PDF 변환 (brief Step 5 §3.2; SPIKE-HWP-DIRECT §6.8 plain language; docs/COPY.md: 합니다체,
 // two-sentence errors, numbers with units, particles after a variable through josa()).
 import type { HwpErrorCode } from '../../lib/hwp/errors';

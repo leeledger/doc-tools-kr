@@ -1,3 +1,4 @@
+// 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 // The PDF file name and the in-page download (SPIKE-HWP-DIRECT §6.2 "download.ts"). A hidden <a download>
 // with a blob: URL: no navigation, no new window, no dialog of ours. The caller owns the URL and revokes it on
 // reset or replacement, never on a timer (the visible 「다시 내려받기」 link keeps using it).

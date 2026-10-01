@@ -9,9 +9,9 @@ import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
-import { COPY, HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-to-pdf/messages';
+import { COPY, HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
 // The tool styles are inlined (1.2 KB): a second render-blocking stylesheet held back LCP (G2 A0/V0).
-import hwpCss from '../../tools/hwp-to-pdf/hwp.css?inline';
+import hwpCss from '../../tools/hwp-shared/hwp.css?inline';
 
 const tool = getTool('hwp-to-pdf');
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
@@ -135,6 +135,6 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
 
 
 <script>
-  import { bootHwpTool } from '../../tools/hwp-to-pdf/boot';
+  import { bootHwpTool } from '../../tools/hwp-shared/boot';
   bootHwpTool('hwp-tool', () => import('../../tools/hwp-to-pdf/controller').then((m) => m.initHwpTool));
 </script>

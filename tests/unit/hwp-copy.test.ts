@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { MB_DEC, MIB } from '../../src/lib/hwp/limits';
 import { route } from '../../src/lib/hwp/route';
-import { COPY, ERRORS, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from '../../src/tools/hwp-to-pdf/messages';
+import { COPY, ERRORS, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from '../../src/tools/hwp-shared/messages';
 
 const JARGON = /업로드|서버|브라우저|네트워크|메모리|인쇄|개발자 도구|(?<![A-Za-z])(?:px|dpi|exif|MiB)(?![A-Za-z])/i;
 

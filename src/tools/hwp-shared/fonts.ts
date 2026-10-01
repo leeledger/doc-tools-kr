@@ -1,3 +1,4 @@
+// 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 // The preview's document faces (brief Step 5 §3.5): one CSS file (scripts/gen-hwp-fonts.mjs) plus the
 // Pretendard dynamic subset, injected when the scan arrives (with the engine, SPIKE-HWP-DIRECT §6.7); slices
 // then load by unicode-range. The PDF embeds its own copies of the same faces (lib/hwp/pdf/font-source.ts).

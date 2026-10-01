@@ -2,7 +2,7 @@
 // The PDF file name and the in-page download (SPIKE-HWP-DIRECT §6.2, §6.4 "File name").
 import { describe, expect, it, vi } from 'vitest';
 import { MAX_FILE_NAME } from '../../src/lib/ui/format';
-import { pdfName, triggerDownload } from '../../src/tools/hwp-to-pdf/download';
+import { pdfName, triggerDownload } from '../../src/tools/hwp-shared/download';
 
 describe('pdfName', () => {
   it('the original name with .pdf', () => {

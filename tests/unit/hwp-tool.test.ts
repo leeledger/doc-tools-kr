@@ -9,8 +9,8 @@ import { route } from '../../src/lib/hwp/route';
 import { pick, rewriteFonts, scopeIds } from '../../src/lib/hwp/svg-string';
 import { LIVE_TOOLS, getTool } from '../../src/data/tools';
 import { faqJsonLd } from '../../src/data/jsonld';
-import { COPY, ERRORS, HANCOM_NOTICE, TRADEMARK_NOTICE, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from '../../src/tools/hwp-to-pdf/messages';
-import { createWatchdog, WATCHDOG_MS } from '../../src/tools/hwp-to-pdf/watchdog';
+import { COPY, ERRORS, HANCOM_NOTICE, TRADEMARK_NOTICE, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from '../../src/tools/hwp-shared/messages';
+import { createWatchdog, WATCHDOG_MS } from '../../src/tools/hwp-shared/watchdog';
 import { HWP_CORPUS } from '../helpers/hwp';
 
 const ROOT = join(__dirname, '..', '..');
