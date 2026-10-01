@@ -78,13 +78,23 @@ const norm = (n: string): string => String(Number(n.replace(/,/g, '')));
 export const key = (n: number | string, unit: Unit): string => `${norm(String(n))} ${unit}`;
 
 /**
+ * Agencies' unit spellings as the check reads them (G2 A2): the compatibility signs U+339D and U+339C
+ * (cm, mm; 정부24) and a capitalised unit right after a number ("3Cm × 4Cm(126*165 Pixel)", TEPS). Only the reading changes; quotes stay verbatim.
+ */
+export const unitSpellings = (text: string): string =>
+  text
+    .replace(/\u339D/g, 'cm')
+    .replace(/\u339C/g, 'mm')
+    .replace(/(\d\s*)(Cm|CM|Mm|MM|Pixel|PIXEL|Px|PX)(?![A-Za-z])/g, (_, n: string, u: string) => n + u.toLowerCase());
+
+/**
  * Every "number unit" in `text` as "413 픽셀", "3.5 cm", "500 KB". In a chain such as "3.5cm x 4.5cm",
  * "413×531픽셀" or "3.2~3.6cm", a number without its own unit takes the chain's last unit. Numbers without any
  * unit (dates, counts, 쪽, 장, 개) are not facts this check covers.
  */
 export function numberUnits(text: string): string[] {
   const out: string[] = [];
-  for (const chain of text.match(CHAIN) ?? []) {
+  for (const chain of unitSpellings(text).match(CHAIN) ?? []) {
     const parts = [...chain.matchAll(PART)].map((m) => ({ n: m[1]!, u: m[2] }));
     const last = [...parts].reverse().find((p) => p.u)?.u;
     if (!last) continue;

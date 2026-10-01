@@ -20,7 +20,8 @@
         "http://127.0.0.1:4173/guide/hwp-on-phone/",
         "http://127.0.0.1:4173/guide/what-is-hwpx/",
         "http://127.0.0.1:4173/guide/photo-sizes/",
-        "http://127.0.0.1:4173/guide/admission-photo/"
+        "http://127.0.0.1:4173/guide/admission-photo/",
+        "http://127.0.0.1:4173/guide/teps-photo/"
       ],
       "numberOfRuns": 5,
       "settings": {

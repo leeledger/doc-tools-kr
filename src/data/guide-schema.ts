@@ -14,6 +14,9 @@ export type Category = (typeof CATEGORIES)[number];
 export const TOPICS = ['여권·신분증', '시험·자격증', '취업·이력서', '입시·장학', '세금·민원', 'PDF·메일', '한글파일'] as const;
 export type Topic = (typeof TOPICS)[number];
 
+/** Korea Standard Time, UTC+9 (no daylight saving). */
+const KST_OFFSET_MS = 9 * 3_600_000;
+
 /** A source older than this at build time fails the dist test (T9): re-verify it (runbook, every January). */
 export const MAX_SOURCE_AGE_DAYS = 400;
 
@@ -114,7 +117,8 @@ export function guideProblems(
   now: Date = new Date(),
 ): string[] {
   const e: string[] = [];
-  const today = now.toISOString().slice(0, 10);
+  // Dates are Korean calendar days (the sources are read and dated in Korea): "today" is the date in KST (UTC+9).
+  const today = new Date(now.getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
   if (g.updated < g.published) e.push(`updated ${g.updated} is before published ${g.published}`);
   for (const [k, v] of [['published', g.published], ['updated', g.updated]] as const) if (v > today) e.push(`${k} ${v} is in the future`);
   const year = g.title.match(/(?<!\d)(20\d\d)(?!\d)/)?.[1];

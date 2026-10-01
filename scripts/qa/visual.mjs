@@ -42,6 +42,8 @@ const PAGES = [
   ['hubphoto', '/guide/photo-sizes/'],
   ['hubupload', '/guide/upload-limits/'],
   ['admission', '/guide/admission-photo/'],
+  // G2 A2: an exam-photo guide with a new preset.
+  ['teps', '/guide/teps-photo/'],
 ];
 const MAIN = PAGES.slice(0, 3);
 const VIEWPORTS = {

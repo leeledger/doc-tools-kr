@@ -225,6 +225,20 @@ test('every shipped preset and a custom size: exact px, ≤ limit, the dpi, the 
   expectSpec(bytes, 200, 250, 50_000, 96);
 });
 
+// G2 A2: each new preset opened from its guide's deep link is selected at load and saves its exact file.
+for (const id of ['history', 'korcham', 'teps', 'kuksiwon']) {
+  test(`?preset=${id}: selected at load; exact px, ≤ limit, the dpi, the file tag`, async ({ page }) => {
+    const p = PRESETS.find((x) => x.id === id)!;
+    await open(page, `/id-photo/?preset=${id}`);
+    await expect(page.locator('#idp-preset')).toHaveValue(id);
+    await pick(page, PORTRAIT);
+    await expect(tool(page)).toHaveAttribute('data-state', 'adjust');
+    const { bytes, name } = await save(page);
+    expect(name).toBe(`${p.fileTag}_${p.outW}x${p.outH}.jpg`);
+    expectSpec(bytes, p.outW, p.outH, p.limitBytes, p.dpi);
+  });
+}
+
 test('custom size: invalid input (49 px, "abc") disables save and shows the message', async ({ page }) => {
   await open(page);
   await pick(page, PORTRAIT);

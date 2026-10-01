@@ -61,6 +61,9 @@ describe('guides: schema (T4)', () => {
     const now = new Date('2026-09-30T12:00:00Z');
     expect(guideProblems({ ...base, published: '2026-09-30', updated: '2026-09-29' }, now).join()).toContain('before published');
     expect(guideProblems({ ...base, published: '2026-09-30', updated: '2026-10-01' }, now).join()).toContain('in the future');
+    // The calendar day is Korea's: 2026-10-01 20:00 UTC is already 2026-10-02 05:00 KST.
+    expect(guideProblems({ ...base, published: '2026-10-02', updated: '2026-10-02' }, new Date('2026-10-01T20:00:00Z'))).toEqual([]);
+    expect(guideProblems({ ...base, published: '2026-10-02', updated: '2026-10-02' }, new Date('2026-10-01T14:59:00Z')).join()).toContain('in the future');
     expect(guideProblems({ ...base, title: '운전면허 사진 규격 2025', updated: '2026-09-30' }, now).join()).toContain('title says 2025');
     expect(guideProblems({ ...base, title: '운전면허 사진 규격 2026', updated: '2026-09-30' }, now)).toEqual([]);
     expect(guideProblems({ ...base, answer: '두 문장이에요. 둘째 문장이에요.' }, now).join()).toContain('one sentence');
@@ -104,6 +107,28 @@ describe('guides: fact check (T9, source side)', () => {
     expect(numberUnits('2026-09-30, 50장, 1,500쪽')).toEqual([]);
   });
 
+  it('numberUnits reads agency spellings: ㎝ ㎜ (정부24) and capitalised units (TEPS); quotes stay verbatim (G2 A2)', () => {
+    expect(numberUnits('6개월 이내에 촬영한 3.5㎝×4.5㎝의 사진, 30㎜')).toEqual(['6 개월', '3.5 cm', '4.5 cm', '30 mm']);
+    expect(numberUnits('3Cm × 4Cm(126*165 Pixel)')).toEqual(['3 cm', '4 cm', '126 픽셀', '165 픽셀']);
+    expect(numberUnits('120PX, 2CM')).toEqual(['120 픽셀', '2 cm']);
+    // A capitalised word that is not a unit right after a number stays unread.
+    expect(numberUnits('3Cmyk 5 Pixels')).toEqual([]);
+  });
+
+  it('A2 presets: the quote states the output pixels and the limit; sources and date present', () => {
+    for (const id of ['history', 'korcham', 'teps', 'kuksiwon']) {
+      const p = getPreset(id)!;
+      const quoted = numberUnits(p.quote ?? '');
+      expect(quoted, id).toContain(`${p.outW} 픽셀`);
+      expect(quoted, id).toContain(`${p.outH} 픽셀`);
+      const lim = presetLimit(p);
+      if (lim) expect(quoted, id).toContain(`${lim.kb} KB`);
+      expect(p.status, id).toBe('official');
+      expect(p.sourceUrls.length, id).toBeGreaterThan(0);
+      expect(p.retrieved, id).toBe('2026-10-02');
+    }
+  });
+
   it('every published guide passes: no number with a unit without a source', () => {
     for (const g of published) {
       const d = g.parsed;
@@ -142,7 +167,9 @@ describe('quick links (T5)', () => {
   });
 
   it('id-photo: one link per preset (never custom); pdf-compress: the Gmail limit from its quote', () => {
-    expect(quickLinks('id-photo').map((l) => l.href)).toEqual(PRESETS.map((p) => `/id-photo/?preset=${p.id}`));
+    // G2 A2: 10 presets, at most 8 links: the brief's order first (id_card, toeic, admission did not ship), then PRESETS order.
+    expect(quickLinks('id-photo').map((l) => l.href.replace('/id-photo/?preset=', ''))).toEqual(['passport_online', 'history', 'gosi', 'qnet', 'korcham', 'teps', 'kuksiwon', 'saramin']);
+    for (const l of quickLinks('id-photo')) expect(PRESETS.some((p) => l.href === `/id-photo/?preset=${p.id}`), l.href).toBe(true);
     expect(GMAIL_LIMIT.quote).toContain(`${GMAIL_LIMIT.mb}MB`);
     expect(quickLinks('pdf-compress').map((l) => l.href)).toEqual(['/pdf-compress/?target=25', '/pdf-compress/?target=10', '/pdf-compress/?target=5']);
     for (const slug of ['id-photo', 'photo-compress', 'pdf-compress']) for (const l of quickLinks(slug)) expect(parseDeep(slug, new URL(l.href, 'https://x').searchParams), l.href).not.toBeNull();

@@ -1,7 +1,8 @@
 // 여권·증명사진 presets (brief Step 4 "Presets" — the data contract). Every shipped preset carries its source
 // URLs, the verbatim quote from the official page and the retrieval date (BUILD-LOG Step 4, 0.1). Values
 // that are our own choice are marked in `note`. Dropped (확인 필요): 주민등록증, 운전면허증, TOEIC, 고용24,
-// 지방공무원 — see FAQ 4 and BUILD-LOG Known Gaps.
+// 지방공무원 — see FAQ 4 and BUILD-LOG Known Gaps. G2 A2 added history, korcham, teps, kuksiwon (no print size
+// where the source's pixels do not match it within 1.5 %, or where it says "약").
 
 import { DEFAULT_PRESET_ID } from './preset-ids';
 
@@ -45,6 +46,8 @@ export interface IdPreset {
 }
 
 export const RETRIEVED = '2026-09-29';
+/** The G2 A2 presets (history, korcham, teps, kuksiwon) were read on this date. */
+export const A2_RETRIEVED = '2026-10-02';
 /** 32–36 mm of a 45 mm-high photo (passport.go.kr menuPos=32). */
 export const PASSPORT_BAND = { minFrac: 32 / 45, maxFrac: 36 / 45 } as const;
 const reference: HeadBand = { kind: 'reference', ...PASSPORT_BAND };
@@ -117,6 +120,70 @@ export const PRESETS: readonly IdPreset[] = [
     quote: '파일형식 : *.JPG 또는 *.JPEG · 파일용량 : 200KB 이하',
     retrieved: RETRIEVED,
     note: 'Q-Net은 픽셀 크기를 정하지 않아 여권 온라인 규격(413×531)으로 맞춥니다.',
+  },
+  {
+    id: 'history',
+    label: '한국사능력검정시험 원서',
+    source: '한국사능력검정시험',
+    outW: 120,
+    outH: 160,
+    limitRule: null,
+    headBand: reference,
+    dpi: 96,
+    fileTag: 'history',
+    status: 'official',
+    sourceUrls: ['https://www.historyexam.go.kr/pst/view.do?bbs=faq&pst_sno=1000015355'],
+    quote: '규정 사진 파일은 GIF와 JPG형식의 이미지 파일만 가능하며, 이미지의 권장크기는 가로 120픽셀 X 세로 160픽셀입니다.(약 가로 3cm X 세로 4cm)',
+    retrieved: A2_RETRIEVED,
+    note: '120×160은 권장 크기입니다.',
+  },
+  {
+    id: 'korcham',
+    label: '대한상공회의소 자격시험 원서',
+    source: '대한상공회의소',
+    outW: 400,
+    outH: 500,
+    limitRule: null,
+    headBand: reference,
+    dpi: 96,
+    fileTag: 'korcham',
+    status: 'official',
+    sourceUrls: ['https://license.korcham.net/customer/guideDetail.do?no=194&pg=1&cd=10'],
+    quote: '사진파일은 JPG, JPEG, PNG, GIF만 가능합니다. - 사진 크기는 400 x 500 픽셀로 변경되며 1 : 1.25 비율로 맞춰주셔야 사진이 정상적으로 보입니다.',
+    retrieved: A2_RETRIEVED,
+  },
+  {
+    id: 'teps',
+    label: 'TEPS 원서',
+    source: 'TEPS관리위원회',
+    outW: 126,
+    outH: 165,
+    limitBytes: limitBytes(50, 'le'),
+    limitRule: 'le',
+    headBand: reference,
+    dpi: 96,
+    fileTag: 'teps',
+    status: 'official',
+    sourceUrls: ['https://www.teps.or.kr/Etc2/FaqList?sch_faqType=09'],
+    quote: '반드시 증명사진을 스캔하여 3Cm × 4Cm(126*165 Pixel) 사이즈, 파일 크기는 50KB 이하의 jpg 파일만 사용 가능 합니다.',
+    retrieved: A2_RETRIEVED,
+  },
+  {
+    id: 'kuksiwon',
+    label: '보건의료인 국가시험 원서',
+    source: '한국보건의료인국가시험원',
+    outW: 276,
+    outH: 354,
+    limitRule: null,
+    mm: { w: 35, h: 45 },
+    headBand: reference,
+    dpi: dpiFor(276, 35),
+    fileTag: 'kuksiwon',
+    status: 'official',
+    sourceUrls: ['https://www.kuksiwon.or.kr/faq/brd/m_52/view.do?seq=60', 'https://www.kuksiwon.or.kr/faq/brd/m_52/view.do?seq=13'],
+    quote: '사진의 올바른 규격은 가로 276px, 354px(3.5cm ×4.5cm), 해상도 200dpi이상 입니다. … 모자를 쓰지 않고 정면을 바라본 상반신 컬러사진 파일(6개월 이내 촬영분, 276X354픽셀 이상 JPG, PNG 형식)',
+    retrieved: A2_RETRIEVED,
+    note: '276×354는 최소 크기입니다.',
   },
   {
     id: 'saramin',

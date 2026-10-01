@@ -1,3 +1,35 @@
+# Review Request — G2 Sprint A, A2 (spec cluster D: exam and ID photos)
+Date: 2026-10-02
+Ready for Review: YES
+
+**Tree:** branch `g2-a2` from 659c04a (Arch's 3f738e4 brief commit sits under mine, untouched).
+**Status:** DONE_WITH_CONCERNS. Every gate passes except local Lighthouse on /photo-compress/ (LCP 2,113 ms), which HEAD 659c04a reproduces on this PC at the same value; the CI run decides. The gate table and Step 0 table are in BUILD-LOG under "G2 A2 build notes".
+
+## Files Changed
+- `src/content/guides/{id-card-photo,history-exam-photo,korcham-photo,teps-photo,kuksiwon-photo,police-exam-photo}.md` (new): the 6 published guides. Every quote was fetched today and is verbatim (check:quotes 113/113).
+- `src/content/guides/{toeic-photo,local-gosi-photo,mma-photo,teacher-exam-photo}.md` (new): drafts, each with tried[].
+- `src/data/id-photo-presets.ts`: adds presets `history` (120×160), `korcham` (400×500), `teps` (126×165, 50 KB 이하) and `kuksiwon` (276×354, 3.5×4.5 cm, dpi 200), plus `A2_RETRIEVED`. `src/data/preset-ids.ts` follows.
+- `src/data/guide-facts.ts:80-97`: `unitSpellings`. The fact check now reads ㎝/㎜ and capitalised units ("3Cm", "Pixel") right after a number.
+- `src/data/guide-schema.ts`: the "in the future" check now compares against the KST calendar day (`KST_OFFSET_MS`).
+- `src/content/hubs/photo-sizes.md`: description, answer and og updated for the new groups.
+- `lighthouserc.json`, `scripts/qa/visual.mjs`: add /guide/teps-photo/.
+- Tests:
+  - `tests/unit/guides-schema.test.ts`: unit spellings; the A2 preset quotes state their pixels and limit; KST dates; quick-link order.
+  - `tests/unit/idphoto-core.test.ts`, `tests/unit/ops.test.ts`: preset lists.
+  - `tests/e2e/id-photo.spec.ts:228-241`: `?preset=<new>` is selected at load and saves the exact file.
+
+## Open Questions
+- Please re-check 3 quotes live. Suggested: TEPS 사진관련 (126*165 Pixel / 50KB), the 정부24 재발급 photo line (㎝), and the police 사진등록안내.
+- police-exam-photo cites public.jinhakapply.com/PoliceV2. That is the 경찰청 원서접수 site, which gosi.police.go.kr frames. gosi.police.go.kr itself fails TLS verification, so check:quotes cannot fetch it.
+- id-card-photo uses the generic /id-photo/ CTA and says that the passport-ratio default is not 정부24's file spec. This is the driver-license precedent; the source never says 여권용.
+- /id-photo/ 관련 안내: title order now lists kuksiwon-photo and police-exam-photo instead of passport-photo and photo-kb. Arch decision (logged).
+
+## Out of Scope (logged in BUILD-LOG)
+- `check:licenses` with PUBLIC_ID_PHOTO_AUTOFRAME=1 set fails on HEAD too (CI runs it without the variable).
+- Post-deploy Naver, Kakao and GSC actions are owner/PC tasks.
+
+---
+
 # Review Request — G2 A1 round 2 (Richard's A1 feedback)
 Date: 2026-10-02
 Ready for Review: YES — status DONE

@@ -1242,3 +1242,58 @@ Status: **DONE_WITH_CONCERNS** (local Lighthouse tool-page LCP noise per the A0 
 - **webkit job cancelled at 45 min:** the time went to "Install Playwright browser" (17:25:43 → 17:59:52, 34 min; on ci-green that whole phase took about 5 min). The E2E step itself ran 10 min until cancelled; on ci-green it took 12.6 min for 224 tests, and A1 adds 6 (hubs.spec, about 30 s on WebKit). The suite did not grow enough to justify a longer timeout, so ci.yml is unchanged; a re-run decides. If the install stall repeats, it is a runner/apt issue for Arch (cache the browsers or time-box the install step).
 - **CI re-run 36906140363 (e1f5f8a):** mobile-safari green (photo-compress :538 ✓, 198 passed); chromium, firefox and checks green. mobile-chrome failed hwp-to-pdf :179 on both tries: `noSwap` samples `document.title` only on a 25 ms interval, and the fast 「다시 내려받기」 (anchor to a ready blob) finished before the first tick, so `titles` was `[]`. The test was wrong (race): it now takes one sample when it installs the sampler. Local chromium, mobile-chrome, webkit, mobile-safari: hwp-to-pdf.spec 84 passed.
 - The webkit job stalled again in "Install Playwright browser" (18:21:44 → still running at 18:54): the apt step logs show 1–3 minute gaps between single package downloads from azure.archive.ubuntu.com. It's the runner mirror, not the suite. Decision: e2e `timeout-minutes` 45 → 60 (comment in ci.yml), since install (up to ~34 min) plus tests (~13 min) no longer fit in 45. A browser/apt cache is the durable fix and is logged for Arch.
+
+## G2 A2 build notes (Bob, 2026-10-02; branch g2-a2 from 659c04a)
+Scope: ARCHITECT-BRIEF-G2.md "A2 — spec cluster D, exam and ID photos" (rows 6–15). Arch's `[Sprint C brief]` commit 3f738e4 (handoff/ARCHITECT-BRIEF-C.md) landed on this branch before mine; left untouched.
+
+### G2 Step 0 (A2 rows; fetched 2026-10-02 KST from this PC; every quote checked against `pageTextExact`, then `npm run check:quotes`)
+| Row | URL | via | status / bytes | result |
+|---|---|---|---|---|
+| 6 id-card-photo | https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000013 (신규) and …=13100000018 (재발급) | curl | 200 / 240 KB, 229 KB | "6개월 이내에 촬영한 3.5㎝×4.5㎝의 모자 등을 쓰지 않은 상반신 사진 1장" (both), 17세 이상, 지문등록기관 6개월이내, 종전의 주민등록증, 신청방법 인터넷, 방문. Print size only → **no preset**; no 여권용 wording → generic /id-photo/ CTA (driver-license precedent). easylaw search: only the 재외국민 rule text. |
+| 7 toeic-photo | exam.toeic.co.kr (home, receiptStep1/2, csFaq pages 1–25, viewContents 18–37, notice 121) | curl | 200 | **draft.** No public photo spec; the step after receiptStep1 needs a login; the FAQ only explains changing a past photo by email. |
+| 8 history-exam-photo | https://www.historyexam.go.kr/pst/view.do?bbs=faq&pst_sno=1000015355, …=1000028410 | curl | 200 / 19 KB | "규정 사진 파일은 GIF와 JPG형식 … 권장크기는 가로 120픽셀 X 세로 160픽셀입니다.(약 가로 3cm X 세로 4cm)", the 10시 change deadline, the rejection rule. **Preset `history` 120×160**, no KB, no print size ("약"). The FAQ list is a POST form; the view URLs are plain GETs. |
+| 9 korcham-photo | https://license.korcham.net/customer/guideDetail.do?no=194 (+192, 183, 191) and /ex/examInfo1.do | curl | 200 / 40 KB | "사진파일은 JPG, JPEG, PNG, GIF만 가능합니다. - 사진 크기는 400 x 500 픽셀로 변경되며 1 : 1.25 비율로 …", rejection list, reuse, admin approval. **Preset `korcham` 400×500.** Home is a frameset → indexmain.jsp. |
+| 10 teps-photo | https://www.teps.or.kr/Etc2/FaqList?sch_faqType=09 (사진관련 category as GET) | curl | 200 / 26 KB | "반드시 증명사진을 스캔하여 3Cm × 4Cm(126*165 Pixel) 사이즈, 파일 크기는 50KB 이하의 jpg 파일만 사용 가능 합니다." + 6개월/컬러/탈모 무배경, 흑백, 확장자, change window. **Preset `teps` 126×165, 50 KB 이하**; no mm (126/165 vs 3/4 differs 1.8 % > the 1.5 % preset rule). |
+| 11 local-gosi-photo | local.gosi.go.kr (main = NetFunnel POST shell) → chrome-cdp: /klid/info/infomethod.do?gubun=4, /klid/qa/faq.do | curl, then browser | 200 / 1 KB shell | **draft.** The rendered photo guide is button steps only; the FAQ has no photo item; specs live in each 시도 notice. |
+| 12 kuksiwon-photo | https://www.kuksiwon.or.kr/faq/brd/m_52/view.do?seq=60, …seq=13, /main/indexNew.do?seq=2 | curl | 200 / 40 KB | "사진의 올바른 규격은 가로 276px, 354px(3.5cm ×4.5cm), 해상도 200dpi이상 입니다." + "276X354픽셀 이상 JPG, PNG 형식", 6개월, 7일 전 수정. **Preset `kuksiwon` 276×354, 35×45 mm, dpi 200**, note: minimum size. |
+| 13 police-exam-photo | https://public.jinhakapply.com/PoliceV2/useinfo/useinfo02_2.aspx | curl | 200 / 16 KB | "최근 1년 이내에 촬영한 상반신 컬러사진(3cm X 4cm)…", rejection list, no change after the 접수 period. gosi.police.go.kr has an untrusted TLS chain (curl SEC_E_UNTRUSTED_ROOT; node fetch fails) and over http only frames this page, which is the 경찰청 원서접수 site ("사이버 경찰청", footer © National Police Agency). Print size only → **no preset**; links `half_card`, labelled as 문서딱's 계산값 (admission-photo wording). |
+| 14 mma-photo | mma.go.kr FAQ boards 317/118/119/120/121/314 (search 사진), mc=mma0000386, mwpt.mma.go.kr | curl, browser | 200 | **draft.** No application photo spec on public pages; mwpt is a script app and the read-only tab hung (closed my own tab via /json/close). |
+| 15 teacher-exam-photo | edurecruit.go.kr (Nexacro shell; chrome-cdp render 765 chars), kice.re.kr | curl, browser | 200 | **draft.** No single national photo source (brief: else draft). |
+- chrome-cdp: my own tabs only, read-only (no login, form submit or cookies); no published quote needed `via: browser`.
+
+### Result: 6 guides published + 4 new presets; 4 drafts
+- Published: id-card-photo, history-exam-photo, korcham-photo, teps-photo, kuksiwon-photo, police-exam-photo. **Indexable /guide/ URLs: 24 guides + 2 hubs = 26** (was 20). A3 must add ≥ 4 for the ≥ 30 ship rule.
+- Drafts (tried[] in each file): toeic-photo, local-gosi-photo, mma-photo, teacher-exam-photo.
+- Presets (cap 8): history, korcham, teps, kuksiwon, placed after qnet in PRESETS. /id-photo/ quick links (≤ 8): passport, history, gosi, qnet, korcham, teps, kuksiwon, saramin (id_card, toeic, admission did not ship; jobkorea and half_card stay in the select).
+- Hubs: photo-sizes gains 6 rows (history "(권장 크기)", kuksiwon "(최소 크기)" per the hub's own rule); upload-limits' photo table gains TEPS (50KB 이하). photo-sizes description/answer/og name the new groups.
+
+### Decisions (never stop)
+- **Unit spellings** (`guide-facts.ts` `unitSpellings`): the fact check reads ㎝/㎜ (U+339D/U+339C, 정부24) and a capitalised unit right after a number (TEPS "3Cm", "Pixel") as cm/mm/픽셀. Quotes stay verbatim; the code uses `\u` escapes so the UI font gains no glyph. Unit test incl. a negative case.
+- **KST dates** (`guide-schema.ts`): "published/updated in the future" compared against the UTC date, so a guide dated today (KST) failed the build between 00:00 and 09:00 KST. "Today" is now the Korean calendar day (UTC+9). Tests at 20:00Z (passes) and 14:59Z (fails).
+- Presets without a stated KB limit get no limit; px-only presets use dpi 96 (saramin/jobkorea precedent); history and teps get no print size (source says "약" / ratio off by 1.8 %).
+- "컴활" is used as the common short name in korcham-photo's answer/query; the 종목 list is quoted from the same site.
+- Lighthouse and qa:visual add /guide/teps-photo/.
+- `check:licenses` with `PUBLIC_ID_PHOTO_AUTOFRAME=1` in the environment fails on HEAD 659c04a too; CI runs it without the variable → OK. Not A2.
+
+### Gates (PUBLIC_SITE_URL=https://docttak.com; final tree)
+| Gate | Result |
+|---|---|
+| astro check | 0 errors, 0 warnings, 1 hint (pre-existing) |
+| unit (vitest) | 687/687, 41 files |
+| build flag off → dist-noauto | check-dist OK, 2,353 files; UI fonts 136.9 KB; precache 416.2 KB |
+| build flag on → dist | check-dist OK, 2,360 files; **UI fonts 138.0 / 190 KB, A2 delta 0.0 KB** (400 43.8, 700 47.3, 800 46.9; 604 characters, same as the HEAD 659c04a build); precache 418.6 / 450 KB; guide HTML ≤ 4.8 KB gzip, hubs 6.2 / 5.6 KB; guide initial JS 1.5 KB; similarity max photo-sizes ~ upload-limits 0.238 / 0.45 |
+| 18 existing guide articles vs HEAD build | byte-equal 18/18 (hubs differ by design) |
+| check:licenses | OK, 36 packages, 5 components |
+| check:quotes | 113/113 verbatim (was 78) |
+| e2e id-photo + hubs (chromium, mobile-chrome, mobile-safari, manual-chromium; E2E_PORT=4273) | 135 passed, 31 skipped (platform skips), 0 failed; new `?preset=` tests 12/12 on chromium, mobile-chrome, mobile-safari |
+| e2e site + growth + hubs, 5 projects | 293 passed, 2 skipped, 0 failed, 0 flaky |
+| Lighthouse (lhci, 17 URLs × 5, median; scratch config on :4473) | every guide/hub URL perf ≥ 0.99, LCP 1,657–1,659 ms, CLS 0, a11y/bp/seo 1 (teps-photo, photo-sizes included); tools/home 1,959–1,964 ms; **/photo-compress/ 2,113 ms fails locally — HEAD 659c04a gives the same on this PC (side-by-side: 2,114 median)**: the known local LCP quantisation; CI decides |
+| qa:visual (:4473) | 306 PNGs, 0 hard failures; new shot `teps` |
+| regress --fixtures-only | not run: no tool code changed (presets are data; the e2e preset tests check the outputs) |
+
+### Known Gaps (A2)
+- **/id-photo/ 관련 안내** shows the first 4 guides naming the tool in title order: kuksiwon-photo and police-exam-photo now push passport-photo and photo-kb off that list (both stay linked from hubs and related). Arch: keep title order, or pin passport-photo for /id-photo/?
+- Post-deploy (owner/PC): Naver 수집 요청 + Kakao cache refresh for the 6 new guides; GSC inspection for photo-sizes.
+- Shortfall: 26 indexable; A3 (7 rows) must yield ≥ 4.
+
+Status: **DONE_WITH_CONCERNS** (local /photo-compress/ LCP equals HEAD's; CI is the source of truth).
