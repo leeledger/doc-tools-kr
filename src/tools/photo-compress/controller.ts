@@ -673,8 +673,12 @@ export function initPhotoTool(): void {
     announce(renderHeadline());
     const target = !zipBtn.hidden ? zipBtn : (list.querySelector<HTMLElement>('a[data-role="download"]') ?? againBtn);
     // The headline and the first download stay in view (below the sticky header); focus lands on a visible element.
-    doneBar.scrollIntoView({ block: 'start' });
-    target.focus();
+    // Instant, then focus without a second scroll (as /id-photo/ does): the site's smooth scrolling made this an
+    // animation that the focus scroll interrupted, and on WebKit the page could end with the headline out of view.
+    doneBar.scrollIntoView({ block: 'start', behavior: 'instant' });
+    const box = target.getBoundingClientRect();
+    if (box.bottom > window.innerHeight) target.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    target.focus({ preventScroll: true });
   }
 
   /** Done-state headline: 줄임 / 그대로 / 늘어남 counted apart, and the reduced photos' before → after. Returns the announced text. */
