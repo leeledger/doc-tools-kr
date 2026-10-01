@@ -1,0 +1,120 @@
+name: Ops A-1/A-2 post-deploy
+
+# A-1: wait for Cloudflare Pages to serve this commit, then the asset smoke and the live tool smoke.
+# A-2: after A-1 passes, ping IndexNow with the sitemap URLs whose lastmod changed.
+# docs/OPS-RUNBOOK.md. No secrets needed.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (no issue, no IndexNow ping)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+# A newer push supersedes the check of an older one (its build would never go live).
+concurrency:
+  group: ops-post-deploy
+  cancel-in-progress: true
+
+env:
+  SITE: https://docttak.com
+  DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+
+jobs:
+  verify:
+    name: A-1 live check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Wait for the live build of this commit (20 min max)
+        id: wait
+        run: node scripts/ops/wait-deploy.mjs --sha "$GITHUB_SHA" --url "$SITE" --timeout 1200 2>&1 | tee wait.log
+      - name: Asset smoke (smoke:assets)
+        id: assets
+        run: npm run smoke:assets -- "$SITE" 2>&1 | tee assets.log
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Live tool smoke (5 tools, no off-site request, no console error)
+        id: smoke
+        env:
+          LIVE_URL: ${{ env.SITE }}
+        run: npx playwright test -c playwright.live.config.ts 2>&1 | tee smoke.log
+      - name: Close the deploy issue (recovered)
+        if: success()
+        run: |
+          echo "배포 ${GITHUB_SHA::12} 점검 통과: 라이브 빌드 확인, 자산 스모크, 도구 5개 라이브 스모크. 자동으로 닫습니다." > ok.md
+          node scripts/ops/issue.mjs close --label ops:deploy --body-file ok.md $DRY
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Open or update the deploy issue
+        if: failure()
+        run: |
+          {
+            echo "main ${GITHUB_SHA::12} 배포 후 점검(A-1)이 실패했습니다."
+            echo
+            echo "| 단계 | 결과 |"
+            echo "|---|---|"
+            echo "| 라이브 빌드 대기 | ${{ steps.wait.outcome }} |"
+            echo "| 자산 스모크 | ${{ steps.assets.outcome }} |"
+            echo "| 라이브 도구 스모크 | ${{ steps.smoke.outcome }} |"
+            echo
+            for f in wait.log assets.log smoke.log; do
+              if [ -s "$f" ]; then echo "<details><summary>$f (마지막 60줄)</summary>"; echo; echo '```'; tail -n 60 "$f"; echo '```'; echo "</details>"; fi
+            done
+            echo
+            echo "실행 기록과 trace: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > fail.md
+          node scripts/ops/issue.mjs open --label ops:deploy --title "배포 후 점검 실패: ${GITHUB_SHA::12}" --body-file fail.md $DRY
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: live-smoke
+          path: |
+            playwright-report-live/
+            test-results-live/
+          retention-days: 7
+
+  indexnow:
+    name: A-2 IndexNow
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      # The sitemap of the last successful ping; a new key per run, the newest one is restored.
+      - uses: actions/cache/restore@v4
+        with:
+          path: .ops-state/sitemap.xml
+          key: indexnow-sitemap-${{ github.run_id }}
+          restore-keys: indexnow-sitemap-
+      - name: Ping the changed URLs
+        run: node scripts/ops/indexnow-diff.mjs --state .ops-state/sitemap.xml --url "$SITE" $DRY
+      - uses: actions/cache/save@v4
+        if: success() && !inputs.dry_run
+        with:
+          path: .ops-state/sitemap.xml
+          key: indexnow-sitemap-${{ github.run_id }}
+      - name: Report a failed ping
+        if: failure()
+        run: |
+          echo "IndexNow 핑(A-2)이 실패했습니다. 다음 배포 때 같은 URL을 다시 보냅니다. 실행 기록: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > fail.md
+          node scripts/ops/issue.mjs open --label ops:deploy --title "IndexNow 핑 실패: ${GITHUB_SHA::12}" --body-file fail.md $DRY
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

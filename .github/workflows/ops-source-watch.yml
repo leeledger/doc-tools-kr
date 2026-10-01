@@ -1,0 +1,42 @@
+name: Ops A-3 source watch
+
+# Weekly: every official source a guide or preset cites is fetched (one request at a time, identifying UA,
+# retries) and every quoted sentence must still be there. Changes open/update the ops:source-changed issue.
+# docs/OPS-RUNBOOK.md. No secrets needed.
+on:
+  schedule:
+    - cron: '41 23 * * 2' # Wednesday 08:41 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (print the issue, send nothing)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ops-source-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Check the cited sources
+        run: node scripts/ops/source-watch.mjs $DRY
+      - name: Report a failed run
+        if: failure()
+        run: |
+          echo "출처 감시(A-3) 작업 자체가 실패했습니다: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > fail.md
+          node scripts/ops/issue.mjs open --label ops:source-changed --title "출처 감시 작업 실패" --body-file fail.md $DRY
