@@ -115,7 +115,11 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   expect(guides).toContain('/guide/');
   expect(guides.length).toBeGreaterThanOrEqual(12);
   for (const hub of ['/guide/photo-sizes/', '/guide/upload-limits/', '/guide/hwp-to-pdf/']) expect(guides).toContain(hub);
-  for (const draft of ['/guide/kakao-photo/', '/guide/yearend-tax-pdf/']) expect(guides).not.toContain(draft);
+  // G2 A3: kakao-photo and yearend-tax-pdf went from draft to published; the file-limit rows without a source stay drafts.
+  for (const live of ['/guide/kakao-photo/', '/guide/yearend-tax-pdf/', '/guide/ecfs-pdf-limit/']) expect(guides).toContain(live);
+  for (const draft of ['/guide/gov24-upload-limit/', '/guide/hometax-upload-limit/', '/guide/work24-resume-upload/', '/guide/epeople-upload-limit/']) {
+    expect(guides).not.toContain(draft);
+  }
   const robots = await (await request.get('/robots.txt')).text();
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
 });

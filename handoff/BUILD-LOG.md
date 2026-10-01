@@ -1306,3 +1306,52 @@ Status: **DONE_WITH_CONCERNS** (local /photo-compress/ LCP equals HEAD's; CI is 
 - Arch ruling 1: `src/data/tool-guide-order.ts` pins /id-photo/ 관련 안내 to passport-photo, photo-kb, then the title order; unit tests.
 - Visual QA (390/1280, light/dark; 6 guides + 2 hubs): hub cells broke inside "350KB"/"JPG" at 390 px (body `overflow-wrap: anywhere`); `.hub-table th, td { overflow-wrap: normal }` fixes it, and the table scrolls.
 - Gates: check 0 errors; unit 689/689; both builds + check-dist OK (UI fonts 138.0 KB, delta 0); check:quotes 113/113; licenses OK; e2e (4273) id-photo + hubs chromium/mobile-safari 75 passed, site + growth 105 passed.
+
+## G2 A3 build notes (Bob, 2026-10-02; branch g2-a3 from d277beb)
+Scope: ARCHITECT-BRIEF-G2.md "A3 — file-limit cluster, remaining drafts" (rows 16–22). C1 (separate worktree) owns `tools.ts` entries, home RelatedTools and lighthouserc tool URLs; A3 touches none of them (Lighthouse ran from a scratch config).
+
+### G2 Step 0 (A3 rows; fetched 2026-10-02 KST from this PC; curl quotes checked with `pageTextExact`, then `npm run check:quotes`)
+| Row | URL | via | status / bytes | result |
+|---|---|---|---|---|
+| 16 yearend-tax-pdf | https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2305&cntntsId=7706 (편리한 연말정산 이용방법), …mi=40609&cntntsId=239021 (맞춤형 안내) | curl | 200 / 205 KB, 199 KB | **published.** The 유형 1–5 lines (출력 서류 / "종이없는 연말정산" PDF into the company program / 홈택스 간편제출), "근로자 연말정산간소화 자료를 조회하여 PDF로 내려받는 방법", the 주택임차차입금 서류 list and "간소화 서비스에서 조회 가능하나, 조회되지 않은 경우 금융회사 등에서 발급 가능". The 간소화·일괄제공 Q&A is a file download; 홈택스이용 Q&A open via fn_goQna (no stable URL). |
+| 17 gov24-upload-limit | gov.kr/portal/customer/faq → faqList JSON pages 1–40 (339 FAQs); plus.gov.kr/portal/faq (browser) | curl, browser | 200 | **draft.** No attachment size item; the limit appears only in the logged-in form. gov.kr now redirects to plus.gov.kr. |
+| 18 hometax-upload-limit | hometax.go.kr (WebSquare shell; 홈택스이용안내 rendered), nts.go.kr search collection=call_hometaxQna | curl, browser | 200 | **draft.** The only size item is 5MB for the 영수증 발급처 Excel upload; "증빙 서류 제출 방법" states PDF conversion, no size; fn_goQna links only. |
+| 19 work24-resume-upload | work24 FAQ (GET search 이력서/첨부/파일/용량), selectBbttInfo.do?ntceStno=75, 이용가이드 GUID000102 | curl, browser | 200 | **draft.** No size/format for resume attachments; the 첨부파일 관리 screen needs a login. |
+| 20 ecfs-pdf-limit | https://ecfs.scourt.go.kr/psp/index.on?m=PSP623M01 (전자소송포털 자주하는질문; SPA, the article opens as &s=PSP624M01 with no id) | browser | 4.4 KB shell | **published, via: browser.** "(PDF파일로 자동변환, 20MB까지 첨부가능)", "파일 하나의 크기는 20MB를 초과할 수 없고 … 총용량은 100M 이하로 제한됩니다.", the scan/merge rule, the 원본 파일 rule (규칙 제8조 제4항), 동영상·음성 "100 MB까지" + formats. The old /ecf/ URL now serves error.html. |
+| 21 epeople-upload-limit | epeople FAQ (93 titles), PttnUtilGdncContent, PttnRqstWrtnInfo.paid | curl | 200 | **draft.** No size item; the form redirects to login. |
+| 22 kakao-photo | https://cs.kakao.com/helps_html/1073209424, …1073210382, …1073209414, …1073206342 | curl (IDs found via chrome-cdp search) | 200 / 181 KB each | **published.** The article pages are static HTML (the 2026-09-30 try only hit the script menu). 사진 1회 300MB, 묶어보내기 120개 / 30장씩, 20MB 이상 → 파일 말풍선, PC 300MB / 100개 + extensions, 사진 화질 path. |
+- chrome-cdp: my own tab only, read-only (public pages, page navigation, no login, no form submit, no cookies); closed when done. The owner's Kakao session in that Chrome was not touched.
+- A2 drafts (toeic, local-gosi, mma, teacher-exam): not retried; A2 checked them today and nothing new is public.
+
+### Result: 3 guides published, 4 new drafts
+- Published: yearend-tax-pdf, kakao-photo (draft → published), ecfs-pdf-limit (new). **Indexable /guide/ URLs: 27 guides + 2 hubs = 29** (was 26). **Shortfall 1** against the ≥ 30 ship rule; every unsourced row has tried[] (gov24, hometax, work24, epeople). No padding.
+- Inbound links: photo-kb → kakao-photo, pdf-merge → yearend-tax-pdf, pdf-compress → ecfs-pdf-limit (4th related each); ecfs is also in the upload-limits hub (2 rows: 문서 20MB까지, 동영상·음성 100 MB까지, fit false). Hub title/description/answer/og name 전자소송.
+
+### Decisions (never stop)
+- **yearend-tax-pdf scope:** the draft title promised "PDF 합치기와 용량 줄이기". NTS says PDF-receiving companies load the 간소화 PDF into their own program, and 문서딱 rewrites any PDF it merges or compresses. So the page tells readers to hand in the 간소화 PDF unchanged and uses our tools only for the other papers (only when the company asks for one file). Title is now "연말정산 간소화 PDF, 회사에 내는 법"; query "연말정산 간소화 pdf" (brief row). No dates (간소화 opening day not quoted).
+- **"100M" (ecfs):** the court writes the total cap as "100M". The copy writes 100MB; the fact check passes on the same court page's "100 MB까지" (video FAQ). No code change to read a bare "M".
+- **kakao-photo topic:** PDF·메일 (closest to "sending files"; TOPICS is the brief's fixed list). Title changed to "카톡 사진 용량, 한 번에 보낼 수 있는 양": no official line says photos sent as files stay original (only videos), so "원본으로 보내기" was dropped.
+- **Tool-page 관련 안내:** the Hangul-titled A3 guides pushed /guide/pdf-merge/ off /pdf-merge/ and /guide/pdf-compress/ off /pdf-compress/ (Korean collation puts "PDF …" last). `TOOL_GUIDE_PINS` gains `pdf-merge: [pdf-merge]`, `pdf-compress: [pdf-compress]` (A2 ruling 1 pattern). Result: /pdf-merge/ = pdf-merge, univ-docs-upload, yearend-tax-pdf, ecfs-pdf-limit; /pdf-compress/ = pdf-compress, univ-docs-upload, hwp-to-pdf, email-attachment-limit. Unit test.
+- **ecfs table:** the 3-column table broke "100MB까지" mid-word at 390 px; it is now 구분 | 용량 with the format lists as bullets.
+
+### Gates (PUBLIC_SITE_URL=https://docttak.com; final tree)
+| Gate | Result |
+|---|---|
+| astro check | 0 errors, 0 warnings, 1 hint (pre-existing) |
+| unit (vitest) | 690/690, 41 files |
+| build flag off → dist-noauto | check-dist OK, 2,359 files; UI fonts 136.9 KB |
+| build flag on → dist | check-dist OK, 2,366 files; **UI fonts 138.0 / 190 KB, A3 delta 0.0 KB** (400 43.8, 700 47.3, 800 46.9; 604 characters); precache 418.7 / 450 KB; ecfs HTML 4.8 KB gzip, initial JS 1.5 KB; similarity max photo-sizes ~ upload-limits 0.228 / 0.45 |
+| 24 existing guide articles + photo-sizes vs d277beb build | byte-equal 25/25 (upload-limits differs by design) |
+| check:licenses | OK, 36 packages, 5 components |
+| check:quotes | 130/130 verbatim (was 113); ecfs's 8 quotes listed as 수동 확인 (via browser) |
+| e2e site + growth + hubs, 5 projects (E2E_PORT=4273) | 292 passed, 2 skipped, 0 failed, 1 flaky (firefox 360 px /id-photo/, passed on retry; different firefox test each run, load-related) |
+| e2e same, chromium + mobile-safari on the final dist (4274) | 117 passed, 1 skipped |
+| Lighthouse (lhci scratch config, :4473, 5 runs, median) | /guide/, upload-limits, kakao-photo, ecfs-pdf-limit, yearend-tax-pdf: perf 1, LCP 1,657–1,660 ms, CLS 0, a11y/bp/seo 1; /, /pdf-merge/, /pdf-compress/ 0.99, LCP 1,960–1,970 ms; **/photo-compress/ 2,111 ms locally (unchanged page; same local quantisation A2 logged on HEAD)** |
+| qa:visual --only static (:4473) | 290 PNGs, 0 hard failures; new shots ecfs, kakao, yearend. Own full-page shots 390/1280 light/dark of the 3 guides + upload hub: no horizontal overflow, read by eye |
+| regress --fixtures-only | not run: no tool code changed |
+
+### Known Gaps (A3)
+- Shortfall: 29 indexable /guide/ URLs, 1 short of 30. Arch: pick the next sourced row (candidates in REVIEW-REQUEST).
+- Post-deploy (owner/PC): Naver 수집 요청 + Kakao cache refresh for the 3 new URLs.
+
+Status: **DONE_WITH_CONCERNS** (shortfall 1; local /photo-compress/ LCP as in A2, CI decides).

@@ -284,7 +284,7 @@ describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
   it('pins move to the front in pin order; the rest keep their order; unknown tools are unchanged', () => {
     const list = [{ id: 'a' }, { id: 'photo-kb' }, { id: 'b' }, { id: 'passport-photo' }];
     expect(orderToolGuides('id-photo', list).map((g) => g.id)).toEqual(['passport-photo', 'photo-kb', 'a', 'b']);
-    expect(orderToolGuides('pdf-merge', list).map((g) => g.id)).toEqual(['a', 'photo-kb', 'b', 'passport-photo']);
+    expect(orderToolGuides('hwp-viewer', list).map((g) => g.id)).toEqual(['a', 'photo-kb', 'b', 'passport-photo']);
     expect(orderToolGuides('id-photo', [{ id: 'a' }, { id: 'photo-kb' }]).map((g) => g.id)).toEqual(['photo-kb', 'a']);
   });
 
@@ -298,5 +298,17 @@ describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
       .sort((a, b) => a.parsed.category.localeCompare(b.parsed.category, 'ko') || a.parsed.title.localeCompare(b.parsed.title, 'ko'))
       .map((g) => ({ id: g.slug }));
     expect(orderToolGuides('id-photo', own).map((g) => g.id).slice(0, 2)).toEqual(['passport-photo', 'photo-kb']);
+  });
+
+  it('G2 A3: /pdf-merge/ and /pdf-compress/ list their own how-to guide first', () => {
+    for (const tool of ['pdf-merge', 'pdf-compress']) {
+      const own = published
+        .filter((g) => g.parsed.tools.includes(tool))
+        .sort((a, b) => a.parsed.category.localeCompare(b.parsed.category, 'ko') || a.parsed.title.localeCompare(b.parsed.title, 'ko'))
+        .map((g) => ({ id: g.slug }));
+      // Without the pin the tool's own guide falls below the 4 shown (Hangul titles sort before "PDF …").
+      expect(own.slice(0, 4).map((g) => g.id), tool).not.toContain(tool);
+      expect(orderToolGuides(tool, own)[0]!.id, tool).toBe(tool);
+    }
   });
 });

@@ -1,14 +1,81 @@
 ---
-draft: true
-title: 연말정산 PDF 합치기와 용량 줄이기
-query: 연말정산 pdf 합치기
-blockedBy: No stable 국세청/홈택스 page quoting the 간소화 자료 PDF download for employees; hometax.go.kr pages are script-rendered.
-publishBy: '2026-11-30'
-tried:
-  - url: https://www.nts.go.kr/search/search.jsp?query=%EA%B0%84%EC%86%8C%ED%99%94+PDF
-    result: 'Search results only; the official Q&A text (일괄제공 PDF) is behind JavaScript links (fn_goQna), no stable URL.'
-    date: '2026-09-30'
-  - url: https://www.nts.go.kr/comm/nttFileDownload.do?fileKey=927f79b68ca5662a356b09e087d9859a
-    result: '(2026-18) 연말정산 간소화자료 일괄제공 서비스 운영 PDF: policy history only, nothing on the employee PDF download.'
-    date: '2026-09-30'
+title: 연말정산 간소화 PDF, 회사에 내는 법
+description: 연말정산 간소화 자료를 회사에 내는 방식(출력, PDF, 홈택스 간편제출)과 간소화에서 나오지 않는 서류를 함께 낼 때 볼 점을 국세청 안내로 정리했어요.
+ogDescription: 간소화 자료를 출력해 낼지, PDF로 낼지, 홈택스로 낼지는 회사 방식에 따라요.
+query: 연말정산 간소화 pdf
+answer: 연말정산 간소화 자료는 회사가 받는 방식에 따라 출력해서 내거나, PDF로 내려받아 내거나, 홈택스 간편제출로 내요.
+published: '2026-10-02'
+updated: '2026-10-02'
+category: PDF
+topic: 세금·민원
+tools: [pdf-merge, pdf-compress]
+cta: { href: '/pdf-merge/', label: 'PDF 합치기' }
+related: [pdf-merge, pdf-compress, email-attachment-limit]
+sources:
+  - url: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2305&cntntsId=7706
+    title: 국세청 — 편리한 연말정산 이용방법
+    quote: 근로자로부터 출력된 연말정산간소화 공제 증명서류를 제출받아 해당 자료를 이용하여 연말정산하는 회사
+    retrieved: '2026-10-02'
+  - url: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2305&cntntsId=7706
+    title: 국세청 — 편리한 연말정산 이용방법
+    quote: 근로자로부터 연말정산간소화 공제 증명자료(PDF)를 제출받아 회사의 연말정산 프로그램에 업로드하여 연말정산하는 대기업 및 국가기관 등 (“종이없는 연말정산”)
+    retrieved: '2026-10-02'
+  - url: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2305&cntntsId=7706
+    title: 국세청 — 편리한 연말정산 이용방법
+    quote: 근로자 연말정산간소화 자료를 조회하여 PDF로 내려받는 방법
+    retrieved: '2026-10-02'
+  - url: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2305&cntntsId=7706
+    title: 국세청 — 편리한 연말정산 이용방법
+    quote: 근로자로부터 공제 증명자료를 홈택스를 통해 온라인으로 수집하는 회사
+    retrieved: '2026-10-02'
+  - url: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2305&cntntsId=7706
+    title: 국세청 — 편리한 연말정산 이용방법
+    quote: 편리한 연말정산(간편제출)을 이용하여 간소화자료를 온라인으로 제출하는 방법
+    retrieved: '2026-10-02'
+  - url: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=40609&cntntsId=239021
+    title: 국세청 — 연말정산 맞춤형 안내 (주택임차차입금 원리금 상환액 소득공제)
+    quote: '①주택자금상환 등 증명서*, ②주민등록표등본, ③임대차계약증서 사본, ④원리금 상환 증빙 서류(ex: 계좌이체 영수증, 무통장입금증 등)'
+    retrieved: '2026-10-02'
+  - url: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=40609&cntntsId=239021
+    title: 국세청 — 연말정산 맞춤형 안내 (주택임차차입금 원리금 상환액 소득공제)
+    quote: 간소화 서비스에서 조회 가능하나, 조회되지 않은 경우 금융회사 등에서 발급 가능
+    retrieved: '2026-10-02'
+faq:
+  - q: 간소화 자료는 꼭 PDF로 내야 하나요?
+    a: 아니요. 국세청 안내에 따르면 회사마다 받는 방식이 달라요. 출력한 서류를 받는 회사, PDF 파일을 받는 회사, 홈택스로 온라인 제출을 받는 회사가 있어요. 회사 안내를 먼저 확인하세요.
+  - q: 회사가 PDF로 내라고 하면 어떻게 하나요?
+    a: 홈택스 연말정산간소화에서 자료를 조회한 뒤 PDF로 내려받아 내요. 국세청 안내에 따르면 PDF로 받는 회사는 이 파일을 회사의 연말정산 프로그램에 넣어 연말정산해요.
+  - q: 간소화 PDF를 다른 서류와 합쳐도 되나요?
+    a: 간소화 PDF는 회사 프로그램에 넣는 파일이라 내려받은 그대로 내는 것이 안전해요. 다른 서류는 회사가 정한 방식대로 따로 내고, 합쳐서 내라는 회사 안내가 있을 때만 합치세요.
+  - q: 간소화에서 조회되지 않는 서류는 어떻게 하나요?
+    a: 공제마다 필요한 서류가 달라요. 예를 들어 주택임차차입금 원리금 상환액 공제는 주택자금상환 등 증명서, 주민등록표등본, 임대차계약증서 사본, 원리금 상환 증빙 서류가 필요하고, 증명서가 간소화에서 조회되지 않으면 금융회사 등에서 발급받을 수 있어요.
+season: { peak: '연말정산 기간', refresh: ['2026-12-15', '2027-12-15'] }
+og: { title: '연말정산 간소화 PDF', line: '회사 방식에 맞춰 내는 법' }
 ---
+
+## 회사마다 받는 방식이 달라요
+
+국세청 안내에 따르면 회사가 간소화 자료를 받는 방식은 크게 세 가지예요. 회사 안내를 먼저 확인하세요.
+
+| 회사가 받는 방식 | 근로자가 할 일 |
+|---|---|
+| 출력한 증명서류를 받는 회사 | 간소화 자료를 조회해서 출력해 내요 |
+| PDF 파일을 받는 회사 ("종이없는 연말정산") | 간소화 자료를 조회해서 PDF로 내려받아 내요 |
+| 홈택스로 모으는 회사 | 편리한 연말정산(간편제출)로 간소화 자료를 온라인으로 내요 |
+
+## PDF로 낼 때
+
+PDF로 받는 회사는 그 파일을 회사의 연말정산 프로그램에 넣어 연말정산해요. 그래서 간소화 PDF는 고치지 말고 내려받은 파일을 그대로 내는 것이 안전해요. 문서딱으로 합치거나 줄이면 새 파일이 만들어져요.
+
+## 간소화에서 안 나오는 서류를 함께 낼 때
+
+공제에 따라 간소화 자료 말고도 회사에 낼 서류가 있어요. 예를 들어 주택임차차입금 원리금 상환액 소득공제는 이런 서류가 필요해요.
+
+- 주택자금상환 등 증명서 (간소화에서 조회되지 않으면 금융회사 등에서 발급)
+- 주민등록표등본
+- 임대차계약증서 사본
+- 원리금 상환 증빙 서류 (계좌이체 영수증, 무통장입금증 등)
+
+이런 서류가 PDF 여러 개로 흩어져 있고 회사가 한 파일로 내라고 하면 [PDF 합치기](/pdf-merge/)로 묶을 수 있어요. 파일이 너무 크면 [PDF 용량 줄이기](/pdf-compress/)로 줄여요. 문서딱은 사진을 PDF로 바꾸지는 않아요.
+
+파일은 내 폰·컴퓨터 안에서만 합치고 줄이며, 어디로도 보내지 않아요.

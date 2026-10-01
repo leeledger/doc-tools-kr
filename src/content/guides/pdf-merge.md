@@ -10,7 +10,7 @@ category: PDF
 topic: PDF·메일
 tools: [pdf-merge, pdf-compress]
 cta: { href: '/pdf-merge/', label: 'PDF 합치기' }
-related: [pdf-compress, email-attachment-limit, photo-kb]
+related: [pdf-compress, email-attachment-limit, photo-kb, yearend-tax-pdf]
 sources:
   - url: https://support.google.com/mail/answer/6584?hl=ko
     title: Gmail 고객센터 — Gmail에서 첨부파일 보내기

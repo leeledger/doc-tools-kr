@@ -44,6 +44,10 @@ const PAGES = [
   ['admission', '/guide/admission-photo/'],
   // G2 A2: an exam-photo guide with a new preset.
   ['teps', '/guide/teps-photo/'],
+  // G2 A3: the file-limit cluster (browser-read source + hub rows) and the two former drafts.
+  ['ecfs', '/guide/ecfs-pdf-limit/'],
+  ['kakao', '/guide/kakao-photo/'],
+  ['yearend', '/guide/yearend-tax-pdf/'],
 ];
 const MAIN = PAGES.slice(0, 3);
 const VIEWPORTS = {

@@ -10,7 +10,7 @@ category: 사진
 topic: PDF·메일
 tools: [photo-compress, id-photo]
 cta: { href: '/photo-compress/?target=500', label: '사진 용량 줄이기' }
-related: [id-photo-kb, email-attachment-limit, pdf-compress]
+related: [id-photo-kb, email-attachment-limit, pdf-compress, kakao-photo]
 sources:
   - url: https://support.google.com/mail/answer/6584?hl=ko
     title: Gmail 고객센터 — Gmail에서 첨부파일 보내기

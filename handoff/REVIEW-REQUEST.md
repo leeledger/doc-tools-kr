@@ -1,3 +1,41 @@
+# Review Request — G2 Sprint A, A3 (file-limit cluster, remaining drafts)
+Date: 2026-10-02
+Ready for Review: YES
+
+**Tree:** branch `g2-a3` from d277beb. **Status:** DONE_WITH_CONCERNS: 29 indexable /guide/ URLs (1 short of 30, logged with tried[]); local /photo-compress/ LCP 2,111 ms on an unchanged page (A2 has the same note; CI decides). Gates and the Step 0 table are in BUILD-LOG under "G2 A3 build notes".
+
+## Files Changed
+- `src/content/guides/ecfs-pdf-limit.md` (new): 전자소송 limits. All 8 quotes are `via: browser` (SPA FAQ). Spec rows: 문서 20MB, 동영상·음성 100MB (fit false).
+- `src/content/guides/kakao-photo.md`, `src/content/guides/yearend-tax-pdf.md`: draft → published. Their quotes are curl-verbatim (check:quotes 130/130).
+- `src/content/guides/{gov24-upload-limit,hometax-upload-limit,work24-resume-upload,epeople-upload-limit}.md` (new): drafts, each with tried[].
+- `src/content/guides/{photo-kb,pdf-merge,pdf-compress}.md:13`: a 4th `related` entry (the inbound link for each new guide). Article text is unchanged (byte-equal against the d277beb build).
+- `src/content/hubs/upload-limits.md:2-7,40`: title, description, answer, og and updated now name 전자소송.
+- `src/data/tool-guide-order.ts`: /pdf-merge/ and /pdf-compress/ pin their own how-to guide. Without the pin, the A3 guides would push it off the list.
+- `scripts/qa/visual.mjs:47-50`: adds shots for ecfs, kakao and yearend.
+- Tests:
+  - `tests/unit/guides-schema.test.ts`: covers the PDF-tool pin.
+  - `tests/e2e/site.spec.ts:118-123`: the sitemap now holds the 3 new guides and leaves out the 4 drafts.
+
+## Open Questions
+- Please re-check 3 quotes live:
+  - the ecfs "파일 하나의 크기는 20MB를 초과할 수 없고 …" (browser: 전자소송포털 > 고객센터 > 자주하는질문, 전자제출 "종이서류로 되어 있는 서증…")
+  - Kakao helps_html/1073210382 (20MB 이상 고용량 이미지)
+  - NTS cntntsId=7706 ("종이없는 연말정산")
+- yearend-tax-pdf tells readers to hand in the 간소화 PDF unchanged, and points our merge/compress tools only at the other papers. This is advice, not an agency quote: NTS only says companies load the PDF into their program. Is that wording acceptable, or should those two sentences go?
+- ecfs: the court writes the total cap as "100M". The copy says 100MB, and the fact check passes on the same page's "100 MB까지" (video). Is that OK?
+- kakao-photo topic = PDF·메일 (no better TOPICS entry).
+
+## Arch questions
+- Shortfall 1. Sourced candidates for the 30th URL, all with an official quote today:
+  - "홈택스 부속서류 PDF로 내기": the nts.go.kr 홈택스이용 Q&A says HWP/Word must be converted to PDF and images auto-convert. But its only stable URL is the NTS search page (`collection=call_hometaxQna`).
+  - A Kakao "동영상 원본으로 보내기" page (cs.kakao.com, static). It has no 문서딱 tool fit, so I recommend against it.
+- Or accept 29 until a new row is sourced?
+
+## Out of Scope (logged in BUILD-LOG)
+- Post-deploy Naver, Kakao and GSC actions are owner/PC tasks.
+
+---
+
 # Review Request — G2 Sprint A, A2 (spec cluster D: exam and ID photos)
 Date: 2026-10-02
 Ready for Review: YES
