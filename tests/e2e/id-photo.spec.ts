@@ -600,7 +600,7 @@ test('mobile at 360 px: no horizontal scroll; stage buttons, sliders and the che
 
 test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedTools; the photo-compress FAQ link', async ({ page }) => {
   await open(page);
-  await expect(page).toHaveTitle('여권·증명사진 규격 맞추기 — 파일을 보내지 않고 무료로 | 문서딱');
+  await expect(page).toHaveTitle('여권사진·증명사진 사이즈 규격 맞추기 무료 | 문서딱');
   const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
   expect(desc).toBe('여권사진 규격(413×531 픽셀, 500KB 이하)과 공무원 시험·Q-Net·이력서 증명사진 사이즈에 맞춰 사진을 자르고 용량을 맞춥니다. 사진은 내 폰·컴퓨터 밖으로 보내지 않고, 보정하지 않습니다.');
   await expect(page.locator('h1')).toHaveText('여권·증명사진 규격 맞추기');

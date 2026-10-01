@@ -33,7 +33,7 @@ export const TOOLS: Tool[] = [
   {
     slug: 'pdf-merge',
     name: 'PDF 합치기',
-    title: 'PDF 합치기 — 파일을 보내지 않고 무료로 | 문서딱',
+    title: 'PDF 합치기·병합 무료 — 설치 없이 바로 | 문서딱',
     description:
       'PDF 합치기를 내 폰·컴퓨터 안에서 바로. 여러 PDF를 원하는 순서로 한 파일로 묶고 서식·책갈피·링크도 그대로 유지합니다. 파일은 어디로도 보내지 않고, 가입 없이 무료.',
     h1: 'PDF 합치기',
@@ -68,7 +68,7 @@ export const TOOLS: Tool[] = [
   {
     slug: 'pdf-compress',
     name: 'PDF 용량 줄이기',
-    title: 'PDF 용량 줄이기 — 파일을 보내지 않고 무료로 | 문서딱',
+    title: 'PDF 용량 줄이기 무료 — 제출 용량에 맞게 | 문서딱',
     description:
       'PDF 용량 줄이기를 내 폰·컴퓨터 안에서 바로. 스캔·사진이 든 PDF를 선명하게 유지하면서 줄이고, 글자는 선택·검색 가능한 그대로 둡니다. 가입 없이 무료.',
     h1: 'PDF 용량 줄이기',
@@ -107,7 +107,7 @@ export const TOOLS: Tool[] = [
   {
     slug: 'photo-compress',
     name: '사진 용량 줄이기',
-    title: '사진 용량 줄이기 — 파일을 보내지 않고 무료로 | 문서딱',
+    title: '사진 용량 줄이기 — 100KB·200KB·KB 맞추기 무료 | 문서딱',
     description:
       '사진 용량 줄이기를 내 폰·컴퓨터 안에서 바로. 100KB·200KB·500KB 등 원하는 용량에 맞춰 화질은 최대한 지키고, 촬영 위치 같은 개인정보는 지웁니다. 가입 없이 무료.',
     h1: '사진 용량 줄이기',
@@ -147,7 +147,7 @@ export const TOOLS: Tool[] = [
   {
     slug: 'id-photo',
     name: '여권·증명사진 규격 맞추기',
-    title: '여권·증명사진 규격 맞추기 — 파일을 보내지 않고 무료로 | 문서딱',
+    title: '여권사진·증명사진 사이즈 규격 맞추기 무료 | 문서딱',
     description:
       '여권사진 규격(413×531 픽셀, 500KB 이하)과 공무원 시험·Q-Net·이력서 증명사진 사이즈에 맞춰 사진을 자르고 용량을 맞춥니다. 사진은 내 폰·컴퓨터 밖으로 보내지 않고, 보정하지 않습니다.',
     h1: '여권·증명사진 규격 맞추기',
@@ -192,7 +192,7 @@ export const TOOLS: Tool[] = [
   {
     slug: 'hwp-to-pdf',
     name: 'HWP PDF 변환',
-    title: 'HWP PDF 변환 — 파일을 보내지 않고 무료로 | 문서딱',
+    title: '한글파일(HWP) PDF로 변환 — 한글 없이 무료 | 문서딱',
     description:
       '한글 프로그램 없이 hwp pdf 변환. 한글파일 PDF로 변환해 바로 내려받고, 파일은 밖으로 보내지 않습니다. HWP·HWPX 문서를 뷰어처럼 열어 볼 수도 있습니다. 회원가입 없이 무료.',
     h1: 'HWP PDF 변환',

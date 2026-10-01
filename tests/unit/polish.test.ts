@@ -462,9 +462,15 @@ describe('live-only description (P.6)', () => {
 });
 
 describe('brand and titles (Polish Q)', () => {
-  it('every tool title is "{h1} — {TITLE_SUFFIX}"; the H1 is the menu name', () => {
+  it('every tool title carries real search terms, ends with "| 문서딱" and stays ≤ 60 chars; the H1 is the menu name', () => {
+    const KEYWORDS: Record<string, RegExp> = {
+      'pdf-merge': /PDF 합치기.*병합/, 'pdf-compress': /PDF 용량 줄이기/, 'photo-compress': /사진 용량 줄이기/,
+      'id-photo': /증명사진.*사이즈|사이즈.*규격/, 'hwp-to-pdf': /한글파일.*PDF/,
+    };
     for (const t of TOOLS) {
-      expect(t.title).toBe(`${t.h1} — ${TITLE_SUFFIX}`);
+      expect(t.title.endsWith(`| ${SITE.name}`)).toBe(true);
+      expect([...t.title].length).toBeLessThanOrEqual(60);
+      const kw = KEYWORDS[t.slug as string]; if (kw) expect(t.title).toMatch(kw);
       expect(t.h1).toBe(t.name);
     }
     expect(TITLE_SUFFIX.endsWith(`| ${SITE.name}`)).toBe(true);
