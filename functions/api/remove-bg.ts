@@ -4,8 +4,8 @@
 // GET  /api/remove-bg?probe=1                 -> which runtime features exist (no image work)
 // GET  /api/remove-bg?src=/spike/s01.jpg&f=  -> cf.image { segment: "foreground" } on a same-origin
 //                                                static test photo (fetch subrequest path; needs no binding)
-// POST /api/remove-bg  (body = image bytes)   -> Images binding path; 501 when env.IMAGES is absent
-//                                                (Pages Functions do not list an Images binding)
+// POST /api/remove-bg  (body = image bytes)   -> forwarded to the docttak-bg Worker via service binding BG
+//                                                (Pages Functions have no Images binding; 501 without BG)
 
 interface ImagesBinding {
   input(stream: ReadableStream | ArrayBuffer): {
@@ -16,13 +16,14 @@ interface ImagesBinding {
 }
 interface Env {
   IMAGES?: ImagesBinding;
+  BG?: { fetch(r: Request): Promise<Response> };
 }
 interface Ctx {
   request: Request;
   env: Env;
 }
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 2_000_000;
 const TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const NO_STORE = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
 
@@ -62,6 +63,9 @@ export async function onRequestPost({ request, env }: Ctx): Promise<Response> {
   if (!TYPES.has(type)) return json(415, { error: 'type' });
   const len = Number(request.headers.get('content-length') ?? '0');
   if (!len || len > MAX_BYTES) return json(413, { error: 'size' });
+  if (request.headers.get('sec-fetch-site') !== 'same-origin') return json(403, { error: 'origin' });
+  // Service binding to the docttak-bg Worker (brief §3). The body is streamed through, never stored.
+  if (env.BG) return env.BG.fetch(request);
   if (!env.IMAGES || !request.body) return json(501, { error: 'no-images-binding' });
   const t0 = Date.now();
   const out = await env.IMAGES.input(request.body).transform({ segment: 'foreground' }).output({ format: 'image/png' });
