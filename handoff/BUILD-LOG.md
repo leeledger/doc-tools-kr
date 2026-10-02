@@ -1725,3 +1725,4 @@ Status: **DONE**. Every Arch target is met on this PC; CI result below. The rele
 - Both builds + check-dist OK. check:licenses OK in both states.
 - e2e `bg-chromium` + `bg-mobile-safari`: 11 passed, 1 skipped. mobile-safari runs the iOS per-photo-restart path, chromium the kept engine.
 - Screenshots checked (390 / 1280 px, light / dark).
+- **CI round 2** (https://github.com/leeledger/doc-tools-kr/actions/runs/36984505822, commit a309a84): **green on the first attempt** (checks + 5 e2e jobs, incl. bg-chromium @model and bg-mobile-safari).

@@ -34,6 +34,7 @@ Ready for Review: YES. Status DONE; every Arch target is met (BUILD-LOG "C2 roun
 - Parity on the new parts: exit 0 (GT MAE 0.00484, IoU 0.9423, empty masks 3/49).
 - Full browser regression (WebGPU, 69 images): OK, max diff 0.00062.
 - UI glyphs: 0 new.
+- CI: https://github.com/leeledger/doc-tools-kr/actions/runs/36984505822 is green on the first attempt.
 
 ## Open Questions (Arch)
 - None blocking.
