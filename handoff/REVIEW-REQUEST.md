@@ -1,3 +1,17 @@
+# Review Request — G2 A3 round 2 (Arch rulings)
+Date: 2026-10-02
+Ready for Review: YES — status DONE (29 indexable /guide/ URLs accepted by Arch)
+
+- `src/content/guides/yearend-tax-pdf.md`: the inferred "hand it in unchanged" lines are cut. The page now says to follow the company's instructions.
+- `src/content/guides/ecfs-pdf-limit.md`: the total cap is written "100M" as the court writes it. A new total row sits in the hub, and each row cites its quote with `source`.
+- `src/data/guide-facts.ts` (`Unit` 'M', `rowQuote`, `specProblems`), `src/data/hubs.ts` (`LIMIT` + `rowOf`), `src/data/guide-schema.ts` (`source` on spec rows; TOPICS + "사진 보내기"):
+  - A spec row is now backed by one quote, and its hub limit comes from that quote.
+  - Test: `tests/unit/guides-schema.test.ts`, "G2 A3 (Arch)".
+- `src/content/guides/kakao-photo.md`: topic is now 사진 보내기.
+- Open: body-text numbers are still matched against the whole guide's quotes, since there is no per-claim citation markup. Worth a brief if Arch wants it.
+
+---
+
 # Review Request — G2 Sprint A, A3 (file-limit cluster, remaining drafts)
 Date: 2026-10-02
 Ready for Review: YES

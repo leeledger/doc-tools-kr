@@ -5,7 +5,9 @@
 import { getPreset, type IdPreset } from './id-photo-presets';
 import { TOOL_FACTS, isToolFactRef } from './tool-facts';
 
-export type Unit = 'KB' | 'MB' | '픽셀' | 'cm' | 'mm' | '개월';
+/** 'M' is a court's spelling of megabytes ("총용량은 100M 이하", 전자소송, G2 A3). It stays its own unit so that copy
+ * written "100M" is backed only by a quote that writes "100M" (never by an unrelated "100 MB" line). */
+export type Unit = 'KB' | 'MB' | 'M' | '픽셀' | 'cm' | 'mm' | '개월';
 
 export type GuideSource = { preset: string } | { url: string; title: string; quote: string; retrieved: string; via?: 'browser' };
 
@@ -25,6 +27,9 @@ export interface SpecRow {
   mm?: { w: number; h: number };
   format?: string;
   fit?: boolean;
+  /** 1-based index into the guide's sources: the quote that backs every number of this row (G2 A3). Without it,
+   * the row's backing quote is the first quote that states all of its numbers. */
+  source?: number;
 }
 
 /**
@@ -35,16 +40,34 @@ export function specRowFacts(r: SpecRow): string[][] {
   const out: string[][] = [];
   if (r.px) out.push([key(r.px.w, '픽셀')], [key(r.px.h, '픽셀')]);
   if (r.kb !== undefined) out.push([key(r.kb, 'KB')]);
-  if (r.mb !== undefined) out.push([key(r.mb, 'MB')]);
+  if (r.mb !== undefined) out.push([key(r.mb, 'MB'), key(r.mb, 'M')]);
   if (r.mm) for (const v of [r.mm.w, r.mm.h]) out.push([key(v / 10, 'cm'), key(v, 'mm')]);
   return out;
 }
 
+/**
+ * The quote that backs a literal spec row (G2 A3, Arch): all of the row's numbers must stand in ONE quote, either
+ * the one the row cites (`source`) or the first quote that states them all. A number found only elsewhere on the
+ * page (another quote about something else) does not count. null when no single quote backs the row.
+ */
+export function rowQuote(r: SpecRow, sources: readonly GuideSource[]): string | null {
+  const facts = specRowFacts(r);
+  const backs = (quote: string): boolean => {
+    const have = new Set(numberUnits(quote));
+    return facts.every((alts) => alts.some((f) => have.has(f)));
+  };
+  if (r.source !== undefined) {
+    const s = sources[r.source - 1];
+    return s && 'quote' in s && backs(s.quote) ? s.quote : null;
+  }
+  for (const s of sources) if ('quote' in s && backs(s.quote)) return s.quote;
+  return null;
+}
+
 /** Spec-row problems of a guide (empty = ok): a preset row cites an official preset of this guide and states no
- * literal value; a literal row states something, and every number is backed by this guide's quotes. */
+ * literal value; a literal row states something, and one quote of this guide backs all of its numbers. */
 export function specProblems(g: FactInput & { spec?: readonly SpecRow[] }): string[] {
   const e: string[] = [];
-  const allowed = allowedFacts(g);
   for (const r of g.spec ?? []) {
     const literal = r.px || r.kb !== undefined || r.mb !== undefined || r.mm;
     if (r.preset) {
@@ -55,14 +78,24 @@ export function specProblems(g: FactInput & { spec?: readonly SpecRow[] }): stri
       continue;
     }
     if (!literal && !r.format) e.push(`spec "${r.label}": states nothing`);
-    for (const alts of specRowFacts(r)) if (!alts.some((f) => allowed.has(f))) e.push(`spec "${r.label}": ${alts[0]} has no source`);
+    if (!literal) continue;
+    if (r.source !== undefined && !(g.sources[r.source - 1] && 'quote' in g.sources[r.source - 1]!)) {
+      e.push(`spec "${r.label}": source ${r.source} is not a quoted source of this guide`);
+      continue;
+    }
+    if (rowQuote(r, g.sources) !== null) continue;
+    const quote = r.source !== undefined ? (g.sources[r.source - 1] as { quote: string }).quote : null;
+    const have = new Set(quote !== null ? numberUnits(quote) : g.sources.flatMap((s) => ('quote' in s ? numberUnits(s.quote) : [])));
+    const missing = specRowFacts(r).filter((alts) => !alts.some((f) => have.has(f)));
+    if (missing.length) for (const alts of missing) e.push(`spec "${r.label}": ${alts[0]} has no source`);
+    else e.push(`spec "${r.label}": no single quote states all of its numbers`);
   }
   return e;
 }
 
 const NUM = String.raw`\d[\d,]*(?:\.\d+)?`;
 // "pixel" and "px" appear only inside official quotes (never rendered); they count as 픽셀.
-const UNIT = String.raw`(?:KB|MB|kb|픽셀|pixel|px|cm|mm|개월)(?![A-Za-z])`;
+const UNIT = String.raw`(?:KB|MB|kb|픽셀|pixel|px|cm|mm|개월|M(?![A-Za-z\d]))(?![A-Za-z])`;
 const SEP = String.raw`\s*(?:×|x|X|\*|~|–|-)\s*`;
 const CHAIN = new RegExp(String.raw`(?<![\d.,])${NUM}(?:\s*${UNIT})?(?:${SEP}${NUM}(?:\s*${UNIT})?)*`, 'g');
 const PART = new RegExp(String.raw`(${NUM})(?:\s*(${UNIT}))?`, 'g');

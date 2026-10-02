@@ -3,7 +3,7 @@
 // literal row from its guide (whose quotes back it). Nothing is typed twice, so a hub cannot drift from a guide.
 // Pure: the pages and the unit tests call it with the guides.
 import { getPreset, type IdPreset } from './id-photo-presets';
-import { key, numberUnits, type GuideSource, type SpecRow } from './guide-facts';
+import { key, numberUnits, rowQuote, type GuideSource, type SpecRow } from './guide-facts';
 
 export const HUB_SLUGS = ['photo-sizes', 'upload-limits'] as const;
 export type HubSlug = (typeof HUB_SLUGS)[number];
@@ -31,7 +31,9 @@ export interface HubRow {
 }
 
 const dims = (w: number, h: number, unit: string): string => `${w}×${h} ${unit}`;
-const LIMIT = /(?<![\d.,])(\d[\d,]*(?:\.\d+)?)\s*(KB|MB|kb|mb|Kb|Mb)(?![A-Za-z])(?:\s*(이하|미만|이내|까지))?/g;
+// "M" alone is a court's megabytes ("100M 이하", G2 A3).
+const LIMIT = /(?<![\d.,])(\d[\d,]*(?:\.\d+)?)\s*(KB|MB|kb|mb|Kb|Mb|M(?!\d))(?![A-Za-z])(?:\s*(이하|미만|이내|까지))?/g;
+const limitUnit = (u: string): 'KB' | 'MB' => (u === 'M' ? 'MB' : (u.toUpperCase() as 'KB' | 'MB'));
 
 /**
  * The limit as the agency wrote it (Arch, A1 review): the first "number unit [rule word]" in the quotes whose value
@@ -41,7 +43,7 @@ const LIMIT = /(?<![\d.,])(\d[\d,]*(?:\.\d+)?)\s*(KB|MB|kb|mb|Kb|Mb)(?![A-Za-z])
 export function quotedLimit(value: number, unit: 'KB' | 'MB', quotes: readonly string[], label: string): string {
   for (const q of quotes) {
     for (const m of q.matchAll(LIMIT)) {
-      if (m[2]!.toUpperCase() === unit && Number(m[1]!.replace(/,/g, '')) === value) return m[0].trim();
+      if (limitUnit(m[2]!) === unit && Number(m[1]!.replace(/,/g, '')) === value) return m[0].trim();
     }
   }
   throw new Error(`hub row "${label}": no quote states ${value} ${unit}`);
@@ -74,7 +76,9 @@ function rowOf(r: SpecRow, g: HubGuide): HubRow {
     return { label: r.label, kind: r.kind, size, limit, format: r.format ?? '', guide, fit: `/id-photo/?preset=${p.id}`, facts: numberUnits(`${size} ${limit}`) };
   }
   const size = [r.mm ? dims(r.mm.w / 10, r.mm.h / 10, 'cm') : '', r.px ? dims(r.px.w, r.px.h, '픽셀') : ''].filter(Boolean).join(' · ');
-  const quotes = g.data.sources.flatMap((s) => ('quote' in s ? [s.quote] : []));
+  // The row's own quote only (G2 A3): never a same-valued number from another quote on the page.
+  const own = rowQuote(r, g.data.sources);
+  const quotes = own !== null ? [own] : [];
   const limit = r.kb !== undefined ? quotedLimit(r.kb, 'KB', quotes, r.label) : r.mb !== undefined ? quotedLimit(r.mb, 'MB', quotes, r.label) : '';
   const fit = r.fit === false ? '' : ctaFits ? g.data.cta.href : '/id-photo/';
   return { label: r.label, kind: r.kind, size, limit, format: r.format ?? '', guide, fit, facts: numberUnits(`${size} ${limit}`) };

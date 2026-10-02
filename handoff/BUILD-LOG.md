@@ -1358,3 +1358,23 @@ Status: **DONE_WITH_CONCERNS** (shortfall 1; local /photo-compress/ LCP as in A2
 
 ### A3 CI
 - Run 36942169967 on fd726b1 (workflow_dispatch, g2-a3): all green (checks incl. Lighthouse, chromium, firefox, webkit, mobile-chrome, mobile-safari).
+
+### A3 round 2 (Bob, 2026-10-02; Arch rulings relayed by the coordinator)
+1. **30th URL:** accept 29. C1's stamp-image guide will be the 30th. The 홈택스 search-URL page and the Kakao video page are not shipped.
+2. **yearend-tax-pdf:** the two "hand it in unchanged" sentences and their FAQ are cut. The page keeps only what 국세청 states, plus "어떤 파일을 어떻게 낼지는 회사 안내를 따르세요".
+3. **ecfs "100M":**
+   - The guide now writes the total cap as the court does, "100M".
+   - The upload hub gains the row "전자소송 첨부파일 (모두 합쳐)", whose limit reads "100M 이하".
+   - The fact check is tightened:
+     - `guide-facts.ts`: "M" is its own unit, `M(?![A-Za-z\d])`, so "MP3, M4A" is not read. Copy written "100M" therefore needs a quote that writes "100M".
+     - `rowQuote()`: a literal spec row must be backed by ONE quote, either the one it cites (new optional `source`, 1-based) or the first quote stating all its numbers.
+     - `hubs.ts`: the hub limit is copied from that quote only. ecfs cites its three rows (1, 5, 7).
+   - Unit test: a cited quote without the number fails; numbers split across two quotes fail; the hub limits read 20MB까지 / 100M 이하 / 100 MB까지.
+   - Remaining gap: body text and FAQ numbers are still checked against all the guide's quotes, because the copy has no per-claim citation markup.
+4. **kakao-photo topic:** no topic fit, so TOPICS gains "사진 보내기" after PDF·메일. Topic names render in the system font, so the UI font is unchanged.
+- Gates:
+  - check: 0 errors.
+  - check:quotes: 130/130.
+  - unit: 691/691.
+  - Both builds: check-dist OK; UI fonts 138.0 KB, delta 0.
+  - e2e hubs + growth + site, chromium + mobile-safari: 117 passed.

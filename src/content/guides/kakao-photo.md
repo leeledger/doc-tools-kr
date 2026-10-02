@@ -7,7 +7,7 @@ answer: 카카오톡으로 사진은 한 번에 최대 300MB까지 보낼 수 �
 published: '2026-10-02'
 updated: '2026-10-02'
 category: 사진
-topic: PDF·메일
+topic: 사진 보내기
 tools: [photo-compress]
 cta: { href: '/photo-compress/', label: '사진 용량 줄이기' }
 related: [photo-kb, email-attachment-limit, id-photo-kb]

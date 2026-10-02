@@ -243,6 +243,31 @@ describe('G2 A1: topics, spec rows, hubs', () => {
     }
   });
 
+  it('G2 A3 (Arch): a spec row is backed by ONE quote (its cited one or the first that states all its numbers), never a same-valued number elsewhere', () => {
+    // "100M" (a court's megabytes) is its own unit: copy written "100M" needs a quote that writes "100M".
+    expect(numberUnits('총용량은 100M 이하로 제한됩니다.')).toEqual(['100 M']);
+    expect(numberUnits('파일용량 : 100 MB까지')).toEqual(['100 MB']);
+    expect(numberUnits('MP3, M4A')).toEqual([]);
+    const total = { url: 'https://example.go.kr/', title: '법원', quote: '첨부파일의 총용량은 100M 이하로 제한됩니다.', retrieved: '2026-10-02' };
+    const video = { url: 'https://example.go.kr/', title: '법원', quote: '동영상 파일용량 : 100 MB까지 첨부가능', retrieved: '2026-10-02' };
+    const w = { url: 'https://example.go.kr/', title: '시험', quote: '사진은 가로 120픽셀입니다.', retrieved: '2026-10-02' };
+    const h = { url: 'https://example.go.kr/', title: '시험', quote: '세로 160픽셀로 올려 주세요.', retrieved: '2026-10-02' };
+    const row = { label: '총용량', kind: 'upload' as const, mb: 100 };
+    expect(specProblems({ sources: [total, video], spec: [{ ...row, source: 1 }] })).toEqual([]);
+    // The row cites a quote without its number: a same-valued number in another quote does not count.
+    expect(specProblems({ sources: [{ ...total, quote: '총용량은 제한됩니다.' }, video], spec: [{ ...row, source: 1 }] }).join()).toContain('100 MB has no source');
+    expect(specProblems({ sources: [total], spec: [{ ...row, source: 3 }] }).join()).toContain('is not a quoted source');
+    // Two numbers from two different quotes: no single quote backs the row.
+    expect(specProblems({ sources: [w, h], spec: [{ label: '시험', kind: 'photo', px: { w: 120, h: 160 } }] }).join()).toContain('no single quote');
+    // The hub limit comes from the row's own quote, in the agency's words.
+    const g = (spec: object[]) => ({ id: 'x', data: { title: 'x', cta: { href: '/pdf-compress/' }, spec, sources: [total, video] } }) as unknown as Parameters<typeof hubRows>[0][number];
+    expect(hubRows([g([{ ...row, source: 1 }, { ...row, label: '동영상', source: 2 }])], 'upload').map((r) => r.limit)).toEqual(['100M 이하', '100 MB까지']);
+    // Without a cite the first quote stating the value wins, so ecfs cites each row's own line.
+    expect(hubRows([g([{ ...row, label: '동영상' }])], 'upload').map((r) => r.limit)).toEqual(['100M 이하']);
+    const ecfs = hubRows(hubGuides, 'upload').filter((r) => r.guide.slug === 'ecfs-pdf-limit');
+    expect(ecfs.map((r) => r.limit)).toEqual(['20MB까지', '100M 이하', '100 MB까지']);
+  });
+
   it('hubs: the copy passes the fact check against the tables; every spec guide has a row; slugs never clash with a guide', () => {
     for (const h of hubFiles) {
       const rows = h.data.tables.flatMap((t) => hubRows(hubGuides, t.kind).filter((r) => !t.limitOnly || r.limit));
