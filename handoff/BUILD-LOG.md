@@ -1755,3 +1755,4 @@ Status: **DONE**.
   - Licences OK in both states.
   - e2e bg-chromium + bg-mobile-safari: 11 passed, 1 skipped.
   - No model or runtime code changed, so no parity run.
+- **CI round 3** (https://github.com/leeledger/doc-tools-kr/actions/runs/36991681913, commit 0d01241): **green on attempt 2**. Attempt 1 failed on two things outside C2: a Lighthouse runner `NO_NAVSTART` error in checks, and the id-photo "adjust" checkbox test on mobile-safari ("Clicking the checkbox did not change its state", the same flake class as round 1). Both passed on the re-run of the failed jobs. bg-mobile-safari passed on both attempts.
