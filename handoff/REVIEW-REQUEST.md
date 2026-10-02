@@ -76,8 +76,8 @@ Ready for Review: YES. Status DONE_WITH_CONCERNS: precache headroom and the per-
    - Measured: WebGPU about 10 s create + 3.5 s first run; WASM about 7 s + 2.7 s on this PC.
    - Keep it, or keep the worker alive between photos on desktop?
 3. Decision 9: precache 448.8 / 450 KB on this PC with the flag on (about 449.6 on CI). The next tool needs a precache decision.
-5. /photo-compress/ LCP sits on the 2,000 ms line on CI (bimodal runs). Not changed by C2 beyond the menu entry, but it will flake.
 4. Decision 16: the brand test exempts the brief's cache name `docttak-model-birefnet-`. Keep it, or rename the cache?
+5. /photo-compress/ LCP sits on the 2,000 ms line on CI (bimodal runs). Not changed by C2 beyond the menu entry, but it will flake.
 
 ## Out of Scope (logged in BUILD-LOG Known Gaps)
 - Brush erase/restore, batch, 1024 고화질, guided filter, cross-page hand-off to /id-photo/, WebGL fusion. Fusion is 1.1–1.3 s at 4 MP, under the 1.5 s budget.
