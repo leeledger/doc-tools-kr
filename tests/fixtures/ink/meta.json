@@ -53,6 +53,32 @@
   "jpegQ": 70,
   "alpha": "gt14.alpha.png"
  },
+ "gt14-desk": {
+  "gt": "gt14",
+  "ink": [
+   0.1,
+   0.14,
+   0.42
+  ],
+  "mode": "auto",
+  "desc": "synthetic blue-ink signature",
+  "variant": "desk",
+  "jpegQ": 85,
+  "alpha": "gt14.alpha.png"
+ },
+ "gt14-ruled": {
+  "gt": "gt14",
+  "ink": [
+   0.1,
+   0.14,
+   0.42
+  ],
+  "mode": "auto",
+  "desc": "synthetic blue-ink signature",
+  "variant": "ruled",
+  "jpegQ": 85,
+  "alpha": "gt14.alpha.png"
+ },
  "gt14-kraft": {
   "gt": "gt14",
   "ink": [
@@ -135,6 +161,35 @@
   "variant": "stampOnText",
   "jpegQ": 92,
   "alpha": "gt15.alpha.png"
+ },
+ "gt15-yellowRed": {
+  "gt": "gt15",
+  "ink": [
+   0.8,
+   0.12,
+   0.12
+  ],
+  "mode": "red",
+  "desc": "synthetic red 도장 impression with ink gaps (Pretendard Black 홍길/동인)",
+  "variant": "yellowRed",
+  "jpegQ": 85,
+  "paper": "#E9DDB5",
+  "alpha": "gt15.alpha.png"
+ },
+ "gt15-overSign": {
+  "gt": "gt15",
+  "ink": [
+   0.8,
+   0.12,
+   0.12
+  ],
+  "mode": "auto",
+  "desc": "synthetic red 도장 impression with ink gaps (Pretendard Black 홍길/동인)",
+  "variant": "overSign",
+  "jpegQ": 85,
+  "guess": "both",
+  "deltaEGate": false,
+  "alpha": "gt15-overSign.alpha.png"
  },
  "gt16": {
   "gt": "gt16",

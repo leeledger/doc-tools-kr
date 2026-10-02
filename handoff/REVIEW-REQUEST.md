@@ -1,3 +1,82 @@
+# Review Request — Sprint C, C1 round 3 (real-photo failures in /stamp-signature/)
+Date: 2026-10-02
+Ready for Review: YES. Status: DONE_WITH_CONCERNS. Two gt15-family IoU readings (m02 0.788, m11 0.794) are under the report's 0.85; they need Arch (see Open Questions).
+
+**Tree:** branch `c1-r3` from main 18e5827. All six report priorities are in `src/lib/ink/key.ts`. Build notes and decisions are in BUILD-LOG under "C1 r3".
+
+## Acceptance
+The full 26-photo set was run through this build with the owner's harness (`run.mjs`, pointed at `tests/e2e/serve.mjs` on :4873 serving `dist-noauto`, chromium, modes 자동 / 빨간 도장 / 서명), then scored with `metrics.py`.
+
+| | Pass | Partial | Fail |
+|---|---|---|---|
+| Live (report, before) | 8 | 7 | 11 |
+| c1-r3, real 14 | 11 | 3 (o04, o06, o08) | 0 |
+| c1-r3, simulated 12 | 6 | 4 (m02, m03, m04, m11) | 2 (m07, m09: documented limits) |
+| **c1-r3, total 26** | **17** | **7** | **2** |
+
+- **Residue in 자동:** at most 0.2 % on every simulated case except m07 and m09. m12 is 0.059 % local / 0.010 % full; m06 is 0.001 %; the rest are 0.
+- **IoU, gt14/gt15 cases:**
+  - Pass: m01 0.887, m05 0.902, m06 0.930, m10 0.937. m10 is scored against both inks, because the output now keeps both; scored against the stamp alone it is 0.697.
+  - Below 0.85: m02 0.788 (was 0.564) and m11 0.794 (was 0.002).
+- **Network and console:** 0 offsite requests, 0 non-GET requests, 0 console errors.
+- **Contact sheets:**
+  - `C:\dev\doc-tools-kr\spikes\ink-owner\sheets\r3-real-chromium.jpg`
+  - `C:\dev\doc-tools-kr\spikes\ink-owner\sheets\r3-sim-chromium.jpg`
+  - Raw results: `...\scratchpad\...\h\live\results.chromium.json` and `metrics.chromium.json`. Per-photo verdicts are in BUILD-LOG.
+
+## Files Changed
+- `src/lib/ink/key.ts`:
+  - **INK constants:** ratio*, page*, desk*, line*, cluster/join*, minInkPx, faintSpeck*, bothShare.
+  - **Mode filters:** `redRatio` / `ratioPlane` / `modeFactor` / `applyModeFilter` (371-440) use paper-relative redness per unit of paper luma, divided by darkness. Both are blurred before the ratio, because JPEG stores colour at half resolution. 진하기 widens each mode by 0.05 per step.
+  - **Faint specks:** `dropFaintSpecks` (577) is a second despeckle that also removes faint specks under 4× the speck size. `areaCheck` (598) adds a 200-strong-pixel floor.
+  - **Page finding:** `components` (654) and `findPage` (707-860). On a ~400 px copy, the page is flooded off luma and tint edges with a drift bound. Desk is non-page outside the hull that touches the frame and is dark, textured or tinted. Medians are used so that ink does not tint a region.
+  - **Desk handling:** `convexHullRows`, `maskDesk` (paints the desk with the nearest paper colour) and `pageBox`.
+  - **Coarse paper:** `coarsePaper` (976) gives a pre-key paper colour, with a shared ~600 px copy.
+  - **Classification:** `sceneInk` / `classifyInk` (998-1096) return red, black or both. Frame-touching and line-like components are excluded. A red cluster can count as a 도장 by shape. Text-like ink gives way: black text loses to red, and small black pieces beside a 도장 lose to red.
+  - **Lines:** `lineCands` / `removeLinesH` / `removeLines` (1098-1296). A Hough vote on thin ink only (±25°) is tracked column by column. A line must be thin, run on, and cover 75 % of the page. Crossings, and ink darker than the line, are kept.
+  - **Keying:** `prepare` / `keyPath` / `keyInk` (1298-1380). Photo-level work is cached. Each path runs `… → fillSolid → removeLines → dropFaintSpecks → hysteresis → desk = 0`. 'both' unions the red and 서명 paths. On noink it retries once at 진하기 +1.
+  - **Colour:** `renderInk` (1628) colours each joined part from its own ink.
+  - **Crop:** `inkClusters` / `keepMainInk` / `padRect` / `cropRect` (1671-1815) crop to the main ink cluster and clear ink outside it. The rect is clamped to the photo.
+  - **Output:** `processInk` (1938) names the 'both' output `도장·서명.png`.
+- `src/lib/ink/worker-core.ts:14`: guess may be `'both'`.
+- `src/tools/stamp-signature/copy.ts:10-11`: allpaper now reads "책상이나 배경까지 도장이나 서명으로 읽었습니다. 종이가 화면을 채우도록 가까이 다시 찍어 주세요." It uses no new glyphs.
+- `scripts/regress/ink.mjs:214-221,250-253`: fixtures are scored as delivered (key, then main cluster). ΔE is info only for the two-ink fixture (`deltaEGate: false`).
+- `scripts/regress/ink-baseline.json`: rebaselined after all brief gates held (129/129). Only gt15-shadow moved (0.9179 → 0.8935; see BUILD-LOG).
+- `scripts/check-dist.mjs:83-87`: ink worker budget 6.1 → 13 KB gzip (measured 10.9 KB + 20 %, the file's rule).
+- `tests/fixtures/build-ink.py` and `tests/fixtures/ink/`: 4 new fixtures:
+  - gt14-desk
+  - gt14-ruled
+  - gt15-yellowRed (빨간 도장 mode)
+  - gt15-overSign (GT = both inks, guess both)
+
+  The existing fixture images are byte-identical.
+- `tests/unit/ink-key.test.ts`: the mode-filter table is rewritten for the ratio. New: redness ratio, findPage (desk, no desk, a hard shadow is no desk), 서명 on a desk, ruled lines with a crossing stroke, cluster crop and clamp, faint speck, 200-px floor, and a 도장 over a 서명 (both, 도장·서명.png, no hole, own colours).
+- `tests/unit/stamp-signature.test.ts:22`: the new allpaper wording.
+
+## Gates (local)
+- check: 0 errors.
+- vitest: 745/745.
+- regress:ink --fixtures-only: 129/129.
+- Both builds (flag off → dist-noauto, flag on → dist): check-dist OK.
+- stamp-signature e2e on chromium and mobile-safari: 15 passed, 1 skipped (existing skip).
+
+## Open Questions
+- **Arch: m02 and m11 IoU (0.788 and 0.794 < 0.85).** Both are visually clean with zero residue (see the sheet). The causes:
+  - m11 is a small blurred stamp. The output is about 1.5 px fatter than the GT at a > 0.5. That comes from the pinned ramp (lo 0.1 / hi 0.6) against a GT whose solid coverage is 0.88; at a > 0.7 the IoU is 0.82.
+  - m02 has blue and black form lines crossing the stamp. The 빨간 도장 path drops them, which leaves 1-2 px holes.
+
+  Changing the pinned ramp is Arch's call; I did not touch it.
+- **Arch: performance.** In Node, 2400×1800 pipeline is now about 1.5 s (was about 0.85 s): page finding, ratio plane, classification and lines add cost. A re-run on the same photo is about 0.6-1.0 s. The brief's 600 ms is logged, not gated.
+- **Arch: ink worker budget 6.1 → 13 KB gzip.** The worker loads on first use only.
+- **Richard:** look at `findPage` (desk rule false positives), the `inkClusters` join rules, and `sceneInk`'s text/stamp rules. These are heuristics tuned on 26 photos plus 18 fixtures.
+
+## Out of Scope (logged in BUILD-LOG)
+- o08: the faint 고슈인 seals are dropped in 자동 because the red seals break into many parts and read as text. 빨간 도장 mode gets them.
+- o04: the black 직인 cannot be picked alone (same colour as the print).
+- The ΔE of thin blue/black 서명 is still dark (report 9b).
+
+---
+
 # Review Request — G2 A3 round 2 (Arch rulings)
 Date: 2026-10-02
 Ready for Review: YES — status DONE (29 indexable /guide/ URLs accepted by Arch)

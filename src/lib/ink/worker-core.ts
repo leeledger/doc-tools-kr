@@ -11,7 +11,7 @@ export type InkResponse =
       type: 'result';
       run: number;
       status: InkStatus;
-      guess: 'red' | 'black';
+      guess: 'red' | 'black' | 'both';
       inkShare: number;
       rect: Rect | null;
       /** Straight RGBA of the cropped, sized PNG content; null when there is nothing to download. */

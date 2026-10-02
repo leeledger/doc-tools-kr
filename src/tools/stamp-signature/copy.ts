@@ -7,7 +7,8 @@ export const COPY = {
   keying: '배경을 지우는 중입니다',
   /** Area check (brief Flow): no download in either case. */
   noink: '도장이나 서명을 찾지 못했습니다. 진하기를 높이거나, 환한 곳에서 종이를 가까이 다시 찍어 주세요.',
-  allpaper: '종이 전체를 도장이나 서명으로 읽었습니다. 종이만 나오게 환한 곳에서 다시 찍어 주세요.',
+  /** Usually a desk or background around the sheet (C1 r3: the page is found first, so this is what is left). */
+  allpaper: '책상이나 배경까지 도장이나 서명으로 읽었습니다. 종이가 화면을 채우도록 가까이 다시 찍어 주세요.',
   animated: '움직이는 이미지는 쓸 수 없습니다. 사진 파일을 선택해 주세요.',
   /** The ink worker stopped after the photo was loaded (out of memory or a crash): 다시 시도 runs it again. */
   crashed: '배경을 지우다 멈췄습니다. 다시 시도하거나 더 작은 사진을 골라 주세요.',

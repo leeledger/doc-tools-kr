@@ -213,7 +213,11 @@ for (const [id, m] of Object.entries(meta)) {
   const img = await decode(join(fixDir, `${id}.jpg`));
   const gt = await decodeAlpha(join(fixDir, m.alpha));
   const t0 = performance.now();
-  const key = ink.keyInk(img, { mode: m.mode });
+  // Scored as delivered (C1 r3): the key, then only the main ink cluster, as processInk crops and colours it.
+  const cache = {};
+  const key = ink.keyInk(img, { mode: m.mode }, cache);
+  ink.keepMainInk(key.alpha, img.width, img.height, cache.page ?? null, key.plane === 'lum' && !key.parts ? cache.ratio : null);
+  for (const p of key.parts ?? []) for (let i = 0; i < p.alpha.length; i++) if (key.alpha[i] === 0) p.alpha[i] = 0;
   const ms = performance.now() - t0;
   const v = iou(key.alpha, gt);
   const rgbaOrig = ink.renderInk(img, key, 'original');
@@ -244,7 +248,9 @@ for (const [id, m] of Object.entries(meta)) {
   const de = meanDeltaE(rgbaOrig, gt, m.ink.map((c, k) => gmax * c + (1 - gmax) * paperBase[k]));
   row.deltaE = +de.toFixed(2);
   row.deltaENominal = +meanDeltaE(rgbaOrig, gt, m.ink).toFixed(2);
-  check(`${id} ink colour ΔE76 vs visible solid ink (default colour) <= ${DELTA_E_MAX}`, de <= DELTA_E_MAX, `${de.toFixed(2)} (nominal ink ${row.deltaENominal})`);
+  // gt15-overSign (C1 r3) holds two inks: one ink colour cannot describe it; the ΔE is information there.
+  if (m.deltaEGate === false) console.log(`INFO ${id} ink colour ΔE76 (two inks, not gated): ${de.toFixed(2)}`);
+  else check(`${id} ink colour ΔE76 vs visible solid ink (default colour) <= ${DELTA_E_MAX}`, de <= DELTA_E_MAX, `${de.toFixed(2)} (nominal ink ${row.deltaENominal})`);
   // Diagnostic (not a brief gate): the base fixtures in their dedicated mode too.
   const own = { gt14: 'sign', gt15: 'red' }[m.gt];
   if (m.variant === 'base' && own) {

@@ -9,11 +9,14 @@ import {
   cropAndResize,
   cropRect,
   despeckle,
+  dropFaintSpecks,
+  findPage,
   gaussBlur,
   gaussBoxes,
   keyInk,
   maxFilter,
   minFilter,
+  modeFactor,
   outputSize,
   paperColor,
   hysteresis,
@@ -24,6 +27,8 @@ import {
   processInk,
   rampAlpha,
   rampFor,
+  redRatio,
+  removeLines,
   renderInk,
   resolveColor,
   sizeOptions,
@@ -159,17 +164,35 @@ describe('alpha ramp, modes, AA, despeckle', () => {
     expect(a[4]).toBe(0); // paper floor 1e-3, no NaN
   });
 
-  it('빨간 도장 keeps red ink only; 검정·파란 서명 drops red ink; 자동 filters nothing', () => {
-    const red = Float32Array.from([0.2, 0.14, 0.08, 0.15, 0.225, 0.3]);
+  it('빨간 도장 keeps red ink only; 검정·파란 서명 drops red ink; 자동 filters nothing (redness ratio, C1 r3)', () => {
+    const ratio = Float32Array.from([0.5, 0.35, 0.25, 0.3, 0.45, 0.6]);
     const r = new Float32Array(6).fill(1);
-    applyModeFilter(r, red, 'red');
-    expect(Array.from(r).map((v) => +v.toFixed(6))).toEqual([1, 0.5, 0, 0.583333, 1, 1]);
+    applyModeFilter(r, ratio, 'red');
+    expect(Array.from(r).map((v) => +v.toFixed(6))).toEqual([1, 0.5, 0, 0.25, 1, 1]);
     const s = new Float32Array(6).fill(1);
-    applyModeFilter(s, red, 'sign');
-    expect(Array.from(s).map((v) => +v.toFixed(6))).toEqual([0.666667, 1, 1, 1, 0.5, 0]);
+    applyModeFilter(s, ratio, 'sign');
+    expect(Array.from(s).map((v) => +v.toFixed(6))).toEqual([0.25, 1, 1, 1, 0.5, 0]);
     const a = new Float32Array(6).fill(1);
-    applyModeFilter(a, red, 'auto');
+    applyModeFilter(a, ratio, 'auto');
     expect(Array.from(a)).toEqual([1, 1, 1, 1, 1, 1]);
+    // A stronger 진하기 widens what each mode keeps (INK.ratioStep per step).
+    expect(+modeFactor(0.25, 'red', 0.1).toFixed(6)).toBe(0.5);
+    expect(+modeFactor(0.5, 'sign', 0.1).toFixed(6)).toBe(0.75);
+  });
+
+  it('redness ratio: red ink scores high at any coverage and in shade; black about 0, blue below; yellowed paper 0', () => {
+    const P = [0.93, 0.92, 0.89];
+    const mix = (c: number, ink: number[], l = 1) => P.map((p, k) => l * (c * ink[k] + (1 - c) * p));
+    const ratio = (px: number[], l = 1) => redRatio(px[0] - Math.max(px[1], px[2]), Math.min(...px), l * P[0], l * P[1], l * P[2]);
+    const red = [0.8, 0.12, 0.12];
+    expect(ratio(mix(1, red))).toBeGreaterThan(0.6);
+    expect(ratio(mix(0.3, red))).toBeCloseTo(ratio(mix(1, red)), 1);
+    expect(ratio(mix(1, red, 0.6), 0.6)).toBeCloseTo(ratio(mix(1, red)), 5);
+    expect(Math.abs(ratio(mix(1, [0.1, 0.1, 0.1])))).toBeLessThan(0.05);
+    expect(ratio(mix(1, [0.1, 0.14, 0.42]))).toBeLessThan(0);
+    // A shadow on yellowed paper is not red.
+    const Y = [0.91, 0.87, 0.71];
+    expect(redRatio(0.6 * (Y[0] - Y[1]), 0.6 * Y[2], Y[0], Y[1], Y[2])).toBeLessThan(0);
   });
 
   it('edge AA: hard 0/1 alpha is untouched; a partial pixel spreads with the 3x3 sigma-0.6 kernel', () => {
@@ -488,6 +511,105 @@ describe('keyInk / processInk end to end', () => {
     expect(INK.hi).toBe(0.6);
     expect(INK.minInk).toBe(0.0005);
     expect(INK.maxInk).toBe(0.6);
+  });
+});
+
+describe('C1 r3: page, lines, clusters, both inks', () => {
+  const paper = (): [number, number, number] => [236, 232, 222];
+
+  it('finds the sheet on a dark desk; no desk on a sheet that fills the frame, nor for a shadow on it', () => {
+    // A tilted white card on a dark desk, 400 x 300.
+    const card = image(400, 300, (x, y) => (y > 60 + 0.1 * x && y < 250 + 0.1 * x - 20 && x > 50 && x < 360 ? [240, 238, 232] : [30, 28, 26]));
+    const p = findPage(card);
+    expect(p).not.toBeNull();
+    const at = (x: number, y: number) => p!.desk[Math.min(p!.sh - 1, Math.floor(y / p!.f)) * p!.sw + Math.min(p!.sw - 1, Math.floor(x / p!.f))];
+    expect(at(10, 10)).toBe(1);
+    expect(at(200, 160)).toBe(0);
+    expect(findPage(image(400, 300, paper))).toBeNull();
+    // A hard -40 % shadow over the right half is not a desk.
+    expect(findPage(image(400, 300, (x) => (x < 200 ? [236, 232, 222] : [142, 139, 133])))).toBeNull();
+  });
+
+  it('a 서명 on a desk: the desk is not ink, the crop is the 서명', () => {
+    const img = image(400, 300, (x, y) => {
+      if (!(x > 60 && x < 380 && y > 40 && y < 280)) return [40, 36, 30];
+      return y >= 150 && y < 154 && x > 120 && x < 300 ? [25, 35, 110] : [236, 232, 222];
+    });
+    const r = processInk(img, { mode: 'auto' });
+    expect(r.status).toBe('ok');
+    expect(r.rect).toEqual({ x: 113, y: 142, w: 195, h: 20 }); // stroke 121..299 x 150..153, padding 8
+  });
+
+  it('ruled lines are removed; the stroke crossing them stays whole', () => {
+    const W = 300;
+    const H = 200;
+    const a = new Float32Array(W * H);
+    for (let y = 20; y < H; y += 30) for (let x = 0; x < W; x++) a[y * W + x] = 0.6; // ruled lines, 1 px
+    for (let y = 30; y < 170; y++) for (let x = 148; x < 152; x++) a[y * W + x] = 1; // a vertical stroke
+    removeLines(a, W, H);
+    expect(a[20 * W + 10]).toBe(0);
+    expect(a[110 * W + 250]).toBe(0);
+    for (let y = 30; y < 170; y++) expect(a[y * W + 150]).toBe(1);
+  });
+
+  it('crop: the main cluster, not a far speck; kept inside the photo', () => {
+    const W = 300;
+    const H = 200;
+    const a = new Float32Array(W * H);
+    for (let y = 90; y < 110; y++) for (let x = 100; x < 200; x++) a[y * W + x] = 1;
+    for (let y = 5; y < 9; y++) for (let x = 280; x < 284; x++) a[y * W + x] = 1; // a stain far away
+    expect(cropRect(a, W, H)).toEqual({ x: 92, y: 82, w: 116, h: 36 });
+    const edge = new Float32Array(W * H);
+    for (let y = 0; y < 30; y++) for (let x = 0; x < 30; x++) edge[y * W + x] = 1;
+    expect(cropRect(edge, W, H)).toEqual({ x: 0, y: 0, w: 38, h: 38 });
+  });
+
+  it('a faint speck goes, a solid dot stays', () => {
+    const W = 200;
+    const H = 200;
+    const a = new Float32Array(W * H);
+    // speckMin = 12 px here, so faint specks under 48 px go.
+    for (let y = 10; y < 16; y++) for (let x = 10; x < 16; x++) a[y * W + x] = 0.6; // faint, 36 px
+    for (let y = 50; y < 56; y++) for (let x = 50; x < 56; x++) a[y * W + x] = 1; // solid, 36 px
+    for (let y = 90; y < 93; y++) for (let x = 90; x < 93; x++) a[y * W + x] = 1; // solid but 9 px: a speck
+    dropFaintSpecks(a, W, H);
+    expect(a[12 * W + 12]).toBe(0);
+    expect(a[52 * W + 52]).toBe(1);
+    expect(a[91 * W + 91]).toBe(0);
+  });
+
+  it('a tiny 도장 on a large page counts from 200 strong pixels', () => {
+    const a = new Float32Array(1_000_000);
+    a.fill(0.9, 0, 199);
+    expect(areaCheck(a).status).toBe('noink');
+    a.fill(0.9, 0, 200);
+    expect(areaCheck(a).status).toBe('ok');
+  });
+
+  it('자동 keeps a 도장 over a 서명 whole: both inks, each in its own colour, 도장·서명.png', () => {
+    const W = 200;
+    const H = 150;
+    const img = image(W, H, (x, y) => {
+      const d = Math.hypot(x - 120, y - 75);
+      if (d > 30 && d < 36) return [200, 30, 30];
+      if (y >= 72 && y < 77 && x > 30 && x < 170) return [20, 20, 25];
+      return [236, 232, 222];
+    });
+    const r = processInk(img, { mode: 'auto' });
+    expect(r.guess).toBe('both');
+    expect(r.fileName).toBe('도장·서명.png');
+    const px = (x: number, y: number) => {
+      const j = ((y - r.rect!.y) * r.out!.width + (x - r.rect!.x)) * 4;
+      return Array.from(r.out!.data.subarray(j, j + 4));
+    };
+    expect(px(60, 74)[3]).toBe(255); // the 서명 outside the ring
+    expect(px(60, 74)[0]).toBeLessThan(60);
+    expect(px(120, 42)[3]).toBe(255); // the ring
+    expect(px(120, 42)[0]).toBeGreaterThan(150);
+    expect(px(87, 74)[3]).toBe(255); // where the 서명 crosses the ring: no hole
+    // The modes still give one ink each.
+    expect(processInk(img, { mode: 'red' }).fileName).toBe('도장.png');
+    expect(processInk(img, { mode: 'sign' }).fileName).toBe('서명.png');
   });
 });
 

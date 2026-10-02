@@ -19,7 +19,7 @@ describe('stamp-signature copy', () => {
     expect(areaMessage('allpaper')).toBe(COPY.allpaper);
     expect(areaMessage('ok')).toBeNull();
     expect(COPY.noink.startsWith('도장이나 서명을 찾지 못했습니다.')).toBe(true);
-    expect(COPY.allpaper).toContain('종이만 나오게');
+    expect(COPY.allpaper).toContain('종이가 화면을 채우도록');
   });
 
   it('labels: 진하기 steps, sizes in 픽셀 (never px), pixel sizes with a thousands separator', () => {

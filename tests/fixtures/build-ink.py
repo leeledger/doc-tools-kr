@@ -15,6 +15,12 @@
 #   gt14-kraft  a dark signature on brown kraft board with fibres and flecks (C1 review, Richard's c07 / Arch's
 #               "d17-like" case): 자동 must classify it black/blue and leave no texture (residue <= 0.2 %).
 #               IoU is reported, not gated: on board this textured the strokes pick up texture at their edges.
+# C1 r3 (the owner's real-photo failures, report "문서딱 도장·서명 실사진 테스트"):
+#   gt14-desk      the sheet on a dark, mottled desk, tilted, the desk on three sides (s08, m11, m12)
+#   gt14-ruled     ruled paper: blue lines every 40 px and a red margin line, slightly tilted (m06)
+#   gt15-yellowRed gt15 on yellowed paper with brown stains, scored in 빨간 도장 mode (m03, m12)
+#   gt15-overSign  gt15 stamped over the gt14 signature; GT = both inks (gt15-overSign.alpha.png); 자동 must keep
+#                  both (guess "both"); the ink-colour ΔE is not gated (two inks)
 # meta.json records the GT ink colour (for the composite error) and the scoring mode of each fixture.
 # Run: python tests/fixtures/build-ink.py
 import json
@@ -132,7 +138,40 @@ def compose(A, ink, P):
 
 def save(name, I, q, meta, info):
     Image.fromarray((I * 255 + 0.5).clip(0, 255).astype(np.uint8)).save(OUT / f"{name}.jpg", quality=q)
-    meta[name] = {**info, "alpha": f"{info['gt']}.alpha.png"}
+    meta[name] = {**info, "alpha": info.get("alpha", f"{info['gt']}.alpha.png")}
+
+
+def desk_around(I, rng):
+    """The sheet (I) on a dark mottled desk: a tilted quadrilateral keeps the sheet, the rest is desk."""
+    g = (rng.normal(0, 1, (H // 16, W // 16)) * 40 + 128).clip(0, 255).astype(np.uint8)
+    mottle = np.array(Image.fromarray(g).resize((W, H), Image.BICUBIC)) / 255 - 0.5
+    desk = np.array([0.30, 0.24, 0.18])[None, None, :] * (1 + 0.5 * mottle[..., None]) + rng.normal(0, 0.01, (H, W, 1))
+    m = Image.new("L", (W * S, H * S), 0)
+    ImageDraw.Draw(m).polygon([(150 * S, 70 * S), (1230 * S, 20 * S), (1280 * S, 960 * S), (110 * S, 900 * S)], fill=255)
+    m = np.array(m.resize((W, H), Image.LANCZOS)).astype(np.float32)[..., None] / 255
+    return (m * I + (1 - m) * desk).clip(0, 1)
+
+
+def ruled(d, s):
+    """Ruled notebook lines (1.5 px) every 40 px, tilted 2 degrees, and a margin line."""
+    t = math.tan(math.radians(2))
+    for y in range(30, H + 60, 40):
+        d.line([(0, y * s), (W * s, (y + W * t) * s)], fill=255, width=int(1.5 * s))
+
+
+def margin(d, s):
+    d.line([(160 * s, 0), (175 * s, H * s)], fill=255, width=int(1.5 * s))
+
+
+def stains(rng, P):
+    """Yellowed paper with brown stains and foxing dots (multiplicative, like real foxing)."""
+    m = np.zeros((H, W), np.float32)
+    for _ in range(60):
+        cx, cy, r = rng.integers(0, W), rng.integers(0, H), rng.integers(3, 18)
+        yy, xx = np.ogrid[0:H, 0:W]
+        m = np.maximum(m, np.exp(-((xx - cx) ** 2 + (yy - cy) ** 2) / (2.0 * r * r)) * rng.uniform(0.15, 0.4))
+    brown = np.array([0.55, 0.40, 0.25])
+    return (P * (1 - m[..., None]) + P * brown[None, None, :] * m[..., None]).clip(0, 1)
 
 
 def main():
@@ -167,6 +206,12 @@ def main():
         save(f"{gid}-yellow", compose(A, ink, pap(yel)), 92, meta, {**base, "variant": "yellow", "jpegQ": 92, "paper": "#E9DDB5"})
         save(f"{gid}-jpeg", compose(A, ink, P), 70, meta, {**base, "variant": "jpeg", "jpegQ": 70})
         if gid == "gt14":
+            # C1 r3: the sheet on a desk; ruled paper (blue lines, red margin).
+            save("gt14-desk", desk_around(compose(A, ink, P), np.random.default_rng(SEED * 1000 + 70)), 85, meta, {**base, "variant": "desk", "jpegQ": 85})
+            lines = ss_mask(ruled)
+            marg = ss_mask(margin)
+            rp = compose(marg, (0.85, 0.35, 0.40), compose(lines * 0.7, (0.35, 0.55, 0.85), P))
+            save("gt14-ruled", compose(A, ink, rp), 85, meta, {**base, "variant": "ruled", "jpegQ": 85})
             kr = tuple(c / 255 for c in (0x9C, 0x74, 0x4E))
             dark = (0.09, 0.08, 0.08)
             info = {**base, "ink": list(dark), "variant": "kraft", "jpegQ": 92, "paper": "#9C744E", "guess": "black", "iouGate": False, "desc": "dark signature on brown kraft board"}
@@ -174,6 +219,14 @@ def main():
         if gid == "gt15":
             printed = compose(text, (0.08, 0.08, 0.08), P)
             save("gt15-stampOnText", compose(A, ink, printed), 92, meta, {**base, "variant": "stampOnText", "mode": "red", "jpegQ": 92})
+            # C1 r3: yellowed, stained paper in 빨간 도장 mode; a 도장 over the gt14 signature in 자동.
+            yp = stains(np.random.default_rng(SEED * 1000 + 60), pap(yel))
+            save("gt15-yellowRed", compose(A, ink, yp), 85, meta, {**base, "variant": "yellowRed", "mode": "red", "jpegQ": 85, "paper": "#E9DDB5"})
+            sig_ink = (0.10, 0.14, 0.42)
+            both = compose(A, ink, compose(a14, sig_ink, P))
+            ab = np.maximum(A, a14)
+            Image.fromarray((ab * 255 + 0.5).clip(0, 255).astype(np.uint8)).save(OUT / "gt15-overSign.alpha.png", optimize=True)
+            save("gt15-overSign", both, 85, meta, {**base, "variant": "overSign", "jpegQ": 85, "guess": "both", "deltaEGate": False, "alpha": "gt15-overSign.alpha.png"})
     (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf8")
     print(f"{len(meta)} fixtures -> {OUT}")
 
