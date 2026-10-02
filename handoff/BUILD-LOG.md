@@ -1355,3 +1355,6 @@ Scope: ARCHITECT-BRIEF-G2.md "A3 — file-limit cluster, remaining drafts" (rows
 - Post-deploy (owner/PC): Naver 수집 요청 + Kakao cache refresh for the 3 new URLs.
 
 Status: **DONE_WITH_CONCERNS** (shortfall 1; local /photo-compress/ LCP as in A2, CI decides).
+
+### A3 CI
+- Run 36942169967 on fd726b1 (workflow_dispatch, g2-a3): all green (checks incl. Lighthouse, chromium, firefox, webkit, mobile-chrome, mobile-safari).
