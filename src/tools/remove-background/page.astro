@@ -13,13 +13,12 @@ import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import { downloadBytes } from '../../lib/bgremove/assets';
-import { COPY, FIT_LINE, STAMP_LINK_TEXT } from './copy';
+import { COPY, FIT_LINE, NOT_FOR_ID, NOT_FOR_ID_SOURCE, STAMP_LINK_TEXT } from './copy';
 // Page-only styles, inlined (the /stamp-signature/ pattern): no other page carries them.
 import bgCss from './bg.css?inline';
 
 const tool = getTool('remove-background');
 const stamp = getTool('stamp-signature');
-const idPhoto = getTool('id-photo');
 const jsonLd = toolJsonLd(tool, Astro.site);
 const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
 const firstTime = COPY.firstTime(Math.max(downloadBytes('webgpu'), downloadBytes('wasm')));
@@ -114,7 +113,6 @@ const limits = [
             <button type="button" class="btn ghost" id="bg-new">다른 사진 고르기</button>
           </div>
           <p class="save-name" id="bg-save-name"></p>
-          <p>증명사진으로 쓰려면 <a href={`/${idPhoto.slug}/`}>{idPhoto.name}</a>에서 저장한 사진을 열어 주세요.</p>
           <Share name={tool.name} text={sharePreview('/remove-background/', Astro.site!).description} id="bg-share" />
         </div>
 
@@ -125,6 +123,7 @@ const limits = [
           <p class="bg-limits-title" id="bg-limits-title">이럴 때는 잘 안 될 수 있어요</p>
           <ul>
             {limits.map((t) => <li>{t}</li>)}
+            <li>{NOT_FOR_ID} <a href={NOT_FOR_ID_SOURCE} rel="noopener noreferrer" target="_blank">외교부 안내</a></li>
           </ul>
         </div>
       </div>
@@ -170,7 +169,7 @@ const limits = [
       ))}
     </div>
   </section>
-  <RelatedTools current={tool.slug} only={['id-photo', 'stamp-signature', 'photo-compress']} />
+  <RelatedTools current={tool.slug} only={['stamp-signature', 'photo-compress', 'pdf-merge']} />
   <div class="wrap narrow"><AdSlot id="remove-background-footer" size="leaderboard" /></div>
 </Base>
 

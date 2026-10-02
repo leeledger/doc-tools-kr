@@ -1,9 +1,10 @@
-"""C2.0 export: BiRefNet_lite (pinned HF revision) -> ONNX 512 fp32 -> wide-op fix -> fp16 -> byte parts + manifest.
+"""C2 export: BiRefNet_lite (pinned HF revision) -> ONNX 512 fp32 -> wide-op fix -> onnxsim -> fp16 -> byte parts + manifest.
 
 Usage (from this folder, inside the venv named in requirements.lock):
   python export.py --deform exporter        # path (a): deform_conv2d_onnx_exporter (fails on torch 2.0.1/2.1.2/2.4.1)
   python export.py --deform gridsample      # path (b): pure-torch grid_sample deform conv (shipped, C2.0)
   python export.py --resplit <out dir>      # only re-cut <out dir>/model_fp16.onnx into parts + manifest
+  python export.py --resimplify <out dir>   # simplify step on an earlier export's model_fp32.onnx -> <out dir>-sim
 Outputs go to out/<tag>/ (git-ignored): model_fp32.onnx, model_fp16.onnx, parts/model.part0..N, manifest.json.
 The shipped parts + manifest are copied by hand to vendor-assets/birefnet-lite-512/<exportId>/ (README.md).
 """
@@ -113,13 +114,63 @@ def write_parts(data, od, meta):
     return manifest
 
 
+def simplify(m):
+    """C2 round 2 (Arch): fold the shape arithmetic offline. The input is fixed at 1x3x512x512, so the ~2,400 int64
+    shape nodes the web engine ran on the CPU at every session start become constants. onnxsim (Apache-2.0, pinned in
+    requirements.lock) with 3 random-input checks against the unsimplified graph; then the wide-op fix again."""
+    import onnxsim
+    from collections import Counter
+    from fix_wide_ops import fix_wide_ops
+    before = len(m.graph.node)
+    ops_before = Counter(n.op_type for n in m.graph.node)
+    t0 = time.time()
+    ms, ok = onnxsim.simplify(m, check_n=3)
+    if not ok:
+        raise SystemExit('onnxsim: simplified model does not match the original')
+    ns, nc = fix_wide_ops(ms, 6)
+    onnx.checker.check_model(ms)
+    ops_after = Counter(n.op_type for n in ms.graph.node)
+    shape_ops = ('Shape', 'Gather', 'Range', 'Expand', 'ConstantOfShape', 'Unsqueeze', 'Concat', 'Cast', 'Equal', 'Where', 'Slice')
+    stats = dict(tool='onnxsim', version=onnxsim.__version__, checkN=3, seconds=round(time.time() - t0, 1), nodesBefore=before,
+                 nodesAfter=len(ms.graph.node), shapeOpsBefore={k: ops_before[k] for k in shape_ops if ops_before[k]},
+                 shapeOpsAfter={k: ops_after[k] for k in shape_ops if ops_after[k]}, wideOpFix=dict(splits=ns, concats=nc))
+    print('simplify', json.dumps(stats), flush=True)
+    return ms, stats
+
+
+def finish(m, od, info, meta):
+    """simplify -> model_fp32.onnx -> fp16 (keep_io_types) -> model_fp16.onnx -> parts + manifest + export_info."""
+    onnx.save(m, os.path.join(od, 'model_fp32_presimplify.onnx'))
+    m, info['simplify'] = simplify(m)
+    onnx.save(m, os.path.join(od, 'model_fp32.onnx'))
+    from onnxconverter_common import float16
+    m16 = float16.convert_float_to_float16(m, keep_io_types=True)
+    f16 = os.path.join(od, 'model_fp16.onnx'); onnx.save(m16, f16)
+    data = open(f16, 'rb').read()
+    print('fp16', len(data) / 2**20, 'MiB', flush=True)
+    manifest = write_parts(data, od, dict(meta, simplify=f"onnxsim {info['simplify']['version']}"))
+    json.dump(dict(info, exportId=manifest['exportId'], outDir=od), open(os.path.join(od, 'export_info.json'), 'w'), indent=1)
+    print(json.dumps(manifest, indent=1))
+    return manifest
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--deform', choices=['exporter', 'gridsample'], default='exporter')
     ap.add_argument('--opset', type=int, default=17)
     ap.add_argument('--maxn', type=int, default=6)
     ap.add_argument('--resplit', metavar='OUT_DIR')
+    ap.add_argument('--resimplify', metavar='OUT_DIR')
     a = ap.parse_args()
+    if a.resimplify:
+        src = a.resimplify.rstrip('/').rstrip(os.sep)
+        info = json.load(open(os.path.join(src, 'export_info.json')))
+        info.pop('exportId', None); info.pop('outDir', None)
+        info['resimplifiedFrom'] = os.path.basename(src)
+        od = src + '-sim'; os.makedirs(od, exist_ok=True)
+        m = onnx.load(os.path.join(src, 'model_fp32.onnx'))
+        finish(m, od, info, dict(torch=info['torch'], opset=info['opset'], deformPath=info['deformPath']))
+        return
     if a.resplit:
         info = json.load(open(os.path.join(a.resplit, 'export_info.json')))
         data = open(os.path.join(a.resplit, 'model_fp16.onnx'), 'rb').read()
@@ -160,18 +211,7 @@ def main():
     ns, nc = fix_wide_ops(m, a.maxn); info['wideOpFix'] = dict(maxn=a.maxn, splits=ns, concats=nc)
     print('wide ops rewritten: splits', ns, 'concats', nc, flush=True)
     onnx.checker.check_model(m)
-    f32 = os.path.join(od, 'model_fp32.onnx'); onnx.save(m, f32)
-
-    from onnxconverter_common import float16
-    m16 = float16.convert_float_to_float16(m, keep_io_types=True)
-    f16 = os.path.join(od, 'model_fp16.onnx'); onnx.save(m16, f16)
-    data = open(f16, 'rb').read()
-    print('fp16', len(data) / 2**20, 'MiB', flush=True)
-
-    manifest = write_parts(data, od, dict(torch=torch.__version__, opset=a.opset, deformPath=a.deform))
-    export_id = manifest['exportId']
-    json.dump(dict(info, exportId=export_id, outDir=od), open(os.path.join(od, 'export_info.json'), 'w'), indent=1)
-    print(json.dumps(manifest, indent=1))
+    finish(m, od, info, dict(torch=torch.__version__, opset=a.opset, deformPath=a.deform))
 
 
 if __name__ == '__main__':

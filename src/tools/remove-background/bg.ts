@@ -1,8 +1,9 @@
 // 사진 배경 지우기 controller (Sprint C, C2; brief Flow). Loaded by entry.ts on the first interaction, never with the
 // page. Named bg*, not controller*: gen-sw precaches controller chunks, and C2 adds nothing to the precache (Arch).
 //
-// pick -> checks + work copy (4,096 / 2,048 px) -> engine cached? -> (consent ->) download (progress, 취소)
-//   -> inference worker (one per photo; terminated after its reply) -> area check -> 8-bit mask at work size
+// pick -> checks + work copy (4,096 / 2,048 px) -> engine running? / cached? -> (consent ->) download (progress, 취소)
+//   -> engine worker (one session kept between photos; disposed after 2 min idle, 60 s hidden, pagehide, a crash,
+//      or after every photo on low-memory devices: Arch round 2) -> area check -> 8-bit mask at work size
 //   -> blur-fusion worker -> preview (투명 / 흰색 / 파란색, 원본과 비교) -> PNG / JPG
 // The photo never leaves the page: its pixels go only to our own workers. The only requests are GETs of our own
 // /vendor/ engine and model files, made after the user agreed (or from this tool's Cache Storage).
@@ -23,11 +24,11 @@ import {
   type Progress,
 } from '../../lib/bgremove/assets';
 import { clearAttempt, markAttempt, workEdge } from '../../lib/bgremove/guard';
-import type { RunRequest } from '../../lib/bgremove/infer-core';
-import { fusionRadii, hasSubject, inputFromImage, resizeMask, SIZE, validMask } from '../../lib/bgremove/infer';
+import { OPT_LEVEL, type InitRequest } from '../../lib/bgremove/infer-core';
+import { fusionRadii, hasSubject, pilResizeRgba, resizeMask, SIZE, toInput, validMask } from '../../lib/bgremove/infer';
 import { plainCutout } from '../../lib/bgremove/fusion';
 import type { FusionRequest, FusionResponse } from '../../lib/bgremove/fusion.worker';
-import { EngineError, pickBackend, runEngine, shouldFallBack, type WorkerLike } from '../../lib/bgremove/session';
+import { EngineError, HIDDEN_MS, IDLE_MS, keepEngine, pickBackend, shouldFallBack, startEngine, type EngineHandle, type WorkerLike } from '../../lib/bgremove/session';
 import { sessionStore } from '../../lib/face/guard';
 import { decodeImage } from '../../lib/image/decode';
 import { ERRORS, PhotoError, unsupportedMessage } from '../../lib/image/messages';
@@ -123,15 +124,39 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   let run = 0;
   let bitmap: ImageBitmap | null = null;
   let backend: Backend = 'wasm';
+  /** Set by a WebGPU failure: the rest of this page visit uses WASM. */
+  let gpuFailed = false;
   let abort: AbortController | null = null;
   let cancelEngine: (() => void) | null = null;
+  /** The live engine (session in its worker), kept between photos unless `keep` is false. */
+  let engine: EngineHandle | null = null;
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let hiddenTimer: ReturnType<typeof setTimeout> | undefined;
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const keep = keepEngine({ deviceMemory: nav.deviceMemory, userAgent: nav.userAgent, platform: nav.platform, maxTouchPoints: nav.maxTouchPoints });
   /** Model bytes kept in the page only when they cannot be cached (needed for the next photo or the fallback). */
   let keptModel: Uint8Array | null = null;
   /** The finished cut-out (straight RGBA at work size). */
   let cut: ImageData | null = null;
   let comparing = false;
+  /** The work copy's pixels between the model input and the fusion worker (transferred there). */
+  let photoPx: ImageData | null = null;
 
   const say = (m: string): void => live('status', m, root);
+
+  /** Terminates the engine worker (frees the session and all engine memory). */
+  function disposeEngine(): void {
+    clearTimeout(idleTimer);
+    engine?.dispose();
+    engine = null;
+  }
+
+  /** After a photo: keep the engine for the next one (idle limit), or drop it on low-memory devices. */
+  function parkEngine(): void {
+    clearTimeout(idleTimer);
+    if (!keep) return disposeEngine();
+    idleTimer = setTimeout(disposeEngine, IDLE_MS);
+  }
 
   function setPhase(p: Phase): void {
     phase = move(phase, p);
@@ -184,6 +209,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     bitmap?.close();
     bitmap = null;
     cut = null;
+    photoPx = null;
     comparing = false;
     compareBtn.setAttribute('aria-pressed', 'false');
     freeCanvas(view$);
@@ -219,8 +245,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
    * The cut-out at work size: blur-fusion in its worker, which gets the pixels and the alpha transferred (no copy
    * stays here). When it fails (accepted degrade) both are made again and the photo's own colours are used.
    */
-  async function cutOut(bm: ImageBitmap, mask: Float32Array): Promise<ImageData | null> {
-    const px = workPixels(bm);
+  async function cutOut(bm: ImageBitmap, mask: Float32Array, read: ImageData | null): Promise<ImageData | null> {
+    const px = read ?? workPixels(bm);
     if (!px) return null;
     const { width, height } = px;
     const alpha = resizeMask(mask, SIZE, SIZE, width, height);
@@ -247,10 +273,12 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     return new ImageData(plainCutout(again.data, resizeMask(mask, SIZE, SIZE, width, height)) as Uint8ClampedArray<ArrayBuffer>, width, height);
   }
 
-  /** Reads the engine and model (cache or network) for `be` and runs one photo; falls back to WASM once. */
-  async function process(my: number, be: Backend, input: Float32Array): Promise<void> {
+  /** A running engine for `be`: the live one, or loaded (cache or network) and started; null when handled (error, 취소). */
+  async function engineFor(my: number, be: Backend): Promise<EngineHandle | null> {
+    if (engine && !engine.disposed && engine.backend === be) return engine;
+    disposeEngine();
     const store = await canStore(deps);
-    if (my !== run) return;
+    if (my !== run) return null;
     note.hidden = store;
     if (!store) note.textContent = COPY.noStore;
     await deleteOldCaches(deps);
@@ -262,57 +290,80 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
       const manifest = await loadManifest(deps, signal, store);
       const rt = runtimeParts(be);
       const rtBytes = rt.reduce((a, p) => a + p.bytes, 0);
-      const mParts = modelParts(manifest);
       const total = rtBytes + (keptModel ? 0 : manifest.bytes);
       setPhase('downloading');
       onBytes({ loaded: 0, total }, 0, total);
       say(COPY.downloading(0, total));
       wasm = await loadParts(rt, { deps, signal, store, onProgress: (p) => onBytes(p, 0, total) });
-      model = keptModel ?? (await loadParts(mParts, { deps, signal, store, onProgress: (p) => onBytes(p, rtBytes, total) }));
+      model = keptModel ?? (await loadParts(modelParts(manifest), { deps, signal, store, onProgress: (p) => onBytes(p, rtBytes, total) }));
       if (!store) keptModel = model;
     } catch (err) {
-      if (signal.aborted || my !== run) return;
-      return fail(my, err instanceof AssetError && err.code === 'corrupt' ? COPY.corrupt : COPY.network, true);
+      if (signal.aborted || my !== run) return null;
+      fail(my, err instanceof AssetError && err.code === 'corrupt' ? COPY.corrupt : COPY.network, true);
+      return null;
     }
-    if (my !== run) return;
+    if (my !== run) return null;
     abort = null;
     setPhase('loading-engine');
     busy(COPY.preparing);
-    markAttempt(storage);
     // The worker gets the bytes; a kept model is copied so the page still has it afterwards.
-    const req: RunRequest = {
-      type: 'run',
+    const req: InitRequest = {
+      type: 'init',
       backend: be,
       ortUrl: ortScript(be),
       ortBase: new URL(ortBase(be), location.href).href,
       wasm: wasm.buffer as ArrayBuffer,
       model: (keptModel ? keptModel.slice() : model).buffer as ArrayBuffer,
-      input: input.slice().buffer,
       maxThreads: LIMITS[detectDevice()].maxThreads,
+      optLevel: OPT_LEVEL,
     };
-    const engine = runEngine(req, createInferWorker, () => {
-      if (my !== run) return;
-      setPhase('working');
-      busy(COPY.working);
+    const started = startEngine(req, createInferWorker, () => {
+      // The worker died between photos (a crash): forget it; the next photo starts a new one.
+      engine = null;
     });
-    cancelEngine = engine.cancel;
-    let mask: Float32Array;
+    cancelEngine = started.cancel;
     try {
-      const r = await engine.result;
-      mask = r.mask;
-      backend = r.backend;
+      const e = await started.ready;
+      cancelEngine = null;
+      if (my !== run) {
+        e.dispose();
+        return null;
+      }
+      engine = e;
+      return e;
     } catch (err) {
       cancelEngine = null;
+      if (my !== run) return null;
+      throw err;
+    }
+  }
+
+  /** One photo: the engine (started if needed), the run, the cut-out. Falls back to WASM once. */
+  async function process(my: number, be: Backend, input: Float32Array): Promise<void> {
+    markAttempt(storage);
+    let mask: Float32Array;
+    try {
+      const e = await engineFor(my, be);
+      if (!e) return;
+      setPhase('working');
+      busy(COPY.working);
+      // The input is transferred; a copy stays here for the fallback.
+      const r = await e.run(input.slice());
       if (my !== run) return;
+      mask = r.mask;
+      backend = e.backend;
+    } catch (err) {
+      if (my !== run) return;
+      disposeEngine();
       if (shouldFallBack(err)) {
         // WebGPU did not work here: once more on the plain WASM engine.
+        gpuFailed = true;
         busy(COPY.fallback);
         return process(my, 'wasm', input);
       }
       return fail(my, err instanceof EngineError && err.stage === 'crash' ? COPY.crashed : COPY.engine, err instanceof EngineError && err.stage === 'crash');
     }
-    cancelEngine = null;
-    if (my !== run) return;
+    parkEngine();
     await finish(my, mask);
   }
 
@@ -327,7 +378,9 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     }
     setPhase('working');
     busy(COPY.finishing);
-    const out = await cutOut(bitmap, mask);
+    const read = photoPx;
+    photoPx = null;
+    const out = await cutOut(bitmap, mask, read);
     if (my !== run) return;
     if (!out) return fail(my, COPY.crashed, true);
     clearAttempt(storage);
@@ -438,9 +491,10 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
       return fail(my, d2);
     }
     bitmap = d.src;
-    backend = await pickBackend();
+    // A live engine is used as it is; after a WebGPU failure this page stays on WASM.
+    backend = engine && !engine.disposed ? engine.backend : gpuFailed ? 'wasm' : await pickBackend();
     if (my !== run) return;
-    if (keptModel || (await isCached(deps, backend))) return void start(my);
+    if ((engine && !engine.disposed) || keptModel || (await isCached(deps, backend))) return void start(my);
     if (my !== run) return;
     consentText.textContent = COPY.consent(downloadBytes(backend));
     const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
@@ -452,7 +506,10 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
 
   function start(my: number): void {
     if (!bitmap || my !== run) return;
-    const input = inputFromImage(bitmap);
+    // The work copy's pixels are read once: the model input is made from them now, and the same buffer goes to the
+    // fusion worker afterwards (C2 round 2: one 4 × w × h buffer instead of two).
+    photoPx = workPixels(bitmap);
+    const input = photoPx ? toInput(pilResizeRgba(photoPx.data, photoPx.width, photoPx.height, SIZE, SIZE)) : null;
     if (!input) return fail(my, COPY.crashed, true);
     void process(my, backend, input);
   }
@@ -512,8 +569,13 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
       input.focus();
     });
   }
+  document.addEventListener('visibilitychange', () => {
+    clearTimeout(hiddenTimer);
+    if (document.visibilityState === 'hidden') hiddenTimer = setTimeout(disposeEngine, HIDDEN_MS);
+  });
   window.addEventListener('pagehide', () => {
     release();
+    disposeEngine();
     if (lastUrl) URL.revokeObjectURL(lastUrl);
     lastUrl = null;
   });

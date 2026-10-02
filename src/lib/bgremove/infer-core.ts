@@ -1,8 +1,9 @@
-// The inference worker's core (Sprint C, C2; brief Flow "runtime" and Arch ruling 6). One photo per worker: the
-// worker imports onnxruntime-web from /vendor/ (never bundled), creates the session from the model bytes, runs once,
-// copies the mask out, disposes the tensors and releases the session; the page then terminates the worker, which
-// frees the whole engine (WebAssembly memory never shrinks while its module lives, so a terminated worker is the
-// only real release).
+// The inference worker's core (Sprint C, C2; brief Flow "runtime"; Arch round 2 ruling 2). The worker imports
+// onnxruntime-web from /vendor/ (never bundled) and creates ONE session from the model bytes ('init'); each photo is a
+// 'run' on that session, whose input and output tensors are disposed right after the mask is copied out. The page
+// keeps the worker while the user is on it and terminates it on idle, hidden, crash, or after every photo on
+// low-memory devices (session.ts): WebAssembly memory never shrinks while its module lives, so a terminated worker is
+// the only real release of the engine.
 // - 'webgpu': the native WebGPU build (ort.webgpu.min.mjs) with the asyncify wasm handed over as env.wasm.wasmBinary.
 // - 'wasm': the plain WASM build, threads when this worker is crossOriginIsolated.
 // JSEP builds are never used (spike: 0.64 mask error). Pure apart from the injected `ort` and adapter, for the tests.
@@ -31,26 +32,51 @@ export interface OrtLike {
   Tensor: new (type: 'float32', data: Float32Array, dims: readonly number[]) => TensorLike;
 }
 
-export interface RunRequest {
-  type: 'run';
+/**
+ * Session graph optimisation. The model is pre-optimised offline (onnxsim, export.py), so ORT's own level matters
+ * little; OPT_LEVEL is the faster-creating one measured at C2 round 2 (BUILD-LOG).
+ */
+export type OptLevel = 'all' | 'basic' | 'disabled';
+export const OPT_LEVEL: OptLevel = 'basic';
+
+/**
+ * WebGPU EP storage-buffer cache (onnxruntime-web 1.30 option). 'lazyRelease' hands the run's intermediate buffers
+ * back after each run instead of pooling them (bucket, the default): measured at C2 round 2 to keep the live session's
+ * GPU memory flat between photos (BUILD-LOG).
+ */
+export type GpuCacheMode = 'disabled' | 'lazyRelease' | 'simple' | 'bucket';
+export const GPU_BUFFER_CACHE: GpuCacheMode = 'bucket';
+
+export interface InitRequest {
+  type: 'init';
   backend: Backend;
   /** The engine script (ort.webgpu.min.mjs or ort.wasm.min.mjs) and its directory. */
   ortUrl: string;
   ortBase: string;
   wasm: ArrayBuffer;
   model: ArrayBuffer;
-  /** 3×512×512 float32 (toInput). */
-  input: ArrayBuffer;
   /** Upper bound for WASM threads (used only when crossOriginIsolated). */
   maxThreads: number;
+  /** Measurement overrides (regress harness); the page always sends OPT_LEVEL and GPU_BUFFER_CACHE. */
+  optLevel?: OptLevel;
+  gpuCache?: GpuCacheMode;
 }
+
+export interface RunRequest {
+  type: 'run';
+  id: number;
+  /** 3×512×512 float32 (toInput). */
+  input: ArrayBuffer;
+}
+
+export type WorkerRequest = InitRequest | RunRequest;
 
 export type Stage = 'runtime' | 'session' | 'run';
 
-export type RunResponse =
-  | { type: 'created'; createMs: number }
-  | { type: 'result'; mask: ArrayBuffer; backend: Backend; createMs: number; runMs: number }
-  | { type: 'error'; stage: Stage; message: string };
+export type WorkerResponse =
+  | { type: 'ready'; backend: Backend; createMs: number }
+  | { type: 'result'; id: number; mask: ArrayBuffer; runMs: number }
+  | { type: 'error'; stage: Stage; id?: number; message: string };
 
 export class StageError extends Error {
   constructor(
@@ -69,8 +95,6 @@ export interface CoreEnv {
   crossOriginIsolated: boolean;
   hardwareConcurrency: number;
   now: () => number;
-  /** Called once the session exists (the page then says "배경을 지우는 중"). */
-  onCreated?: (createMs: number) => void;
 }
 
 const msg = (err: unknown): string => String((err as Error)?.message ?? err);
@@ -81,8 +105,14 @@ export function threadCount(coi: boolean, cores: number, max: number): number {
   return Math.max(1, Math.min(cores || 1, max));
 }
 
-/** Runs the model once on `req.input`; the mask is a fresh 512×512 float32 buffer (transferable). */
-export async function runOnce(req: RunRequest, env: CoreEnv): Promise<Extract<RunResponse, { type: 'result' }>> {
+export interface Engine {
+  ort: OrtLike;
+  session: SessionLike;
+  backend: Backend;
+}
+
+/** Imports the engine and creates the session ('init'). The model buffer is dropped by the caller afterwards. */
+export async function createEngine(req: InitRequest, env: CoreEnv): Promise<{ engine: Engine; createMs: number }> {
   let ort: OrtLike;
   try {
     ort = await env.importOrt(req.ortUrl);
@@ -93,7 +123,7 @@ export async function runOnce(req: RunRequest, env: CoreEnv): Promise<Extract<Ru
   ort.env.wasm.wasmBinary = req.wasm;
   ort.env.wasm.numThreads = threadCount(env.crossOriginIsolated, env.hardwareConcurrency, req.maxThreads);
   ort.env.wasm.proxy = false;
-  // Only errors: the graph optimiser warns about every int64 shape node it leaves to the CPU (thousands of lines).
+  // Only errors: the graph optimiser can warn about every node it leaves to the CPU.
   ort.env.logLevel = 'error';
   if (req.backend === 'webgpu') {
     let adapter: unknown | null = null;
@@ -106,29 +136,63 @@ export async function runOnce(req: RunRequest, env: CoreEnv): Promise<Extract<Ru
     if (ort.env.webgpu) ort.env.webgpu.adapter = adapter;
   }
   const t0 = env.now();
-  let session: SessionLike;
   try {
-    session = await ort.InferenceSession.create(new Uint8Array(req.model), { executionProviders: [req.backend], graphOptimizationLevel: 'all', logSeverityLevel: 3 });
+    const session = await ort.InferenceSession.create(new Uint8Array(req.model), {
+      executionProviders: [req.backend === 'webgpu' ? { name: 'webgpu', storageBufferCacheMode: req.gpuCache ?? GPU_BUFFER_CACHE } : 'wasm'],
+      graphOptimizationLevel: req.optLevel ?? OPT_LEVEL,
+      logSeverityLevel: 3,
+    });
+    return { engine: { ort, session, backend: req.backend }, createMs: env.now() - t0 };
   } catch (err) {
     throw new StageError('session', `session create failed: ${msg(err)}`);
   }
-  const t1 = env.now();
-  env.onCreated?.(t1 - t0);
-  const input = new ort.Tensor('float32', new Float32Array(req.input), [1, 3, SIZE, SIZE]);
+}
+
+/** One photo on a live session; the input and output tensors are disposed before returning. */
+export async function runEngineOnce(engine: Engine, input: ArrayBuffer, now: () => number): Promise<{ mask: ArrayBuffer; runMs: number }> {
+  const { ort, session } = engine;
+  const t0 = now();
+  const x = new ort.Tensor('float32', new Float32Array(input), [1, 3, SIZE, SIZE]);
   let out: Record<string, TensorLike> | null = null;
   try {
-    out = await session.run({ [session.inputNames[0]!]: input });
+    out = await session.run({ [session.inputNames[0]!]: x });
     const y = out[session.outputNames[0]!];
     const data = y ? await y.getData() : null;
     if (!(data instanceof Float32Array) || data.length !== SIZE * SIZE) throw new Error('unexpected output');
     // A copy that owns its buffer (the tensor's may be a view into the engine's memory).
-    const mask = new Float32Array(data);
-    return { type: 'result', mask: mask.buffer, backend: req.backend, createMs: t1 - t0, runMs: env.now() - t1 };
+    return { mask: new Float32Array(data).buffer, runMs: now() - t0 };
   } catch (err) {
-    throw err instanceof StageError ? err : new StageError('run', `run failed: ${msg(err)}`);
+    throw new StageError('run', `run failed: ${msg(err)}`);
   } finally {
-    input.dispose();
+    x.dispose();
     if (out) for (const t of Object.values(out)) t.dispose();
-    await session.release().catch(() => undefined);
   }
+}
+
+/**
+ * The worker's message handler: 'init' once, then any number of 'run'. Replies go to `post` (with the mask buffer
+ * as transferable). A second 'init' replaces nothing: the page starts a new worker instead.
+ */
+export function createHandler(env: CoreEnv, post: (m: WorkerResponse, transfer?: Transferable[]) => void): (m: WorkerRequest) => Promise<void> {
+  let engine: Engine | null = null;
+  return async (m) => {
+    if (m.type === 'init') {
+      if (engine) return post({ type: 'error', stage: 'session', message: 'already initialised' });
+      try {
+        const r = await createEngine(m, env);
+        engine = r.engine;
+        post({ type: 'ready', backend: m.backend, createMs: r.createMs });
+      } catch (err) {
+        post({ type: 'error', stage: err instanceof StageError ? err.stage : 'session', message: msg(err) });
+      }
+      return;
+    }
+    if (!engine) return post({ type: 'error', stage: 'run', id: m.id, message: 'no session' });
+    try {
+      const r = await runEngineOnce(engine, m.input, env.now);
+      post({ type: 'result', id: m.id, mask: r.mask, runMs: r.runMs }, [r.mask]);
+    } catch (err) {
+      post({ type: 'error', stage: 'run', id: m.id, message: msg(err) });
+    }
+  };
 }

@@ -1,11 +1,12 @@
-// 배경 지우기 engine choice and the worker round trip (Sprint C, C2; brief Flow "runtime", failure rows "runtime").
+// 배경 지우기 engine choice and the engine worker (Sprint C, C2; brief Flow "runtime"; Arch round 2 ruling 2).
 // - WebGPU when navigator.gpu gives an adapter; otherwise the plain WASM build.
-// - One worker per photo (infer-core.ts): it is terminated after its reply, so the session, its tensors and the
-//   engine memory are gone before the next step (Arch ruling 6).
+// - One worker holds one session for as long as the page keeps it (startEngine -> run, run, … -> dispose). The page
+//   disposes it after 2 minutes idle, after 60 s hidden, on pagehide and on a crash; low-memory devices
+//   (keepEngine false) dispose it after every photo. Disposing terminates the worker, which frees the whole engine.
 // - A WebGPU failure at session create or run (no adapter in the worker, adapter lost, kernel error) falls back to
-//   WASM once; the caller downloads the WASM runtime if needed and calls runEngine again. A WASM failure is final.
+//   WASM once; the caller downloads the WASM runtime if needed and starts again. A WASM failure is final.
 import type { Backend } from './assets';
-import type { RunRequest, RunResponse, Stage } from './infer-core';
+import type { InitRequest, Stage, WorkerRequest, WorkerResponse } from './infer-core';
 
 export interface GpuNavigator {
   gpu?: { requestAdapter(o?: { powerPreference?: string }): Promise<unknown | null> };
@@ -19,6 +20,34 @@ export async function pickBackend(nav: GpuNavigator | undefined = typeof navigat
   } catch {
     return 'wasm';
   }
+}
+
+/** Arch round 2: keep the session between photos unless the device is low on memory. */
+export const LOW_MEMORY_GB = 4;
+/** Disposed after this long without a photo. */
+export const IDLE_MS = 2 * 60 * 1000;
+/** Disposed after the page has been hidden this long. */
+export const HIDDEN_MS = 60 * 1000;
+
+export interface DeviceInfo {
+  deviceMemory?: number | undefined;
+  userAgent: string;
+  platform?: string | undefined;
+  maxTouchPoints?: number | undefined;
+}
+
+/** iPhone, iPod, iPad (also iPadOS, which reports itself as a Mac with touch). */
+export function isIOS(d: DeviceInfo): boolean {
+  return /iPhone|iPad|iPod/.test(d.userAgent) || (d.platform === 'MacIntel' && (d.maxTouchPoints ?? 0) > 1);
+}
+
+/**
+ * False (dispose the engine after every photo) when navigator.deviceMemory ≤ 4 GB, or when it is unknown on iOS
+ * (Safari never reports it). Everywhere else the session stays between photos.
+ */
+export function keepEngine(d: DeviceInfo): boolean {
+  if (typeof d.deviceMemory === 'number') return d.deviceMemory > LOW_MEMORY_GB;
+  return !isIOS(d);
 }
 
 export class EngineError extends Error {
@@ -36,58 +65,99 @@ export class EngineError extends Error {
 export const shouldFallBack = (err: unknown): boolean => err instanceof EngineError && err.backend === 'webgpu' && err.stage !== 'runtime';
 
 export interface WorkerLike {
-  onmessage: ((e: MessageEvent<RunResponse>) => void) | null;
+  onmessage: ((e: MessageEvent<WorkerResponse>) => void) | null;
   onerror: ((e: ErrorEvent) => void) | null;
-  postMessage(m: RunRequest, transfer: Transferable[]): void;
+  postMessage(m: WorkerRequest, transfer: Transferable[]): void;
   terminate(): void;
 }
 
-export interface EngineRun {
-  result: Promise<{ mask: Float32Array; backend: Backend; createMs: number; runMs: number }>;
-  /** Stops the run (the worker is terminated; the promise rejects with stage 'crash'). */
+export interface EngineHandle {
+  readonly backend: Backend;
+  readonly createMs: number;
+  /** One photo; the input buffer is transferred (the caller's copy becomes empty). */
+  run(input: Float32Array): Promise<{ mask: Float32Array; runMs: number }>;
+  /** Terminates the worker; pending runs reject with stage 'crash'. Safe to call twice. */
+  dispose(): void;
+  readonly disposed: boolean;
+}
+
+export interface StartedEngine {
+  ready: Promise<EngineHandle>;
+  /** Stops the start (the worker is terminated; `ready` rejects with stage 'crash'). */
   cancel(): void;
 }
 
 /**
- * Sends one run to a fresh worker and terminates it when it answers, fails or is cancelled. The request's buffers
- * are transferred (the caller's copies become empty).
+ * Starts a worker and creates the session ('init'; the wasm and model buffers are transferred). `onLost` is called
+ * once if the worker dies after it was ready (a crash), so the page can forget the engine.
  */
-export function runEngine(req: RunRequest, createWorker: () => WorkerLike, onCreated?: () => void): EngineRun {
+export function startEngine(req: InitRequest, createWorker: () => WorkerLike, onLost?: (e: EngineError) => void): StartedEngine {
   let worker: WorkerLike | null = null;
-  let settle: ((e: EngineError) => void) | null = null;
-  const result = new Promise<{ mask: Float32Array; backend: Backend; createMs: number; runMs: number }>((resolve, reject) => {
-    const done = (): void => {
-      worker?.terminate();
-      worker = null;
-      settle = null;
-    };
-    settle = (e) => {
-      done();
-      reject(e);
-    };
+  let disposed = false;
+  let handle: EngineHandle | null = null;
+  let next = 0;
+  const pending = new Map<number, { resolve: (r: { mask: Float32Array; runMs: number }) => void; reject: (e: EngineError) => void }>();
+  let failStart: ((e: EngineError) => void) | null = null;
+
+  const kill = (e: EngineError): void => {
+    if (disposed) return;
+    disposed = true;
+    worker?.terminate();
+    worker = null;
+    failStart?.(e);
+    failStart = null;
+    for (const p of pending.values()) p.reject(e);
+    pending.clear();
+  };
+
+  const ready = new Promise<EngineHandle>((resolve, reject) => {
+    failStart = reject;
     try {
       worker = createWorker();
     } catch (err) {
-      settle(new EngineError('runtime', req.backend, `worker did not start: ${String(err)}`));
+      kill(new EngineError('runtime', req.backend, `worker did not start: ${String(err)}`));
       return;
     }
     worker.onmessage = (ev) => {
       const m = ev.data;
-      if (m.type === 'created') onCreated?.();
-      else if (m.type === 'result') {
-        done();
-        resolve({ mask: new Float32Array(m.mask), backend: m.backend, createMs: m.createMs, runMs: m.runMs });
-      } else settle?.(new EngineError(m.stage, req.backend, m.message));
+      if (m.type === 'ready') {
+        failStart = null;
+        handle = {
+          backend: req.backend,
+          createMs: m.createMs,
+          get disposed() {
+            return disposed;
+          },
+          run: (input) =>
+            new Promise((res, rej) => {
+              if (disposed || !worker) return rej(new EngineError('crash', req.backend, 'engine disposed'));
+              const id = ++next;
+              pending.set(id, { resolve: res, reject: rej });
+              const buf = input.buffer as ArrayBuffer;
+              worker.postMessage({ type: 'run', id, input: buf }, [buf]);
+            }),
+          dispose: () => kill(new EngineError('crash', req.backend, 'disposed')),
+        };
+        resolve(handle);
+      } else if (m.type === 'result') {
+        const p = pending.get(m.id);
+        pending.delete(m.id);
+        p?.resolve({ mask: new Float32Array(m.mask), runMs: m.runMs });
+      } else if (m.id !== undefined) {
+        const p = pending.get(m.id);
+        pending.delete(m.id);
+        p?.reject(new EngineError(m.stage, req.backend, m.message));
+      } else kill(new EngineError(m.stage, req.backend, m.message));
     };
     worker.onerror = (ev) => {
       ev.preventDefault?.();
       // The worker script itself failed (did not load, or the engine crashed it).
-      settle?.(new EngineError('crash', req.backend, ev.message || 'worker error'));
+      const e = new EngineError('crash', req.backend, ev.message || 'worker error');
+      const wasReady = handle !== null && !disposed;
+      kill(e);
+      if (wasReady) onLost?.(e);
     };
-    worker.postMessage(req, [req.wasm, req.model, req.input]);
+    worker.postMessage(req, [req.wasm, req.model]);
   });
-  return {
-    result,
-    cancel: () => settle?.(new EngineError('crash', req.backend, 'cancelled')),
-  };
+  return { ready, cancel: () => kill(new EngineError('crash', req.backend, 'cancelled')) };
 }

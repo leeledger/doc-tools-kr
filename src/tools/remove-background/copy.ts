@@ -4,8 +4,18 @@
 import { formatMB } from '../../lib/ui/format';
 import { josa } from '../../lib/ui/josa';
 
-/** Brief "Slug, title, SEO": above the picker, not only in the FAQ. */
-export const FIT_LINE = '증명사진·상품·반려동물·자동차 사진에 잘 맞아요. 유리나 투명한 물건, 여러 사람이 함께 나온 사진, 복잡한 배경은 잘 안 될 수 있어요.';
+/**
+ * Brief "Slug, title, SEO": above the picker, not only in the FAQ. C2 round 2 (Arch): no 증명사진 (외교부 refuses
+ * photos whose background was removed by editing software); the positioning is product, profile, documents, slides.
+ */
+export const FIT_LINE = '상품·프로필 사진·반려동물처럼 하나가 크게 나온 사진을 문서나 발표 자료에 넣을 때 잘 맞아요. 유리나 투명한 물건, 여러 사람이 함께 나온 사진, 복잡한 배경은 잘 안 될 수 있어요.';
+/**
+ * Arch C2 round 2, in the limits list. Source: 외교부 여권안내 "제출 불가한 사진파일 안내",
+ * https://www.passport.go.kr/home/kor/contents.do?menuPos=12 (fetched 2026-10-02):
+ * "배경이 흰색이 아니거나, 배경색을 사진 편집 프로그램으로 제거하여 사진이 변형된 경우"
+ */
+export const NOT_FOR_ID = '여권·증명사진 제출용으로는 쓰지 마세요. 외교부는 편집 프로그램으로 배경을 지운 사진을 받지 않아요.';
+export const NOT_FOR_ID_SOURCE = 'https://www.passport.go.kr/home/kor/contents.do?menuPos=12';
 export const STAMP_LINK_TEXT = '서명·도장은 여기서 더 잘 돼요';
 
 /** "약 110 MB": rounded to 10 MB for the static page line. */
@@ -52,8 +62,8 @@ export type BgChoice = 'transparent' | 'white' | 'blue';
 export type SaveFormat = 'jpeg' | 'png';
 
 /**
- * The solid backgrounds. Blue: no blue exists in src/lib/idphoto/ (the id-photo tool keeps the photo's own
- * background), so the brief's fallback #3D6FD6 is used (design choice, BUILD-LOG C2).
+ * The solid backgrounds, generic (products, profiles, slides; never framed for ID photos: Arch C2 round 2). Blue is
+ * the brief's #3D6FD6 (design choice, BUILD-LOG C2).
  */
 export const BG_COLORS: Record<Exclude<BgChoice, 'transparent'>, string> = { white: '#FFFFFF', blue: '#3D6FD6' };
 

@@ -1,11 +1,12 @@
 // Regression harness for 사진 배경 지우기 (Sprint C, C2 test map; gates = brief C2.0 step 8). Starts a Vite dev server on
 // scripts/regress/bgremove-harness/ (public/ served, so /vendor/onnxruntime-web/ and /vendor/birefnet-lite-512/ are
 // the copied production files; COOP/COEP set so the WASM engine gets threads) and runs the production modules in
-// Playwright Chromium: the asset loader, decode, the model input, one inference worker per image, as the page does.
+// Playwright Chromium: the asset loader, decode, the model input, one engine session for all images, as the page keeps it.
 //
 //   npm run regress:bgremove -- --fixtures-only     (CI) the committed CC0 fixtures, tests/fixtures/bgremove/
 //   npm run regress:bgremove                         (owner PC) + the spike sets: 16 GT and the 49 real photos
-//   options: --backend wasm|webgpu|auto (default auto: WebGPU when Chromium offers an adapter), --channel chrome
+//   options: --backend wasm|webgpu|auto (default auto: WebGPU when Chromium offers an adapter), --channel chrome,
+//            --opt all|basic|disabled (session graph optimisation; default: the page's OPT_LEVEL), --only a01,b02
 //
 // Gates (never lowered):
 //   every image: mean |browser mask − Python fp16 mask| ≤ 0.002 (Python = parity.py / build-bgremove.py, ORT CPU)
@@ -26,7 +27,7 @@ const args = process.argv.slice(2);
 const arg = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
 const fixturesOnly = args.includes('--fixtures-only');
 const backend = arg('--backend') ?? 'auto';
-const EXPORT = 'aa62cd87-ce158794';
+const EXPORT = 'aa62cd87-714d0a62';
 const FIX = join(root, 'tests', 'fixtures', 'bgremove');
 const SPIKE = process.env.BGREMOVE_SPIKE ?? 'C:/dev/doc-tools-kr/spikes/bg-remove';
 const PARITY = join(root, 'scripts', 'model', 'birefnet', 'out', `parity-${EXPORT}`, 'masks_fp16');
@@ -106,8 +107,8 @@ const browser = await pw.chromium.launch({ args: launchArgs, ...(arg('--channel'
 const page = await browser.newPage();
 page.on('pageerror', (e) => console.error('page error:', e.message));
 await page.goto(base);
-const env = await page.evaluate((b) => window.harness.setup(b), backend);
-console.log(`regress:bgremove: ${env.backend}, crossOriginIsolated ${env.coi}, export ${env.exportId}`);
+const env = await page.evaluate(([b, o]) => window.harness.setup(b, o), [backend, arg('--opt')]);
+console.log(`regress:bgremove: ${env.backend}, crossOriginIsolated ${env.coi}, export ${env.exportId}, session create ${Math.round(env.createMs)} ms`);
 
 /** GT metrics of a 512 mask against an alpha (spike metrics: MAE and IoU at 0.5 on the GT grid). */
 function gtMetrics(mask, gt) {
@@ -155,7 +156,7 @@ for (const it of only ? items.filter((x) => only.includes(x.key)) : items) {
   const r = await page.evaluate((u) => window.harness.runImage(u), fsUrl(it.img));
   const mask = Float32Array.from(r.mask);
   const ref = it.ref();
-  const row = { key: it.key, set: it.set, diff: meanDiff(mask, ref), area: maskArea(mask), createMs: Math.round(r.createMs), runMs: Math.round(r.runMs) };
+  const row = { key: it.key, set: it.set, diff: meanDiff(mask, ref), area: maskArea(mask), inputMs: Math.round(r.inputMs), runMs: Math.round(r.runMs) };
   if (row.diff > GATE.browserMean) fails.push(`${it.key}: browser vs Python mean ${row.diff.toFixed(5)} > ${GATE.browserMean}`);
   if (it.gt) {
     Object.assign(row, gtMetrics(mask, await grey(it.gt)));
@@ -165,7 +166,7 @@ for (const it of only ? items.filter((x) => only.includes(x.key)) : items) {
     }
   }
   rows.push(row);
-  console.log(`  ${it.key.padEnd(12)} ${it.set.padEnd(8)} diff ${row.diff.toFixed(5)} area ${row.area.toFixed(4)}${row.iou !== undefined ? ` IoU ${row.iou.toFixed(4)} MAE ${row.mae.toFixed(4)}` : ''} create ${row.createMs} ms run ${row.runMs} ms`);
+  console.log(`  ${it.key.padEnd(12)} ${it.set.padEnd(8)} diff ${row.diff.toFixed(5)} area ${row.area.toFixed(4)}${row.iou !== undefined ? ` IoU ${row.iou.toFixed(4)} MAE ${row.mae.toFixed(4)}` : ''} input ${row.inputMs} ms run ${row.runMs} ms`);
 }
 
 const summary = { backend: env.backend, coi: env.coi, exportId: env.exportId, n: rows.length, maxDiff: Math.max(...rows.map((r) => r.diff)) };
@@ -185,7 +186,8 @@ if (raw.length && !only) {
   if (summary.empty.length > GATE.emptyMax) fails.push(`empty masks on the real set: ${summary.empty.length} (${summary.empty.join(', ')}) > ${GATE.emptyMax}`);
 }
 const med = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
-summary.createMsMedian = med(rows.map((r) => r.createMs));
+summary.createMs = Math.round(env.createMs);
+summary.inputMsMedian = med(rows.map((r) => r.inputMs));
 summary.runMsMedian = med(rows.map((r) => r.runMs));
 summary.fusionMs4MP = Math.round(await page.evaluate(() => window.harness.fusionMs(2309, 1732)));
 if (summary.fusionMs4MP > GATE.fusionMs) fails.push(`blur-fusion at 4 MP took ${summary.fusionMs4MP} ms > ${GATE.fusionMs}`);
@@ -199,9 +201,9 @@ const md = [
   '',
   `Engine ${summary.backend}, crossOriginIsolated ${summary.coi}, export ${summary.exportId}, ${summary.n} images.`,
   '',
-  '| image | set | mean diff vs Python | area | IoU | MAE | create ms | run ms |',
+  '| image | set | mean diff vs Python | area | IoU | MAE | input ms | run ms |',
   '|---|---|---|---|---|---|---|---|',
-  ...rows.map((r) => `| ${r.key} | ${r.set} | ${r.diff.toFixed(5)} | ${r.area.toFixed(4)} | ${r.iou?.toFixed(4) ?? '-'} | ${r.mae?.toFixed(4) ?? '-'} | ${r.createMs} | ${r.runMs} |`),
+  ...rows.map((r) => `| ${r.key} | ${r.set} | ${r.diff.toFixed(5)} | ${r.area.toFixed(4)} | ${r.iou?.toFixed(4) ?? '-'} | ${r.mae?.toFixed(4) ?? '-'} | ${r.inputMs} | ${r.runMs} |`),
   '',
   '```json',
   JSON.stringify(summary, null, 1),

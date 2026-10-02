@@ -11,6 +11,7 @@
 //         ─► /vendor/birefnet-lite-512/, /vendor/onnxruntime-web/ ► browser default (C2: the tool's own Cache Storage
 //            keeps them; a second copy here would double ~120 MB on the device)
 //         ─► navigation ───────────────────────────► network first (3 s), then cache, then /offline/
+//            (precached pages and RUNTIME_PAGES are stored on a successful network answer)
 //         ─► /_astro/ /vendor/ /fonts/ /brand/ ────► cache first; stores only res.ok && basic
 //         ─► anything else ────────────────────────► browser default
 
@@ -21,6 +22,11 @@ declare const __PRECACHE__: string[];
 export const CACHE_PREFIX = 'anolim-';
 export const RUNTIME_PREFIXES = ['/_astro/', '/vendor/', '/fonts/', '/brand/'];
 export const BYPASS = ['/sw.js', '/deploy-manifest.json'];
+/**
+ * Pages left out of the precache because they are useless offline (C2 round 2, Arch: budget headroom), stored when
+ * visited instead, so a page once read is still there offline.
+ */
+export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/'];
 /** 배경 지우기 (Sprint C, C2): the model and the runtime go straight to the network (src/lib/bgremove/assets.ts caches them). */
 export const NETWORK_PREFIXES = ['/vendor/birefnet-lite-512/', '/vendor/onnxruntime-web/'];
 export const NAV_TIMEOUT_MS = 3000;
@@ -74,7 +80,7 @@ export function handleFetch(event: FetchEventLike, env: SwEnv): void {
 async function networkFirst(request: Request, env: SwEnv): Promise<Response> {
   const path = new URL(request.url).pathname;
   const network = env.fetch(request).then(async (res) => {
-    if (res.ok && env.precache.has(path)) await (await env.caches.open(env.cacheName)).put(path, res.clone());
+    if (res.ok && (env.precache.has(path) || RUNTIME_PAGES.includes(path))) await (await env.caches.open(env.cacheName)).put(path, res.clone());
     return res;
   });
   const cached = (): Promise<Response | undefined> => env.caches.match(path, { ignoreSearch: true });

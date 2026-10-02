@@ -33,9 +33,9 @@ import {
 import { blurFusion, boxFilter, plainCutout, reflect } from '../../src/lib/bgremove/fusion';
 import { ATTEMPT_KEY, SMALL_KEY, clearAttempt, markAttempt, takeCrash, workEdge, type GuardStorage } from '../../src/lib/bgremove/guard';
 import { MEAN, NOSUBJECT_AREA, SIZE, STD, fusionRadii, hasSubject, maskArea, pilResizeRgba, resizeMask, toInput, validMask } from '../../src/lib/bgremove/infer';
-import { StageError, runOnce, threadCount, type CoreEnv, type OrtLike, type RunRequest, type SessionLike, type TensorLike } from '../../src/lib/bgremove/infer-core';
-import { EngineError, pickBackend, runEngine, shouldFallBack, type WorkerLike } from '../../src/lib/bgremove/session';
-import { BG_COLORS, COPY, FIT_LINE, aboutMB, fileName, saveLabel } from '../../src/tools/remove-background/copy';
+import { OPT_LEVEL, StageError, createEngine, createHandler, runEngineOnce, threadCount, type CoreEnv, type InitRequest, type OrtLike, type SessionLike, type TensorLike, type WorkerRequest, type WorkerResponse } from '../../src/lib/bgremove/infer-core';
+import { EngineError, HIDDEN_MS, IDLE_MS, isIOS, keepEngine, pickBackend, shouldFallBack, startEngine, type WorkerLike } from '../../src/lib/bgremove/session';
+import { BG_COLORS, COPY, FIT_LINE, NOT_FOR_ID, aboutMB, fileName, saveLabel } from '../../src/tools/remove-background/copy';
 import { LIMITS, checkDims, checkFileBytes } from '../../src/tools/remove-background/limits';
 import { move, view, type Phase } from '../../src/tools/remove-background/model';
 import { BG_REMOVE_TOOL, TOOLS } from '../../src/data/tools';
@@ -248,7 +248,7 @@ describe('assets: manifest, parts, cache (brief Flow, failure rows "download" an
     expect(ortBase('wasm')).toBe('/vendor/onnxruntime-web/1.30.0/');
     expect(downloadBytes('webgpu')).toBe(MODEL_BYTES + runtimeBytes('webgpu'));
     // The committed model manifest is what the build pins.
-    const committed = JSON.parse(readFileSync(join(ROOT, 'vendor-assets', 'birefnet-lite-512', 'aa62cd87-ce158794', 'manifest.json'), 'utf8'));
+    const committed = JSON.parse(readFileSync(join(ROOT, 'vendor-assets', 'birefnet-lite-512', 'aa62cd87-714d0a62', 'manifest.json'), 'utf8'));
     expect(committed.bytes).toBe(MODEL_BYTES);
     expect(parseManifest(committed).parts.every((p) => p.bytes < 24 * 1024 * 1024)).toBe(true);
   });
@@ -347,7 +347,7 @@ describe('blur-fusion (Forte & Pitié, our implementation) vs the spike pp.fg_bl
     const src = Float32Array.from({ length: w * h }, (_, i) => (i * 37) % 11);
     for (const r of [1, 3, 9]) {
       const out = new Float32Array(w * h);
-      boxFilter(src, w, h, r, out, new Float32Array(w * h));
+      boxFilter(src, w, h, r, out);
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           let s = 0;
@@ -424,16 +424,16 @@ function fakeOrt(o: { createFails?: boolean; runFails?: boolean; outLength?: num
   return { ort, log, env };
 }
 
-const req = (backend: 'webgpu' | 'wasm'): RunRequest => ({
-  type: 'run',
+const init = (backend: 'webgpu' | 'wasm'): InitRequest => ({
+  type: 'init',
   backend,
   ortUrl: `/vendor/onnxruntime-web/1.30.0/ort.${backend}.min.mjs`,
   ortBase: 'http://x/vendor/onnxruntime-web/1.30.0/',
   wasm: new ArrayBuffer(8),
   model: new ArrayBuffer(16),
-  input: new Float32Array(3 * SIZE * SIZE).buffer,
   maxThreads: 8,
 });
+const input = (): ArrayBuffer => new Float32Array(3 * SIZE * SIZE).buffer;
 
 const coreEnv = (ort: OrtLike, over: Partial<CoreEnv> = {}): CoreEnv => ({
   importOrt: async () => ort,
@@ -444,37 +444,59 @@ const coreEnv = (ort: OrtLike, over: Partial<CoreEnv> = {}): CoreEnv => ({
   ...over,
 });
 
-describe('engine core (mocked ort): EP choice, env, release after the run', () => {
-  it('wasm: threads only when crossOriginIsolated, capped; the session is released and the tensors disposed', async () => {
+describe('engine core (mocked ort): one session, many runs, tensors disposed per run (Arch round 2)', () => {
+  it('wasm: threads only when crossOriginIsolated, capped; OPT_LEVEL; two runs on one session, nothing released between them', async () => {
     const { ort, log, env } = fakeOrt();
-    const created = vi.fn();
-    const r = await runOnce(req('wasm'), coreEnv(ort, { onCreated: created }));
-    expect(new Float32Array(r.mask)[0]).toBe(0.25);
+    const opts: Record<string, unknown>[] = [];
+    const create = ort.InferenceSession.create;
+    ort.InferenceSession.create = (m, o) => (opts.push(o), create(m, o));
+    const { engine } = await createEngine(init('wasm'), coreEnv(ort));
     expect(env.wasm.numThreads).toBe(8);
     expect(env.wasm.wasmBinary).toBeInstanceOf(ArrayBuffer);
     expect(env.wasm.wasmPaths).toBe('http://x/vendor/onnxruntime-web/1.30.0/');
     expect(env.wasm.proxy).toBe(false);
-    expect(created).toHaveBeenCalledOnce();
-    expect(log).toEqual(['create:["wasm"]', 'tensor:1x3x512x512', 'run:input_image', 'dispose', 'dispose', 'release']);
+    expect(opts[0]).toMatchObject({ executionProviders: ['wasm'], graphOptimizationLevel: OPT_LEVEL });
+    const a = await runEngineOnce(engine, input(), () => 0);
+    const b = await runEngineOnce(engine, input(), () => 0);
+    expect(new Float32Array(a.mask)[0]).toBe(0.25);
+    expect(new Float32Array(b.mask)[0]).toBe(0.25);
+    expect(log).toEqual(['create:["wasm"]', 'tensor:1x3x512x512', 'run:input_image', 'dispose', 'dispose', 'tensor:1x3x512x512', 'run:input_image', 'dispose', 'dispose']);
     expect(threadCount(false, 16, 8)).toBe(1);
     expect(threadCount(true, 2, 8)).toBe(2);
+    expect(OPT_LEVEL).toBe('basic');
   });
 
   it('webgpu: the adapter is handed to ort; no adapter in the worker is a session-stage failure (falls back)', async () => {
     const { ort, env } = fakeOrt();
     const adapter = { name: 'gpu' };
-    await runOnce(req('webgpu'), coreEnv(ort, { adapter: async () => adapter }));
+    await createEngine(init('webgpu'), coreEnv(ort, { adapter: async () => adapter }));
     expect(env.webgpu!.adapter).toBe(adapter);
-    await expect(runOnce(req('webgpu'), coreEnv(fakeOrt().ort, { adapter: async () => null }))).rejects.toMatchObject({ stage: 'session' });
+    await expect(createEngine(init('webgpu'), coreEnv(fakeOrt().ort, { adapter: async () => null }))).rejects.toMatchObject({ stage: 'session' });
   });
 
-  it('stages: script load -> runtime, create -> session, run or a wrong output -> run (always released)', async () => {
-    await expect(runOnce(req('wasm'), coreEnv(fakeOrt().ort, { importOrt: () => Promise.reject(new Error('404')) }))).rejects.toMatchObject({ stage: 'runtime' });
-    await expect(runOnce(req('wasm'), coreEnv(fakeOrt({ createFails: true }).ort))).rejects.toMatchObject({ stage: 'session' });
-    const run = fakeOrt({ runFails: true });
-    await expect(runOnce(req('wasm'), coreEnv(run.ort))).rejects.toBeInstanceOf(StageError);
-    expect(run.log.at(-1)).toBe('release');
-    await expect(runOnce(req('wasm'), coreEnv(fakeOrt({ outLength: 10 }).ort))).rejects.toMatchObject({ stage: 'run' });
+  it('stages: script load -> runtime, create -> session, run or a wrong output -> run (tensors still disposed)', async () => {
+    await expect(createEngine(init('wasm'), coreEnv(fakeOrt().ort, { importOrt: () => Promise.reject(new Error('404')) }))).rejects.toMatchObject({ stage: 'runtime' });
+    await expect(createEngine(init('wasm'), coreEnv(fakeOrt({ createFails: true }).ort))).rejects.toMatchObject({ stage: 'session' });
+    const r = fakeOrt({ runFails: true });
+    const { engine } = await createEngine(init('wasm'), coreEnv(r.ort));
+    await expect(runEngineOnce(engine, input(), () => 0)).rejects.toBeInstanceOf(StageError);
+    expect(r.log.at(-1)).toBe('dispose');
+    const bad = await createEngine(init('wasm'), coreEnv(fakeOrt({ outLength: 10 }).ort));
+    await expect(runEngineOnce(bad.engine, input(), () => 0)).rejects.toMatchObject({ stage: 'run' });
+  });
+
+  it('handler: init then runs (mask transferred); a run before init and a second init are errors', async () => {
+    const posted: { m: WorkerResponse; t?: Transferable[] }[] = [];
+    const h = createHandler(coreEnv(fakeOrt().ort), (m, t) => posted.push({ m, t }));
+    await h({ type: 'run', id: 1, input: input() });
+    expect(posted[0]!.m).toMatchObject({ type: 'error', stage: 'run', id: 1 });
+    await h(init('wasm'));
+    expect(posted[1]!.m).toMatchObject({ type: 'ready', backend: 'wasm' });
+    await h({ type: 'run', id: 2, input: input() });
+    expect(posted[2]!.m).toMatchObject({ type: 'result', id: 2 });
+    expect(posted[2]!.t).toHaveLength(1);
+    await h(init('wasm'));
+    expect(posted[3]!.m).toMatchObject({ type: 'error', stage: 'session' });
   });
 });
 
@@ -482,9 +504,9 @@ class FakeWorker implements WorkerLike {
   onmessage: WorkerLike['onmessage'] = null;
   onerror: WorkerLike['onerror'] = null;
   terminated = false;
-  posted: unknown[] = [];
+  posted: WorkerRequest[] = [];
   transfer: Transferable[] = [];
-  postMessage(m: RunRequest, transfer: Transferable[]): void {
+  postMessage(m: WorkerRequest, transfer: Transferable[]): void {
     this.posted.push(m);
     this.transfer = transfer;
   }
@@ -496,44 +518,74 @@ class FakeWorker implements WorkerLike {
   }
 }
 
-describe('session: one worker per photo, terminated after its reply; WebGPU -> WASM fallback rule', () => {
-  it('result: the mask comes back, the worker is terminated, the buffers were transferred', async () => {
+describe('session: one engine worker kept between photos; dispose; WebGPU -> WASM fallback rule; keep policy', () => {
+  it('ready, then two runs on the same worker (input transferred), then dispose terminates it', async () => {
     const w = new FakeWorker();
-    const created = vi.fn();
-    const run = runEngine(req('wasm'), () => w, created);
-    expect(w.transfer).toHaveLength(3);
-    w.reply({ type: 'created', createMs: 5 });
-    expect(created).toHaveBeenCalledOnce();
-    w.reply({ type: 'result', mask: new Float32Array([0.5]).buffer, backend: 'wasm', createMs: 5, runMs: 7 });
-    const r = await run.result;
-    expect(r.mask[0]).toBe(0.5);
+    const s = startEngine(init('wasm'), () => w);
+    expect(w.transfer).toHaveLength(2);
+    w.reply({ type: 'ready', backend: 'wasm', createMs: 5 });
+    const e = await s.ready;
+    expect(e.createMs).toBe(5);
+    for (const id of [1, 2]) {
+      const p = e.run(new Float32Array(4));
+      expect(w.posted.at(-1)).toMatchObject({ type: 'run', id });
+      expect(w.transfer).toHaveLength(1);
+      w.reply({ type: 'result', id, mask: new Float32Array([0.5]).buffer, runMs: 7 });
+      expect((await p).mask[0]).toBe(0.5);
+    }
+    expect(w.terminated).toBe(false);
+    const late = e.run(new Float32Array(4));
+    e.dispose();
     expect(w.terminated).toBe(true);
+    expect(e.disposed).toBe(true);
+    expect(await late.catch((x: unknown) => x)).toMatchObject({ stage: 'crash' });
+    expect(await e.run(new Float32Array(4)).catch((x: unknown) => x)).toBeInstanceOf(EngineError);
   });
 
-  it('errors: a stage error, a worker crash and 취소 all reject with EngineError and terminate the worker', async () => {
+  it('errors: an init error, a crash before and after ready, 취소; a run error keeps the worker', async () => {
     const w1 = new FakeWorker();
-    const r1 = runEngine(req('webgpu'), () => w1);
+    const s1 = startEngine(init('webgpu'), () => w1);
     w1.reply({ type: 'error', stage: 'session', message: 'no adapter' });
-    const e1 = await r1.result.catch((e) => e);
+    const e1 = await s1.ready.catch((x: unknown) => x);
     expect(e1).toMatchObject({ stage: 'session', backend: 'webgpu' });
     expect(shouldFallBack(e1)).toBe(true);
     expect(w1.terminated).toBe(true);
 
     const w2 = new FakeWorker();
-    const r2 = runEngine(req('webgpu'), () => w2);
+    const lost = vi.fn();
+    const s2 = startEngine(init('webgpu'), () => w2, lost);
+    w2.reply({ type: 'ready', backend: 'webgpu', createMs: 1 });
+    const e2 = await s2.ready;
+    const p = e2.run(new Float32Array(4));
+    w2.reply({ type: 'error', stage: 'run', id: 1, message: 'kernel' });
+    expect(await p.catch((x: unknown) => x)).toMatchObject({ stage: 'run' });
+    expect(w2.terminated).toBe(false);
     w2.onerror?.({ message: 'boom', preventDefault: () => undefined } as ErrorEvent);
-    expect(await r2.result.catch((e) => e)).toMatchObject({ stage: 'crash' });
+    expect(lost).toHaveBeenCalledOnce();
+    expect(e2.disposed).toBe(true);
 
     const w3 = new FakeWorker();
-    const r3 = runEngine(req('wasm'), () => w3);
-    r3.cancel();
-    const e3 = await r3.result.catch((e) => e);
+    const s3 = startEngine(init('wasm'), () => w3);
+    s3.cancel();
+    const e3 = await s3.ready.catch((x: unknown) => x);
     expect(e3).toBeInstanceOf(EngineError);
     expect(shouldFallBack(e3)).toBe(false);
     expect(w3.terminated).toBe(true);
-    // A WASM failure or a runtime-script failure never falls back.
     expect(shouldFallBack(new EngineError('runtime', 'webgpu', 'x'))).toBe(false);
     expect(shouldFallBack(new EngineError('run', 'wasm', 'x'))).toBe(false);
+  });
+
+  it('keepEngine: per-photo restart when deviceMemory ≤ 4, or unknown on iOS (iPadOS too); idle 2 min, hidden 60 s', () => {
+    const ua = { pc: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/153', iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)', mac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)' };
+    expect(keepEngine({ deviceMemory: 8, userAgent: ua.pc })).toBe(true);
+    expect(keepEngine({ deviceMemory: 4, userAgent: ua.pc })).toBe(false);
+    expect(keepEngine({ deviceMemory: 2, userAgent: ua.pc })).toBe(false);
+    expect(keepEngine({ userAgent: ua.pc })).toBe(true);
+    expect(keepEngine({ userAgent: ua.iphone })).toBe(false);
+    expect(keepEngine({ userAgent: ua.mac, platform: 'MacIntel', maxTouchPoints: 5 })).toBe(false);
+    expect(keepEngine({ userAgent: ua.mac, platform: 'MacIntel', maxTouchPoints: 0 })).toBe(true);
+    expect(isIOS({ userAgent: ua.iphone })).toBe(true);
+    expect([IDLE_MS, HIDDEN_MS]).toEqual([120_000, 60_000]);
   });
 
   it('pickBackend: webgpu only with an adapter; never throws', async () => {
@@ -621,7 +673,13 @@ describe('copy and limits (brief: honest limits up front, plain words)', () => {
   const all = [FIT_LINE, ...Object.entries(COPY).map(([k, v]) => call(k, v))].join('\n');
 
   it('the brief lines; never a competitor or "remove.bg급"; no 업로드/서버/브라우저/메모리', () => {
-    expect(FIT_LINE).toBe('증명사진·상품·반려동물·자동차 사진에 잘 맞아요. 유리나 투명한 물건, 여러 사람이 함께 나온 사진, 복잡한 배경은 잘 안 될 수 있어요.');
+    expect(FIT_LINE).toBe('상품·프로필 사진·반려동물처럼 하나가 크게 나온 사진을 문서나 발표 자료에 넣을 때 잘 맞아요. 유리나 투명한 물건, 여러 사람이 함께 나온 사진, 복잡한 배경은 잘 안 될 수 있어요.');
+    // Arch C2 round 2: never positioned for ID photos (외교부 refuses edited backgrounds).
+    expect(FIT_LINE).not.toMatch(/증명|여권/);
+    expect(NOT_FOR_ID).toBe('여권·증명사진 제출용으로는 쓰지 마세요. 외교부는 편집 프로그램으로 배경을 지운 사진을 받지 않아요.');
+    expect(BG_REMOVE_TOOL.faq.flatMap((f) => f.links ?? []).map((l) => l.href)).not.toContain('/id-photo/');
+    expect(BG_REMOVE_TOOL.faq.filter((f) => /증명/.test(f.a)).map((f) => f.q)).toEqual(['여권·증명사진에 써도 되나요?']);
+    expect(BG_REMOVE_TOOL.faq.find((f) => f.q === '여권·증명사진에 써도 되나요?')!.a).toContain('배경색을 사진 편집 프로그램으로 제거하여 사진이 변형된 경우');
     expect(COPY.nosubject).toBe('사진에서 피사체를 찾지 못했어요. 피사체가 크게, 배경이 단순하게 나온 사진으로 해 보세요.');
     expect(COPY.nosubjectPaper('전자서명·도장 이미지 만들기')).toBe('종이에 찍힌 도장·서명·로고라면 전자서명·도장 이미지 만들기를 써 보세요.');
     expect(COPY.consent(114.5 * 1048576)).toBe('배경을 지우는 프로그램 114.5 MB를 한 번 받아요 (와이파이 권장).');
@@ -691,11 +749,14 @@ describe('release flag and build wiring (PUBLIC_BG_REMOVE)', () => {
     const o = 'https://docttak.com';
     const r = (path: string) => route({ method: 'GET', url: `${o}${path}`, mode: 'cors' }, o);
     expect(NETWORK_PREFIXES).toEqual(['/vendor/birefnet-lite-512/', '/vendor/onnxruntime-web/']);
-    expect(r('/vendor/birefnet-lite-512/aa62cd87-ce158794/model.part0')).toBe('default');
+    expect(r('/vendor/birefnet-lite-512/aa62cd87-714d0a62/model.part0')).toBe('default');
     expect(r('/vendor/onnxruntime-web/1.30.0/ort.webgpu.min.mjs')).toBe('default');
     expect(r('/vendor/pdfjs/6.3.289/pdf.worker.min.mjs')).toBe('runtime');
     expect(NOT_PRECACHED('/remove-background/')).toBe(true);
     expect(NOT_PRECACHED('/stamp-signature/')).toBe(false);
+    // C2 round 2 (Arch): pages useless offline leave the precache (stored when visited instead).
+    for (const p of ['/terms/', '/privacy/', '/licenses/']) expect(NOT_PRECACHED(p), p).toBe(true);
+    for (const p of ['/', '/offline/', '/id-photo/']) expect(NOT_PRECACHED(p), p).toBe(false);
   });
 
   it('licences: the bgremove entries are judged only when they ship; the share image only with the flag', () => {

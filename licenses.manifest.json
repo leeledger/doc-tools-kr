@@ -328,7 +328,7 @@
       "homepage": "https://github.com/microsoft/onnxruntime/tree/v1.30.0"
     },
     {
-      "component": "BiRefNet_lite (512, float16, 문서딱 자체 ONNX 변환 aa62cd87-ce158794)",
+      "component": "BiRefNet_lite (512, float16, 문서딱 자체 ONNX 변환 aa62cd87-714d0a62)",
       "bgremove": true,
       "version": "HF aa62cd87eafb9cc43056d08ef3615a14628b831d",
       "license": "MIT",

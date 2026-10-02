@@ -109,7 +109,7 @@ if (autoframe) {
 // when PUBLIC_BG_REMOVE is off. src/generated/bgremove.json always carries the URLs, sizes and SHA-256s
 // (src/lib/bgremove/assets.ts verifies the runtime parts against them and the model parts against the manifest).
 export const ORT_VERSION = '1.30.0';
-export const BIREFNET_EXPORT = 'aa62cd87-ce158794';
+export const BIREFNET_EXPORT = 'aa62cd87-714d0a62';
 if (version('onnxruntime-web') !== ORT_VERSION) throw new Error(`copy-vendor: onnxruntime-web is ${version('onnxruntime-web')}, expected ${ORT_VERSION}`);
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 const ortDist = nm('onnxruntime-web', 'dist');

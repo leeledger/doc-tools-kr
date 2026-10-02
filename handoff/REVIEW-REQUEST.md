@@ -1,3 +1,46 @@
+# Review Request — Sprint C, C2 round 2 (Arch rulings)
+Date: 2026-10-02
+Ready for Review: YES. Status DONE; every Arch target is met (BUILD-LOG "C2 round 2", with the before/after table).
+
+## Files Changed
+- Session kept between photos:
+  - `src/lib/bgremove/{infer-core.ts,infer.worker.ts,session.ts}`: init/run protocol; `startEngine`/`EngineHandle`; `keepEngine` (deviceMemory ≤ 4, or iOS with it unknown → restart per photo); `OPT_LEVEL 'basic'`; WebGPU `storageBufferCacheMode` pinned to `bucket`.
+  - `src/tools/remove-background/bg.ts`: the engine is disposed on 2 min idle, 60 s hidden, pagehide or a crash; WASM is used for the rest of the visit after a WebGPU failure; the pixels are read once.
+  - `model.ts`: opening/error → working.
+- `src/lib/bgremove/fusion.ts`: streamed box filters through a 2r+1-row ring; output written in place (2 float planes instead of 8).
+- Model:
+  - `scripts/model/birefnet/export.py`: `simplify()` (onnxsim) step and `--resimplify`.
+  - `requirements.lock` (+ onnxsim 0.4.36 and its deps) and `README.md`.
+  - `vendor-assets/birefnet-lite-512/aa62cd87-714d0a62/` replaces `…-ce158794`.
+  - New exportId in copy-vendor, parity, regress, fixtures, licences and SOURCES. Python masks rebuilt.
+- Precache: `scripts/gen-sw.mjs` (`/terms/` and `/privacy/` not precached) and `src/sw/sw.ts` (`RUNTIME_PAGES` stored when visited).
+- Not for ID photos:
+  - `src/tools/remove-background/{copy.ts,page.astro}`: fit line, the limits line + the 외교부 link, no /id-photo/ hand-off, related tools.
+  - `src/data/tools.ts`: FAQ.
+- Regress and measuring:
+  - `scripts/regress/bgremove.mjs` + harness: one session for all images; `--opt`, `--only`; session create reported.
+  - `scripts/regress/bgremove-mem.py`: N photos; per-photo peak and time to the edge-colour step.
+- Tests:
+  - `tests/unit/bgremove.test.ts`: engine protocol, keep policy, precache pages, not-for-ID copy.
+  - `tests/unit/polish.test.ts`: SW stores RUNTIME_PAGES and serves them offline.
+  - `tests/unit/postbuild.test.ts`: terms/privacy not precached.
+  - `tests/e2e/remove-background.spec.ts`: the not-for-ID line and source link; no /id-photo/ link.
+
+## Numbers (this PC)
+- Session create, WebGPU: 8.1 s → **1.7–1.9 s**. WASM: 7.0 s → 1.1–1.2 s.
+- WebGPU, 2nd and later 12 MP photos, pick → edge-colour step: **1.33–1.75 s** (end to end 4.2–5.6 s).
+- Peak memory, WebGPU, 10 × 12 MP: **flat at 2.24–2.42 GB**.
+- Precache: **432.9 KB** with the flag on (429.3 off).
+- Parity on the new parts: exit 0 (GT MAE 0.00484, IoU 0.9423, empty masks 3/49).
+- Full browser regression (WebGPU, 69 images): OK, max diff 0.00062.
+- UI glyphs: 0 new.
+
+## Open Questions (Arch)
+- None blocking.
+- For information: WASM on a desktop with the engine kept peaks at up to 2.47 GB on one photo (about 1.9 on the others). WASM is the fallback path only.
+
+---
+
 # Review Request — Sprint C, C2 사진 배경 지우기 (/remove-background/)
 Date: 2026-10-02
 Ready for Review: YES. Status DONE_WITH_CONCERNS: precache headroom and the per-photo engine start (BUILD-LOG "C2 build notes", decisions 7 and 9). The release flag stays off.

@@ -1,6 +1,6 @@
 // Postbuild, last (brief Polish P.11): builds dist/sw.js from src/sw/sw.ts with typescript.transpileModule
 // (no new dependency) and injects BUILD_ID and the precache list:
-// - the HTML of /, every live tool page, /privacy/, /terms/ (the sitemap, minus /licenses/) and /offline/, the
+// - the HTML of /, every live tool page (the sitemap minus NOT_PRECACHED) and /offline/, the
 //   navigation fallback (not /404.html: Cloudflare Pages redirects *.html, and a redirected response cannot
 //   answer a navigation). /licenses/ is left out (Step 4): its embedded license texts are ~220 KB with the
 //   MediaPipe components, alone half the budget, and it is not a page anyone needs offline.
@@ -35,8 +35,9 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * their share images (Growth G.3): gen-sw would otherwise precache every guide and pass the 450 KB limit, and
  * /remove-background/ (Sprint C, C2; Arch ruling 3: C2 adds 0 bytes to the precache; its page, controller, runtime and
  * model are cached at runtime only, like the /stamp-signature/ photo controller). Offline it needs its 120 MB anyway.
+ * C2 round 2 (Arch): /terms/ and /privacy/ too: useless offline; the SW stores them when visited (sw.ts RUNTIME_PAGES).
  */
-export const NOT_PRECACHED = (path) => path === '/licenses/' || path === '/remove-background/' || path.startsWith('/guide/') || path.startsWith('/og/');
+export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

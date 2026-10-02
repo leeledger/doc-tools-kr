@@ -128,6 +128,11 @@ test('page load: no engine or model request, crossOriginIsolated, COEP only on t
   await expect(page.locator('.bg-intro')).toContainText('유리나 투명한 물건, 여러 사람이 함께 나온 사진, 복잡한 배경은 잘 안 될 수 있어요.');
   await expect(page.locator('.bg-intro')).toContainText(/처음 한 번 약 \d+ MB를 받아요\./);
   await expect(page.locator('.bg-intro a')).toHaveAttribute('href', '/stamp-signature/');
+  // Arch C2 round 2: never for ID photos; the limits say so, with the 외교부 source.
+  await expect(page.locator('.bg-intro')).not.toContainText('증명사진');
+  await expect(page.locator('.bg-limits')).toContainText('여권·증명사진 제출용으로는 쓰지 마세요.');
+  await expect(page.locator('.bg-limits a')).toHaveAttribute('href', 'https://www.passport.go.kr/home/kor/contents.do?menuPos=12');
+  await expect(page.locator('#bg-tool a[href="/id-photo/"]')).toHaveCount(0);
   for (const other of ['/', '/stamp-signature/', '/id-photo/']) {
     const h = (await request.get(other)).headers();
     expect(h['cross-origin-embedder-policy'], other).toBeUndefined();
@@ -175,7 +180,6 @@ test('consent: 취소 downloads nothing; 받고 시작 downloads with progress, 
   await expect(page.locator('#bg-canvas')).toHaveAttribute('aria-label', '원본 사진');
   await compare.click();
   await expect(page.locator('#bg-canvas')).toHaveAttribute('aria-label', /배경을 지운 결과 미리보기, 파란색 배경/);
-  await expect(page.getByRole('link', { name: '여권·증명사진 규격 맞추기' }).first()).toBeVisible();
 
   // Second photo: everything is in this tool's Cache Storage, so no consent and no model request.
   const before = hits.length;

@@ -416,6 +416,9 @@ describe('built output', () => {
     expect(urls).not.toContain('/404.html');
     // Step 4: /licenses/ (its texts alone are ~half the budget) is not precached; every tool page is.
     expect(urls).not.toContain('/licenses/');
+    // C2 round 2: /terms/ and /privacy/ are useless offline (stored when visited, sw.ts RUNTIME_PAGES).
+    expect(urls).not.toContain('/terms/');
+    expect(urls).not.toContain('/privacy/');
     for (const tool of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/']) expect(urls).toContain(tool);
     // Round 2: the lazily imported /id-photo/ controller is precached too (offline first use).
     expect(urls.some((u: string) => /^\/_astro\/controller\.[\w-]+\.js$/.test(u))).toBe(true);

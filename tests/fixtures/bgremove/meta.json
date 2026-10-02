@@ -1,5 +1,5 @@
 {
- "exportId": "aa62cd87-ce158794",
+ "exportId": "aa62cd87-714d0a62",
  "fixtures": {
   "cc0-person": {
    "width": 480,
@@ -9,9 +9,9 @@
    "bg": "File:Grass at a lawn with morning dew 05.jpg",
    "bgPage": "https://commons.wikimedia.org/wiki/File:Grass_at_a_lawn_with_morning_dew_05.jpg",
    "license": "CC0",
-   "pythonArea": 0.3346405029296875,
+   "pythonArea": 0.3346366882324219,
    "pythonGt": {
-    "mae": 0.002770997118204832,
+    "mae": 0.002771249506622553,
     "iou": 0.9946303781027982
    }
   },
@@ -25,8 +25,8 @@
    "license": "CC0",
    "pythonArea": 0.1973724365234375,
    "pythonGt": {
-    "mae": 0.0035743005573749542,
-    "iou": 0.9886220800208949
+    "mae": 0.0035743426997214556,
+    "iou": 0.9886218942831957
    }
   },
   "cc0-pet": {
@@ -39,8 +39,8 @@
    "license": "CC0",
    "pythonArea": 0.036712646484375,
    "pythonGt": {
-    "mae": 0.008216911926865578,
-    "iou": 0.8161245780914391
+    "mae": 0.008216992020606995,
+    "iou": 0.8161871883390871
    }
   },
   "fusion-a": {

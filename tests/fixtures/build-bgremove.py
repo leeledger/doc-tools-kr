@@ -23,7 +23,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 SPIKE = os.environ.get('BGREMOVE_SPIKE', 'C:/dev/doc-tools-kr/spikes/bg-remove')
 G = os.path.join(SPIKE, 'data', 'gt')
 OUT = os.path.join(ROOT, 'tests', 'fixtures', 'bgremove')
-EXPORT = 'aa62cd87-ce158794'
+EXPORT = 'aa62cd87-714d0a62'
 MEAN = np.array([0.485, 0.456, 0.406], np.float32)
 STD = np.array([0.229, 0.224, 0.225], np.float32)
 sys.path.insert(0, os.path.join(ROOT, 'scripts', 'model', 'birefnet'))

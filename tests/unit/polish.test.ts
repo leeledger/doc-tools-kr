@@ -648,6 +648,23 @@ describe('service worker (P.11)', () => {
     expect(cache.store.has('/_astro/b.js')).toBe(false);
   });
 
+  it('C2 round 2: /terms/, /privacy/, /licenses/ are not precached but stored when visited; offline they come from the cache', async () => {
+    const cache = new FakeCache();
+    for (const path of ['/terms/', '/privacy/', '/licenses/']) {
+      const ev = event(req(path, 'GET', 'navigate'));
+      handleFetch(ev.e, envWith(async () => new Response(`page ${path}`), cache));
+      await ev.responded;
+      expect(cache.store.has(path), path).toBe(true);
+      const offline = event(req(path, 'GET', 'navigate'));
+      handleFetch(offline.e, envWith(async () => Promise.reject(new TypeError('offline')), cache));
+      expect(await (await offline.responded!).text()).toBe(`page ${path}`);
+    }
+    const guide = event(req('/guide/x/', 'GET', 'navigate'));
+    handleFetch(guide.e, envWith(async () => new Response('guide'), cache));
+    await guide.responded;
+    expect(cache.store.has('/guide/x/')).toBe(false);
+  });
+
   it('navigation: network first (refreshing the precache), then the cache, then the offline page', async () => {
     const cache = new FakeCache();
     const online = event(req('/pdf-merge/', 'GET', 'navigate'));

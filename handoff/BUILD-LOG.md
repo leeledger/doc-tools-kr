@@ -1656,3 +1656,72 @@ Status: **DONE_WITH_CONCERNS**. Everything is built and gated locally. The relea
   - `regress:bgremove --fixtures-only --backend wasm` passed on CI.
   - bg-chromium (with `@model`) and bg-mobile-safari passed.
   - Arch: /photo-compress/ LCP sits on the 2,000 ms line on CI. A3 saw 2,111 ms locally on an unchanged page.
+
+## C2 round 2 (Bob, 2026-10-02; Arch rulings on the round-1 questions + the sustainability ruling)
+
+Status: **DONE**. Every Arch target is met on this PC; CI result below. The release flag stays off.
+
+### Arch rulings applied
+1. **COEP on the worker scripts and on `/vendor/onnxruntime-web/*`:** approved as built, unchanged. The Cloudflare `*` match is checked at deploy.
+2. **The engine stays alive between photos (the per-photo restart is rejected).**
+   - `infer-core.ts`: an `init` message creates the session; each `run` disposes its input and output tensors.
+   - `session.ts`: `startEngine` returns an `EngineHandle` (`run`, `dispose`).
+   - `bg.ts`: keeps the handle. It is disposed after 2 minutes idle (`IDLE_MS`), after 60 s hidden (`HIDDEN_MS`, visibilitychange), on pagehide, on a crash (`onLost`) and on any engine error.
+   - `keepEngine()` keeps today's per-photo restart when `navigator.deviceMemory ≤ 4`, or when it is unknown on iOS (iPhone, iPod, iPad, and iPadOS reporting MacIntel with touch).
+   - After a WebGPU failure, the page uses WASM for the rest of the visit.
+   - Memory work this needed (the first kept-session runs peaked at 2.5–2.7 GB):
+     - Blur-fusion now streams its box filters through a ring of 2r+1 rows and writes the result into the input. Float planes go from 8 to 2: about 100 MB instead of about 400 MB at 12 MP. The output equals the Python reference within the gate (unit test).
+     - The work copy's pixels are read once and serve both the model input and the fusion worker (transferred, not copied).
+     - WebGPU buffer-cache modes were measured (`storageBufferCacheMode`): `disabled` peaked at 2.18 GB but took 2.7–2.9 s per photo; `simple` peaked at 2.97 GB; `lazyRelease` was no better than `bucket`. **Kept: `bucket`** (the default), with the streamed fusion.
+3. **Session start.**
+   - New export step `simplify()` in `scripts/model/birefnet/export.py`: onnxsim 0.4.36 (Apache-2.0, pinned in `requirements.lock` with rich (MIT), markdown-it-py (MIT), mdurl (MIT) and pygments (BSD-2-Clause); dev only), 3 random-input checks, then the wide-op fix again.
+   - `--resimplify` applied it to the C2.0 export: **17,112 → 1,870 nodes**. The shape ops (Shape 1,274, Unsqueeze 1,384, Gather 784, Cast 744, Concat 686 and more) are folded.
+   - New exportId **`aa62cd87-714d0a62`** (92,302,964 B, `sha256Total 714d0a62f064d6d972911ba7cef8716d8a77f326e6f714379e3a77364ab92062`). Its manifest records `"simplify": "onnxsim 0.4.36"`; export_info.json holds the node counts. The old parts were removed (one version only), and fixtures, regress, parity, the licence row and SOURCES were updated.
+   - `graphOptimizationLevel` on the simplified model, WebGPU: `all` 2,327 ms, **`basic` 1,659 ms (kept, `OPT_LEVEL`)**, `disabled` 1,487 ms. WASM: `all` 1,671 ms, `basic` 1,061 ms.
+4. **Precache:** `/terms/` and `/privacy/` left the precache (`/licenses/` was out already). The SW now stores these 3 pages when they are visited (`RUNTIME_PAGES`, network first; unit test with offline). The offline page and the tool shells stay. **432.9 KB with the flag on, 429.3 KB off** (before: 448.8 / 444.8).
+5. **Cache name:** kept, with the exemption.
+6. **/photo-compress/ LCP:** not touched.
+7. **Not for ID or passport photos (sustainability ruling).**
+   - Source: 외교부 여권안내 "제출 불가한 사진파일 안내", https://www.passport.go.kr/home/kor/contents.do?menuPos=12, fetched 2026-10-02. Verbatim: **"배경이 흰색이 아니거나, 배경색을 사진 편집 프로그램으로 제거하여 사진이 변형된 경우"**.
+   - The tool page has no sources block (check:quotes covers guides only), so the quote is kept here, in `copy.ts` (`NOT_FOR_ID_SOURCE`) and in a code comment in tools.ts.
+   - Removed:
+     - 증명사진 from the fit line.
+     - The done-panel line that sent users to /id-photo/.
+     - The FAQ sentence and link to /id-photo/.
+     - id-photo from the related tools (now stamp-signature, photo-compress, pdf-merge).
+     - The 증명사진 wording in the blue comment.
+   - Positioning: products, profile photos, pets; for documents and slides.
+     - Fit line: `상품·프로필 사진·반려동물처럼 하나가 크게 나온 사진을 문서나 발표 자료에 넣을 때 잘 맞아요. 유리나 …`
+   - Added:
+     - Limits line (Arch wording) with an `외교부 안내` link: `여권·증명사진 제출용으로는 쓰지 마세요. 외교부는 편집 프로그램으로 배경을 지운 사진을 받지 않아요.`
+     - FAQ `여권·증명사진에 써도 되나요?`, which answers no, quotes the rule and links passport.go.kr.
+   - The HEIC FAQ was dropped to keep 6 FAQs (COPY.md 4–6).
+   - The no-subject → /stamp-signature/ hint is unchanged.
+   - Glyphs: **0 new** (one candidate, 앞, was rewritten away). UI fonts 137.7 KB flag on (main 137.1).
+
+### Before / after (this PC: RTX 2060, Chrome 153 headless; 12 MP = 4,000×3,000 JPEG)
+
+| | Round 1 | Round 2 |
+|---|---|---|
+| Session create, WebGPU | ~8.1 s (regress median) | **1.7–1.9 s** (target ≤ 3 s) |
+| Session create, WASM | ~7.0 s | **1.1–1.2 s** |
+| WebGPU, 2nd and later photos, pick → edge-colour step | 17–19 s end to end (restart every photo) | **1.33–1.75 s** (target ≤ 2 s); end to end with fusion 4.2–5.6 s |
+| WebGPU, 1st photo (incl. local download + session) | 19.1 s | 9.3 s to fusion, 13.2 s end to end |
+| Peak private memory, WebGPU, 10 × 12 MP in a row | 2.26 GB (one photo, restart) | **2.24–2.42 GB per photo, flat from photo 2 (no growth)**; max 2.42 GB (target ≤ 2.5) |
+| Peak private memory, WASM, 5 × 12 MP | 2.00 GB (one photo) | 1.62–2.47 GB (one spike at photo 2, then about 1.9) |
+| WASM, 2nd and later photos, to the edge-colour step | — | 2.9–5.4 s |
+| Precache (flag on / off) | 448.8 / 444.8 KB | **432.9 / 429.3 KB** (target ≤ 440) |
+
+### Gates (round 2, changed parts)
+- `parity.py --out …-gridsample-sim` on the committed parts: **exit 0**.
+  - fp32 vs torch: mean ≤ 2.1e-7, max 9.5e-5.
+  - fp16 vs fp32: 3.1e-5.
+  - GT: MAE 0.00484, IoU 0.9423.
+  - Empty masks: 3/49 (g01, m02, t01).
+- Full `regress:bgremove`, WebGPU (69 images, one session): **OK**. Max diff 0.00062; GT MAE 0.00482, IoU 0.9424; empty masks 3/49; fusion at 4 MP 1.07 s.
+- `--fixtures-only --backend wasm` (the CI command): OK, diff ≤ 0.00001.
+- check: 0 errors.
+- unit: 784/784 on the flag-off dist; postbuild 44/44 on the flag-on dist.
+- Both builds + check-dist OK. check:licenses OK in both states.
+- e2e `bg-chromium` + `bg-mobile-safari`: 11 passed, 1 skipped. mobile-safari runs the iOS per-photo-restart path, chromium the kept engine.
+- Screenshots checked (390 / 1280 px, light / dark).

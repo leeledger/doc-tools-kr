@@ -19,7 +19,7 @@ from metrics import all_metrics
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 SP = os.environ.get('BGREMOVE_SPIKE', 'C:/dev/doc-tools-kr/spikes/bg-remove')
-EXPORT = 'aa62cd87-ce158794'
+EXPORT = 'aa62cd87-714d0a62'
 # Not part of the real set (Arch C2.0 ruling): paper documents belong to /stamp-signature/.
 OFF_TOPIC = {'l04': 'paper letterhead (logo-sign); /stamp-signature/ handles paper stamps, signatures and logos'}
 MEAN = np.array([0.485, 0.456, 0.406], np.float32); STD = np.array([0.229, 0.224, 0.225], np.float32)

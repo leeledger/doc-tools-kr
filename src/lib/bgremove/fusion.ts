@@ -6,10 +6,10 @@
 //                         F' = clip(bF + a·(I − a·bF − (1−a)·bB), 0, 1)        returns F', bB
 //   F1, B1 = pass(I, I, I, a, r1);   F = pass(I, F1, B1, a, r2).F'
 //
-// box() is a normalised (2r+1)² mean with reflected borders (cv2 BORDER_REFLECT: …cba|abc…|cba…), done as two
-// running-sum passes (O(1) per pixel whatever the radius). box(1−a) = 1 − box(a), since the box of 1 is 1.
-// Memory: the channels are done one after another, so at most 8 float planes are alive (about 400 MB at 4,096×3,072,
-// 100 MB at the phone cap of 2,048 px). Pure; runs in fusion.worker.ts.
+// box() is a normalised (2r+1)² mean with reflected borders (cv2 BORDER_REFLECT: …cba|abc…|cba…), done as running
+// sums (O(1) per pixel whatever the radius) streamed row by row through a ring of 2r+1 rows. box(1−a) = 1 − box(a),
+// since the box of 1 is 1. Memory: 2 float planes + small rings; the result is written into the input. Pure; runs in
+// fusion.worker.ts.
 
 export const EPS = 1e-5;
 
@@ -23,10 +23,17 @@ export function reflect(i: number, n: number): number {
   }
 }
 
-/** Normalised box filter of `src` (w×h) with radius `r` into `out`; `tmp` is a scratch plane of the same size. */
-export function boxFilter(src: Float32Array, w: number, h: number, r: number, out: Float32Array, tmp: Float32Array): void {
+/** Fills `row` (length w) with source row `y`. */
+export type RowFill = (y: number, row: Float32Array) => void;
+
+/**
+ * Normalised (2r+1)² box filters of several sources at once, streamed row by row (C2 round 2: no full-size scratch
+ * planes). Each source is given as a row filler; its horizontal running sums go into a ring of 2r+1 rows, and column
+ * sums over the ring give the output row, which `onRow(y, rows)` receives (rows[i] = box of source i at row y; the
+ * arrays are reused for the next row). Borders reflect as cv2 BORDER_REFLECT, for any radius.
+ */
+export function boxRows(fills: readonly RowFill[], w: number, h: number, r: number, onRow: (y: number, rows: readonly Float32Array[]) => void): void {
   const k = 2 * r + 1;
-  // Horizontal running sums, row by row.
   const addX = new Int32Array(w);
   const subX = new Int32Array(w);
   for (let x = 1; x < w; x++) {
@@ -35,86 +42,138 @@ export function boxFilter(src: Float32Array, w: number, h: number, r: number, ou
   }
   const startX = new Int32Array(k);
   for (let j = 0; j < k; j++) startX[j] = reflect(j - r, w);
-  for (let y = 0; y < h; y++) {
-    const o = y * w;
+  const src = new Float32Array(w);
+  const rings = fills.map(() => new Float32Array(k * w));
+  const cols = fills.map(() => new Float64Array(w));
+  const outs = fills.map(() => new Float32Array(w));
+  const slot = (v: number): number => (((v % k) + k) % k) * w;
+  /** Horizontal box of source row `sy` of source `f` into ring offset `o`. */
+  const hrow = (f: number, sy: number, o: number): void => {
+    fills[f]!(sy, src);
+    const ring = rings[f]!;
     let s = 0;
-    for (let j = 0; j < k; j++) s += src[o + startX[j]!]!;
-    tmp[o] = s / k;
+    for (let j = 0; j < k; j++) s += src[startX[j]!]!;
+    ring[o] = s / k;
     for (let x = 1; x < w; x++) {
-      s += src[o + addX[x]!]! - src[o + subX[x]!]!;
-      tmp[o + x] = s / k;
+      s += src[addX[x]!]! - src[subX[x]!]!;
+      ring[o + x] = s / k;
+    }
+  };
+  for (let f = 0; f < fills.length; f++) {
+    const ring = rings[f]!;
+    const col = cols[f]!;
+    for (let v = -r; v <= r; v++) {
+      const o = slot(v);
+      hrow(f, reflect(v, h), o);
+      for (let x = 0; x < w; x++) col[x] = col[x]! + ring[o + x]!;
     }
   }
-  // Vertical running sums over whole rows (row-major, cache friendly).
-  const col = new Float64Array(w);
-  for (let j = 0; j < k; j++) {
-    const o = reflect(j - r, h) * w;
-    for (let x = 0; x < w; x++) col[x] = col[x]! + tmp[o + x]!;
-  }
-  for (let x = 0; x < w; x++) out[x] = col[x]! / k;
-  for (let y = 1; y < h; y++) {
-    const add = reflect(y + r, h) * w;
-    const sub = reflect(y - r - 1, h) * w;
-    const o = y * w;
-    for (let x = 0; x < w; x++) {
-      const v = col[x]! + tmp[add + x]! - tmp[sub + x]!;
-      col[x] = v;
-      out[o + x] = v / k;
+  for (let y = 0; y < h; y++) {
+    if (y > 0) {
+      // The row leaving the window (virtual index y − r − 1) shares its ring slot with the one entering (y + r).
+      const o = slot(y + r);
+      for (let f = 0; f < fills.length; f++) {
+        const ring = rings[f]!;
+        const col = cols[f]!;
+        for (let x = 0; x < w; x++) col[x] = col[x]! - ring[o + x]!;
+        hrow(f, reflect(y + r, h), o);
+        for (let x = 0; x < w; x++) col[x] = col[x]! + ring[o + x]!;
+      }
     }
+    for (let f = 0; f < fills.length; f++) {
+      const col = cols[f]!;
+      const out = outs[f]!;
+      for (let x = 0; x < w; x++) out[x] = col[x]! / k;
+    }
+    onRow(y, outs);
   }
+}
+
+/** Normalised box filter of a whole plane `src` (w×h) with radius `r` into `out` (boxRows on one source). */
+export function boxFilter(src: Float32Array, w: number, h: number, r: number, out: Float32Array): void {
+  boxRows([(y, row) => row.set(src.subarray(y * w, (y + 1) * w))], w, h, r, (y, rows) => out.set(rows[0]!, y * w));
 }
 
 const clip01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /**
  * Blur-fusion ×2. `rgba`: the work copy (straight RGBA bytes); `alpha`: the mask at the same size (0..255).
- * Returns straight RGBA bytes: the estimated foreground colour with `alpha` as its alpha channel.
+ * Writes the estimated foreground colour into `rgba` itself, with `alpha` as its alpha channel, and returns it.
+ * Memory (C2 round 2): per channel, pass 1 streams box(a), box(I·a), box(I·(1−a)) at r1 into F1 and B1 (the only
+ * two float planes), pass 2 streams box(a), box(F1·a), box(B1·(1−a)) at r2 and writes the result straight into
+ * `rgba`: about 100 MB at 4,096×3,072 besides the photo and the mask.
  */
-export function blurFusion(rgba: Uint8ClampedArray | Uint8Array, alpha: Uint8ClampedArray | Uint8Array, w: number, h: number, r1: number, r2: number): Uint8ClampedArray {
+export function blurFusion(rgba: Uint8ClampedArray, alpha: Uint8ClampedArray | Uint8Array, w: number, h: number, r1: number, r2: number): Uint8ClampedArray {
   const n = w * h;
   if (rgba.length !== n * 4 || alpha.length !== n) throw new Error('blurFusion: size mismatch');
-  const out = new Uint8ClampedArray(n * 4);
-  const a = new Float32Array(n);
-  for (let i = 0; i < n; i++) a[i] = alpha[i]! / 255;
-  const tmp = new Float32Array(n);
-  // box(a) at both radii, shared by the three channels.
-  const bA1 = new Float32Array(n);
-  boxFilter(a, w, h, r1, bA1, tmp);
-  const bA2 = new Float32Array(n);
-  boxFilter(a, w, h, r2, bA2, tmp);
-  const I = new Float32Array(n);
-  const prod = new Float32Array(n);
-  const bF = new Float32Array(n);
-  const bB = new Float32Array(n);
+  const k = 1 / 255;
+  const F1 = new Float32Array(n);
+  const B1 = new Float32Array(n);
+  const aRow: RowFill = (y, row) => {
+    const o = y * w;
+    for (let x = 0; x < w; x++) row[x] = alpha[o + x]! * k;
+  };
   for (let c = 0; c < 3; c++) {
-    for (let i = 0; i < n; i++) I[i] = rgba[i * 4 + c]! / 255;
     // Pass 1 (r1): F = B = I.
-    for (let i = 0; i < n; i++) prod[i] = I[i]! * a[i]!;
-    boxFilter(prod, w, h, r1, bF, tmp);
-    for (let i = 0; i < n; i++) prod[i] = I[i]! * (1 - a[i]!);
-    boxFilter(prod, w, h, r1, bB, tmp);
-    for (let i = 0; i < n; i++) {
-      const fb = bF[i]! / (bA1[i]! + EPS);
-      const bb = bB[i]! / (1 - bA1[i]! + EPS);
-      const ai = a[i]!;
-      bF[i] = clip01(fb + ai * (I[i]! - ai * fb - (1 - ai) * bb)); // F1
-      bB[i] = bb; // B1
-    }
-    // Pass 2 (r2): F = F1, B = B1.
-    for (let i = 0; i < n; i++) prod[i] = bF[i]! * a[i]!;
-    const bF2 = bF; // F1 is no longer needed after this product
-    boxFilter(prod, w, h, r2, bF2, tmp);
-    for (let i = 0; i < n; i++) prod[i] = bB[i]! * (1 - a[i]!);
-    boxFilter(prod, w, h, r2, bB, tmp);
-    for (let i = 0; i < n; i++) {
-      const fb = bF2[i]! / (bA2[i]! + EPS);
-      const bb = bB[i]! / (1 - bA2[i]! + EPS);
-      const ai = a[i]!;
-      out[i * 4 + c] = Math.round(clip01(fb + ai * (I[i]! - ai * fb - (1 - ai) * bb)) * 255);
-    }
+    boxRows(
+      [
+        aRow,
+        (y, row) => {
+          const o = y * w;
+          for (let x = 0; x < w; x++) row[x] = rgba[(o + x) * 4 + c]! * k * alpha[o + x]! * k;
+        },
+        (y, row) => {
+          const o = y * w;
+          for (let x = 0; x < w; x++) row[x] = rgba[(o + x) * 4 + c]! * k * (1 - alpha[o + x]! * k);
+        },
+      ],
+      w,
+      h,
+      r1,
+      (y, [bA, bIA, bIB]) => {
+        const o = y * w;
+        for (let x = 0; x < w; x++) {
+          const i = o + x;
+          const ba = bA![x]!;
+          const fb = bIA![x]! / (ba + EPS);
+          const bb = bIB![x]! / (1 - ba + EPS);
+          const ai = alpha[i]! * k;
+          F1[i] = clip01(fb + ai * (rgba[i * 4 + c]! * k - ai * fb - (1 - ai) * bb));
+          B1[i] = bb;
+        }
+      },
+    );
+    // Pass 2 (r2): F = F1, B = B1; the result goes straight into channel c (read as I before it is overwritten).
+    boxRows(
+      [
+        aRow,
+        (y, row) => {
+          const o = y * w;
+          for (let x = 0; x < w; x++) row[x] = F1[o + x]! * alpha[o + x]! * k;
+        },
+        (y, row) => {
+          const o = y * w;
+          for (let x = 0; x < w; x++) row[x] = B1[o + x]! * (1 - alpha[o + x]! * k);
+        },
+      ],
+      w,
+      h,
+      r2,
+      (y, [bA, bFA, bBB]) => {
+        const o = y * w;
+        for (let x = 0; x < w; x++) {
+          const i = o + x;
+          const ba = bA![x]!;
+          const fb = bFA![x]! / (ba + EPS);
+          const bb = bBB![x]! / (1 - ba + EPS);
+          const ai = alpha[i]! * k;
+          rgba[i * 4 + c] = Math.round(clip01(fb + ai * (rgba[i * 4 + c]! * k - ai * fb - (1 - ai) * bb)) * 255);
+        }
+      },
+    );
   }
-  for (let i = 0; i < n; i++) out[i * 4 + 3] = alpha[i]!;
-  return out;
+  for (let i = 0; i < n; i++) rgba[i * 4 + 3] = alpha[i]!;
+  return rgba;
 }
 
 /** The fallback when fusion cannot run (worker out of memory): the photo's own colours with the mask as alpha. */
