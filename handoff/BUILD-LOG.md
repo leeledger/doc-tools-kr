@@ -1768,3 +1768,21 @@ Status: **DONE**.
 - Design: Pages Function -> service binding -> Worker `docttak-bg` with the Images binding. Send a <=1024 px copy only, use the alpha only, fuse on the device. Full brief: `handoff/ARCHITECT-BRIEF-C2-CLOUD.md`.
 - Blocked on owner-only items (brief §9): create the Worker + Images binding, the Pages service binding (Preview), the privacy-officer name, approval of the copy and the CLAUDE.md rule change. `wrangler whoami`: not authenticated.
 - About 60 of 5,000 monthly unique transformations used by the spike.
+
+## C2-cloud spike-2 (Arch, 2026-10-02; brief §9 steps 1–3)
+- Owner ran `wrangler login` (account d6248b98…). Worker `docttak-bg` deployed from `workers/bg/` (version 7fc58a4c): Images binding `IMAGES`, ratelimits `RL_IP` 6/60 s and `RL_IP10` 3/10 s, `workers_dev = false`, `preview_urls = false`, observability off. No routes ("No targets deployed").
+- Pages project `doc-tools-kr`: service binding `BG` → `docttak-bg` set on **Preview only** through the Pages API (PATCH deployment_configs.preview.services). Production: no services, env unchanged (NODE_VERSION, PUBLIC_NAVER_SITE_VERIFICATION, PUBLIC_SITE_URL). Preview env keeps PUBLIC_BG_REMOVE.
+- Function `functions/api/remove-bg.ts` POST: type allowlist, Content-Length 1..2,000,000, `Sec-Fetch-Site: same-origin` (else 403), then `env.BG.fetch(request)`. Commit 575d98b, preview deploy 100f0f3d.
+- Results (Seoul, owner PC, 1024 px JPEG q90 copies of the spike photos):
+
+| Photo | Sent | Out | Wall time |
+|---|---|---|---|
+| s01 | 1024×769 | WebP RGBA 1024×769, 575 KB | 3.25 s |
+| h01 | 752×1024 | WebP RGBA 752×1024, 662 KB | 4.11 s |
+| a02 | 1024×682 | WebP RGBA 1024×682, 425 KB | 5.50 s |
+
+- **F2 proven:** `segment: "foreground"` works through the binding. **U5 answered:** `output({ format: "image/webp", quality: 100 })` is lossless (RGB in opaque pixels equals the input exactly, mean diff 0.00) with 256 alpha levels. PNG and `f=json` mask output not needed; not tested.
+- **U3 answered:** the ratelimits binding deploys and enforces on Workers Free. 10 parallel requests from one IP → 7 × 200, 3 × 429 `{"error":"busy"}` (permissive, as F14 says).
+- Guards: no Sec-Fetch-Site → 403 `origin`; non-image bytes → 415 `type`. Response headers: `Cache-Control: no-store, private`, `CDN-Cache-Control: no-store`, `X-Robots-Tag: noindex`.
+- Still open: U4 (quota error code; the Worker maps /9422|quota/ to 503 `quota`), phone/LTE latency (§11 step 3), owner §9 step 5 (privacy officer name, §7 copy and the CLAUDE.md rule change). Quota used so far this month: about 65 of 5,000.
+- Next: Bob builds the brief (§3–§10) on `c2-cloud` with `PUBLIC_BG_CLOUD` default 0. The Worker source lives in `workers/bg/` and is deployed with `npx wrangler deploy` from that folder.
