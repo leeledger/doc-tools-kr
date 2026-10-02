@@ -1484,6 +1484,8 @@ Status: DONE_WITH_CONCERNS (all gates pass on this PC; the real-photo gate is pe
 - qa:visual (port 4575): 0 hard failures, 332 shots; /stamp-signature/ looked at by me at 390 and 1280, light and dark (empty, 도장 result, no-ink message, draw).
 - Lighthouse (lhci, 5 runs, median, served on 4575): /stamp-signature/ LCP 1,959 ms perf 0.99; /guide/stamp-image/ 1,656 ms perf 1; home 1,960; every other URL ≤ 1,971 except /photo-compress/ 2,110 ms, the same local value A2 reproduced on HEAD 659c04a (2,113 ms; CI is the source of truth). Accessibility, best practices, SEO, CLS and script size pass on all 19 URLs.
 
+- CI run 36942932929 (55144bb): checks job green (build, check, unit, licenses, regress:ink, Lighthouse); e2e failed on every project in one test only, `id-photo.spec.ts` SEO, which counted 5 related tools (now 6 with /stamp-signature/). Fixed in the follow-up commit; firefox's 11 flaky retries are the known harness flakes, none in the new spec.
+
 ### Known Gaps (C1 integration)
 - **Real-photo gate pending (owner-only, needed by 2026-11-10, before 11-15):** 6 photos + JSON into `tests/corpus/ink-photos/`; then `npm run regress:ink` (without --fixtures-only) and the contact sheet for Richard.
 - Hancom "한글에 넣기" section: no fetchable official Hancom help page found; add when one is quoted.

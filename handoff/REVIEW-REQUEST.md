@@ -65,7 +65,7 @@ Ready for Review: YES
 - `src/content/guides/stamp-image.md`, `src/content/guides/e-signature-law.md` — the two guides (published; check:quotes 121/121).
 - `scripts/check-dist.mjs:83-96` — ink worker 6.1 KB and lazy-controls 13.5 KB budgets; controls must not load with the page.
 - `lighthouserc.json`, `scripts/qa/visual.mjs` — new URLs and states.
-- Tests: `tests/unit/stamp-signature.test.ts`, `tests/e2e/stamp-signature.spec.ts` (new); `tests/e2e/{site,polish}.spec.ts`, `tests/unit/{postbuild,polish}.test.ts` (lists, og rule, statute-quote exemption).
+- Tests: `tests/unit/stamp-signature.test.ts`, `tests/e2e/stamp-signature.spec.ts` (new); `tests/e2e/{site,polish,id-photo}.spec.ts`, `tests/unit/{postbuild,polish}.test.ts` (lists, og rule, statute-quote exemption).
 
 ## Open Questions
 - e-signature-law: please read it against the red lines (no "an image is a 전자서명", no 인감, ends with the 받는 곳 line). It shows the statute text verbatim; `tests/unit/postbuild.test.ts` now exempts law.go.kr quotes from "no quote is rendered".
