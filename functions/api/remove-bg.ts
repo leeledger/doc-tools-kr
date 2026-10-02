@@ -39,7 +39,7 @@ export async function onRequestGet({ request, env }: Ctx): Promise<Response> {
     return json(200, { images: typeof env.IMAGES, colo: (request as unknown as { cf?: { colo?: string } }).cf?.colo ?? null });
   }
   const src = url.searchParams.get('src') ?? '';
-  if (!/^\/_spike\/[a-z0-9]+\.jpg$/.test(src)) return json(400, { error: 'src' });
+  if (!/^\/spike\/[a-z0-9]+\.jpg$/.test(src)) return json(400, { error: 'src' });
   const f = url.searchParams.get('f') ?? '';
   const image: Record<string, unknown> = { segment: 'foreground' };
   if (f === 'png' || f === 'webp' || f === 'avif' || f === 'json') image.format = f;
