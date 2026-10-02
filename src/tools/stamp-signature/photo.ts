@@ -234,6 +234,11 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
       return;
     }
     hideError();
+    // Nothing was found at the chosen 진하기 and one step stronger found it: the control shows the step used.
+    if (m.strength !== Number(strength.value)) {
+      strength.value = String(m.strength);
+      strengthOut.value = strengthLabel(m.strength);
+    }
     const px: Rgba = { data: new Uint8ClampedArray(m.out.pixels), width: m.out.width, height: m.out.height };
     current = { px, fileName: m.fileName };
     // A 크기 bigger than the crop is disabled (downscale only); a disabled choice falls back to 원본 크기, which

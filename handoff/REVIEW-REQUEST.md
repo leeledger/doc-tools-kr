@@ -1,3 +1,104 @@
+# Review Request — Sprint C, C1 r3 round 2 (Richard's C1 r3 feedback)
+Date: 2026-10-02
+Ready for Review: YES. Status: DONE. Arch's earlier acceptances still stand: m02/m11 IoU, budget, timing.
+
+## Acceptance (Arch): no regression against 18e5827 on any photo, at 1600 and 2400 px
+I looked through all four old | new sheets myself. Columns: photo | auto | 빨간 도장 | 서명, each as old and new.
+- `C:\dev\doc-tools-kr\spikes\ink-owner\sheets\r3b-oldnew-cr2400.jpg`, `...-cr1600.jpg`: spikes/ink-real, 19 photos
+- `...\sheets\r3b-oldnew-co2400.jpg`, `...-co1600.jpg`: spikes/ink-owner, 26 photos
+
+| Photos | 자동 result vs 18e5827 |
+|---|---|
+| c03, c11 (seal walls) | Every seal is keyed again, as before |
+| r07 (kraft in a dark frame) | Whole letter, no grain, black; it was the noise cloud. The old build also kept the frame |
+| r02 (scroll) | The seal only, no band or smear; old gave the painting and its mount |
+| r01 | Named 도장.png, no longer both |
+| c02 | Better: the seal; old keyed it as black |
+| c02b | Same class as old: the painting |
+| r04 (seal and ink pad photo) | Messy in both builds |
+
+In the explicit modes nothing that used to work fails now:
+- 빨간 도장 still gives noink on pure 서명 photos. This is why the noink retry is now 자동 only; at +1 it found paper noise on c09.
+- 서명 drops red ink.
+
+Owner set, through the owner harness (run.mjs + metrics.py) on this build (serve.mjs on :4873, dist-noauto, chromium):
+- 17 Pass / 7 Partial / 2 Fail (m07, m09). That is 24 Pass + Partial.
+- Residue at most 0.2 % on every case except m07/m09. m02 is 0.114 % local; the rest are 0–0.003.
+- IoU:
+
+  | ID | IoU |
+  |---|---|
+  | m01 | 0.887 |
+  | m05 | 0.901 |
+  | m06 | 0.930 |
+  | m10 | 0.937 (vs both inks) |
+  | m02 | 0.802 |
+  | m11 | 0.794 |
+
+- 0 offsite requests, 0 non-GET requests, 0 console errors.
+- Sheets: `sheets\r3b-real-chromium.jpg` and `sheets\r3b-sim-chromium.jpg`.
+
+## Files Changed
+### src/lib/ink/key.ts
+**Must Fix 1: underline.** `removeLinesH` / `removeLines` first find candidate lines, then remove only ruled or printed ones:
+- a family of 3 or more parallel lines (within 1°), or
+- a single line that runs within 6 % of both page edges and is not joined to a larger strong-ink component.
+
+The page box now carries its x/y origin (`PageBox`).
+
+**Must Fix 2: regressions on photos that passed before.**
+
+| Change | Function | Fixes |
+|---|---|---|
+| The paper colour for redness excludes ink within 2 px and anything redder than the median paper by more than 0.06. Before, seal rims turned the paper pink | `inkExclusion` → `coarsePaper` and `sceneInk` | c03, c11 |
+| Ratio is 0 where the blurred darkness is under 0.1 | `ratioPlane` | kraft grain |
+| Dark, already red-ish pixels of a red hue get +0.2, so dull maroon seals key | `ratioPlane` | c02 |
+| 빨간 도장 range 0.2 → 0.4 | — | — |
+| 서명 also keeps the 18e5827 absolute-redness fade, 0.15 → 0.3 | `absFactor`, also in `fillSolid` | r07 kraft |
+| Ink is cleared in the desk plus a 2-cell band of the page edge | `PageMask.band` | r07 frame edge |
+
+**Should Fix**
+- The noink retry runs in 자동 only. Its result carries `strength`, which the worker passes on and the page shows (`photo.ts` onResult).
+- `sceneInk`: 'both' now needs all of the following:
+  - The dark ink is stroke-like: what a 2 % opening removes, at least half of the dark ink and at least `blackShare` (0.1) of the strong ink. A solid object such as r01's handle is excluded.
+  - A red cluster is stamp-shaped.
+  - The stroke meets the red and carries on past it (at least 65 % away from it).
+- Red print is text only when its parts are small (average < 150 px), so a wall of seals is not mistaken for print.
+- A red pixel for the decision also needs 0.06 of paper-relative redness. Classification uses the plain ratio, without the boost.
+
+### Other files
+- `src/lib/ink/worker-core.ts`, `src/tools/stamp-signature/photo.ts`: `strength` in the result; the 진하기 control follows it.
+- `tests/fixtures/build-ink.py` + `tests/fixtures/ink/`: new fixtures. Existing images are byte-identical.
+
+  | Fixture | Checks | IoU / note |
+  |---|---|---|
+  | gt14-tight | Underline spans 78 % | 0.923 (r3 build: 0.790) |
+  | gt14-kraftFrame | Purple pen on kraft in a dark frame | 0.950 (18e5827: 0.028) |
+  | gt15-sealWall | 768 px wall of pink-rimmed seals, guess red | IoU and ΔE info, baseline-guarded |
+
+- `scripts/regress/ink.mjs`: the 서명 path passes the ratio to `keepMainInk`; ΔE is info for `deltaEGate: false` fixtures. `scripts/regress/ink-baseline.json` is rebaselined with all 150 checks green. Two baselines moved:
+
+  | Fixture | Baseline (r3 → now) | 18e5827 | Cause |
+  |---|---|---|---|
+  | gt15-stampOnText | 0.8934 → 0.8821 | 0.8907 | The dark boost takes in a little text under the seal |
+  | gt15-shadow | 0.8935 → 0.8922 | — | — |
+
+- `scripts/check-dist.mjs`: comment only. The worker is 11.9 KB gzip, inside the 13 KB budget.
+- `tests/unit/ink-key.test.ts`: tests for the tight underline, a lone edge-to-edge rule, the retry (once, 자동 only, strength reported), 'both' with a fixed colour gives 도장.png / 서명.png, paper colour under a wall of seals, and the zero ratio on kraft grain. The mode-filter table is updated.
+
+## Gates
+- check: 0 errors
+- unit: 749/749
+- regress:ink --fixtures-only: 150/150
+- both builds + check-dist: OK
+- stamp-signature e2e on chromium + mobile-safari: 15 passed, 1 skipped
+
+## Open Questions
+- In the Node pipeline, a 2400×1800 run takes 1.3–2.4 s (logged, not gated).
+- r04 (ink pad and blue porcelain) gets 'both'. That is no worse than old, which gave a mess of cloth and seal; it is not a 도장 photo.
+
+---
+
 # Review Request — Sprint C, C1 round 3 (real-photo failures in /stamp-signature/)
 Date: 2026-10-02
 Ready for Review: YES. Status: DONE_WITH_CONCERNS. Two gt15-family IoU readings (m02 0.788, m11 0.794) are under the report's 0.85; they need Arch (see Open Questions).

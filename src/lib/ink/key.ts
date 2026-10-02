@@ -26,6 +26,8 @@ export const INK = {
    * C1 r3 lowered it from 0.15 to 0.1 so the faint seals of a 고슈인 (o08, 0.11) are not dropped silently.
    */
   redShare: 0.1,
+  /** 자동: dark strokes (not solid dark objects) count beside red from this share of the strong ink. */
+  blackShare: 0.1,
   /** Hysteresis: strong ink is a > 0.5; weak alpha must lie within max(2, round(longEdge / 600)) px of it. */
   strongAlpha: 0.5,
   hystMinPx: 2,
@@ -52,15 +54,24 @@ export const INK = {
    * Redness ratio (C1 r3, redRatio): (R - max(G,B)) of the pixel minus that of the paper around it, per unit of
    * paper luma, divided by the pixel's min(R,G,B) darkness against that paper (at least 0.05). About 0.4-1.0 for
    * red or orange ink at any coverage and in shade, about 0 for black, negative for blue; a shadow on yellowed
-   * paper is negative. 빨간 도장 keeps ratio 0.25 -> 0..0.45 -> 1; 서명 drops 0.35 -> 0..0.55 -> 1; 자동 counts a
+   * paper is negative. 빨간 도장 keeps ratio 0.2 -> 0..0.4 -> 1 (C1 r3 review: a faded seal, c02b); 서명 drops 0.35 -> 0..0.55 -> 1; 자동 counts a
    * pixel red above 0.35. Each 진하기 step widens what the mode keeps by ratioStep.
    */
-  ratioRed: [0.25, 0.45],
+  ratioRed: [0.2, 0.4],
   ratioSign: [0.35, 0.55],
+  /** 서명 also fades absolute redness R - max(G,B) from 0.15 to 0.3 (the 18e5827 filter; kraft grain, r07). */
+  signAbsRed: [0.15, 0.3],
   ratioGuess: 0.35,
+  /** 자동 also wants this much paper-relative redness (per unit of paper luma) before a pixel counts as red. */
+  redMinRel: 0.06,
+  /** Red parts averaging under this many strong pixels (on the ~600 px copy) are print, not seals. */
+  textPartPx: 150,
   /** 자동: dark ink under this share of the strong ink, all in small pieces, is no 서명 (C1 r3, m04). */
   bothShare: 0.2,
   ratioStep: 0.05,
+  /** The ratio is 0 where the blurred darkness is under this (no ink to judge the colour of). */
+  ratioMinDark: 0.1,
+  ratioDarkBoost: 0.2,
   /**
    * Page (C1 r3, findPage): on a copy of about 400 px, neighbours off an edge (relative luma gradient > 0.2 or
    * tint gradient > 0.12) whose closed luma differs by at most 12 %, and by at most 35 % from the region's mean,
@@ -84,6 +95,9 @@ export const INK = {
   lineAlpha: 0.1,
   lineSpan: 0.75,
   lineMaxDeg: 25,
+  /** Ruled or printed: at least this many parallel lines (within lineFamilyDeg), else one running edge to edge. */
+  lineFamily: 3,
+  lineFamilyDeg: 1,
   /** Crop (C1 r3, inkClusters): strong ink clustered at 0.8 % of the long edge; joins by share and gap. */
   clusterGap: 0.008,
   joinShare: 0.15,
@@ -152,6 +166,8 @@ export interface KeyResult {
   /** Share of pixels with a > 0.5. */
   inkShare: number;
   status: InkStatus;
+  /** 진하기 step actually used (the request, or one step stronger after a noink retry). */
+  strength: number;
   /** 자동 with both inks: the 빨간 도장 and 서명 keys that were joined (each coloured from its own ink). */
   parts?: { alpha: Float32Array; plane: InkPlane; paper: PaperGrid }[];
 }
@@ -383,6 +399,12 @@ export function modeFactor(ratio: number, mode: InkMode, shift = 0): number {
   return 1;
 }
 
+/** 서명's second factor, on absolute redness R - max(G,B), faded out from INK.signAbsRed (the 18e5827 filter). */
+export function absFactor(red: number, mode: InkMode, shift = 0): number {
+  if (mode === 'sign') return 1 - clamp01((red - INK.signAbsRed[0] - shift) / (INK.signAbsRed[1] - INK.signAbsRed[0]));
+  return 1;
+}
+
 /** Redness ratio of one pixel (INK.ratioRed): pixel redness and min(R,G,B) against the paper colour pr, pg, pb. */
 export function redRatio(red: number, mn: number, pr: number, pg: number, pb: number): number {
   const pmn = Math.max(1e-3, Math.min(pr, pg, pb));
@@ -396,7 +418,7 @@ export function redRatio(red: number, mn: number, pr: number, pg: number, pb: nu
  * keeps colour at half resolution, which leaves the fine grain of a speckled 도장 with too little redness for its
  * darkness when they are compared pixel by pixel.
  */
-export function ratioPlane(mn: Float32Array, red: Float32Array, grid: PaperGrid, w: number, h: number): Float32Array {
+export function ratioPlane(mn: Float32Array, red: Float32Array, grid: PaperGrid, w: number, h: number, darkBoost = 0, rgb: Uint8ClampedArray | null = null): Float32Array {
   // Per grid cell (the paper colour is smooth, so the nearest cell will do): paper redness, paper luma, paper
   // min(R,G,B). Redness is taken per unit of paper luma, as the darkness is per unit of paper: a shadow dims both.
   const { cell, gw, gh, v } = grid;
@@ -428,7 +450,27 @@ export function ratioPlane(mn: Float32Array, red: Float32Array, grid: PaperGrid,
     blur121(rel, w, h);
     blur121(dk, w, h);
   }
-  for (let i = 0; i < rel.length; i++) rel[i] /= Math.max(0.05, dk[i]);
+  // Where the pixel is barely darker than its paper the ratio is noise over a tiny darkness (kraft grain, r07):
+  // it is 0 there, so the 5 x 5 maximum of the 서명 filter cannot spread paper noise onto a pen stroke.
+  // Dark ink of a dull red (a maroon 도장 on beige paper, c02) has a low ratio; a stain or a shadow is never that
+  // dark, so the ratio of dark pixels is raised by up to INK.ratioDarkBoost (dark black or blue ink stays below
+  // every red threshold: its ratio is about 0 or negative).
+  // Only for a red hue: (R - G) close to (R - B), as red and maroon are; gold and brown (G well above B) are not
+  // raised (the gold border of o05, the gilt figure of o09).
+  const hue = (i: number): number => {
+    if (!rgb) return 1;
+    const r = rgb[i * 4];
+    const b = rgb[i * 4 + 2];
+    return clamp01(((r - rgb[i * 4 + 1]) / Math.max(1, r - b) - 0.5) / 0.4);
+  };
+  for (let i = 0; i < rel.length; i++) {
+    if (dk[i] < INK.ratioMinDark) rel[i] = 0;
+    else {
+      // Raised only where the plain ratio already says red-ish (0.1 and up): black ink over a red seal stays black.
+      const r0 = rel[i] / dk[i];
+      rel[i] = r0 + (r0 >= 0.1 && darkBoost > 0 ? darkBoost * clamp01((dk[i] - 0.3) / 0.3) * hue(i) : 0);
+    }
+  }
   return rel;
 }
 
@@ -691,6 +733,8 @@ export interface PageMask {
   sh: number;
   /** 1 = desk or background (not the page). */
   desk: Uint8Array;
+  /** The desk and the 2 cells of the page next to it (the sheet's edge, its shadow line): no ink there. */
+  band: Uint8Array;
   /** RGB (0..255) per cell: the nearest page cell's paper colour, used in place of the desk. */
   fill: Uint8ClampedArray;
 }
@@ -855,7 +899,10 @@ export function findPage(img: Rgba): PageMask | null {
     }
   }
   for (let i = 0; i < n; i++) for (let c = 0; c < 3; c++) fill[i * 3 + c] = Math.round(ch[c][src[i]] * 255);
-  return { f, sw, sh, desk, fill };
+  const bandF = maxFilter(Float32Array.from(desk), sw, sh, 5);
+  const band = new Uint8Array(n);
+  for (let i = 0; i < n; i++) band[i] = bandF[i] > 0 ? 1 : 0;
+  return { f, sw, sh, desk, band, fill };
 }
 
 /** Convex hull of the cells labelled `l`: per row, its [first, last] column (first > last: the row is outside). */
@@ -926,9 +973,12 @@ export function maskDesk(img: Rgba, p: PageMask): Rgba {
   return { data, width: w, height: h };
 }
 
+/** A page box in px. */
+export type PageBox = { x: number; y: number; w: number; h: number };
+
 /** Bounding box (full-res px) of the page: the cells that are not desk. */
-function pageBox(p: PageMask | null, w: number, h: number): { w: number; h: number } {
-  if (!p) return { w, h };
+function pageBox(p: PageMask | null, w: number, h: number): PageBox {
+  if (!p) return { x: 0, y: 0, w, h };
   let x0 = p.sw;
   let y0 = p.sh;
   let x1 = -1;
@@ -940,7 +990,9 @@ function pageBox(p: PageMask | null, w: number, h: number): { w: number; h: numb
     if (y < y0) y0 = y;
     y1 = y;
   }
-  return { w: Math.min(w, (x1 - x0 + 1) * p.f), h: Math.min(h, (y1 - y0 + 1) * p.f) };
+  const x = x0 * p.f;
+  const y = y0 * p.f;
+  return { x, y, w: Math.min(w - x, (x1 - x0 + 1) * p.f), h: Math.min(h - y, (y1 - y0 + 1) * p.f) };
 }
 
 /** What 자동 sees in a photo (classifyInk); the counts are strong-ink pixels on the ~600 px copy. */
@@ -975,10 +1027,40 @@ function coarseCopy(img: Rgba): { f: number; small: Rgba } {
  */
 export function coarsePaper(img: Rgba): PaperGrid {
   const { f, small } = coarseCopy(img);
-  const { mn } = planes(small);
+  const { mn, red } = planes(small);
   const a = rampFromDark(darkness(mn, paperLevel(mn, small.width, small.height)), INK.lo, INK.hi);
-  const pg = paperColor(small, a);
+  const pg = paperColor(small, inkExclusion(a, red, small.width, small.height));
   return { ...pg, cell: pg.cell * f };
+}
+
+/**
+ * The pixels that must not count as paper for the redness reference (C1 r3 review, c03 / c11 walls of seals): any
+ * ink (a > 0.25) within 2 px (the pink anti-aliased rim of a stroke keys weak but is not paper), and any pixel redder than
+ * the image's paper (median redness of the unkeyed pixels) by more than 0.06. Otherwise, where seals cover the
+ * page, the paper colour turns pink and the seals read as no redder than their paper. Returns 1 = not paper.
+ */
+function inkExclusion(a: Float32Array, red: Float32Array, w: number, h: number): Float32Array {
+  // Ink is a > 0.25 here (despeckle's level): grain a hair darker than its paper (kraft) stays paper.
+  const ink = new Float32Array(a.length);
+  for (let i = 0; i < a.length; i++) ink[i] = a[i] > INK.speckAlpha ? 1 : 0;
+  const near = maxFilter(ink, w, h, 5);
+  const hist = new Int32Array(256);
+  let n = 0;
+  for (let i = 0; i < a.length; i++) if (near[i] === 0) {
+    hist[Math.max(0, Math.min(255, Math.round((red[i] + 0.5) * 255)))]++;
+    n++;
+  }
+  let ref = 0;
+  for (let v = 0, acc = 0; v < 256; v++) {
+    acc += hist[v];
+    if (acc >= n / 2) {
+      ref = v / 255 - 0.5;
+      break;
+    }
+  }
+  const out = new Float32Array(a.length);
+  for (let i = 0; i < a.length; i++) out[i] = near[i] > 0 || red[i] > ref + 0.06 ? 1 : 0;
+  return out;
 }
 
 /** Text-like: at least this many components of one colour (printed lines of text, not a 서명 or a 도장). */
@@ -1001,19 +1083,30 @@ export function sceneInk(img: Rgba, strength = 0): InkScene {
   const { mn, red } = planes(small);
   const { lo, hi } = rampFor(strength);
   const a = rampFromDark(darkness(mn, paperLevel(mn, w, h)), lo, hi);
-  const pg = paperColor(small, a);
+  const pg = paperColor(small, inkExclusion(a, red, w, h));
+  // The plain ratio for the decision: the dark-ink boost (for keying a dull 도장) would count brown ink red (r06).
   const ratio = ratioPlane(mn, red, pg, w, h);
   removeLines(a, w, h);
   const strong = new Uint8Array(w * h);
   for (let i = 0; i < a.length; i++) strong[i] = a[i] > INK.strongAlpha ? 1 : 0;
   const { label, n } = components(strong, w, h);
+  // Red: a redness ratio above ratioGuess and, against noise on a dark or grainy paper, at least redMinRel of
+  // paper-relative redness itself (per unit of paper luma).
+  const isRed = new Uint8Array(w * h);
+  const pp = new Float32Array(3);
+  for (let y = 0, i = 0; y < h; y++) for (let x = 0; x < w; x++, i++) {
+    if (!strong[i] || !(ratio[i] > INK.ratioGuess)) continue;
+    readGrid3(pg, x, y, pp, 0);
+    const rel = (red[i] - (pp[0] - Math.max(pp[1], pp[2]))) / Math.max(0.05, 0.299 * pp[0] + 0.587 * pp[1] + 0.114 * pp[2]);
+    if (rel > INK.redMinRel) isRed[i] = 1;
+  }
   const cs = Array.from({ length: n + 1 }, () => ({ size: 0, reds: 0, edge: false, x0: w, y0: h, x1: -1, y1: -1 }));
   for (let y = 0, i = 0; y < h; y++) for (let x = 0; x < w; x++, i++) {
     const l = label[i];
     if (!l) continue;
     const c = cs[l];
     c.size++;
-    if (ratio[i] > INK.ratioGuess) c.reds++;
+    if (isRed[i]) c.reds++;
     if (x === 0 || y === 0 || x === w - 1 || y === h - 1) c.edge = true;
     if (x < c.x0) c.x0 = x;
     if (x > c.x1) c.x1 = x;
@@ -1044,7 +1137,7 @@ export function sceneInk(img: Rgba, strength = 0): InkScene {
     }
     if (c.size - c.reds > blackMax) blackMax = c.size - c.reds;
   }
-  for (let i = 0; i < a.length; i++) if (label[i] && use[label[i]] && ratio[i] > INK.ratioGuess) redMask[i] = 1;
+  for (let i = 0; i < a.length; i++) if (label[i] && use[label[i]] && isRed[i]) redMask[i] = 1;
   const T = R + B;
   // The largest red cluster (red ink dilated by 1 % of the long edge): a 도장 is compact.
   let stamp = false;
@@ -1070,16 +1163,35 @@ export function sceneInk(img: Rgba, strength = 0): InkScene {
       return c.m >= Math.max(40, 0.2 * R) && Math.max(bw, bh) <= 2.5 * Math.min(bw, bh) && c.m >= 0.03 * bw * bh;
     });
   }
+  // Dark ink as strokes: what an opening of radius 2 % of the long edge removes. A solid dark object (the stone
+  // handle beside a 도장, r01) survives the opening and is no 서명; pen, marker and brush strokes do not.
+  const blackMask = new Float32Array(w * h);
+  for (let i = 0; i < a.length; i++) if (label[i] && use[label[i]] && !isRed[i]) blackMask[i] = 1;
+  const k = 2 * Math.max(2, Math.round(0.02 * Math.max(w, h))) + 1;
+  const thick = maxFilter(minFilter(blackMask, w, h, k), w, h, k);
+  let BS = 0;
+  for (let i = 0; i < a.length; i++) if (blackMask[i] && !thick[i]) BS++;
   const redSig = T > 0 && (R / T >= INK.redShare || stamp);
-  const blackSig = T > 0 && B / T >= INK.redShare;
+  // Mostly solid dark ink (BS under half of it) is an object, not a 서명.
+  const blackSig = T > 0 && BS / T >= INK.blackShare && BS >= 0.5 * B;
   let guess: InkScene['guess'] = redSig ? 'red' : 'black';
   if (redSig && blackSig) {
-    const redText = redParts >= TEXT_PARTS && !stamp;
+    // Red print: many small parts (letters), not seals (a wall of seals has as many parts, each far larger).
+    const redText = redParts >= TEXT_PARTS && R / redParts < INK.textPartPx && !stamp;
     const blackText = blackParts >= TEXT_PARTS;
     // A little dark ink in pieces beside a 도장 (left-over ruled lines, smudges: under bothShare of the ink, none
     // of it a third of the dark ink) is not a 서명; a thin 서명 under a bulky 도장 is one long stroke.
-    const weakBlack = B / T < INK.bothShare && blackMax < B / 3;
-    guess = blackText || weakBlack ? 'red' : redText ? 'black' : 'both';
+    const weakBlack = BS / T < INK.bothShare && blackMax < B / 3;
+    // Both only where a stroke meets a 도장 (a 도장 over a 서명, a brush across a seal); dark ink apart from the
+    // red (a display case, a frame beside seals) leaves 자동 on the 도장 as before C1 r3.
+    const rr = 2 * Math.max(1, Math.round(0.005 * Math.max(w, h))) + 1;
+    const nearRed = maxFilter(Float32Array.from(redMask), w, h, rr);
+    let meet = 0;
+    for (let i = 0; i < a.length; i++) if (blackMask[i] && !thick[i] && nearRed[i] > 0) meet++;
+    // ...and runs on beyond it: dark pixels that only line the red strokes are the red ink's own darker edge (a
+    // brown 서명, r06), not a 서명 crossing a 도장.
+    const crosses = meet >= Math.max(5, 0.01 * BS) && BS - meet >= 0.65 * BS;
+    guess = blackText || weakBlack ? 'red' : redText ? 'black' : crosses && stamp ? 'both' : 'red';
   }
   return { guess, red: R, black: B, redParts, blackParts, stamp };
 }
@@ -1136,41 +1248,49 @@ function lineCands(d: Float32Array, w: number, h: number, ex: number, t: boolean
   return cands.sort((p, r) => r.v - p.v);
 }
 
+/** A line found by removeLinesH: tracked centre per column, half thickness, run, keep level, angle. */
+type FoundLine = { yc: Float32Array; half: number; x0: number; x1: number; keep: number; deg: number };
+
 /**
  * Straight thin lines (C1 r3; ruled paper m06, form lines m02), within INK.lineMaxDeg of the horizontal: each
- * Hough candidate (lineCands: a > 0.1, 0.25 degree, 4 px bins) is tracked column by column, and kept when its band
- * is at most maxThick px thick and runs on (gaps under 4 % of the width, inked over 60 %) over INK.lineSpan of the
- * page width `ex`. Its pixels are cleared from `a` and `d`, except where ink lies just beyond the band (a stroke
- * crossing the line) or is clearly darker than the line itself (a stroke running along it). In place.
+ * Hough candidate (lineCands: a > 0.1, 0.25 degree, 4 px bins) is tracked column by column, and found when its
+ * band is at most maxThick px thick and runs on (gaps under 4 % of the width, inked over 60 %) over INK.lineSpan of
+ * the page width `ex` (page from `s0`). A found line is removed only when it is ruled or printed, not a 서명's own
+ * underline (C1 r3 review): one of at least INK.lineFamily parallel lines (ruled paper, a form), or a single line
+ * that runs to within 6 % of both page edges and is not joined to a larger stroke. Its pixels are cleared from `a`
+ * and `d`, except where ink lies just beyond the band (a stroke crossing the line) or is clearly darker than the
+ * line itself (a stroke running along it). In place.
  */
-function removeLinesH(d: Float32Array, a: Float32Array, w: number, h: number, ex: number, cands: LineCand[]): void {
+function removeLinesH(d: Float32Array, a: Float32Array, w: number, h: number, s0: number, ex: number, cands: LineCand[]): void {
   const S = INK.lineAlpha;
   // Thickness at a > 0.1 of a blurred phone photo's ruled line: up to 12 px at a long edge of 2400.
   const maxThick = Math.max(8, Math.round(Math.max(w, h) / 200));
   const gapMax = Math.max(8, Math.round(0.04 * w));
   const R = 8;
   const hist = new Int32Array(2 * R + 1);
-  const yc = new Float32Array(w);
+  const claimed = new Uint8Array(w * h);
+  const on = (x: number, y: number): boolean => y >= 0 && y < h && d[y * w + x] > S && !claimed[y * w + x];
+  const found: FoundLine[] = [];
   for (const cd of cands.slice(0, 400)) {
-    // Quick check on every 4th column: a line already cleared (a neighbour angle of one done) is skipped.
+    // Quick check on every 4th column: a line already found (a neighbour angle of the same line) is skipped.
     let quick = 0;
     for (let x = 0; x < w; x += 4) {
       const y0 = Math.round((cd.rho + x * cd.s) / cd.c);
-      for (let y = y0 - 3; y <= y0 + 3; y++) if (y >= 0 && y < h && d[y * w + x] > S) {
-        quick++;
-        break;
+      for (let y = y0 - 3; y <= y0 + 3; y++) {
+        if (on(x, y)) {
+          quick++;
+          break;
+        }
       }
     }
     if (quick * 4 < 0.5 * INK.lineSpan * ex) continue;
     // Fine profile across the line: offset of strong pixels from the candidate's centre line.
+    const yc = new Float32Array(w);
     hist.fill(0);
     for (let x = 0; x < w; x++) {
       yc[x] = (cd.rho + x * cd.s) / cd.c;
       const y0 = Math.round(yc[x]);
-      for (let k = -R; k <= R; k++) {
-        const y = y0 + k;
-        if (y >= 0 && y < h && d[y * w + x] > S) hist[k + R]++;
-      }
+      for (let k = -R; k <= R; k++) if (on(x, y0 + k)) hist[k + R]++;
     }
     let pk = 0;
     for (let k = 1; k < hist.length; k++) if (hist[k] > hist[pk]) pk = k;
@@ -1189,8 +1309,7 @@ function removeLinesH(d: Float32Array, a: Float32Array, w: number, h: number, ex
       let sy = 0;
       let sn = 0;
       for (let k = -half - 1; k <= half + 1; k++) {
-        const y = base + k;
-        if (y >= 0 && y < h && d[y * w + x] > S) {
+        if (on(x, base + k)) {
           sy += k;
           sn++;
         }
@@ -1201,10 +1320,7 @@ function removeLinesH(d: Float32Array, a: Float32Array, w: number, h: number, ex
     hist.fill(0);
     for (let x = 0; x < w; x++) {
       const y0 = Math.round(yc[x]);
-      for (let k = -R; k <= R; k++) {
-        const y = y0 + k;
-        if (y >= 0 && y < h && d[y * w + x] > S) hist[k + R]++;
-      }
+      for (let k = -R; k <= R; k++) if (on(x, y0 + k)) hist[k + R]++;
     }
     lo = R;
     hi = R;
@@ -1221,9 +1337,9 @@ function removeLinesH(d: Float32Array, a: Float32Array, w: number, h: number, ex
     let last = -1;
     for (let x = 0; x < w; x++) {
       const y0 = Math.round(yc[x]);
-      let on = false;
-      for (let y = y0 - half; y <= y0 + half && !on; y++) if (y >= 0 && y < h && d[y * w + x] > S) on = true;
-      if (!on) continue;
+      let hit = false;
+      for (let y = y0 - half; y <= y0 + half && !hit; y++) if (on(x, y)) hit = true;
+      if (!hit) continue;
       if (run0 < 0 || x - last > gapMax) {
         run0 = x;
         runOn = 0;
@@ -1254,15 +1370,55 @@ function removeLinesH(d: Float32Array, a: Float32Array, w: number, h: number, ex
         break;
       }
     }
-    const keep = Math.max(INK.strongAlpha, 1.5 * med);
     for (let x = best0; x <= best1; x++) {
       const y0 = Math.round(yc[x]);
-      const up = y0 - half - 3;
-      const dn = y0 + half + 3;
+      for (let y = Math.max(0, y0 - half - 1); y <= Math.min(h - 1, y0 + half + 1); y++) claimed[y * w + x] = 1;
+    }
+    found.push({ yc, half, x0: best0, x1: best1, keep: Math.max(INK.strongAlpha, 1.5 * med), deg: (Math.atan2(cd.s, cd.c) * 180) / Math.PI });
+  }
+  if (!found.length) return;
+  // Which found lines are ruled or printed. Strong ink components, made once when a single line needs them.
+  let strong: { label: Int32Array; size: Int32Array } | null = null;
+  const joinedToLarger = (f: FoundLine): boolean => {
+    if (!strong) {
+      const m = new Uint8Array(w * h);
+      for (let i = 0; i < a.length; i++) m[i] = a[i] > INK.strongAlpha ? 1 : 0;
+      const c = components(m, w, h);
+      const size = new Int32Array(c.n + 1);
+      for (let i = 0; i < c.label.length; i++) size[c.label[i]]++;
+      strong = { label: c.label, size };
+    }
+    const { label, size } = strong;
+    let band = 0;
+    const inBand = new Map<number, number>();
+    for (let x = f.x0; x <= f.x1; x++) {
+      const y0 = Math.round(f.yc[x]);
+      for (let y = Math.max(0, y0 - f.half); y <= Math.min(h - 1, y0 + f.half); y++) {
+        const l = label[y * w + x];
+        if (!l) continue;
+        band++;
+        inBand.set(l, (inBand.get(l) ?? 0) + 1);
+      }
+    }
+    for (const [l, n] of inBand) if (size[l] - n > Math.max(band, 50)) return true;
+    return false;
+  };
+  const margin = 0.06 * ex;
+  const remove = found.filter((f) => {
+    const family = found.filter((g) => Math.abs(g.deg - f.deg) <= INK.lineFamilyDeg).length;
+    if (family >= INK.lineFamily) return true;
+    const edgeToEdge = f.x0 <= s0 + margin && f.x1 >= s0 + ex - 1 - margin;
+    return edgeToEdge && !joinedToLarger(f);
+  });
+  for (const f of remove) {
+    for (let x = f.x0; x <= f.x1; x++) {
+      const y0 = Math.round(f.yc[x]);
+      const up = y0 - f.half - 3;
+      const dn = y0 + f.half + 3;
       const crossing = (up >= 0 && d[up * w + x] > INK.strongAlpha) || (dn < h && d[dn * w + x] > INK.strongAlpha);
       if (crossing) continue;
-      for (let y = Math.max(0, y0 - half - 1); y <= Math.min(h - 1, y0 + half + 1); y++) {
-        if (d[y * w + x] > keep) continue;
+      for (let y = Math.max(0, y0 - f.half - 1); y <= Math.min(h - 1, y0 + f.half + 1); y++) {
+        if (d[y * w + x] > f.keep) continue;
         a[y * w + x] = 0;
         d[y * w + x] = 0;
       }
@@ -1273,16 +1429,16 @@ function removeLinesH(d: Float32Array, a: Float32Array, w: number, h: number, ex
 /**
  * Removes ruled and printed lines along both page axes (removeLinesH) from `a`, found in `d` (default `a`): the
  * ramp before hysteresis, where a faint ruled line is whole, not the dashes that hysteresis leaves of it. page =
- * the page's extent in px. In place (`d` too).
+ * the page's box in px. In place (`d` too).
  */
-export function removeLines(a: Float32Array, w: number, h: number, page: { w: number; h: number } = { w, h }, d: Float32Array = a): void {
+export function removeLines(a: Float32Array, w: number, h: number, page: PageBox = { x: 0, y: 0, w, h }, d: Float32Array = a): void {
   const ch = lineCands(d, w, h, page.w, false);
-  if (ch.length) removeLinesH(d, a, w, h, page.w, ch);
+  if (ch.length) removeLinesH(d, a, w, h, page.x, page.w, ch);
   const cv = lineCands(d, w, h, page.h, true);
   if (!cv.length) return;
   const ta = transpose(a, w, h);
   const td = d === a ? ta : transpose(d, w, h);
-  removeLinesH(td, ta, h, w, page.h, cv);
+  removeLinesH(td, ta, h, w, page.y, page.h, cv);
   transpose(ta, h, w, a);
   if (d !== a) transpose(td, h, w, d);
 }
@@ -1301,7 +1457,7 @@ function prepare(img: Rgba, cache: InkCache): Rgba {
   const src = cache.page ? maskDesk(img, cache.page) : img;
   Object.assign(cache, planes(src));
   const grid = coarsePaper(src);
-  cache.ratio = ratioPlane(cache.mn as Float32Array, cache.red as Float32Array, grid, src.width, src.height);
+  cache.ratio = ratioPlane(cache.mn as Float32Array, cache.red as Float32Array, grid, src.width, src.height, INK.ratioDarkBoost, src.data);
   cache.src = src;
   return src;
 }
@@ -1321,18 +1477,25 @@ function keyPath(src: Rgba, mode: 'red' | 'sign', strength: number, cache: InkCa
   // 서명 drops red ink by the largest ratio within 2 px: the soft rim of red print goes with its letters (s04).
   const shift = strength * INK.ratioStep;
   applyModeFilter(ramp, sign ? (cache.ratioMax ??= maxFilter(ratio, w, h, 5)) : ratio, mode, shift);
+  // 서명 also keeps the 18e5827 filter on absolute redness (C1 r3 review, r07): grain and blotches of kraft board
+  // are a darker copy of the board, as red as it relative to the paper (ratio about 0), but redder in absolute
+  // terms than any pen ink.
+  if (sign) {
+    const rd = cache.red as Float32Array;
+    for (let i = 0; i < ramp.length; i++) ramp[i] *= absFactor(rd[i], mode, shift);
+  }
   const alpha = smoothEdges(ramp, w, h);
   const r = hysteresisRadius(w, h);
   hysteresis(alpha, w, h, r);
   despeckle(alpha, w, h);
   const plane: InkPlane = sign ? 'lum' : 'mn';
   const pg = paperColor(src, alpha);
-  fillSolid(alpha, x, paper, ratio, pg, plane, mode, lo, hi, w, h, shift);
+  fillSolid(alpha, x, paper, ratio, cache.red as Float32Array, pg, plane, mode, lo, hi, w, h, shift);
   removeLines(alpha, w, h, pageBox(cache.page ?? null, w, h), ramp);
   dropFaintSpecks(alpha, w, h);
   hysteresis(alpha, w, h, r);
   const page = cache.page;
-  if (page) for (let y = 0, i = 0; y < h; y++) for (let xx = 0; xx < w; xx++, i++) if (page.desk[pageCell(page, xx, y)]) alpha[i] = 0;
+  if (page) for (let y = 0, i = 0; y < h; y++) for (let xx = 0; xx < w; xx++, i++) if (page.band[pageCell(page, xx, y)]) alpha[i] = 0;
   return { alpha, plane, paper: pg };
 }
 
@@ -1354,14 +1517,16 @@ export function keyInk(img: Rgba, opts: KeyOptions, cache: InkCache = {}): KeyRe
     const s = keyPath(src, 'sign', strength, cache);
     const alpha = new Float32Array(r.alpha.length);
     for (let i = 0; i < alpha.length; i++) alpha[i] = r.alpha[i] > s.alpha[i] ? r.alpha[i] : s.alpha[i];
-    out = { alpha, plane: 'mn', paper: r.paper, guess, inkShare: 0, status: 'ok', parts: [r, s] };
+    out = { alpha, plane: 'mn', paper: r.paper, guess, inkShare: 0, status: 'ok', strength, parts: [r, s] };
   } else {
     const k = keyPath(src, opts.mode === 'sign' || guess === 'black' ? 'sign' : 'red', strength, cache);
-    out = { ...k, guess: guess ?? colorGuess(k.alpha, cache.red as Float32Array), inkShare: 0, status: 'ok' };
+    out = { ...k, guess: guess ?? colorGuess(k.alpha, cache.red as Float32Array), inkShare: 0, status: 'ok', strength };
   }
   Object.assign(out, areaCheck(out.alpha));
-  // Nothing found (C1 r3, o06: a small dull 직인): one 진하기 step stronger, once, as the noink message advises.
-  if (out.status === 'noink' && !opts.retried && strength < INK.strengthMax) return keyInk(img, { ...opts, strength: strength + 1, retried: true }, cache);
+  // Nothing found in 자동 (C1 r3, o06: a small dull 직인): one 진하기 step stronger, once, as the noink message
+  // advises. Not in 빨간 도장 / 서명: there the user chose what to look for, and a stronger step on a page without
+  // that ink only finds paper noise (c09 in 빨간 도장).
+  if (out.status === 'noink' && opts.mode === 'auto' && !opts.retried && strength < INK.strengthMax) return keyInk(img, { ...opts, strength: strength + 1, retried: true }, cache);
   return out;
 }
 
@@ -1456,7 +1621,7 @@ export function paperColor(img: Rgba, alpha: Float32Array): PaperGrid {
  * pixel of that region keeps the larger of its two alphas. Paper and shadows
  * do not grow (paperColor follows them); thin strokes are unchanged. In place.
  */
-export function fillSolid(a: Float32Array, x: Float32Array, paper: Float32Array, ratio: Float32Array, pg: PaperGrid, plane: InkPlane, mode: InkMode, lo: number, hi: number, w: number, h: number, shift = 0): void {
+export function fillSolid(a: Float32Array, x: Float32Array, paper: Float32Array, ratio: Float32Array, red: Float32Array, pg: PaperGrid, plane: InkPlane, mode: InkMode, lo: number, hi: number, w: number, h: number, shift = 0): void {
   const S = INK.strongAlpha;
   const pr = new Float32Array(3);
   const span = hi - lo;
@@ -1466,7 +1631,7 @@ export function fillSolid(a: Float32Array, x: Float32Array, paper: Float32Array,
     const p = plane === 'mn' ? Math.min(pr[0], pr[1], pr[2]) : 0.299 * pr[0] + 0.587 * pr[1] + 0.114 * pr[2];
     // Only where the closing's level sank well below the paper around the ink; elsewhere the key stands.
     if (p - paper[i] <= INK.fillSink * p) return a[i];
-    return clamp01((clamp01((p - x[i]) / p) - lo) / span) * modeFactor(ratio[i], mode, shift);
+    return clamp01((clamp01((p - x[i]) / p) - lo) / span) * modeFactor(ratio[i], mode, shift) * absFactor(red[i], mode, shift);
   };
   const n = w * h;
   const seen = new Uint8Array(n);
@@ -1926,6 +2091,8 @@ export interface ProcessResult {
   status: InkStatus;
   guess: 'red' | 'black' | 'both';
   inkShare: number;
+  /** 진하기 actually used (one step above the request after the noink retry); the page shows it. */
+  strength: number;
   /** Crop in work-copy pixels (null when status is not ok). */
   rect: Rect | null;
   /** Cropped, coloured, resized straight RGBA (null when status is not ok: no download). */
@@ -1949,7 +2116,7 @@ export function processInk(img: Rgba, opts: ProcessOptions, cache: InkCache = {}
     box = keepMainInk(key.alpha, img.width, img.height, cache.page ?? null, sign ? (cache.ratio ?? null) : null);
     for (const p of key.parts ?? []) for (let i = 0; i < p.alpha.length; i++) if (key.alpha[i] === 0) p.alpha[i] = 0;
   }
-  const base = { status: key.status, guess: key.guess, inkShare: key.inkShare, fileName, alpha: key.alpha };
+  const base = { status: key.status, guess: key.guess, inkShare: key.inkShare, strength: key.strength, fileName, alpha: key.alpha };
   const rect = box ? padRect(box, img.width, img.height, !!opts.noPad) : null;
   if (!rect) return { ...base, status: key.status === 'ok' ? 'noink' : key.status, rect: null, out: null };
   const rgba = renderInk(img, key, color);

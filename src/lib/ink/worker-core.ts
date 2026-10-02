@@ -13,6 +13,8 @@ export type InkResponse =
       status: InkStatus;
       guess: 'red' | 'black' | 'both';
       inkShare: number;
+      /** 진하기 actually used (processInk: one step up after a noink retry). */
+      strength: number;
       rect: Rect | null;
       /** Straight RGBA of the cropped, sized PNG content; null when there is nothing to download. */
       out: { pixels: ArrayBuffer; width: number; height: number } | null;
@@ -42,7 +44,7 @@ export function createInkHandler(now: () => number = () => performance.now()): (
       const ms = Math.round(now() - t0);
       const out = r.out ? { pixels: r.out.data.buffer as ArrayBuffer, width: r.out.width, height: r.out.height } : null;
       return {
-        msg: { type: 'result', run: req.run, status: r.status, guess: r.guess, inkShare: r.inkShare, rect: r.rect, out, fileName: r.fileName, ms },
+        msg: { type: 'result', run: req.run, status: r.status, guess: r.guess, inkShare: r.inkShare, strength: r.strength, rect: r.rect, out, fileName: r.fileName, ms },
         transfer: out ? [out.pixels] : [],
       };
     } catch {

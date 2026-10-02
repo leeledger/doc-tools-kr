@@ -19,6 +19,10 @@
 #   gt14-desk      the sheet on a dark, mottled desk, tilted, the desk on three sides (s08, m11, m12)
 #   gt14-ruled     ruled paper: blue lines every 40 px and a red margin line, slightly tilted (m06)
 #   gt15-yellowRed gt15 on yellowed paper with brown stains, scored in 빨간 도장 mode (m03, m12)
+#   gt14-tight     gt14 cropped to x 280..1000: the underline spans 78 % of the width and must be kept (review)
+#   gt14-kraftFrame the kraft signature inside a dark frame (r07): black guess, no grain (residue)
+#   gt15-sealWall  a wall of small pink-rimmed seals at 768 px (c03, c11): 자동 red, every seal keyed; IoU is info
+#                  (small blurred seals key about 1 px fat) and so is the colour (pink haze), the baseline guards both
 #   gt15-overSign  gt15 stamped over the gt14 signature; GT = both inks (gt15-overSign.alpha.png); 자동 must keep
 #                  both (guess "both"); the ink-colour ΔE is not gated (two inks)
 # meta.json records the GT ink colour (for the composite error) and the scoring mode of each fixture.
@@ -216,6 +220,17 @@ def main():
             dark = (0.09, 0.08, 0.08)
             info = {**base, "ink": list(dark), "variant": "kraft", "jpegQ": 92, "paper": "#9C744E", "guess": "black", "iouGate": False, "desc": "dark signature on brown kraft board"}
             save("gt14-kraft", compose(A, dark, kraft(np.random.default_rng(SEED * 1000 + 50), kr)), 92, meta, info)
+            # C1 r3 review: the 서명 framed tight (its underline spans 78 % of the width) keeps its underline; a dark
+            # 서명 on kraft board inside a dark frame (r07) stays a clean 서명 with no board grain.
+            tight = compose(A, ink, P)[:, 280:1000]
+            Image.fromarray((A[:, 280:1000] * 255 + 0.5).clip(0, 255).astype(np.uint8)).save(OUT / "gt14-tight.alpha.png", optimize=True)
+            save("gt14-tight", tight, 92, meta, {**base, "variant": "tight", "jpegQ": 92, "guess": "black", "alpha": "gt14-tight.alpha.png"})
+            pen = (0.24, 0.20, 0.34)
+            board = compose(A, pen, kraft(np.random.default_rng(SEED * 1000 + 80), kr))
+            fr = np.zeros((H, W, 1), np.float32)
+            fr[:70], fr[-70:], fr[:, :70], fr[:, -70:] = 1, 1, 1, 1
+            framed = board * (1 - fr) + np.array([0.06, 0.05, 0.05])[None, None, :] * fr
+            save("gt14-kraftFrame", framed, 88, meta, {**info, "ink": list(pen), "variant": "kraftFrame", "jpegQ": 88, "desc": "purple pen signature on kraft board in a dark frame"})
         if gid == "gt15":
             printed = compose(text, (0.08, 0.08, 0.08), P)
             save("gt15-stampOnText", compose(A, ink, printed), 92, meta, {**base, "variant": "stampOnText", "mode": "red", "jpegQ": 92})
@@ -226,6 +241,23 @@ def main():
             both = compose(A, ink, compose(a14, sig_ink, P))
             ab = np.maximum(A, a14)
             Image.fromarray((ab * 255 + 0.5).clip(0, 255).astype(np.uint8)).save(OUT / "gt15-overSign.alpha.png", optimize=True)
+            # C1 r3 review (c03, c11): a wall of seals covering much of the page keeps every seal in 자동.
+            one = A[220:740, 380:900]
+            small = np.array(Image.fromarray((one * 255).astype(np.uint8)).resize((120, 120), Image.LANCZOS)).astype(np.float32) / 255
+            wall = np.zeros((H, W), np.float32)
+            for j, y in enumerate(range(16, H - 120, 128)):
+                for x in range(16 + (j % 2) * 30, W - 120, 128):
+                    wall[y:y + 120, x:x + 120] = np.maximum(wall[y:y + 120, x:x + 120], small)
+            # A phone or web photo of a seal sheet is often small (c03 is 768 px): the paper grid is then fine enough to
+            # take in the pink rims, so the fixture is stored at 60 %.
+            sz = (W * 3 // 5, H * 3 // 5)
+            Image.fromarray((wall * 255 + 0.5).clip(0, 255).astype(np.uint8)).resize(sz, Image.LANCZOS).save(OUT / "gt15-sealWall.alpha.png", optimize=True)
+            # Seal paste bleeds: a faint pink haze (coverage up to 0.15) around every seal, as photographed seal sheets show.
+            haze = np.array(Image.fromarray((wall * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(8))).astype(np.float32) / 255
+            wall_ink = (0.80, 0.30, 0.30)
+            wall_img = compose(np.maximum(wall, 0.25 * np.clip(haze * 3, 0, 1)), wall_ink, P)
+            wall_img = np.array(Image.fromarray((wall_img * 255 + 0.5).clip(0, 255).astype(np.uint8)).resize(sz, Image.LANCZOS)).astype(np.float32) / 255
+            save("gt15-sealWall", wall_img, 72, meta, {**base, "ink": list(wall_ink), "variant": "sealWall", "jpegQ": 72, "guess": "red", "iouGate": False, "deltaEGate": False, "alpha": "gt15-sealWall.alpha.png"})
             save("gt15-overSign", both, 85, meta, {**base, "variant": "overSign", "jpegQ": 85, "guess": "both", "deltaEGate": False, "alpha": "gt15-overSign.alpha.png"})
     (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf8")
     print(f"{len(meta)} fixtures -> {OUT}")

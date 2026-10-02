@@ -1653,3 +1653,30 @@ Verdicts are mine, made from sheets/r3-real-chromium.jpg and sheets/r3-sim-chrom
 - o04: the 직인 cannot be isolated from print of the same colour.
 - Thin 서명 colours are still dark (report 9b).
 - `findPage` and the cluster and scene rules are heuristics, tuned on 26 photos and 18 fixtures.
+
+## Sprint C — C1 r3 round 2: Richard's C1 r3 feedback (Bob, 2026-10-02)
+
+Status DONE. Details, sheets and file list in REVIEW-REQUEST (C1 r3 round 2). Decisions:
+- Line removal removes only ruled or printed lines:
+  - a family of 3 or more parallel lines, or
+  - one edge-to-edge line that is not joined to a larger stroke.
+
+  A 서명's own underline is kept, even when it spans 78 % of the page (gt14-tight).
+- Paper colour for redness: ink within 2 px, and pixels redder than the median paper by more than 0.06, are not paper (c03, c11).
+- Redness ratio:
+  - It is 0 where darkness is under 0.1.
+  - Red-hued dark pixels that are already red-ish get +0.2, so dull maroon seals key (c02).
+  - 빨간 도장 range is 0.2 → 0.4.
+- 서명 also keeps the 18e5827 absolute-redness fade (r07 kraft).
+- Ink is cleared on the page-edge band next to a found desk (r07 frame).
+- The noink retry runs in 자동 only (c09: in 빨간 도장, +1 found paper noise). The strength actually used is shown in the UI.
+- 'both' needs:
+  - dark strokes, not solid objects (r01: the stone handle);
+  - a stamp-shaped red cluster;
+  - a stroke that crosses the red and runs on (r06: a brown 서명 is no longer 'both').
+- Fixtures: gt14-tight, gt14-kraftFrame and gt15-sealWall.
+- Rebaselined with 150/150 green. gt15-stampOnText is 0.8821 (18e5827: 0.8907).
+- Acceptance: old (18e5827) vs new on ink-real (19 photos) and ink-owner (26), at 1600 and 2400 px. I looked at every sheet: no photo got worse in 자동.
+  - The owner harness on this build gives 17 / 7 / 2 (Pass / Partial / Fail; the 2 Fails are m07 and m09).
+  - m12 residue is now 0.
+- Known gap: o09's red seals keep some dark pixels where the black brush crosses them (red under black, like the both-ink case). This is the same as in 18e5827.

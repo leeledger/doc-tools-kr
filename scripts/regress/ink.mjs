@@ -248,8 +248,8 @@ for (const [id, m] of Object.entries(meta)) {
   const de = meanDeltaE(rgbaOrig, gt, m.ink.map((c, k) => gmax * c + (1 - gmax) * paperBase[k]));
   row.deltaE = +de.toFixed(2);
   row.deltaENominal = +meanDeltaE(rgbaOrig, gt, m.ink).toFixed(2);
-  // gt15-overSign (C1 r3) holds two inks: one ink colour cannot describe it; the ΔE is information there.
-  if (m.deltaEGate === false) console.log(`INFO ${id} ink colour ΔE76 (two inks, not gated): ${de.toFixed(2)}`);
+  // gt15-overSign (C1 r3) holds two inks and gt15-sealWall a pink haze: one ink colour cannot describe them.
+  if (m.deltaEGate === false) console.log(`INFO ${id} ink colour ΔE76 (not gated): ${de.toFixed(2)}`);
   else check(`${id} ink colour ΔE76 vs visible solid ink (default colour) <= ${DELTA_E_MAX}`, de <= DELTA_E_MAX, `${de.toFixed(2)} (nominal ink ${row.deltaENominal})`);
   // Diagnostic (not a brief gate): the base fixtures in their dedicated mode too.
   const own = { gt14: 'sign', gt15: 'red' }[m.gt];

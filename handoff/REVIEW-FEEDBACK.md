@@ -1,3 +1,55 @@
+# Review Feedback — Sprint C, C1 r3 (c751299 on c1-r3)
+Date: 2026-10-02
+Ready for Builder: NO
+
+I ran the pipeline in Node on stress inputs I made from fixtures, and on the Wikimedia set (spikes/ink-real) with the old (18e5827) and new key.ts side by side, at the 1600 work edge (mobile) and the 2400 work edge (desktop). I did not re-run the 26-photo harness or e2e. Sheets: C:\Users\force\AppData\Local\Temp\claude\C--dev-AGI-AGENT\05ad789c-cc86-4675-ba5b-65cdc115439c\scratchpad\real-1.png, real-2.png, A-crop720.png.
+
+## Must Fix
+- src/lib/ink/key.ts:1239 + 1257 (confidence: 9/10). **A 서명's own underline is deleted when the 서명 fills the frame.**
+  - Cause: the only length test is `best1 - best0 + 1 < INK.lineSpan * ex`, and `keep = Math.max(INK.strongAlpha, 1.5 * med)` is above 1 for a solid pen line, so nothing on it is kept except at crossings.
+  - Repro: gt14.jpg cropped to x 280..1000 (the whole 서명 with 20 px margins, so the underline spans 78 % of the width). Underline pixels kept: **0 of 720**; IoU 0.924 -> 0.789. With a crop of 800 px (span 70 %) the underline is kept.
+  - Why it matters: the new allpaper copy tells the user to "가까이 다시 찍어 주세요", which pushes users toward exactly this framing.
+  - Fix: a 서명 underline ends inside the page, but a ruled or form line runs nearly to the page edges or repeats in parallel. Pick one or more of these tests:
+    - require the run to reach within a few % of both page edges;
+    - require at least two parallel candidates;
+    - skip a line whose band touches a non-line ink component that is larger than the line.
+  - Add a unit test: a tight-framed 서명 with a baseline at 80 % or more of the width keeps the baseline.
+- **Regressions on Wikimedia photos that passed before** (confidence: 9/10, observed side by side, old vs new, same code path):
+  - **c03 and c11 (walls of red seals, 자동 and 빨간 도장):** the old build keyed most seals. The new build keeps 3–5 fragments, and the alpha itself is fragmentary, so this is the key and not the crop. 서명 mode now returns the red seals.
+    - That inversion suggests the paper-relative redness is wrong when seals cover much of the page. Possibly `coarsePaper` takes in seal colour, so the seals read as not red relative to the paper. Verify this.
+  - **r07 (handwritten letter on kraft board in a dark frame):** at 2400 px, 자동 now keys a cloud of kraft-texture speckle around the text. At 1600 px it guesses red, and 도장.png is kraft noise only. The old build gave clean text and 서명. This brings back the kraft-texture failure that r2 fixed.
+  - **r02 (scroll):** 자동 now adds a grey mount band along the top. 빨간 도장 mode gives a large blurred maroon smear of the painting (fillSolid on a wrong ratio?).
+  - Fix: find the cause, then add c03 and r07 (or synthetic equivalents: a dense-seal page, kraft with a dark frame) to the fixtures so regress:ink guards them. Re-check the rest of ink-real against 18e5827.
+  - Improved on the same set: c01, c02, c02b, c07, r03, r08. Unchanged: r04, r05, r06, r09, r10, r11, c09, c10.
+
+## Should Fix
+- key.ts:1364 (confidence: 8/10). The noink retry quietly returns a +1 result while the 진하기 control still shows 0. Moving the control to +1 then gives the same picture. Return the strength actually used, so the UI can show it, or log it as a known gap. The loop itself is safe: `retried` plus `strength < strengthMax` means at most one recursion.
+- tests/unit/ink-key.test.ts:517-614 (confidence: 8/10). Missing tests:
+  - the noink retry (it fires once and does not retry twice);
+  - a long 서명 baseline that survives (see Must Fix);
+  - 'both' with a fixed colour gives 도장.png or 서명.png (key.ts:1942-1944 does this, but it is untested).
+- key.ts:1942-1944 (confidence: 6/10, verify). r01, a seal next to its brown soapstone handle, is now guessed 'both' and named 도장·서명.png. The handle is not a 서명. This is minor, but it shows that a brown object counts as black ink for 'both'.
+
+## Escalate to Architect
+- None beyond the Must Fix items. Arch's sim-sheet acceptances (m02/m11 IoU, 13 KB budget, re-baseline, scoring the delivered output, ~1.5 s) stand; I did not revisit them.
+
+## Checks that held
+- **Page detection** (findPage / maskDesk). Real ink was not zeroed in any of these:
+  - gt15 cut by the frame corner: IoU 0.900;
+  - gt15 touching the left frame edge: 0.901;
+  - gt15 close-up: 0.904;
+  - a whole photo dimmed to 40 % (dark paper): gt15 0.901, gt14 0.924, with no desk found.
+- **Main-cluster crop** (inkClusters / keepMainInk). A separate second 서명 part at half size, with a gap of 0.2 or 0.5 of the main width, is kept whole.
+- **'both' union and 도장·서명.png:** behave as described. The name is used only in 자동 + 원래 색.
+- **Privacy:** no fetch, XHR or beacon added. The worker change is type-only.
+- **Copy:** the allpaper copy has no 업로드, 서버 or 브라우저 wording. It adds no glyphs that were not already in src/ at 18e5827.
+- **New fixtures and unit tests:** meaningful for what they cover.
+
+## Cleared
+Not cleared. Two Must Fix items: underline deletion in tight framing, and regressions on c03, c11, r07 and r02 of the real set.
+
+---
+
 # Review Feedback — G2 A3 (66f7979 on g2-a3)
 Date: 2026-10-02
 Ready for Builder: YES

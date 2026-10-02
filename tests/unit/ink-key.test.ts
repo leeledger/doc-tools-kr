@@ -8,6 +8,7 @@ import {
   colorGuess,
   cropAndResize,
   cropRect,
+  coarsePaper,
   despeckle,
   dropFaintSpecks,
   findPage,
@@ -24,6 +25,7 @@ import {
   paperLevel,
   paperWindow,
   planes,
+  ratioPlane,
   processInk,
   rampAlpha,
   rampFor,
@@ -165,18 +167,18 @@ describe('alpha ramp, modes, AA, despeckle', () => {
   });
 
   it('빨간 도장 keeps red ink only; 검정·파란 서명 drops red ink; 자동 filters nothing (redness ratio, C1 r3)', () => {
-    const ratio = Float32Array.from([0.5, 0.35, 0.25, 0.3, 0.45, 0.6]);
+    const ratio = Float32Array.from([0.45, 0.3, 0.2, 0.25, 0.4, 0.6]);
     const r = new Float32Array(6).fill(1);
     applyModeFilter(r, ratio, 'red');
     expect(Array.from(r).map((v) => +v.toFixed(6))).toEqual([1, 0.5, 0, 0.25, 1, 1]);
     const s = new Float32Array(6).fill(1);
     applyModeFilter(s, ratio, 'sign');
-    expect(Array.from(s).map((v) => +v.toFixed(6))).toEqual([0.25, 1, 1, 1, 0.5, 0]);
+    expect(Array.from(s).map((v) => +v.toFixed(6))).toEqual([0.5, 1, 1, 1, 0.75, 0]);
     const a = new Float32Array(6).fill(1);
     applyModeFilter(a, ratio, 'auto');
     expect(Array.from(a)).toEqual([1, 1, 1, 1, 1, 1]);
     // A stronger 진하기 widens what each mode keeps (INK.ratioStep per step).
-    expect(+modeFactor(0.25, 'red', 0.1).toFixed(6)).toBe(0.5);
+    expect(+modeFactor(0.2, 'red', 0.1).toFixed(6)).toBe(0.5);
     expect(+modeFactor(0.5, 'sign', 0.1).toFixed(6)).toBe(0.75);
   });
 
@@ -610,6 +612,71 @@ describe('C1 r3: page, lines, clusters, both inks', () => {
     // The modes still give one ink each.
     expect(processInk(img, { mode: 'red' }).fileName).toBe('도장.png');
     expect(processInk(img, { mode: 'sign' }).fileName).toBe('서명.png');
+    // A fixed colour in 자동 names the file by that colour, not by the two inks.
+    expect(processInk(img, { mode: 'auto', color: 'red' }).fileName).toBe('도장.png');
+    expect(processInk(img, { mode: 'auto', color: 'black' }).fileName).toBe('서명.png');
+    expect(processInk(img, { mode: 'auto', color: 'blue' }).fileName).toBe('서명.png');
+  });
+
+  it('a 서명 framed tight keeps its long underline; ruled lines (a family) and a lone edge-to-edge line go', () => {
+    const W = 300;
+    const H = 200;
+    // A stroke joined to its underline, which spans 80 % of the width (x 30..270), and nothing else.
+    const sig = new Float32Array(W * H);
+    for (let x = 30; x < 270; x++) for (let y = 150; y < 153; y++) sig[y * W + x] = 1;
+    for (let y = 60; y < 150; y++) for (let x = 60 + ((y - 60) >> 1); x < 64 + ((y - 60) >> 1); x++) sig[y * W + x] = 1;
+    const before = sig.reduce((n, v) => n + v, 0);
+    removeLines(sig, W, H);
+    expect(sig.reduce((n, v) => n + v, 0)).toBe(before);
+    // The same underline alone, still 80 %: one line that does not reach the page edges is kept too.
+    const lone = new Float32Array(W * H);
+    for (let x = 30; x < 270; x++) for (let y = 150; y < 153; y++) lone[y * W + x] = 1;
+    removeLines(lone, W, H);
+    expect(lone[151 * W + 150]).toBe(1);
+    // A lone line from edge to edge (a form's rule) goes.
+    const rule = new Float32Array(W * H);
+    for (let x = 0; x < W; x++) for (let y = 150; y < 152; y++) rule[y * W + x] = 0.8;
+    removeLines(rule, W, H);
+    expect(rule[150 * W + 150]).toBe(0);
+  });
+
+  it('자동: noink retries once at one 진하기 step stronger and reports the step it used; the other modes do not', () => {
+    // A grey bar whose darkness (0.335) keys weak at 진하기 0 (no strong ink: noink) and strong at +1.
+    const faint = image(100, 90, (x, y) => (y >= 40 && y < 48 && x > 15 && x < 85 ? [153, 153, 153] : [230, 230, 230]));
+    expect(keyInk(faint, { mode: 'auto', strength: 1, retried: true }).status).toBe('ok');
+    expect(keyInk(faint, { mode: 'auto', retried: true }).status).toBe('noink');
+    const r = processInk(faint, { mode: 'auto' });
+    expect(r.status).toBe('ok');
+    expect(r.strength).toBe(1);
+    // Blank paper: one retry only (0 -> 1), never a second step.
+    const blank = processInk(image(100, 90, () => [230, 230, 230]), { mode: 'auto' });
+    expect(blank.status).toBe('noink');
+    expect(blank.strength).toBe(1);
+    expect(processInk(faint, { mode: 'auto', strength: 2 }).strength).toBe(2);
+    // 서명 mode keeps the user's step.
+    const sign = processInk(faint, { mode: 'sign' });
+    expect(sign.status).toBe('noink');
+    expect(sign.strength).toBe(0);
+  });
+
+  it('paper colour stays the paper where seals cover much of it (c03: their pink rims are not paper)', () => {
+    // White paper; red seal strokes every 12 px with a faint pink rim (coverage 0.1) 2 px around each.
+    const img = image(240, 180, (x, y) => {
+      const m = x % 12;
+      if (m < 3) return [200, 40, 40];
+      if (m < 5 || m > 9) return [240, 220, 220];
+      return [242, 240, 236];
+    });
+    const pg = coarsePaper(img);
+    const reds = Array.from(pg.v[0], (r, i) => r - Math.max(pg.v[1][i], pg.v[2][i])).sort((p, q) => p - q);
+    expect(reds[reds.length >> 1]).toBeLessThan(0.03);
+  });
+
+  it('redness ratio is 0 where a pixel is barely darker than its paper (kraft grain does not spread onto a pen)', () => {
+    const img = image(60, 40, (x, y) => ((x * 7 + y * 13) % 5 === 0 ? [150, 108, 70] : [156, 115, 78]));
+    const { mn, red } = planes(img);
+    const ratio = ratioPlane(mn, red, coarsePaper(img), 60, 40);
+    expect(Math.max(...ratio)).toBe(0);
   });
 });
 

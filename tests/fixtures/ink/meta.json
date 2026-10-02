@@ -95,6 +95,36 @@
   "iouGate": false,
   "alpha": "gt14.alpha.png"
  },
+ "gt14-tight": {
+  "gt": "gt14",
+  "ink": [
+   0.1,
+   0.14,
+   0.42
+  ],
+  "mode": "auto",
+  "desc": "synthetic blue-ink signature",
+  "variant": "tight",
+  "jpegQ": 92,
+  "guess": "black",
+  "alpha": "gt14-tight.alpha.png"
+ },
+ "gt14-kraftFrame": {
+  "gt": "gt14",
+  "ink": [
+   0.24,
+   0.2,
+   0.34
+  ],
+  "mode": "auto",
+  "desc": "purple pen signature on kraft board in a dark frame",
+  "variant": "kraftFrame",
+  "jpegQ": 88,
+  "paper": "#9C744E",
+  "guess": "black",
+  "iouGate": false,
+  "alpha": "gt14.alpha.png"
+ },
  "gt15": {
   "gt": "gt15",
   "ink": [
@@ -175,6 +205,22 @@
   "jpegQ": 85,
   "paper": "#E9DDB5",
   "alpha": "gt15.alpha.png"
+ },
+ "gt15-sealWall": {
+  "gt": "gt15",
+  "ink": [
+   0.8,
+   0.3,
+   0.3
+  ],
+  "mode": "auto",
+  "desc": "synthetic red 도장 impression with ink gaps (Pretendard Black 홍길/동인)",
+  "variant": "sealWall",
+  "jpegQ": 72,
+  "guess": "red",
+  "iouGate": false,
+  "deltaEGate": false,
+  "alpha": "gt15-sealWall.alpha.png"
  },
  "gt15-overSign": {
   "gt": "gt15",

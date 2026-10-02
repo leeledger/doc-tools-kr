@@ -81,7 +81,7 @@ budget('fflate chunk (zip*.js)', match(/^_astro\/zip[.-][^/]*\.js$/), 12 * KB);
 const autoframe = autoframeOn(env.PUBLIC_ID_PHOTO_AUTOFRAME) && !process.argv.includes('--no-mediapipe');
 budget('encode.worker*.js (id-photo)', match(/^_astro\/encode\.worker[^/]*\.js$/), 25 * KB);
 // 전자서명·도장 이미지 (Sprint C, C1): the ink worker (5.05 KB gzip measured at C1 integration, after C1-core round 2
-// added the ink colour; 10.9 KB after C1 r3 added page finding, line removal, ink clusters and both-ink keying;
+// added the ink colour; 11.9 KB after C1 r3 (review round) added page finding, line removal, ink clusters and both-ink keying;
 // budget = measured + 20 %), and the page's controls (photo*.js, pad*.js and what only they import; 11.3 KB gzip
 // measured, budget + 20 %), which load on first use only, never with the page.
 budget('ink.worker*.js (stamp-signature)', match(/^_astro\/ink\.worker[^/]*\.js$/), 13 * KB);
