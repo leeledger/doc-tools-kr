@@ -1646,3 +1646,13 @@ Status: **DONE_WITH_CONCERNS**. Everything is built and gated locally. The relea
   - check:licenses OK in both states.
   - e2e `bg-chromium` + `bg-mobile-safari`: 11 passed, 1 skipped (`@model` is chromium only).
   - Screenshots at 390 and 1280 px, light and dark, in 4 states: checked.
+- **CI** (run https://github.com/leeledger/doc-tools-kr/actions/runs/36974710691, commit 86174a8): **green** on attempt 2.
+  - Attempt 1 had two failures in code C2 does not touch:
+    - The `checks` Lighthouse LCP median on /photo-compress/ was 2,104 ms. The runs were bimodal: 1,956 / 1,964 / 2,117 / 2,113 / 2,104.
+    - The webkit job failed in `stamp-signature.spec.ts` "modes" ("Clicking the checkbox did not change its state").
+  - Both passed on the re-run of the failed jobs.
+  - /remove-background/ passed Lighthouse on both attempts.
+  - CI precache: 449.6 KB of 450 (flag on), as predicted.
+  - `regress:bgremove --fixtures-only --backend wasm` passed on CI.
+  - bg-chromium (with `@model`) and bg-mobile-safari passed.
+  - Arch: /photo-compress/ LCP sits on the 2,000 ms line on CI. A3 saw 2,111 ms locally on an unchanged page.

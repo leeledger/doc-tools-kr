@@ -66,12 +66,17 @@ Ready for Review: YES. Status DONE_WITH_CONCERNS: precache headroom and the per-
 - Initial JS of the page: 9.4 KB gzip; lazy controller 12.0 KB.
 - Gates: check 0 errors; unit 781/781; both builds + check-dist; licences in both states; e2e bg-chromium + bg-mobile-safari 11 passed, 1 skipped; screenshots at 390 and 1280 px, light and dark.
 
+- CI: https://github.com/leeledger/doc-tools-kr/actions/runs/36974710691 is green on attempt 2.
+  - Attempt 1 failed on the /photo-compress/ LCP median (2,104 ms; bimodal runs) and on a webkit stamp-signature checkbox test. Neither is C2 code, and both passed on the re-run.
+  - CI precache: 449.6 KB.
+
 ## Open Questions (Arch)
 1. Decision 5: COEP on `/_astro/infer.worker*`, `/_astro/fusion.worker*` and `/vendor/onnxruntime-web/*` as well as on the page. Without it Chrome does not start the workers. OK?
 2. Decision 7: ruling 6 (release after each image) makes every photo pay a new session.
    - Measured: WebGPU about 10 s create + 3.5 s first run; WASM about 7 s + 2.7 s on this PC.
    - Keep it, or keep the worker alive between photos on desktop?
 3. Decision 9: precache 448.8 / 450 KB on this PC with the flag on (about 449.6 on CI). The next tool needs a precache decision.
+5. /photo-compress/ LCP sits on the 2,000 ms line on CI (bimodal runs). Not changed by C2 beyond the menu entry, but it will flake.
 4. Decision 16: the brand test exempts the brief's cache name `docttak-model-birefnet-`. Keep it, or rename the cache?
 
 ## Out of Scope (logged in BUILD-LOG Known Gaps)
