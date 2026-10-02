@@ -1,3 +1,27 @@
+# Review Request — Sprint C, C2 round 3 (Richard's Must Fix + Arch fallback ruling)
+Date: 2026-10-02
+Ready for Review: YES. Status DONE.
+
+## Files Changed
+- `src/lib/bgremove/session.ts`: `disposeTimers()` (idle and hidden timers that never dispose during an engine start or run).
+- `src/tools/remove-background/bg.ts`:
+  - `process()` brackets each photo with `begin`/`done`; visibility changes feed the timers.
+  - Fallback line `#bg-fallback`; consent extra line.
+  - `checkModel` after the model is read.
+- `src/tools/remove-background/{copy.ts,page.astro}`: `consentExtra`, `fallbackNote` (sizes from `runtimeBytes('wasm')`; 0 new glyphs).
+- `src/lib/bgremove/assets.ts`: `MODEL_PIN`, `manifestMatches`, `checkModel`. `loadManifest` and `isCached` honour the pin.
+- `scripts/copy-vendor.mjs`: `sha256Total` in bgremove.json.
+- `src/lib/bgremove/infer-core.ts`: buffer-cache comment matches `bucket`.
+- Tests:
+  - `tests/unit/bgremove.test.ts`: fake-timer tests (idle at IDLE_MS − 1 ms, hidden during a run), pin tests, fallback copy.
+  - `tests/e2e/remove-background.spec.ts`: the stand-in rewrites the pinned bytes and SHA in the served controller chunk.
+- `handoff/REVIEW-FEEDBACK.md` (Richard's C2 section), `handoff/BUILD-LOG.md` (round 3 + Known Gap).
+
+## Open Questions
+- None.
+
+---
+
 # Review Request — Sprint C, C2 round 2 (Arch rulings)
 Date: 2026-10-02
 Ready for Review: YES. Status DONE; every Arch target is met (BUILD-LOG "C2 round 2", with the before/after table).

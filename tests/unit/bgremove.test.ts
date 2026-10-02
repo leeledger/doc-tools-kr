@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ATTEMPTS,
   AssetError,
@@ -15,11 +15,14 @@ import {
   MODEL_BYTES,
   cacheName,
   canStore,
+  checkModel,
   deleteOldCaches,
   downloadBytes,
   isCached,
   loadManifest,
   loadParts,
+  manifestMatches,
+  MODEL_PIN,
   modelParts,
   ortBase,
   ortScript,
@@ -34,7 +37,7 @@ import { blurFusion, boxFilter, plainCutout, reflect } from '../../src/lib/bgrem
 import { ATTEMPT_KEY, SMALL_KEY, clearAttempt, markAttempt, takeCrash, workEdge, type GuardStorage } from '../../src/lib/bgremove/guard';
 import { MEAN, NOSUBJECT_AREA, SIZE, STD, fusionRadii, hasSubject, maskArea, pilResizeRgba, resizeMask, toInput, validMask } from '../../src/lib/bgremove/infer';
 import { OPT_LEVEL, StageError, createEngine, createHandler, runEngineOnce, threadCount, type CoreEnv, type InitRequest, type OrtLike, type SessionLike, type TensorLike, type WorkerRequest, type WorkerResponse } from '../../src/lib/bgremove/infer-core';
-import { EngineError, HIDDEN_MS, IDLE_MS, isIOS, keepEngine, pickBackend, shouldFallBack, startEngine, type WorkerLike } from '../../src/lib/bgremove/session';
+import { EngineError, HIDDEN_MS, IDLE_MS, disposeTimers, isIOS, keepEngine, pickBackend, shouldFallBack, startEngine, type WorkerLike } from '../../src/lib/bgremove/session';
 import { BG_COLORS, COPY, FIT_LINE, NOT_FOR_ID, aboutMB, fileName, saveLabel } from '../../src/tools/remove-background/copy';
 import { LIMITS, checkDims, checkFileBytes } from '../../src/tools/remove-background/limits';
 import { move, view, type Phase } from '../../src/tools/remove-background/model';
@@ -215,23 +218,47 @@ describe('assets: manifest, parts, cache (brief Flow, failure rows "download" an
     expect(modelParts(manifest(), url).map((p) => p.url)).toEqual(['/vendor/m/model.part0', '/vendor/m/model.part1']);
     const rt = runtimeParts('wasm');
     const rtFiles = Object.fromEntries(rt.map((p) => [p.url, new Uint8Array(0)]));
+    const pin = { exportId: 'x', bytes: 1700, sha256Total: 'f'.repeat(64) };
     const { deps, calls } = setup({ [url]: JSON.stringify(manifest()), ...files, ...rtFiles });
-    expect(await isCached(deps, 'wasm', url)).toBe(false);
-    await loadManifest(deps, signal(), true, url);
+    expect(await isCached(deps, 'wasm', url, pin)).toBe(false);
+    await loadManifest(deps, signal(), true, url, pin);
     calls.length = 0;
-    expect((await loadManifest(deps, signal(), true, url)).bytes).toBe(1700);
+    expect((await loadManifest(deps, signal(), true, url, pin)).bytes).toBe(1700);
     expect(calls).toEqual([]);
     await loadParts(modelParts(manifest(), url), { deps, signal: signal(), store: true });
-    expect(await isCached(deps, 'wasm', url)).toBe(false);
+    expect(await isCached(deps, 'wasm', url, pin)).toBe(false);
     const c = await deps.caches!.open(cacheName());
     for (const p of rt) await c.put(p.url, new Response('x'));
-    expect(await isCached(deps, 'wasm', url)).toBe(true);
-    expect(await isCached(deps, 'webgpu', url)).toBe(false);
+    expect(await isCached(deps, 'wasm', url, pin)).toBe(true);
+    expect(await isCached(deps, 'webgpu', url, pin)).toBe(false);
   });
 
   it('loadManifest: a 404 or broken JSON is an AssetError (network / corrupt)', async () => {
     await expect(loadManifest(setup({}).deps, signal(), true, '/m.json')).rejects.toMatchObject({ code: 'network' });
     await expect(loadManifest(setup({ '/m.json': '{nope' }).deps, signal(), true, '/m.json')).rejects.toMatchObject({ code: 'corrupt' });
+  });
+
+  it('pin (Richard C2 review): a manifest or model that is not the build pin is corrupt; a stale cached manifest is re-read', async () => {
+    const pin = { exportId: 'x', bytes: 1700, sha256Total: 'f'.repeat(64) };
+    const ok = JSON.stringify(manifest());
+    expect(manifestMatches(manifest(), pin)).toBe(true);
+    for (const bad of [{ exportId: 'y' }, { sha256Total: 'e'.repeat(64) }]) {
+      const served = JSON.stringify(manifest(bad));
+      await expect(loadManifest(setup({ '/m.json': served }).deps, signal(), true, '/m.json', pin)).rejects.toMatchObject({ code: 'corrupt' });
+    }
+    // A cached manifest of another export is dropped and the served one is used.
+    const { deps, caches } = setup({ '/m.json': ok });
+    const c = await caches.api.open(cacheName());
+    await c.put('/m.json', new Response(JSON.stringify(manifest({ exportId: 'old' }))));
+    expect((await loadManifest(deps, signal(), true, '/m.json', pin)).exportId).toBe('x');
+    // The joined bytes are checked against the pinned total SHA-256.
+    const bytes = new Uint8Array([1, 2, 3]);
+    await expect(checkModel(bytes, { digest: async (d) => sha(d) }, { exportId: 'x', bytes: 3, sha256Total: sha(bytes) })).resolves.toBeUndefined();
+    await expect(checkModel(bytes, { digest: async (d) => sha(d) }, { exportId: 'x', bytes: 3, sha256Total: 'f'.repeat(64) })).rejects.toMatchObject({ code: 'corrupt' });
+    await expect(checkModel(bytes, { digest: async (d) => sha(d) }, { exportId: 'x', bytes: 4, sha256Total: sha(bytes) })).rejects.toMatchObject({ code: 'corrupt' });
+    // The build pin is the committed manifest.
+    const committed = JSON.parse(readFileSync(join(ROOT, 'vendor-assets', 'birefnet-lite-512', MODEL_PIN.exportId, 'manifest.json'), 'utf8'));
+    expect(manifestMatches(committed)).toBe(true);
   });
 
   it('the build plan: runtime parts are pinned (≤ 24 MiB each, SHA-256), the WebGPU wasm is split in two', () => {
@@ -575,6 +602,61 @@ describe('session: one engine worker kept between photos; dispose; WebGPU -> WAS
     expect(shouldFallBack(new EngineError('run', 'wasm', 'x'))).toBe(false);
   });
 
+  describe('dispose timers never kill an engine mid-photo (Richard C2 Must Fix; fake timers)', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('idle: photo 2 picked at IDLE_MS − 1 ms keeps the engine through its run; the idle timer restarts after it', () => {
+      vi.useFakeTimers();
+      const dispose = vi.fn();
+      const t = disposeTimers(dispose);
+      t.begin();
+      t.done(); // photo 1 finished: idle armed
+      vi.advanceTimersByTime(IDLE_MS - 1);
+      t.begin(); // photo 2 starts just before the idle mark
+      vi.advanceTimersByTime(IDLE_MS * 3); // a very long run
+      expect(dispose).not.toHaveBeenCalled();
+      t.done();
+      vi.advanceTimersByTime(IDLE_MS - 1);
+      expect(dispose).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(dispose).toHaveBeenCalledOnce();
+    });
+
+    it('hidden: 60 s hidden during a run disposes only after the run, and only if still hidden', () => {
+      vi.useFakeTimers();
+      const dispose = vi.fn();
+      const t = disposeTimers(dispose);
+      t.begin();
+      t.hidden();
+      vi.advanceTimersByTime(HIDDEN_MS + 5000);
+      expect(dispose).not.toHaveBeenCalled();
+      t.done(); // still hidden: now
+      expect(dispose).toHaveBeenCalledOnce();
+
+      const d2 = vi.fn();
+      const t2 = disposeTimers(d2);
+      t2.begin();
+      t2.hidden();
+      vi.advanceTimersByTime(HIDDEN_MS + 1);
+      t2.visible(); // back before the run ended: keep
+      t2.done();
+      expect(d2).not.toHaveBeenCalled();
+
+      const d3 = vi.fn();
+      const t3 = disposeTimers(d3);
+      t3.hidden(); // no run: plain 60 s
+      vi.advanceTimersByTime(HIDDEN_MS);
+      expect(d3).toHaveBeenCalledOnce();
+      const d4 = vi.fn();
+      const t4 = disposeTimers(d4);
+      t4.begin();
+      t4.done();
+      t4.stop(); // disposed for another reason: no later call
+      vi.advanceTimersByTime(IDLE_MS * 2);
+      expect(d4).not.toHaveBeenCalled();
+    });
+  });
+
   it('keepEngine: per-photo restart when deviceMemory ≤ 4, or unknown on iOS (iPadOS too); idle 2 min, hidden 60 s', () => {
     const ua = { pc: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/153', iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)', mac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)' };
     expect(keepEngine({ deviceMemory: 8, userAgent: ua.pc })).toBe(true);
@@ -683,6 +765,9 @@ describe('copy and limits (brief: honest limits up front, plain words)', () => {
     expect(COPY.nosubject).toBe('사진에서 피사체를 찾지 못했어요. 피사체가 크게, 배경이 단순하게 나온 사진으로 해 보세요.');
     expect(COPY.nosubjectPaper('전자서명·도장 이미지 만들기')).toBe('종이에 찍힌 도장·서명·로고라면 전자서명·도장 이미지 만들기를 써 보세요.');
     expect(COPY.consent(114.5 * 1048576)).toBe('배경을 지우는 프로그램 114.5 MB를 한 번 받아요 (와이파이 권장).');
+    // Arch (C2 review): the possible fallback download is stated up front, with the generated size; no second question.
+    expect(COPY.consentExtra(runtimeBytes('wasm'))).toBe(`고속 처리가 안 되는 기기에서는 ${(runtimeBytes('wasm') / 1048576).toFixed(1)} MB를 더 받을 수 있어요.`);
+    expect(COPY.fallbackNote(runtimeBytes('wasm'))).toContain('다른 방식으로 바꿔요');
     expect(all).not.toMatch(/remove\.bg|업로드|서버|브라우저|메모리|네트워크/i);
     for (const t of TOOLS) expect(`${t.description}${t.faq.map((f) => f.a).join('')}`).not.toMatch(/remove\.bg/i);
   });

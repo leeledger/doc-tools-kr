@@ -64,6 +64,7 @@ const limits = [
         <div class="bg-panel" id="bg-consent" role="group" aria-labelledby="bg-consent-text" hidden>
           <p id="bg-consent-text"></p>
           <p>{COPY.consentKeep}</p>
+          <p id="bg-consent-extra" hidden></p>
           <p id="bg-low-device" hidden>{COPY.lowDevice}</p>
           <div class="bg-row">
             <button type="button" class="btn primary" id="bg-start">받고 시작</button>
@@ -77,6 +78,7 @@ const limits = [
           <div class="bg-row"><button type="button" class="btn ghost" id="bg-cancel" hidden>취소</button></div>
         </div>
         <p class="hint" id="bg-note" hidden></p>
+        <p class="hint" id="bg-fallback" role="status" hidden></p>
 
         <p class="error-box" id="bg-error" role="alert" data-live="alert" hidden></p>
         <div class="bg-row"><button type="button" class="btn primary" id="bg-retry" hidden>다시 시도</button></div>

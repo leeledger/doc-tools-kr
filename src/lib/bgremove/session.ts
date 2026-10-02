@@ -161,3 +161,80 @@ export function startEngine(req: InitRequest, createWorker: () => WorkerLike, on
   });
   return { ready, cancel: () => kill(new EngineError('crash', req.backend, 'cancelled')) };
 }
+
+export interface TimerApi {
+  set: (fn: () => void, ms: number) => unknown;
+  clear: (id: unknown) => void;
+}
+
+export interface DisposeTimers {
+  /** An engine start or a run begins: the idle timer stops, and neither timer may dispose until `done`. */
+  begin(): void;
+  /** That start or run is over: dispose now if the page stayed hidden past HIDDEN_MS meanwhile, else re-arm idle. */
+  done(): void;
+  /** visibilitychange. */
+  hidden(): void;
+  visible(): void;
+  /** Stops both timers (the engine was disposed for another reason). */
+  stop(): void;
+}
+
+/**
+ * When the kept engine is disposed (Arch round 2; Richard C2 Must Fix): after IDLE_MS without a photo, or after
+ * HIDDEN_MS hidden, but never while an engine start or a run is in flight. A hidden timeout that fires mid-run is
+ * remembered and acted on when the run ends, if the page is still hidden. Pure apart from the injected timers.
+ */
+export function disposeTimers(dispose: () => void, t: TimerApi = { set: (f, ms) => setTimeout(f, ms), clear: (id) => clearTimeout(id as ReturnType<typeof setTimeout>) }): DisposeTimers {
+  let idle: unknown;
+  let hide: unknown;
+  let busy = 0;
+  let isHidden = false;
+  let hiddenExpired = false;
+  const clearIdle = (): void => {
+    if (idle !== undefined) t.clear(idle);
+    idle = undefined;
+  };
+  const clearHide = (): void => {
+    if (hide !== undefined) t.clear(hide);
+    hide = undefined;
+  };
+  const fire = (): void => {
+    clearIdle();
+    clearHide();
+    hiddenExpired = false;
+    dispose();
+  };
+  return {
+    begin() {
+      busy++;
+      clearIdle();
+    },
+    done() {
+      busy = Math.max(0, busy - 1);
+      if (busy) return;
+      if (hiddenExpired && isHidden) return fire();
+      hiddenExpired = false;
+      clearIdle();
+      idle = t.set(() => (busy ? undefined : fire()), IDLE_MS);
+    },
+    hidden() {
+      isHidden = true;
+      clearHide();
+      hide = t.set(() => {
+        hide = undefined;
+        if (busy) hiddenExpired = true;
+        else fire();
+      }, HIDDEN_MS);
+    },
+    visible() {
+      isHidden = false;
+      hiddenExpired = false;
+      clearHide();
+    },
+    stop() {
+      clearIdle();
+      clearHide();
+      hiddenExpired = false;
+    },
+  };
+}

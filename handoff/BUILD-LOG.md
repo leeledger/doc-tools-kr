@@ -37,6 +37,7 @@
 - Manual iLovePDF comparison on 3–4 non-sensitive files (owner)
 - Re-verification of the photo presets marked secondary (before Step 4)
 - Expanding the HWP corpus to 100+ files (precondition for Step 5)
+- C2 flag-off UI font: the C2 copy adds 2 glyphs (+0.3 KB; 601 characters / 137.4 KB vs 599 / 137.1 on main) to the shipping font while the tool is dark, because gen-ui-font reads the sources, not dist (Richard, C2 review). Inside the 2.0 KB C1+C2 allowance; excluding flag-gated sources from the scan is an optional later change.
 - C2 배경 지우기: brush erase/restore, batch, 1024 고화질, guided filter, hand-off to /id-photo/, WebGL fusion (not needed: 0.9–1.3 s at 4 MP); `scripts/qa/visual.mjs` shots of /remove-background/ (it runs on the flag-off build); owner real-phone check before `PUBLIC_BG_REMOVE=1`
 
 ## Open questions for owner
@@ -1726,3 +1727,31 @@ Status: **DONE**. Every Arch target is met on this PC; CI result below. The rele
 - e2e `bg-chromium` + `bg-mobile-safari`: 11 passed, 1 skipped. mobile-safari runs the iOS per-photo-restart path, chromium the kept engine.
 - Screenshots checked (390 / 1280 px, light / dark).
 - **CI round 2** (https://github.com/leeledger/doc-tools-kr/actions/runs/36984505822, commit a309a84): **green on the first attempt** (checks + 5 e2e jobs, incl. bg-chromium @model and bg-mobile-safari).
+
+## C2 round 3 (Bob, 2026-10-02; Richard's C2 review + Arch ruling on the fallback download)
+Status: **DONE**.
+- **Must Fix: the dispose timers could kill the engine mid-photo.**
+  - New pure `disposeTimers()` in `src/lib/bgremove/session.ts`. `begin()` runs when an engine start or run begins: it stops the idle timer, and neither timer may dispose until `done()`.
+  - `done()` re-arms the 2-minute idle timer. If the page stayed hidden past 60 s during the run, it disposes at that point instead (only if still hidden).
+  - `bg.ts` `process()` brackets each photo with `begin`/`done` in a `finally`. Visibility changes feed `hidden()`/`visible()`.
+  - Fake-timer unit tests:
+    - Photo 2 at IDLE_MS − 1 ms survives a run 3× IDLE_MS long; idle disposal follows only IDLE_MS after it.
+    - Hidden for 60 s + 5 s during a run disposes only after the run.
+    - Coming back before the run ends keeps the engine.
+    - The plain hidden timeout and `stop()` work.
+- **Fallback download (Arch ruling).**
+  - With WebGPU chosen, the consent panel adds `고속 처리가 안 되는 기기에서는 {runtimeBytes('wasm')}를 더 받을 수 있어요.` (13.6 MB, generated, not a literal).
+  - When the fallback happens, `#bg-fallback` (role=status) shows `이 기기에서는 고속 처리가 안 돼서 다른 방식으로 바꿔요. 필요한 파일 13.6 MB를 더 받아요.`. Progress never overwrites it, and the next photo clears it.
+  - No second question. Glyphs: 0 new.
+- **Manifest pin.**
+  - `src/generated/bgremove.json` now carries `sha256Total`.
+  - `loadManifest` refuses a served manifest whose exportId, bytes or sha256Total differ from the pin (`'corrupt'`, the 손상 path). A stale cached manifest is dropped and read again, and `isCached` needs the pinned one.
+  - The page also hashes the joined model once per engine start (`checkModel`). Unit tests cover these.
+  - The e2e stand-in rewrites the two pinned values in the served controller chunk (test side; the page code is unchanged).
+- **Stale comment fixed:** infer-core `GPU_BUFFER_CACHE` now describes `bucket` and the measured alternatives.
+- **Known Gap (logged):** see the Known Gaps list.
+- **Gates:**
+  - check: 0 errors. unit: 787/787. Both builds + check-dist OK; precache 432.9 / 429.3 KB.
+  - Licences OK in both states.
+  - e2e bg-chromium + bg-mobile-safari: 11 passed, 1 skipped.
+  - No model or runtime code changed, so no parity run.

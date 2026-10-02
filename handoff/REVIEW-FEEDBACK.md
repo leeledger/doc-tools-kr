@@ -1,3 +1,79 @@
+# Review Feedback — C2 사진 배경 지우기 /remove-background/ (rounds 1+2, c2 @ d3894aa)
+Date: 2026-10-02
+Ready for Builder: NO (one Must Fix, small)
+
+## Must Fix
+- `src/tools/remove-background/bg.ts:155-159, 278, 572-575` (confidence: 8) — the dispose timers can kill the engine in the middle of a photo.
+  - `parkEngine()` arms `idleTimer = setTimeout(disposeEngine, IDLE_MS)`. Nothing clears it when the next photo starts: `openFile`, `start` and `process` do not touch it, and `engineFor` returns the live engine (`if (engine && !engine.disposed && engine.backend === be) return engine;`). A second photo picked shortly before the 2-minute mark is killed during `e.run(...)`.
+  - The hidden timer (`hiddenTimer = setTimeout(disposeEngine, HIDDEN_MS)`) does the same when a phone user leaves the tab for 60 s while a run is still going. Background throttling makes that run longer.
+  - Effect: `kill()` rejects the pending run with stage `'crash'`.
+    - On WebGPU, `shouldFallBack` is true, so `gpuFailed` is set for the visit and the WASM runtime (13.6 MB) is downloaded without consent (see Should Fix 1).
+    - On WASM, the user sees `COPY.crashed` ("배경을 지우다 멈췄어요…") for a photo that did not crash.
+  - Fix:
+    - Clear `idleTimer` when a photo starts using the engine (at the top of `process`).
+    - While an engine start or run is in flight, make the idle and hidden timers no-ops. For example, set an `inFlight` flag; a hidden-timeout that fires during a run disposes in `parkEngine()` afterwards if the page is still hidden.
+    - Add a fake-timer unit or e2e test: photo 2 picked at IDLE_MS − ε, and hidden for HIDDEN_MS during a run. In both cases the run completes and no fallback happens.
+
+## Should Fix
+1. `bg.ts:358-362` with `COPY.consent` (confidence: 9, verified in a browser) — the WebGPU → WASM fallback downloads more than the consent stated.
+   - Forced fallback (page adapter, none in the worker): the consent said 113.6 MB. The page then fetched the asyncify parts plus `ort-wasm-simd-threaded.wasm` (13.6 MB more), with no new consent.
+   - The `COPY.fallback` text is overwritten at once by `onBytes` (the poll never saw it).
+   - Either state the possible extra in the consent line, or ask again before the WASM runtime is downloaded. This is a product call, so it is also under Escalate.
+   - Fallback itself works: result done, 0 off-site requests.
+2. `src/lib/bgremove/infer-core.ts:205-211` (confidence: 9) — a stale comment. It says `'lazyRelease'` "hands … back" and keeps memory flat, but the value is `'bucket'`, as the BUILD-LOG round-2 entry says. Rewrite the comment to match.
+3. `src/lib/bgremove/assets.ts:92-104` (confidence: 7) — the model manifest is trusted as served.
+   - `parseManifest` checks the shape (`typeof m.exportId === 'string'`) but never compares `exportId` to `EXPORT_ID`, `bytes` to `MODEL_BYTES`, or the parts' concatenation to `sha256Total`. `src/generated/bgremove.json` already pins `exportId` and `bytes`.
+   - Same-origin and immutable, so the risk is low. Still, compare `exportId` and `bytes` (cheap), or pin the manifest's SHA-256 in bgremove.json, so that a stale or wrong manifest is `'corrupt'` and not a wrong model.
+4. UI font, informational: the flag-OFF build is 601 characters / 137.4 KB, against 599 / 137.1 on main.
+   - The C2 copy still adds glyphs to production while the tool is dark, because gen-ui-font reads the sources and not dist.
+   - Harmless, inside the 2.0 KB C1+C2 allowance. Log it.
+
+## Escalate to Architect
+- The fallback download has no consent (Should Fix 1). Should the consent line mention "WebGPU가 안 되면 약 14 MB를 더 받을 수 있어요", or should the page ask again? This is a product wording and consent decision.
+
+## Verified (my own runs)
+- Flag OFF (`PUBLIC_BG_REMOVE=0`, fresh dist): check-dist OK.
+  - No `remove-background/`, `vendor/onnxruntime-web`, `vendor/birefnet-lite-512` or `og-remove-background.png`.
+  - No COEP block in `_headers`.
+  - No 배경 지우기 entry in the sitemap, llms.txt or /licenses/. The only llms.txt "배경" hits are the existing stamp-tool lines.
+  - No infer or fusion worker chunks.
+  - The only C2 string is the inert `NETWORK_PREFIXES` constant in sw.js.
+  - Precache 430.0 KB.
+- Flag ON (dist-bg):
+  - Precache 433.6 KB. Initial JS 9.4 KB gzip. Controller 12.5 KB lazy. UI fonts 137.7 KB.
+  - CSP unchanged (`connect-src 'self'`).
+  - COEP only on `/remove-background/*`, `/_astro/infer.worker*`, `/_astro/fusion.worker*`, `/vendor/onnxruntime-web/*`.
+- Port 5073, chromium, real model (WASM; headless has no WebGPU):
+  - 0 engine or model requests before the pick, and none at the consent panel.
+  - Consent text correct. The run finished in about 5.3 s.
+  - PNG 640×480, colour type 6, `누끼.png`. White → `누끼-흰배경.jpg` (FFD8FF).
+  - The compare toggle shows the original (`aria-label 원본 사진`, `data-bg none`).
+  - 2nd photo: the engine was kept, no consent, 0 new requests, 2.7 s.
+  - A corrupt `model.part1` gave "받은 파일이 손상되었어요" and was not cached. The cache kept the manifest, the wasm and part0. 다시 시도 re-fetched only parts 1–3, so resume works, and the run finished.
+  - 0 off-site requests across every run.
+- Other pages on the flag-on build: /id-photo/, /stamp-signature/ (ink.worker started) and /hwp-viewer/ (hwp.worker started).
+  - No COEP, `crossOriginIsolated` false, no console errors.
+- Screenshots at 390 and 1280, light and dark: empty, consent, done, white, compare, error. Layout and contrast OK. The dark cancel button's computed colours are fine.
+- `parity.py` on the committed parts (`…-gridsample-sim`): **exit 0**.
+  - GT MAE 0.004836, IoU 0.94226.
+  - Empty masks: g01, m02, t01 (3/49), the same as torch. `real_set_is_49` true.
+- Licences, byte-identical to upstream:
+  - ORT `LICENSE` and `ThirdPartyNotices.txt` match raw @ `f2c39fe…` (= tag v1.30.0 via `gh api`).
+  - BiRefNet `LICENSE` matches GitHub @ `ebcc0bc8`.
+  - HF revision `aa62cd87…831d` exists, `license:mit`.
+  - onnxsim 0.4.36 Apache-2.0 is in requirements.lock and README (dev only).
+  - The manifest has `"simplify": "onnxsim 0.4.36"`.
+- 외교부 quote re-fetched from passport.go.kr menuPos=12: "배경이 흰색이 아니거나, 배경색을 사진 편집 프로그램으로 제거하여 사진이 변형된 경우" is verbatim.
+- Copy:
+  - 문서딱 brand. No 업로드, 서버 or 메모리 in the visible copy. 브라우저 appears only in the site-wide JSON-LD `operatingSystem`.
+  - The limits list covers glass, groups, busy backgrounds, hair and the 외교부 line with its link.
+  - The no-subject panel links /stamp-signature/.
+
+## Cleared
+Everything above passed except the dispose-timer race. Fix that one item, with its test, and C2 is clear for a flag-off merge. The release still waits for the owner's phone check.
+
+---
+
 # Review Feedback — G2 A3 (66f7979 on g2-a3)
 Date: 2026-10-02
 Ready for Builder: YES

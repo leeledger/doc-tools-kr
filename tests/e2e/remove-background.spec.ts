@@ -12,9 +12,12 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import type { Download, Page, Route } from '@playwright/test';
 import { resizeMask } from '../../src/lib/bgremove/infer';
 import { COPY } from '../../src/tools/remove-background/copy';
+
 import { expect, gotoReady, test } from './no-upload';
 
 const FIX = join(process.cwd(), 'tests', 'fixtures', 'bgremove');
+/** The build's model pin (copy-vendor writes it; the flag-on build bundles it into the controller chunk). */
+const PIN = JSON.parse(readFileSync(join(process.cwd(), 'src', 'generated', 'bgremove.json'), 'utf8')).model as { exportId: string; bytes: number; sha256Total: string };
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const PATH = '/remove-background/';
 /** Anything the tool loads after a pick: the controller, its workers, the engine, the model. */
@@ -55,11 +58,22 @@ async function stubModel(page: Page, opts: { corrupt?: boolean } = {}): Promise<
   const cut = Math.ceil(tiny.length / 2);
   const parts = [tiny.subarray(0, cut), tiny.subarray(cut)];
   const manifest = {
-    exportId: 'e2e-tiny',
+    exportId: PIN.exportId,
     bytes: tiny.length,
     parts: parts.map((b, i) => ({ name: `model.part${i}`, bytes: b.length, sha256: sha(b) })),
     sha256Total: sha(tiny),
   };
+  // The page pins the model (bytes and total SHA-256 from src/generated/bgremove.json, bundled in the controller
+  // chunk): the test rewrites those two values in the served chunk to the stand-in's. The page code is unchanged.
+  await page.route(/\/_astro\/bg\.[\w-]+\.js$/, async (route: Route) => {
+    const real = await route.fetch();
+    const body = (await real.text()).replaceAll(PIN.sha256Total, manifest.sha256Total).replaceAll(`bytes:${PIN.bytes}`, `bytes:${tiny.length}`);
+    if (!body.includes(manifest.sha256Total)) throw new Error('the model pin is not in the controller chunk');
+    const h = { ...real.headers() };
+    delete h['content-length'];
+    delete h['content-encoding'];
+    await route.fulfill({ status: 200, headers: h, body });
+  });
   const hits: string[] = [];
   let headers: Record<string, string> | null = null;
   await page.route(MODEL, async (route: Route) => {

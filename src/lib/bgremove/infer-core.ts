@@ -40,9 +40,10 @@ export type OptLevel = 'all' | 'basic' | 'disabled';
 export const OPT_LEVEL: OptLevel = 'basic';
 
 /**
- * WebGPU EP storage-buffer cache (onnxruntime-web 1.30 option). 'lazyRelease' hands the run's intermediate buffers
- * back after each run instead of pooling them (bucket, the default): measured at C2 round 2 to keep the live session's
- * GPU memory flat between photos (BUILD-LOG).
+ * WebGPU EP storage-buffer cache (onnxruntime-web 1.30 option), pinned to 'bucket' (ORT's default pooling). Measured
+ * at C2 round 2 with the session kept, 12 MP photos: 'disabled' peaked lower (2.18 GB) but took 2.7–2.9 s per photo,
+ * 'simple' peaked at 2.97 GB, 'lazyRelease' was no better than 'bucket' (BUILD-LOG). Memory stays flat with 'bucket'
+ * because the fusion step was made smaller.
  */
 export type GpuCacheMode = 'disabled' | 'lazyRelease' | 'simple' | 'bucket';
 export const GPU_BUFFER_CACHE: GpuCacheMode = 'bucket';

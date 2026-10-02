@@ -142,7 +142,7 @@ const bgremove = {
     wasm: { bytes: plainWasm.length, sha256: sha256(plainWasm), parts: [fileOf('ort-wasm-simd-threaded.wasm', plainWasm)] },
   },
   // Part URLs are the manifest's directory + part name (no bare directory literal: smoke-assets checks each one).
-  model: { exportId: BIREFNET_EXPORT, hfRevision: modelManifest.hfRevision, manifest: `${modelBase}manifest.json`, bytes: modelManifest.bytes },
+  model: { exportId: BIREFNET_EXPORT, hfRevision: modelManifest.hfRevision, manifest: `${modelBase}manifest.json`, bytes: modelManifest.bytes, sha256Total: modelManifest.sha256Total },
 };
 writeFileSync(join(root, 'src', 'generated', 'bgremove.json'), `${JSON.stringify(bgremove, null, 1)}\n`);
 rmSync(pub('vendor', 'onnxruntime-web'), { recursive: true, force: true });

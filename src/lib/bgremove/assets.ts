@@ -76,6 +76,22 @@ export function runtimeParts(backend: Backend): Part[] {
 export const runtimeBytes = (backend: Backend): number => plan[backend].wasm.bytes;
 /** Model bytes known at build time (the consent panel shows this before manifest.json is read). */
 export const MODEL_BYTES = plan.model.bytes;
+
+/** The build's pin of the model (src/generated/bgremove.json): the served manifest and the joined parts must match it. */
+export interface ModelPin {
+  exportId: string;
+  bytes: number;
+  sha256Total: string;
+}
+export const MODEL_PIN: ModelPin = { exportId: plan.model.exportId, bytes: plan.model.bytes, sha256Total: plan.model.sha256Total };
+
+/** True when the manifest is the one the build pinned (Richard C2 review: a stale or wrong manifest is 'corrupt'). */
+export const manifestMatches = (m: ModelManifest, pin: ModelPin = MODEL_PIN): boolean => m.exportId === pin.exportId && m.bytes === pin.bytes && m.sha256Total === pin.sha256Total;
+
+/** Throws AssetError 'corrupt' unless the joined model bytes hash to the pinned total. */
+export async function checkModel(model: Uint8Array, deps: Pick<AssetDeps, 'digest'>, pin: ModelPin = MODEL_PIN): Promise<void> {
+  if (model.byteLength !== pin.bytes || (await deps.digest(model)) !== pin.sha256Total) throw new AssetError('corrupt', 'model does not match the build pin');
+}
 export const MODEL_MANIFEST_URL = plan.model.manifest;
 
 /** Model + runtime bytes of a first visit on `backend`. */
@@ -123,15 +139,17 @@ async function cachedResponse(cache: Cache | null, url: string): Promise<Respons
 }
 
 /** Reads the manifest from the cache, else the network (and caches it when `store`). */
-export async function loadManifest(deps: AssetDeps, signal: AbortSignal, store: boolean, url: string = MODEL_MANIFEST_URL): Promise<ModelManifest> {
+export async function loadManifest(deps: AssetDeps, signal: AbortSignal, store: boolean, url: string = MODEL_MANIFEST_URL, pin: ModelPin = MODEL_PIN): Promise<ModelManifest> {
   const cache = await openCache(deps, cacheName());
   const hit = await cachedResponse(cache, url);
   if (hit) {
     try {
-      return parseManifest(await hit.json());
+      const m = parseManifest(await hit.json());
+      if (manifestMatches(m, pin)) return m;
     } catch {
-      await cache?.delete(url).catch(() => false);
+      // A broken cached copy: dropped below and read again.
     }
+    await cache?.delete(url).catch(() => false);
   }
   let text: string | null = null;
   let lastErr: unknown;
@@ -152,12 +170,13 @@ export async function loadManifest(deps: AssetDeps, signal: AbortSignal, store: 
   } catch {
     throw new AssetError('corrupt', 'model manifest is malformed');
   }
+  if (!manifestMatches(manifest, pin)) throw new AssetError('corrupt', `model manifest ${manifest.exportId} is not the pinned ${pin.exportId}`);
   if (store && cache) await cache.put(url, new Response(text, { headers: { 'content-type': 'application/json' } })).catch(() => undefined);
   return manifest;
 }
 
 /** True when the manifest and every runtime and model part of `backend` are in the cache (no download needed). */
-export async function isCached(deps: AssetDeps, backend: Backend, url: string = MODEL_MANIFEST_URL): Promise<boolean> {
+export async function isCached(deps: AssetDeps, backend: Backend, url: string = MODEL_MANIFEST_URL, pin: ModelPin = MODEL_PIN): Promise<boolean> {
   const cache = await openCache(deps, cacheName());
   if (!cache) return false;
   const hit = await cachedResponse(cache, url);
@@ -168,6 +187,7 @@ export async function isCached(deps: AssetDeps, backend: Backend, url: string = 
   } catch {
     return false;
   }
+  if (!manifestMatches(manifest, pin)) return false;
   for (const p of [...runtimeParts(backend), ...modelParts(manifest, url)]) if (!(await cachedResponse(cache, p.url))) return false;
   return true;
 }

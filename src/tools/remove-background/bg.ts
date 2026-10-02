@@ -11,6 +11,7 @@ import {
   AssetError,
   browserDeps,
   canStore,
+  checkModel,
   deleteOldCaches,
   downloadBytes,
   isCached,
@@ -19,6 +20,7 @@ import {
   modelParts,
   ortBase,
   ortScript,
+  runtimeBytes,
   runtimeParts,
   type Backend,
   type Progress,
@@ -28,7 +30,7 @@ import { OPT_LEVEL, type InitRequest } from '../../lib/bgremove/infer-core';
 import { fusionRadii, hasSubject, pilResizeRgba, resizeMask, SIZE, toInput, validMask } from '../../lib/bgremove/infer';
 import { plainCutout } from '../../lib/bgremove/fusion';
 import type { FusionRequest, FusionResponse } from '../../lib/bgremove/fusion.worker';
-import { EngineError, HIDDEN_MS, IDLE_MS, keepEngine, pickBackend, shouldFallBack, startEngine, type EngineHandle, type WorkerLike } from '../../lib/bgremove/session';
+import { disposeTimers, EngineError, keepEngine, pickBackend, shouldFallBack, startEngine, type EngineHandle, type WorkerLike } from '../../lib/bgremove/session';
 import { sessionStore } from '../../lib/face/guard';
 import { decodeImage } from '../../lib/image/decode';
 import { ERRORS, PhotoError, unsupportedMessage } from '../../lib/image/messages';
@@ -104,6 +106,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   const bar = must<HTMLProgressElement>('bg-bar');
   const cancelBtn = must<HTMLButtonElement>('bg-cancel');
   const note = must<HTMLElement>('bg-note');
+  const consentExtra = must<HTMLElement>('bg-consent-extra');
+  const fallbackLine = must<HTMLElement>('bg-fallback');
   const errorBox = must<HTMLElement>('bg-error');
   const retryBtn = must<HTMLButtonElement>('bg-retry');
   const nosubject = must<HTMLElement>('bg-nosubject');
@@ -130,8 +134,6 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   let cancelEngine: (() => void) | null = null;
   /** The live engine (session in its worker), kept between photos unless `keep` is false. */
   let engine: EngineHandle | null = null;
-  let idleTimer: ReturnType<typeof setTimeout> | undefined;
-  let hiddenTimer: ReturnType<typeof setTimeout> | undefined;
   const nav = navigator as Navigator & { deviceMemory?: number };
   const keep = keepEngine({ deviceMemory: nav.deviceMemory, userAgent: nav.userAgent, platform: nav.platform, maxTouchPoints: nav.maxTouchPoints });
   /** Model bytes kept in the page only when they cannot be cached (needed for the next photo or the fallback). */
@@ -146,17 +148,16 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
 
   /** Terminates the engine worker (frees the session and all engine memory). */
   function disposeEngine(): void {
-    clearTimeout(idleTimer);
+    timers.stop();
     engine?.dispose();
     engine = null;
   }
+  /** Idle (2 min) and hidden (60 s) disposal, never during an engine start or a run (session.ts disposeTimers). */
+  const timers = disposeTimers(() => {
+    engine?.dispose();
+    engine = null;
+  });
 
-  /** After a photo: keep the engine for the next one (idle limit), or drop it on low-memory devices. */
-  function parkEngine(): void {
-    clearTimeout(idleTimer);
-    if (!keep) return disposeEngine();
-    idleTimer = setTimeout(disposeEngine, IDLE_MS);
-  }
 
   function setPhase(p: Phase): void {
     phase = move(phase, p);
@@ -210,6 +211,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     bitmap = null;
     cut = null;
     photoPx = null;
+    fallbackLine.hidden = true;
     comparing = false;
     compareBtn.setAttribute('aria-pressed', 'false');
     freeCanvas(view$);
@@ -296,6 +298,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
       say(COPY.downloading(0, total));
       wasm = await loadParts(rt, { deps, signal, store, onProgress: (p) => onBytes(p, 0, total) });
       model = keptModel ?? (await loadParts(modelParts(manifest), { deps, signal, store, onProgress: (p) => onBytes(p, rtBytes, total) }));
+      // The joined model must be the build's (exportId, bytes, total SHA-256): otherwise the 손상 path.
+      if (!keptModel) await checkModel(model, deps);
       if (!store) keptModel = model;
     } catch (err) {
       if (signal.aborted || my !== run) return null;
@@ -342,6 +346,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   async function process(my: number, be: Backend, input: Float32Array): Promise<void> {
     markAttempt(storage);
     let mask: Float32Array;
+    timers.begin();
     try {
       const e = await engineFor(my, be);
       if (!e) return;
@@ -358,12 +363,18 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
       if (shouldFallBack(err)) {
         // WebGPU did not work here: once more on the plain WASM engine.
         gpuFailed = true;
-        busy(COPY.fallback);
+        // Stated in the consent panel already (no second question); said again here, in a line progress never overwrites.
+        fallbackLine.textContent = COPY.fallbackNote(runtimeBytes('wasm'));
+        fallbackLine.hidden = false;
+        say(fallbackLine.textContent);
         return process(my, 'wasm', input);
       }
       return fail(my, err instanceof EngineError && err.stage === 'crash' ? COPY.crashed : COPY.engine, err instanceof EngineError && err.stage === 'crash');
+    } finally {
+      timers.done();
     }
-    parkEngine();
+    // Low-memory devices drop the engine after every photo; elsewhere the idle timer (re-armed above) does it.
+    if (!keep) disposeEngine();
     await finish(my, mask);
   }
 
@@ -497,10 +508,12 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     if ((engine && !engine.disposed) || keptModel || (await isCached(deps, backend))) return void start(my);
     if (my !== run) return;
     consentText.textContent = COPY.consent(downloadBytes(backend));
+    consentExtra.textContent = backend === 'webgpu' ? COPY.consentExtra(runtimeBytes('wasm')) : '';
+    consentExtra.hidden = backend !== 'webgpu';
     const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
     lowDevice.hidden = !(typeof mem === 'number' && mem < LOW_DEVICE_MEMORY);
     setPhase('consent');
-    say(`${COPY.consent(downloadBytes(backend))} ${lowDevice.hidden ? '' : COPY.lowDevice}`.trim());
+    say([consentText.textContent, consentExtra.textContent, lowDevice.hidden ? '' : COPY.lowDevice].filter(Boolean).join(' '));
     startBtn.focus();
   }
 
@@ -570,8 +583,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     });
   }
   document.addEventListener('visibilitychange', () => {
-    clearTimeout(hiddenTimer);
-    if (document.visibilityState === 'hidden') hiddenTimer = setTimeout(disposeEngine, HIDDEN_MS);
+    if (document.visibilityState === 'hidden') timers.hidden();
+    else timers.visible();
   });
   window.addEventListener('pagehide', () => {
     release();
