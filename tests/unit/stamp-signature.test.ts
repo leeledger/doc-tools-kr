@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { getTool } from '../../src/data/tools';
-import { INK_COLORS, INK_SIZES } from '../../src/lib/ink/key';
+import { INK_COLORS, INK_SIZES, classifyInk, keyInk, processInk, type Rgba } from '../../src/lib/ink/key';
 import { COPY, areaMessage, dims, sizeLabel, strengthLabel } from '../../src/tools/stamp-signature/copy';
 import { LIMITS, checkDims, checkFileBytes } from '../../src/tools/stamp-signature/limits';
 import { drawStrokes, PEN_SHARE } from '../../src/tools/stamp-signature/pad';
@@ -102,6 +102,66 @@ describe('stamp-signature pad drawing', () => {
       'lineTo(300,200)',
       'stroke()',
     ]);
+  });
+});
+
+/** An RGBA image filled by `px(x, y) -> [r, g, b]` (0..255). */
+function image(w: number, h: number, px: (x: number, y: number) => [number, number, number]): Rgba {
+  const data = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) data.set([...px(x, y), 255], (y * w + x) * 4);
+  return { data, width: w, height: h };
+}
+/** Seeded 0..1. */
+function rand(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 2 ** 32);
+}
+
+describe('자동 classification and file names (Arch rulings, C1 review)', () => {
+  const W = 320;
+  const H = 200;
+  const stroke = (x: number, y: number) => Math.abs(y - 100 - 30 * Math.sin(x / 25)) < 3 && x > 40 && x < 280;
+  // Brown kraft board with strong mottling (red as its paper) and a dark signature: the old 자동 keyed the texture.
+  const r = rand(5);
+  const blotch = Array.from({ length: (W / 8) * (H / 8) }, () => (r() - 0.5) * 0.35);
+  const kraft = image(W, H, (x, y) => {
+    if (stroke(x, y)) return [30, 26, 28];
+    const t = 1 + blotch[Math.floor(y / 8) * (W / 8) + Math.floor(x / 8)]! + (r() - 0.5) * 0.12;
+    return [156 * t, 116 * t, 78 * t];
+  });
+  const stamp = image(W, H, (x, y) => (Math.abs(Math.hypot(x - 160, y - 100) - 60) < 6 ? [200, 30, 40] : [236, 234, 228]));
+  const sign = image(W, H, (x, y) => (stroke(x, y) ? [25, 35, 110] : [236, 234, 228]));
+
+  it('kraft paper with a dark signature is black/blue: keyed on luma, no texture keyed', () => {
+    expect(classifyInk(kraft)).toBe('black');
+    const k = keyInk(kraft, { mode: 'auto' });
+    expect(k.guess).toBe('black');
+    expect(k.plane).toBe('lum');
+    let off = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (k.alpha[y * W + x]! > 0.1 && !(Math.abs(y - 100 - 30 * Math.sin(x / 25)) < 10 && x > 30 && x < 290)) off++;
+    expect(off / (W * H)).toBeLessThanOrEqual(0.002);
+  });
+
+  it('a red 도장 is red: keyed as 빨간 도장', () => {
+    expect(classifyInk(stamp)).toBe('red');
+    expect(keyInk(stamp, { mode: 'auto' })).toMatchObject({ guess: 'red', plane: 'mn', status: 'ok' });
+    expect(keyInk(sign, { mode: 'auto' })).toMatchObject({ guess: 'black', plane: 'lum', status: 'ok' });
+  });
+
+  it('the file name follows the chosen mode; 자동 uses a fixed colour, else the guess', () => {
+    expect(processInk(stamp, { mode: 'sign' }).fileName).toBe('서명.png');
+    expect(processInk(sign, { mode: 'red' }).fileName).toBe('도장.png');
+    expect(processInk(stamp, { mode: 'auto' }).fileName).toBe('도장.png');
+    expect(processInk(sign, { mode: 'auto' }).fileName).toBe('서명.png');
+    expect(processInk(sign, { mode: 'auto', color: 'red' }).fileName).toBe('도장.png');
+    expect(processInk(stamp, { mode: 'auto', color: 'blue' }).fileName).toBe('서명.png');
+    expect(processInk(stamp, { mode: 'sign', color: 'red' }).fileName).toBe('서명.png');
+  });
+
+  it('빨간 도장 on a blue signature finds nothing: no output to download', () => {
+    const p = processInk(sign, { mode: 'red' });
+    expect(p.status).toBe('noink');
+    expect(p.out).toBeNull();
   });
 });
 

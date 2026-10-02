@@ -269,6 +269,8 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
 
   async function openFile(file: File): Promise<void> {
     release();
+    // Every photo starts from the defaults, also one picked after an error or a crash (Arch ruling, C1 review).
+    resetControls();
     hideError();
     hideEngineError();
     const my = photoRun;

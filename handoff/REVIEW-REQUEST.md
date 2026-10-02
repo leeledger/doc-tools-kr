@@ -21,7 +21,7 @@ Ready for Review: YES
 ## Open Questions
 - e-signature-law: please read it against the red lines (no "an image is a 전자서명", no 인감, ends with the 받는 곳 line). It shows the statute text verbatim; `tests/unit/postbuild.test.ts` now exempts law.go.kr quotes from "no quote is rendered".
 - Home og:description no longer lists the tools (7 names > 80 chars). Arch decision requested (BUILD-LOG decision 2).
-- The photo controller is not precached (precache 444.3 / 450 KB). Arch decision requested (decision 3).
+- The photo controller is not precached (precache 445.1 / 450 KB). Arch decision requested (decision 3).
 - Area-message wording moved to 합니다체 without 잡혔 (decision 5).
 
 ## Out of Scope (logged in BUILD-LOG)

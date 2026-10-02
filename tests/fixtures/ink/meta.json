@@ -53,6 +53,22 @@
   "jpegQ": 70,
   "alpha": "gt14.alpha.png"
  },
+ "gt14-kraft": {
+  "gt": "gt14",
+  "ink": [
+   0.09,
+   0.08,
+   0.08
+  ],
+  "mode": "auto",
+  "desc": "dark signature on brown kraft board",
+  "variant": "kraft",
+  "jpegQ": 92,
+  "paper": "#9C744E",
+  "guess": "black",
+  "iouGate": false,
+  "alpha": "gt14.alpha.png"
+ },
  "gt15": {
   "gt": "gt15",
   "ink": [

@@ -159,6 +159,16 @@ test('modes: 빨간 도장 keeps the stamp, 검정·파란 서명 drops it (no i
   await expect(page.locator('#ss-strength-out')).toHaveText('아주 진하게');
   await ready(page);
   expect(await save(page)).toMatchObject({ name: '서명.png', type: 6 });
+  // 빨간 도장 on a blue signature finds nothing: the message blocks the download (Arch ruling 5, C1 review).
+  await photo(page).getByRole('radio', { name: '빨간 도장' }).check();
+  await expect(page.locator('#ss-error')).toHaveText(COPY.noink);
+  await expect(page.locator('#ss-download')).toBeDisabled();
+  // A photo picked straight from the input (not through 다른 사진 고르기) also starts from the defaults (ruling 3).
+  await open(page, STAMP);
+  await ready(page);
+  await expect(photo(page).getByRole('radio', { name: '자동' })).toBeChecked();
+  await expect(page.locator('#ss-strength-out')).toHaveText('보통');
+  await expect(page.locator('#ss-save-name')).toContainText('도장.png');
 });
 
 test('area check: blank paper and a dark page get their message and no download', async ({ page }) => {

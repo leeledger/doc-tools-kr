@@ -20,6 +20,12 @@ export const INK = {
   strengthMax: 2,
   /** Auto colour guess: weighted redness above this = 도장 빨강. */
   redGuess: 0.15,
+  /**
+   * 자동 classification: red when at least this share of the strong ink (a > 0.5) is red relative to its paper
+   * (by more than redGuess). Measured on 12 real photos and the 14 fixtures: red sets 0.28-1.0, black/blue sets
+   * 0-0.05 (BUILD-LOG, C1 review round).
+   */
+  redShare: 0.15,
   /** Hysteresis: strong ink is a > 0.5; weak alpha must lie within max(2, round(longEdge / 600)) px of it. */
   strongAlpha: 0.5,
   hystMinPx: 2,
@@ -75,6 +81,8 @@ export interface InkCache {
   red?: Float32Array;
   paperMn?: Float32Array;
   paperLum?: Float32Array;
+  /** 자동 classification per 진하기 step. */
+  guess?: Record<string, 'red' | 'black'>;
 }
 
 export interface KeyResult {
@@ -449,34 +457,98 @@ export function colorGuess(a: Float32Array, red: Float32Array): 'red' | 'black' 
   return sa > 0 && sr / sa > INK.redGuess ? 'red' : 'black';
 }
 
+/** Paper level of a plane, from the cache or computed once into it. */
+function cachedPaper(cache: InkCache, plane: InkPlane, w: number, h: number): Float32Array {
+  if (plane === 'lum') return (cache.paperLum ??= paperLevel(cache.lum as Float32Array, w, h));
+  return (cache.paperMn ??= paperLevel(cache.mn as Float32Array, w, h));
+}
+
+/** Box-averaged copy of an image, `f` x `f` pixels per sample (f = 1: the image itself). */
+export function boxDown(img: Rgba, f: number): Rgba {
+  if (f <= 1) return img;
+  const { width: w, height: h, data } = img;
+  const ow = Math.max(1, Math.floor(w / f));
+  const oh = Math.max(1, Math.floor(h / f));
+  const out = new Uint8ClampedArray(ow * oh * 4);
+  const n = f * f;
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      for (let dy = 0; dy < f; dy++) {
+        for (let dx = 0, j = ((y * f + dy) * w + x * f) * 4; dx < f; dx++, j += 4) {
+          r += data[j];
+          g += data[j + 1];
+          b += data[j + 2];
+        }
+      }
+      const o = (y * ow + x) * 4;
+      out[o] = r / n;
+      out[o + 1] = g / n;
+      out[o + 2] = b / n;
+      out[o + 3] = 255;
+    }
+  }
+  return { data: out, width: ow, height: oh };
+}
+
+/**
+ * 자동 classification (Arch ruling, C1 review): red 도장 or black/blue 서명, decided before keying. On a copy
+ * box-averaged to a long edge of about 600 px (a colour decision needs no detail, and it keeps 자동 near the cost of
+ * one keying), a first key on min(R,G,B) (no mode filter) finds the strong ink (a > 0.5); a pixel counts as red
+ * when its redness exceeds the redness of the paper around it (paperColor) by more than INK.redGuess, so brown or
+ * kraft paper texture, as red as its paper, reads as black. Red when at least INK.redShare of the strong ink is
+ * red: a share, not a mean, so a red 도장 next to dark lines or shadows (a sheet of seals) still reads red.
+ */
+export function classifyInk(img: Rgba, strength = 0): 'red' | 'black' {
+  const small = boxDown(img, Math.floor(Math.max(img.width, img.height) / 600));
+  const { width: w } = small;
+  const { mn, red } = planes(small);
+  const { lo, hi } = rampFor(strength);
+  const a = rampFromDark(darkness(mn, paperLevel(mn, w, small.height)), lo, hi);
+  const pg = paperColor(small, a);
+  const pr = new Float32Array(3);
+  let strong = 0;
+  let reds = 0;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] <= INK.strongAlpha) continue;
+    const x = i % w;
+    readGrid3(pg, x, (i - x) / w, pr, 0);
+    strong++;
+    if (red[i] - (pr[0] - Math.max(pr[1], pr[2])) > INK.redGuess) reds++;
+  }
+  return strong > 0 && reds / strong >= INK.redShare ? 'red' : 'black';
+}
+
 /**
  * Ink key, steps 1-7 of the brief: planes -> paper estimate -> ramp -> mode filter -> edge AA -> hysteresis
  * -> despeckle -> solid fill -> area check. `cache` keeps the planes and paper levels of one photo between re-runs.
+ * 자동 classifies first (classifyInk) and then keys exactly as the chosen path: 빨간 도장 for red, 검정·파란 서명
+ * for black/blue (Arch ruling, C1 review: keying 자동 on min(R,G,B) let kraft paper texture through).
  */
 export function keyInk(img: Rgba, opts: KeyOptions, cache: InkCache = {}): KeyResult {
   const { width: w, height: h } = img;
   if (!cache.mn || !cache.lum || !cache.red) Object.assign(cache, planes(img));
-  const sign = opts.mode === 'sign';
+  const guess = opts.mode === 'auto' ? (cache.guess?.[String(opts.strength ?? 0)] ?? classifyInk(img, opts.strength)) : null;
+  if (guess) (cache.guess ??= {})[String(opts.strength ?? 0)] = guess;
+  const mode: InkMode = guess === null ? opts.mode : guess === 'red' ? 'red' : 'sign';
+  const sign = mode === 'sign';
   // Paper level of the plane being keyed: min(R,G,B) for 자동/빨간 도장, luma for 검정·파란 서명.
   const x = (sign ? cache.lum : cache.mn) as Float32Array;
-  let paper = sign ? cache.paperLum : cache.paperMn;
-  if (!paper) {
-    paper = paperLevel(x, w, h);
-    if (sign) cache.paperLum = paper;
-    else cache.paperMn = paper;
-  }
+  const paper = cachedPaper(cache, sign ? 'lum' : 'mn', w, h);
   const { lo, hi } = rampFor(opts.strength);
   const dark = darkness(x, paper);
   const ramp = rampFromDark(dark, lo, hi);
-  applyModeFilter(ramp, cache.red as Float32Array, opts.mode);
+  applyModeFilter(ramp, cache.red as Float32Array, mode);
   const alpha = smoothEdges(ramp, w, h);
   hysteresis(alpha, w, h, hysteresisRadius(w, h));
   despeckle(alpha, w, h);
   const plane: InkPlane = sign ? 'lum' : 'mn';
   const pg = paperColor(img, alpha);
-  fillSolid(alpha, x, paper, cache.red as Float32Array, pg, plane, opts.mode, lo, hi, w, h);
+  fillSolid(alpha, x, paper, cache.red as Float32Array, pg, plane, mode, lo, hi, w, h);
   const { inkShare, status } = areaCheck(alpha);
-  return { alpha, plane, paper: pg, guess: colorGuess(alpha, cache.red as Float32Array), inkShare, status };
+  return { alpha, plane, paper: pg, guess: guess ?? colorGuess(alpha, cache.red as Float32Array), inkShare, status };
 }
 
 /** The fixed colour of a 색 choice, or null for 원래 색. */
@@ -900,7 +972,7 @@ export interface ProcessResult {
   rect: Rect | null;
   /** Cropped, coloured, resized straight RGBA (null when status is not ok: no download). */
   out: Rgba | null;
-  /** File name: 도장.png when the ink is red, else 서명.png. */
+  /** File name: 빨간 도장 -> 도장.png, 검정·파란 서명 -> 서명.png; 자동: a fixed colour, else the guess. */
   fileName: string;
 }
 
@@ -908,7 +980,8 @@ export interface ProcessResult {
 export function processInk(img: Rgba, opts: ProcessOptions, cache: InkCache = {}): ProcessResult & { alpha: Float32Array } {
   const key = keyInk(img, opts, cache);
   const color = opts.color ?? 'original';
-  const isRed = color === 'red' || (color === 'original' && key.guess === 'red');
+  // The file name follows the chosen mode; in 자동 a fixed colour decides, else the guess (Arch ruling, C1 review).
+  const isRed = opts.mode === 'red' || (opts.mode === 'auto' && (color === 'red' || (color === 'original' && key.guess === 'red')));
   const fileName = isRed ? '도장.png' : '서명.png';
   const base = { status: key.status, guess: key.guess, inkShare: key.inkShare, fileName, alpha: key.alpha };
   const rect = key.status === 'ok' ? cropRect(key.alpha, img.width, img.height, opts.noPad) : null;
