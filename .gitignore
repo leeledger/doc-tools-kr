@@ -19,3 +19,7 @@ dist-noauto/
 test-results-live/
 playwright-report-live/
 .ops-state/
+# C2 export outputs (scripts/model/birefnet/export.py); only the shipped parts are committed under vendor-assets/.
+scripts/model/birefnet/out/
+scripts/model/birefnet/__pycache__/
+dist-bg/

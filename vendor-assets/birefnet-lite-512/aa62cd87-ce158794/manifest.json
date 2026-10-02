@@ -1,0 +1,31 @@
+{
+ "exportId": "aa62cd87-ce158794",
+ "hfRevision": "aa62cd87eafb9cc43056d08ef3615a14628b831d",
+ "torch": "2.1.2+cpu",
+ "opset": 17,
+ "deformPath": "gridsample",
+ "bytes": 93300659,
+ "parts": [
+  {
+   "name": "model.part0",
+   "bytes": 24117248,
+   "sha256": "c3b4b0dd97fba1b9e8e98e44b8127a05a89525dcdda0acaa94fe3db3bf19ba69"
+  },
+  {
+   "name": "model.part1",
+   "bytes": 24117248,
+   "sha256": "47bd24a8413051f708032bd2abafdbbaa68691fa95f27ff9f8ca03f337c462e7"
+  },
+  {
+   "name": "model.part2",
+   "bytes": 24117248,
+   "sha256": "a04cb551db7c13e13ad5a15ac84bd07c7af02e896ef7c1ba0b6d8341cdc9119d"
+  },
+  {
+   "name": "model.part3",
+   "bytes": 20948915,
+   "sha256": "2fab652e14d059ad4d5c64c5e849069344c80a17158254bd2a0f3771ab71a9be"
+  }
+ ],
+ "sha256Total": "ce15879499a24fa7b32266cde15ac5090f95d683f14788baeefc5c4481d6309d"
+}

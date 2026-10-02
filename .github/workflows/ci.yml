@@ -26,8 +26,13 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - name: Build (copy-vendor, gen-licenses, gen-ui-font, astro build, check-dist)
+      # Sprint C, C2: the checks job builds with PUBLIC_BG_REMOVE=1, so Lighthouse covers /remove-background/ and the
+      # unit tests read a build that has it. The shipping (flag-off) build is checked by every e2e job's builds
+      # (check-dist fails a flag-off build that carries any trace of the page).
+      - name: Build (copy-vendor, gen-licenses, gen-ui-font, astro build, check-dist; 배경 지우기 on)
         run: npm run build
+        env:
+          PUBLIC_BG_REMOVE: '1'
       - name: Typecheck
         run: npm run check
       - name: Unit tests (incl. static network-API guard)
@@ -36,6 +41,10 @@ jobs:
         run: npm run check:licenses
       - name: Ink key regression (committed GT fixtures; real photos are local only)
         run: npm run regress:ink -- --fixtures-only
+      - name: Install Chromium (regress:bgremove)
+        run: npx playwright install --with-deps chromium
+      - name: Background removal regression (real model on the committed CC0 fixtures, WASM; the spike sets are local only)
+        run: npm run regress:bgremove -- --fixtures-only --backend wasm
       - name: Lighthouse CI
         run: npm run lhci
       - uses: actions/upload-artifact@v4
@@ -76,6 +85,14 @@ jobs:
         run: npm run build
         env:
           PUBLIC_ID_PHOTO_AUTOFRAME: '1'
+      # Sprint C, C2: /remove-background/ exists only with PUBLIC_BG_REMOVE=1; its spec runs on dist-bg/ as the
+      # bg-chromium and bg-mobile-safari projects (brief: chromium + mobile-safari). Built last: dist/ keeps the
+      # flag-on auto-framing build of the step above.
+      - name: Build (배경 지우기 on → dist-bg)
+        if: matrix.project == 'chromium' || matrix.project == 'mobile-safari'
+        run: mv dist dist-keep && npm run build && mv dist dist-bg && mv dist-keep dist
+        env:
+          PUBLIC_BG_REMOVE: '1'
       - name: Install Playwright browser
         run: |
           case "${{ matrix.project }}" in
@@ -86,7 +103,9 @@ jobs:
       - name: E2E (no-upload assertion, axe)
         run: |
           if [ "${{ matrix.project }}" = chromium ]; then
-            npx playwright test --project=chromium --project=manual-chromium
+            npx playwright test --project=chromium --project=manual-chromium --project=bg-chromium
+          elif [ "${{ matrix.project }}" = mobile-safari ]; then
+            npx playwright test --project=mobile-safari --project=bg-mobile-safari
           elif [ "${{ matrix.project }}" = firefox ]; then
             npx playwright test --project=firefox --project=manual-firefox
           else

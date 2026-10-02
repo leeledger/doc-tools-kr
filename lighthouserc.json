@@ -1,5 +1,5 @@
 {
-  "$comment": "G2 A0 (Arch, 2026-10-01): LCP stays at 2,000 ms; the gate is the median of 5 runs per URL, and the CI runner result is the source of truth (local runs quantise to about 1,953 or 2,040 ms under simulated throttling). Aggregation is \"median\" (the median value of the 5 runs per assertion); \"median-run\" asserted every metric on one representative run picked by FCP and TTI, which is not the median LCP (G2 ci-green).",
+  "$comment": "G2 A0 (Arch, 2026-10-01): LCP stays at 2,000 ms; the gate is the median of 5 runs per URL, and the CI runner result is the source of truth (local runs quantise to about 1,953 or 2,040 ms under simulated throttling). Sprint C, C2: /remove-background/ exists only in a PUBLIC_BG_REMOVE=1 build; the CI checks job builds with it on, so run lhci locally on such a build too. Aggregation is \"median\" (the median value of the 5 runs per assertion); \"median-run\" asserted every metric on one representative run picked by FCP and TTI, which is not the median LCP (G2 ci-green).",
   "ci": {
     "collect": {
       "startServerCommand": "node tests/e2e/serve.mjs",
@@ -13,6 +13,7 @@
         "http://127.0.0.1:4173/hwp-viewer/",
         "http://127.0.0.1:4173/id-photo/",
         "http://127.0.0.1:4173/stamp-signature/",
+        "http://127.0.0.1:4173/remove-background/",
         "http://127.0.0.1:4173/terms/",
         "http://127.0.0.1:4173/guide/",
         "http://127.0.0.1:4173/guide/passport-photo/",

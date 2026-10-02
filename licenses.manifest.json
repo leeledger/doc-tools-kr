@@ -1,5 +1,5 @@
 {
-  "$comment": "Everything shipped to the browser. gen-licenses.mjs embeds these files into /licenses/ and fails the build if one is missing. `files` are paths inside the npm package; `localFiles` are paths relative to the repo root (license texts the package does not ship, see licenses/third-party/SOURCES.md). Entries with `component` instead of `name` describe code compiled into a package (no npm package of their own). Entries with \"autoframe\": true ship only when PUBLIC_ID_PHOTO_AUTOFRAME is on (scripts/lib/autoframe.mjs); gen-licenses drops them otherwise.",
+  "$comment": "Everything shipped to the browser. gen-licenses.mjs embeds these files into /licenses/ and fails the build if one is missing. `files` are paths inside the npm package; `localFiles` are paths relative to the repo root (license texts the package does not ship, see licenses/third-party/SOURCES.md). Entries with `component` instead of `name` describe code compiled into a package (no npm package of their own). Entries with \"autoframe\": true ship only when PUBLIC_ID_PHOTO_AUTOFRAME is on (scripts/lib/autoframe.mjs); gen-licenses drops them otherwise. Entries with \"bgremove\": true ship only when PUBLIC_BG_REMOVE is on (scripts/lib/bgremove.mjs; Sprint C, C2).",
   "packages": [
     {
       "name": "@cantoo/pdf-lib",
@@ -314,6 +314,28 @@
       "use": "여권·증명사진 규격 맞추기: 얼굴 위치 찾기 프로그램(vision_wasm_internal.wasm)에 포함 (C 표준 라이브러리)",
       "localFiles": [
         "licenses/third-party/musl/COPYRIGHT"
+      ]
+    },
+    {
+      "name": "onnxruntime-web",
+      "bgremove": true,
+      "use": "사진 배경 지우기 (누끼): 배경을 지우는 프로그램을 이 기기에서 실행 (ONNX Runtime Web 1.30.0, WebGPU·WebAssembly 빌드만, 사진을 고르고 받기에 동의한 뒤에만 내려받음). npm 패키지에 라이선스 파일이 없어 GitHub v1.30.0 태그(f2c39fe2f838cf35ce7da92824f5a5e3ee6e88a7)의 LICENSE와 ThirdPartyNotices.txt를 싣습니다.",
+      "files": [],
+      "localFiles": [
+        "licenses/third-party/onnxruntime/LICENSE",
+        "licenses/third-party/onnxruntime/ThirdPartyNotices.txt"
+      ],
+      "homepage": "https://github.com/microsoft/onnxruntime/tree/v1.30.0"
+    },
+    {
+      "component": "BiRefNet_lite (512, float16, 문서딱 자체 ONNX 변환 aa62cd87-ce158794)",
+      "bgremove": true,
+      "version": "HF aa62cd87eafb9cc43056d08ef3615a14628b831d",
+      "license": "MIT",
+      "homepage": "https://huggingface.co/ZhengPeng7/BiRefNet_lite/tree/aa62cd87eafb9cc43056d08ef3615a14628b831d",
+      "use": "사진 배경 지우기 (누끼): 사람·물건을 찾는 부분. 원본 가중치는 ZhengPeng7/BiRefNet_lite의 aa62cd87 판(라이선스 표시: mit), 코드 라이선스는 https://github.com/ZhengPeng7/BiRefNet (MIT, Copyright (c) 2024 ZhengPeng). ONNX 변환과 조각 나누기는 문서딱이 직접 했습니다. 가장자리 색 보정은 Forte & Pitie, \"Approximate Fast Foreground Colour Estimation\" (ICIP 2021)을 보고 문서딱이 직접 만들었습니다(코드 복사 없음).",
+      "localFiles": [
+        "licenses/third-party/birefnet/LICENSE"
       ]
     },
     {

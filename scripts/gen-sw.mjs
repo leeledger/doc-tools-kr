@@ -32,9 +32,11 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
 
 /**
  * Sitemap pages that are not precached (fetched from the network when visited): /licenses/, and the guides and
- * their share images (Growth G.3): gen-sw would otherwise precache every guide and pass the 450 KB limit.
+ * their share images (Growth G.3): gen-sw would otherwise precache every guide and pass the 450 KB limit, and
+ * /remove-background/ (Sprint C, C2; Arch ruling 3: C2 adds 0 bytes to the precache; its page, controller, runtime and
+ * model are cached at runtime only, like the /stamp-signature/ photo controller). Offline it needs its 120 MB anyway.
  */
-export const NOT_PRECACHED = (path) => path === '/licenses/' || path.startsWith('/guide/') || path.startsWith('/og/');
+export const NOT_PRECACHED = (path) => path === '/licenses/' || path === '/remove-background/' || path.startsWith('/guide/') || path.startsWith('/og/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

@@ -6,6 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
 import { autoframeOn } from './lib/autoframe.mjs';
+import { bgRemoveOn } from './lib/bgremove.mjs';
 import { beaconPath } from './lib/beacon-path.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
@@ -120,6 +121,63 @@ if (!autoframe) {
   // The lazy SIMD path a first auto-framing downloads: chunk + loader + wasm + model.
   budget('lazy total, SIMD path (chunk+loader+wasm+model)', [...bundle, `${MP}vision_wasm_internal.js`, `${MP}vision_wasm_internal.wasm`, ...models], 7.2 * 1024 * KB);
   if (files.some((f) => f.path.includes('vision_wasm_module_internal'))) errors.push('vision_wasm_module_internal.* must not ship');
+}
+// 사진 배경 지우기 (Sprint C, C2; brief build order 2). Flag off (PUBLIC_BG_REMOVE): not one file, link or line about
+// it ships. Flag on: the engine and model files have their own rows, the manifest's SHA-256s match the files, no other
+// onnxruntime build (ort.all*, JSEP, JSPI, WebGL) ships, and the controller loads on first use only.
+const bgOn = bgRemoveOn(env.PUBLIC_BG_REMOVE);
+if (!bgOn) {
+  for (const f of files) if (/onnxruntime|birefnet|remove-background/i.test(f.path)) errors.push(`${f.path}: 배경 지우기 file in a build with PUBLIC_BG_REMOVE off`);
+  for (const f of match(/\.(html|xml|txt|json|webmanifest|m?js)$/)) if (read(f).includes('remove-background')) errors.push(`${f} names /remove-background/ in a build with PUBLIC_BG_REMOVE off`);
+} else {
+  const MiB = 1024 * KB;
+  const ORT = 'vendor/onnxruntime-web/1.30.0/';
+  const ortFiles = match(/^vendor\/onnxruntime-web\//);
+  const expected = ['ort.webgpu.min.mjs', 'ort-wasm-simd-threaded.asyncify.mjs', 'ort-wasm-simd-threaded.asyncify.wasm.part0', 'ort-wasm-simd-threaded.asyncify.wasm.part1', 'ort.wasm.min.mjs', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm'].map((f) => ORT + f);
+  if (ortFiles.slice().sort().join() !== expected.slice().sort().join()) errors.push(`vendor/onnxruntime-web/: ${ortFiles.join(', ')}; expected exactly ${expected.join(', ')}`);
+  for (const f of files) if (/(^|\/)ort\.(all|min|jspi|webgl|bundle|node)|\.(jsep|jspi)\./.test(f.path)) errors.push(`${f.path}: only the native WebGPU and plain WASM onnxruntime builds may ship (no ort.all*, JSEP, JSPI, WebGL)`);
+  // Engine scripts: the 1.30.0 sizes measured at C2 + 10 %.
+  budget('ort.webgpu.min.mjs (raw)', [`${ORT}ort.webgpu.min.mjs`].filter((f) => ortFiles.includes(f)), 73 * KB, raw, 'raw');
+  budget('ort-wasm-simd-threaded.asyncify.mjs (raw)', [`${ORT}ort-wasm-simd-threaded.asyncify.mjs`].filter((f) => ortFiles.includes(f)), 58.4 * KB, raw, 'raw');
+  budget('ort.wasm.min.mjs (raw)', [`${ORT}ort.wasm.min.mjs`].filter((f) => ortFiles.includes(f)), 55.1 * KB, raw, 'raw');
+  budget('ort-wasm-simd-threaded.mjs (raw)', [`${ORT}ort-wasm-simd-threaded.mjs`].filter((f) => ortFiles.includes(f)), 26.8 * KB, raw, 'raw');
+  for (const part of match(/^vendor\/onnxruntime-web\/[^/]+\/ort-wasm-simd-threaded\.asyncify\.wasm\.part\d$/)) budget(`ORT asyncify wasm ${part.split('/').pop()} (raw)`, [part], 24 * MiB, raw, 'raw');
+  budget('ORT plain wasm (raw)', match(/^vendor\/onnxruntime-web\/[^/]+\/ort-wasm-simd-threaded\.wasm$/), 15 * MiB, raw, 'raw');
+  const modelDirs = [...new Set(match(/^vendor\/birefnet-lite-512\//).map((f) => f.split('/').slice(0, 3).join('/')))];
+  if (modelDirs.length !== 1) errors.push(`vendor/birefnet-lite-512/: ${modelDirs.length} model version(s), expected exactly 1`);
+  for (const dir of modelDirs) {
+    let manifest = null;
+    try {
+      manifest = JSON.parse(read(`${dir}/manifest.json`).toString('utf8'));
+    } catch {
+      errors.push(`${dir}/manifest.json is missing or not JSON`);
+    }
+    if (manifest) {
+      const parts = files.filter((f) => f.path.startsWith(`${dir}/`) && /^model\.part\d+$/.test(f.path.slice(dir.length + 1))).map((f) => f.path);
+      if (parts.length !== manifest.parts.length) errors.push(`${dir}: ${parts.length} part file(s), the manifest lists ${manifest.parts.length}`);
+      for (const p of manifest.parts) {
+        const f = `${dir}/${p.name}`;
+        if (!parts.includes(f)) continue;
+        budget(`model ${p.name} (raw)`, [f], 24 * MiB, raw, 'raw');
+        const sha = createHash('sha256').update(read(f)).digest('hex');
+        if (sha !== p.sha256 || raw(f) !== p.bytes) errors.push(`${f}: SHA-256/bytes do not match manifest.json`);
+      }
+      budget('model total (raw)', parts, 101 * MiB, raw, 'raw');
+      if (`${dir.split('/').pop()}` !== manifest.exportId) errors.push(`${dir}: directory is not the manifest exportId ${manifest.exportId}`);
+    }
+  }
+  // Workers (measured at C2 + 20 %) and the lazy controller (bg*.js and what only it imports; 11.4 KB gzip measured).
+  budget('infer.worker*.js (remove-background)', match(/^_astro\/infer\.worker[^/]*\.js$/), 1.3 * KB);
+  budget('fusion.worker*.js (remove-background)', match(/^_astro\/fusion\.worker[^/]*\.js$/), 1 * KB);
+  const html = pageHtml.get('remove-background/index.html');
+  if (!html) errors.push('remove-background/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/bg\.[\w-]{8}\.js$/);
+    if (controller.some((f) => initial.has(f))) errors.push('the /remove-background/ controller (bg*.js) loads with the page');
+    budget('remove-background controller (bg*.js, lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 14 * KB);
+    if (/rel="(preload|modulepreload|prefetch)"[^>]*(onnxruntime|birefnet)/.test(html)) errors.push('remove-background/index.html preloads the engine or the model');
+  }
 }
 // Test inputs never ship: no tests/ path and no file named like a committed corpus photo.
 const corpusDir = join(import.meta.dirname, '..', 'tests', 'corpus', 'id-photo');

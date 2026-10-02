@@ -37,6 +37,7 @@
 - Manual iLovePDF comparison on 3–4 non-sensitive files (owner)
 - Re-verification of the photo presets marked secondary (before Step 4)
 - Expanding the HWP corpus to 100+ files (precondition for Step 5)
+- C2 배경 지우기: brush erase/restore, batch, 1024 고화질, guided filter, hand-off to /id-photo/, WebGL fusion (not needed: 0.9–1.3 s at 4 MP); `scripts/qa/visual.mjs` shots of /remove-background/ (it runs on the flag-off build); owner real-phone check before `PUBLIC_BG_REMOVE=1`
 
 ## Open questions for owner
 - Privacy page contact channel: email or GitHub issues
@@ -1505,3 +1506,143 @@ Status: DONE.
 6. Precache: CI and Richard's build read **445.1 KB (flag off) / 447.4 KB (flag on)** of 450; this PC reads 444.3 / 446.6 for the same tree. CI is the figure of record.
 7. **Arch ruling (for C2): C2's page adds 0 bytes to the precache.** Its controller and runtime are runtime-cached only, like C1's photo.ts: the tool needs a ~100 MB download anyway, so offline-first gives nothing.
 - Ink worker 5.4 KB gzip (budget 6.1). Gates: check 0 errors; unit 735/735; both builds + check-dist OK; regress:ink 101/101; stamp-signature e2e chromium + mobile-safari 15 passed, 1 skipped (desktop-only keyboard test).
+
+## C2 build notes — 사진 배경 지우기 /remove-background/ (Bob, 2026-10-02; worktree `doc-tools-kr-c2`, branch `c2` off main 18e5827)
+
+Status: **DONE_WITH_CONCERNS**. Everything is built and gated locally. The release stays behind `PUBLIC_BG_REMOVE=0` until the owner's real-phone check (brief build order 9). Concerns: precache headroom (decision 9) and the per-photo engine start (decision 7).
+
+### What shipped (flag on; with the flag off nothing of it is in dist/)
+- Model: our export `aa62cd87-ce158794` (BiRefNet_lite 512 fp16, HF `aa62cd87…831d`, torch 2.1.2, GridSample deform path), committed under `vendor-assets/birefnet-lite-512/aa62cd87-ce158794/` (4 parts + manifest, `binary` in .gitattributes). copy-vendor copies it to `public/vendor/` only when the flag is on, and checks the SHA-256 of every part and `sha256Total` at copy time.
+- Engine: onnxruntime-web **1.30.0** (exact) as a dependency. copy-vendor ships only `ort.webgpu.min.mjs` + asyncify glue + the asyncify wasm split in 2 (13,390,957 B each), and `ort.wasm.min.mjs` + glue + plain wasm (14,239,897 B). `src/generated/bgremove.json` pins the URLs, sizes and SHA-256 of the runtime parts.
+- `src/lib/bgremove/`:
+  - `assets.ts`: manifest, consent sizes, parts with progress, SHA-256 per part, 3 attempts per part, Cache Storage `docttak-model-birefnet-<exportId>`, old caches deleted, no caching below 300 MB free (with a note), resume from cached parts.
+  - `session.ts`: WebGPU adapter check, one worker per photo, terminate after the reply, fallback rule.
+  - `infer-core.ts` + `infer.worker.ts`: ort import from /vendor/, env, session, run, dispose, release.
+  - `infer.ts`: 512 input, ImageNet normalisation, area check, validity, cv2-style bilinear mask resize to 8-bit alpha, fusion radii.
+  - `fusion.ts` + `fusion.worker.ts`: blur-fusion ×2, running-sum box filters, reflect borders.
+  - `guard.ts`: a crash marker gives a message and half the work size for the tab.
+- Page: `src/tools/remove-background/page.astro` (injected by `astro.config.mjs` only when the flag is on), `entry.ts` (lazy), `bg.ts` (controller), `model.ts` (state machine), `copy.ts`, `limits.ts`, `bg.css` (inlined).
+- Wiring:
+  - `src/data/tools.ts`: `BG_REMOVE_TOOL`, in TOOLS only when `__BG_REMOVE__`.
+  - `og.json` + `gen-brand`: the share image ships only with the flag.
+  - `site.ts`: defaultDescription fits 8 names.
+  - `gen-headers`: COEP blocks. `gen-sw`/`sw.ts`: not precached; model and runtime network-only in the SW.
+  - `check-dist` (both flag states), `gen-licenses`/`check-licenses` (`bgremove` entries), `licenses.manifest.json`.
+  - CI, Playwright projects, lighthouserc.
+
+### Decisions (never stop; Arch please confirm the ones marked)
+1. **Empty-mask set (Arch C2.0 ruling 1).**
+   - `parity.py` and `regress:bgremove` define the real set as the 50 spike photos minus `OFF_TOPIC = {l04}` (a paper letterhead, which belongs to /stamp-signature/).
+   - l04 is still run and reported (area 0.08 %).
+   - The gate is unchanged (≤ 3). Result: 3/49 (g01, m02, t01), the same as torch.
+   - The no-subject panel says `종이에 찍힌 도장·서명·로고라면 전자서명·도장 이미지 만들기를 써 보세요.` with the link.
+2. **Parts re-cut to 23 MiB.**
+   - The C2.0 parts were exactly 24 MiB (25,165,824 B). `capacity.mjs` fails any dist file `>= 24 MiB`, while the brief's rows say `<= 24 MiB`.
+   - `export.py --resplit` re-cut the same fp16 bytes into 3 × 24,117,248 + 20,948,915. `sha256Total` and the exportId are unchanged.
+   - Parity was re-run on the committed parts.
+3. **Model in `vendor-assets/`, not `public/vendor/`** (the brief said committed under public/vendor). public/vendor/ is git-ignored and rebuilt by copy-vendor, and the MediaPipe model already lives in vendor-assets/. Provenance is the same (our commit), and a flag-off build copies nothing.
+4. **onnxruntime-web licence (Arch C2.0 ruling 2).**
+   - `LICENSE` and `ThirdPartyNotices.txt` come from tag v1.30.0 = commit `f2c39fe2f838cf35ce7da92824f5a5e3ee6e88a7` (`gh api repos/microsoft/onnxruntime/git/ref/tags/v1.30.0`). The raw.githubusercontent URLs are in `licenses/third-party/SOURCES.md`.
+   - Both are on /licenses/ when the flag is on.
+   - ThirdPartyNotices is 338 KB, so /licenses/ grows by about that much. It is not precached.
+5. **COEP also on the page's worker scripts (Arch, please confirm).**
+   - With COEP only on `/remove-background/*`, Chrome refused to start the inference worker. Measured: the worker request was made, no worker started, and the run failed with "crash".
+   - With `Cross-Origin-Embedder-Policy: require-corp` also on `/_astro/infer.worker*`, `/_astro/fusion.worker*` and `/vendor/onnxruntime-web/*`, everything runs and the page is crossOriginIsolated.
+   - These files are used by this page only. The site-wide `/*` block and every other page are unchanged (postbuild and e2e assert it).
+   - The live smoke must confirm that Cloudflare's `*` matches `/remove-background/` itself and the `infer.worker-<hash>.js` names.
+6. **Engine in a worker, one worker per photo** (Arch ruling 6: "release the session and tensors after each image").
+   - WebAssembly memory never shrinks while its module lives, so `session.release()` alone frees little. Terminating the worker frees the whole engine.
+   - Tensors are disposed and the session released before the reply anyway.
+   - When the model bytes are cached, the page keeps none: they are re-read from Cache Storage and SHA-checked for each photo.
+   - Without caching, the page keeps one copy, needed for the next photo and for the WASM fallback.
+7. **Cost of decision 6 (Arch, please confirm).**
+   - Every photo pays the session start again: WASM about 7 s to create + 2.6 s to run (8 threads, this PC); WebGPU about 7 s to create + 0.3 s to run (C2.0 probe).
+   - Apart from the download, later photos are no faster than the first.
+   - Alternative if Arch prefers speed: keep the worker alive between photos, on desktop only.
+8. **Memory guards (ruling 6).**
+   - Input caps: 150 MP / 64 MP (`checkDims`, as id-photo) and 50 / 30 MB.
+   - Work copy: 4,096 / 2,048 px long edge, halved after a crash.
+   - Mask: 512 → 8-bit alpha at work size (a quarter of a float plane).
+   - Fusion runs per channel (8 float planes at most). The pixels and the alpha are transferred to the fusion worker, so no copy stays in the page.
+   - Bitmaps are closed and canvases zeroed on every new photo, on 취소 and on pagehide.
+   - `navigator.deviceMemory < 4` adds a warning line to the consent panel.
+   - Peak private memory: see "Measurements".
+9. **Precache (Arch ruling 3): concern.**
+   - The page, controller, workers, engine and model are not precached (`NOT_PRECACHED` + a test).
+   - But with the flag on, every precached page gains the nav entry. 4 tool pages also gain a related-tools card, and the home a card + a JSON-LD item.
+   - Result: **448.8 KB of 450 on this PC (flag on).** C1 measured CI = this PC + 0.8 KB, so about 449.6 on CI.
+   - To get there: the tool icon is 2 short shapes, the summary is short, and the new UI glyphs were cut to 1 (see 10).
+   - The next tool needs an Arch decision on the precache, for example dropping the menu icons from the HTML or precaching fewer pages.
+10. **UI font +0.6 KB** (137.1 → 137.7 KB total, 599 → 602 characters, flag on).
+    - Brief-quoted lines were rewritten onto existing glyphs where the meaning is unchanged:
+      - `서명·도장은 여기서 더 잘 돼요` (brief: `…더 깔끔해요`; 깔 and 끔 were 2 new glyphs).
+      - `받은 파일이 손상되었어요` (brief: `손상됐어요`; 됐 was new).
+      - The guard line `…창이 멈췄을 수 있어요` (brief: `메모리가 부족해 창이 닫혔을 수`). 메모리 is banned by the plain-language test, and 혔 was a new glyph.
+    - New glyphs: 잘 (brief `잘 맞아요`), and å (ThirdPartyNotices, flag on only).
+    - The licence `use` texts were written onto existing glyphs too.
+11. **Copy style.**
+    - The tool's dynamic lines follow the brief's 해요체 (COPY.md exception added, as for /hwp-viewer/). 사용 방법, 안전한 이유 and the FAQ are 합니다체.
+    - name = h1 = `사진 배경 지우기 (누끼)` (COPY.md rule, as in C1).
+    - Home description: with 8 names the long sentence is 130 characters, so `defaultDescription` falls back to `{names}. 파일은 밖으로 안 나가요. 무료.` (120).
+12. **Consent size.**
+    - The consent panel shows the size for the chosen engine: WebGPU 114.5 MB, WASM 102.6 MB (MiB-based, like every size on the site).
+    - The static line says `처음 한 번 약 110 MB를 받아요` (the larger one, rounded to 10 MB), not the brief's "약 100 MB".
+13. **Blue = `#3D6FD6`.** No blue exists in src/lib/idphoto/ (the id-photo tool keeps the photo's background). Design choice.
+14. **Input resize = Pillow BILINEAR, ported (root cause of a gate miss).**
+    - The first full `regress:bgremove` run (WASM) failed the browser-vs-Python gate on 5 of 49 real photos: b02 0.0086, t02 0.0067, m01 0.0030, c02 0.0023, f03 0.0021 (gate 0.002). All GT and empty-mask gates passed.
+    - Cause: the input resize. The page drew the photo to 512×512 on a canvas (`imageSmoothingQuality 'high'`), while the Python reference (parity.py) uses Pillow `resize(BILINEAR)`, a triangle filter widened by the reduction factor.
+    - Fix: `pilResizeRgba` in `src/lib/bgremove/infer.ts` ports Pillow's 8-bit resampler (same coefficients, 22-bit fixed point, horizontal pass then vertical). It equals Pillow byte for byte, down and up (unit test against `pil-down.png` / `pil-up.png`).
+    - After the fix, the same 5 photos are at 0.00002–0.00009 and the fixtures at ~0.00001.
+15. **CI.**
+    - The checks job builds with `PUBLIC_BG_REMOVE=1`, because Lighthouse needs the page. The unit postbuild tests adapt to the build's flag.
+    - The checks job installs Chromium and runs `regress:bgremove -- --fixtures-only --backend wasm` (real model, 3 CC0 fixtures).
+    - The chromium and mobile-safari e2e jobs also build `dist-bg/` and run `bg-chromium` / `bg-mobile-safari`.
+    - The flag-off state is checked by check-dist in every other build.
+16. **Brand test exemption.**
+    - The brief's Cache Storage name `docttak-model-birefnet-<id>` is in the controller chunk.
+    - The brand test (no "docttak" except the domain) now exempts exactly `docttak-model-birefnet-`, an internal key that is never shown.
+    - A rename would be cleaner if Arch prefers. It cannot be `anolim-`: the SW deletes old `anolim-*` caches.
+17. **Fixtures.**
+    - 3 CC0 composites (foreground and background both CC0), built by `tests/fixtures/build-bgremove.py`, with their Python masks.
+    - 2 blur-fusion references from the spike's `pp.fg_blur`.
+    - `tiny.onnx` (272 B, `scripts/model/birefnet/tiny.py`) for the page e2e, served via `page.route` (no test hook in the page).
+
+### Residual risk (not user-facing; brief build order 10)
+- The BiRefNet README lists training sets that include P3M-10k, some of them research-only. The weights licence (MIT) is separate.
+- Accepted by Arch on 2026-10-02. Revisit if the upstream licence changes or a takedown arrives.
+
+### Measurements (this PC: Ryzen + RTX 2060, Chrome 153 headless; flag-on build)
+- **Parity** (`parity.py --out …t2.1.2-gridsample`, run on the committed parts): exit 0, 920 s.
+  - fp32 vs torch: mean ≤ 2.0e-7, max 9.7e-5.
+  - fp16 vs fp32: mean 3.1e-5.
+  - GT: MAE 0.00484, IoU 0.9423.
+  - Empty masks: 3/49 (g01, m02, t01), the same as torch.
+  - l04 is off-topic, area 0.08 %.
+  - Gate `real_set_is_49`: true.
+- **regress:bgremove, full** (69 images, WebGPU, `--channel chrome`): OK.
+  - Browser vs Python: max mean diff 0.00059 (gate 0.002).
+  - GT: MAE 0.00482, IoU 0.9423. Empty masks: 3/49.
+  - Per image: create median 8.1 s, first run median 3.0 s.
+  - Fusion at 4 MP: 0.9 s (budget 1.5 s).
+  - The WASM full run before the resize fix: decision 14. After the fix: the 5 photos that had failed are at ≤ 0.00009.
+- **regress:bgremove --fixtures-only --backend wasm** (the CI command): OK. Diff 0.00001–0.0003; create about 7 s, run about 2.6 s; fusion at 4 MP 1.1 s.
+- **Peak private memory, Chrome total** (`scripts/regress/bgremove-mem.py`; first photo + a second photo from the cache):
+
+  | Engine | Photo | Peak private memory | Time, first photo | Time, cached photo |
+  |---|---|---|---|---|
+  | WebGPU | 12 MP (4,000×3,000) | **2.26 GB** (GPU process 1.22, renderer 0.96) | 19.1 s | 17.2 s |
+  | WASM | 12 MP | **2.00 GB** (renderer 1.80) | 17.2 s | 12.9 s |
+  | WebGPU | 640 px | 2.05 GB | — | — |
+
+  - The C2.0 probe page measured 2.96 GB (WebGPU) and 3.83 GB (WASM).
+  - Phones: owner check (build order 9).
+- **Precache**: 448.8 / 450 KB with the flag on and 444.8 with it off (this PC). Nothing of the tool is precached.
+- **UI fonts**: 137.7 KB with the flag on, 137.4 with it off (main 137.1).
+- **Bundle**: initial JS of the page 9.4 KB gzip; lazy controller 12.0 / 14 KB; workers 1.0 and 0.8 KB.
+- **Gates**:
+  - check: 0 errors.
+  - unit: 781/781 on the flag-off dist; postbuild + bgremove green on the flag-on dist.
+  - Both builds + check-dist OK.
+  - check:licenses OK in both states.
+  - e2e `bg-chromium` + `bg-mobile-safari`: 11 passed, 1 skipped (`@model` is chromium only).
+  - Screenshots at 390 and 1280 px, light and dark, in 4 states: checked.

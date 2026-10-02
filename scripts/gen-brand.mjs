@@ -220,9 +220,16 @@ export function buildIco(pngs) {
   return Buffer.concat([header, ...pngs.map((p) => p.data)]);
 }
 
-/** Every output, keyed by its path under public/. */
-export function renderBrand(domain = ogDomain()) {
-  const ogImages = Object.fromEntries(Object.entries(OG.images).map(([name, image]) => [`brand/og-${name}.png`, ogImage(image, domain)]));
+/** Share images that ship only with their release flag on (Sprint C, C2: PUBLIC_BG_REMOVE). */
+export const FLAGGED_IMAGES = { 'remove-background': 'bgRemove' };
+
+/** Every output, keyed by its path under public/. `flags.bgRemove`: the /remove-background/ image ships (default off). */
+export function renderBrand(domain = ogDomain(), flags = { bgRemove: false }) {
+  const ogImages = Object.fromEntries(
+    Object.entries(OG.images)
+      .filter(([name]) => !(name in FLAGGED_IMAGES) || flags[FLAGGED_IMAGES[name]])
+      .map(([name, image]) => [`brand/og-${name}.png`, ogImage(image, domain)]),
+  );
   return {
     'favicon.ico': buildIco([16, 32, 48].map((size) => ({ size, data: icon(size) }))),
     'brand/apple-touch-icon.png': icon(180),
@@ -236,7 +243,9 @@ export function renderBrand(domain = ogDomain()) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const pub = join(root, 'public');
   mkdirSync(join(pub, 'brand'), { recursive: true });
-  const out = renderBrand();
+  const { publicEnv } = await import('./lib/dist.mjs');
+  const { bgRemoveOn } = await import('./lib/bgremove.mjs');
+  const out = renderBrand(ogDomain(), { bgRemove: bgRemoveOn(publicEnv().PUBLIC_BG_REMOVE) });
   // A share image whose page entry was removed (or the old single og.png) must not ship.
   for (const f of readdirSync(join(pub, 'brand'))) if (/^og.*\.png$/.test(f) && !(`brand/${f}` in out)) rmSync(join(pub, 'brand', f));
   for (const [path, data] of Object.entries(out)) writeFileSync(join(pub, path), data);

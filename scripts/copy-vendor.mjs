@@ -5,6 +5,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFil
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autoframeOn } from './lib/autoframe.mjs';
+import { bgRemoveOn } from './lib/bgremove.mjs';
 import { publicEnv } from './lib/dist.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -100,5 +101,63 @@ if (autoframe) {
   writeFileSync(pub('vendor', 'mediapipe', 'models', modelFile), model);
 }
 
+// 배경 지우기 (Sprint C, C2; brief build order 1). onnxruntime-web (MIT), pinned exact, and our own BiRefNet_lite 512
+// fp16 export from vendor-assets/ (committed, SHA-256 per part in its manifest.json; never fetched at build time:
+// provenance = our commit). Shipped only: the native-WebGPU build (ort.webgpu.min.mjs + its asyncify glue, the
+// 25.5 MiB asyncify wasm split into 2 parts for the 24 MiB file limit) and the plain WASM build (ort.wasm.min.mjs +
+// glue + wasm). No ort.all* / JSEP / JSPI / WebGL file (JSEP gave a 0.64 mask error in the spike). Nothing is copied
+// when PUBLIC_BG_REMOVE is off. src/generated/bgremove.json always carries the URLs, sizes and SHA-256s
+// (src/lib/bgremove/assets.ts verifies the runtime parts against them and the model parts against the manifest).
+export const ORT_VERSION = '1.30.0';
+export const BIREFNET_EXPORT = 'aa62cd87-ce158794';
+if (version('onnxruntime-web') !== ORT_VERSION) throw new Error(`copy-vendor: onnxruntime-web is ${version('onnxruntime-web')}, expected ${ORT_VERSION}`);
+const sha256 = (b) => createHash('sha256').update(b).digest('hex');
+const ortDist = nm('onnxruntime-web', 'dist');
+const ortUrl = (f) => `/vendor/onnxruntime-web/${ORT_VERSION}/${f}`;
+const asyncify = readFileSync(join(ortDist, 'ort-wasm-simd-threaded.asyncify.wasm'));
+const half = Math.ceil(asyncify.length / 2);
+const asyncParts = [asyncify.subarray(0, half), asyncify.subarray(half)].map((b, i) => ({ name: `ort-wasm-simd-threaded.asyncify.wasm.part${i}`, data: b }));
+const plainWasm = readFileSync(join(ortDist, 'ort-wasm-simd-threaded.wasm'));
+const ORT_COPY = ['ort.webgpu.min.mjs', 'ort-wasm-simd-threaded.asyncify.mjs', 'ort.wasm.min.mjs', 'ort-wasm-simd-threaded.mjs'];
+const fileOf = (name, data) => ({ url: ortUrl(name), bytes: data.length, sha256: sha256(data) });
+const modelDir = join(root, 'vendor-assets', 'birefnet-lite-512', BIREFNET_EXPORT);
+const modelManifest = JSON.parse(readFileSync(join(modelDir, 'manifest.json'), 'utf8'));
+if (modelManifest.exportId !== BIREFNET_EXPORT) throw new Error(`copy-vendor: model manifest exportId ${modelManifest.exportId}, expected ${BIREFNET_EXPORT}`);
+const modelBytes = [];
+for (const p of modelManifest.parts) {
+  const b = readFileSync(join(modelDir, p.name));
+  if (b.length !== p.bytes || sha256(b) !== p.sha256) throw new Error(`copy-vendor: ${p.name} does not match its manifest entry (bytes/SHA-256)`);
+  modelBytes.push(b);
+}
+if (sha256(Buffer.concat(modelBytes)) !== modelManifest.sha256Total) throw new Error('copy-vendor: the model parts do not add up to sha256Total');
+const modelBase = `/vendor/birefnet-lite-512/${BIREFNET_EXPORT}/`;
+const bgremove = {
+  ortVersion: ORT_VERSION,
+  webgpu: {
+    mjs: ortUrl('ort.webgpu.min.mjs'),
+    wasm: { bytes: asyncify.length, sha256: sha256(asyncify), parts: asyncParts.map((p) => fileOf(p.name, p.data)) },
+  },
+  wasm: {
+    mjs: ortUrl('ort.wasm.min.mjs'),
+    wasm: { bytes: plainWasm.length, sha256: sha256(plainWasm), parts: [fileOf('ort-wasm-simd-threaded.wasm', plainWasm)] },
+  },
+  // Part URLs are the manifest's directory + part name (no bare directory literal: smoke-assets checks each one).
+  model: { exportId: BIREFNET_EXPORT, hfRevision: modelManifest.hfRevision, manifest: `${modelBase}manifest.json`, bytes: modelManifest.bytes },
+};
+writeFileSync(join(root, 'src', 'generated', 'bgremove.json'), `${JSON.stringify(bgremove, null, 1)}\n`);
+rmSync(pub('vendor', 'onnxruntime-web'), { recursive: true, force: true });
+rmSync(pub('vendor', 'birefnet-lite-512'), { recursive: true, force: true });
+const bgOn = bgRemoveOn(publicEnv().PUBLIC_BG_REMOVE);
+if (bgOn) {
+  const out = pub('vendor', 'onnxruntime-web', ORT_VERSION);
+  for (const f of ORT_COPY) copy(join(ortDist, f), join(out, f));
+  for (const p of asyncParts) writeFileSync(join(out, p.name), p.data);
+  writeFileSync(join(out, 'ort-wasm-simd-threaded.wasm'), plainWasm);
+  const mOut = pub('vendor', 'birefnet-lite-512', BIREFNET_EXPORT);
+  mkdirSync(mOut, { recursive: true });
+  modelManifest.parts.forEach((p, i) => writeFileSync(join(mOut, p.name), modelBytes[i]));
+  copy(join(modelDir, 'manifest.json'), join(mOut, 'manifest.json'));
+}
+console.log(`copy-vendor: onnxruntime-web ${bgOn ? `${ORT_VERSION} + birefnet ${BIREFNET_EXPORT}` : 'skipped (PUBLIC_BG_REMOVE off)'}`);
 console.log(`copy-vendor: mediapipe ${autoframe ? `${MEDIAPIPE_VERSION} + ${modelFile}` : 'skipped (PUBLIC_ID_PHOTO_AUTOFRAME off)'}`);
 console.log(`copy-vendor: pretendard ${version('pretendard')}, pdfjs ${pdfjsVer}, qpdf ${QPDF_VENDOR_DIR}`);

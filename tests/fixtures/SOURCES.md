@@ -65,3 +65,20 @@ Light model (round 2): the spike's room-light falloff lights the ink as well as 
 
 Real photos for the C1 gates (6 phone photos with uneven light, owner-only item) are **not** committed; `regress:ink` reads them from `INK_PHOTOS_DIR` (default `tests/corpus/ink-photos/`) with one JSON per photo (`mode`, `paperRects`, `inkRect`).
 
+
+## 배경 지우기 fixtures (`bgremove/`, 사진 배경 지우기, Sprint C C2)
+
+Built by `python tests/fixtures/build-bgremove.py` (export venv: numpy, Pillow, opencv-python, onnxruntime 1.20.1; dev only, never shipped) from the C2 spike sources (`BGREMOVE_SPIKE/data/gt/src`, `sources.json`) and the committed model parts. `tiny.onnx` is written by `python scripts/model/birefnet/tiny.py`.
+
+| File | Source | Content |
+|---|---|---|
+| `cc0-person.jpg` + `.alpha.png` | fg10 "File:Woman in White Sleeveless Dress Sitting on Gray Concrete Seat during Daytime transparent.png" (CC0) on bg03 "File:Grass at a lawn with morning dew 05.jpg" (CC0) | 480×640 premultiplied LANCZOS composite (the spike's `compose_gt.py` at a smaller size, seed 11), JPEG q90; GT alpha |
+| `cc0-dog.jpg` + `.alpha.png` | fg02 "File:Transparent-jack-russell-puppy-dog.png" (CC0, PxHere) on bg01 "File:Weatherworn top of wooden table.jpg" (CC0) | 640×480, same method |
+| `cc0-pet.jpg` + `.alpha.png` | fg13 "File:Cat Stretch.png" (CC0) on bg04 "File:Office interior 2022 queue.jpg" (CC0) | 640×480, same method; a small subject on a busy background (Python IoU 0.816: an honest hard case) |
+| `*.mask.u16.gz` | Our fp16 ONNX on ORT CPU (Python reference) | 512×512 uint16 LE (value × 65535), gzip |
+| `fusion-a.png` + `.alpha.png` + `.fg.u16.gz` | 128×96 LANCZOS copy of `cc0-dog` and its GT alpha; the spike's `pp.fg_blur` (r1 12, r2 2) output | blur-fusion reference |
+| `fusion-b.*` | Synthetic soft red disc on a gradient, 80×60; `pp.fg_blur` (r1 5, r2 1) | blur-fusion reference |
+| `tiny.onnx` | Ours (`tiny.py`) | 272-byte stand-in model with the export's I/O for the page e2e (`sigmoid(-4·(mean_c(x) − 0.8))`) |
+| `meta.json` | `build-bgremove.py` | sizes, sources, Python area and GT IoU/MAE per fixture |
+
+All foregrounds and backgrounds of the photo fixtures are CC0 on Wikimedia Commons (pages in `meta.json`); the other spike GT images mix CC BY / CC BY-SA sources and stay local.

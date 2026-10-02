@@ -17,7 +17,7 @@ import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
 import { parse as parseYaml } from 'yaml';
 import { MAX_SOURCE_AGE_DAYS, publishedGuideSchema } from '../../src/data/guide-schema';
 import { resolveSources, unsourcedFacts } from '../../src/data/guide-facts';
-import { LIVE_TOOLS } from '../../src/data/tools';
+import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { parseHref } from '../../src/lib/ui/deeplink';
 import { HUB_KIND, HUB_SLUGS } from '../../src/data/hubs';
 import { DUP_LIMIT, articleText, duplicatePairs, jaccard, shingles } from '../../scripts/lib/shingles.mjs';
@@ -373,8 +373,19 @@ describe('built output', () => {
   const walk = (dir: string, re: RegExp): string[] =>
     readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name), re) : re.test(e.name) ? [join(dir, e.name)] : []));
 
+  /**
+   * The live tools of the build under test: a PUBLIC_BG_REMOVE=1 build (Sprint C, C2; the CI checks job) also has
+   * /remove-background/, after /stamp-signature/ as in tools.ts. Unit tests themselves run with the flag off.
+   */
+  const builtLive = () => (existsSync(join(DIST, 'remove-background')) ? LIVE_TOOLS.flatMap((t) => (t.slug === 'stamp-signature' ? [t, BG_REMOVE_TOOL] : [t])) : LIVE_TOOLS);
+
   /** The env of the build under test: dist/ has MediaPipe only when it was built with auto-framing on (Step 4). */
-  const buildEnv = (): NodeJS.ProcessEnv => ({ ...process.env, PUBLIC_ID_PHOTO_AUTOFRAME: existsSync(join(DIST, 'vendor', 'mediapipe')) ? '1' : '0' });
+  const buildEnv = (): NodeJS.ProcessEnv => ({
+    ...process.env,
+    PUBLIC_ID_PHOTO_AUTOFRAME: existsSync(join(DIST, 'vendor', 'mediapipe')) ? '1' : '0',
+    // Sprint C, C2: and /remove-background/ only when it was built with PUBLIC_BG_REMOVE on.
+    PUBLIC_BG_REMOVE: existsSync(join(DIST, 'remove-background')) ? '1' : '0',
+  });
 
   it('an invalid PUBLIC_CONTACT_EMAIL fails the build (check-dist)', () => {
     need();
@@ -475,7 +486,8 @@ describe('built output', () => {
     expect(found).toEqual([]);
     // Owner's brand rule: the name is always 문서딱. "docttak" appears only as the domain (docttak.com), never
     // as a name ("Docttak", "DOCTTAK", "독딱").
-    const misnamed = files.filter((f) => /독딱|docttak(?!\.com)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.com/gi, '')));
+    // Sprint C, C2: the brief's Cache Storage name `docttak-model-birefnet-<exportId>` is an internal key, never shown.
+    const misnamed = files.filter((f) => /독딱|docttak(?!\.com|-model-birefnet-)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.com/gi, '')));
     expect(misnamed).toEqual([]);
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
     expect(home).toContain('<meta property="og:site_name" content="문서딱">');
@@ -546,6 +558,44 @@ describe('built output', () => {
     const on = existsSync(join(DIST, 'vendor', 'mediapipe'));
     for (const phrase of ['자동으로 잡아', '자동으로 맞춘', '자동 맞춤', '건너뛰고 직접 맞추기', '6 MB의 프로그램']) expect(html.includes(phrase), phrase).toBe(on);
     expect(html).toContain(on ? '얼굴 위치를 자동으로 잡아 드리고' : '안내선을 보며 사진 위치를 직접 맞춘 뒤');
+  });
+
+  it('/remove-background/ (Sprint C, C2): all of it with PUBLIC_BG_REMOVE on, no trace with it off; check-dist enforces both', () => {
+    need();
+    const on = existsSync(join(DIST, 'remove-background', 'index.html'));
+    const sitemap = readFileSync(join(DIST, 'sitemap.xml'), 'utf8');
+    const llms = readFileSync(join(DIST, 'llms.txt'), 'utf8');
+    const home = readFileSync(join(DIST, 'index.html'), 'utf8');
+    const headers = readFileSync(join(DIST, '_headers'), 'utf8');
+    expect(sitemap.includes('/remove-background/')).toBe(on);
+    expect(llms.includes('/remove-background/')).toBe(on);
+    expect(home.includes('href="/remove-background/"')).toBe(on);
+    expect(existsSync(join(DIST, 'brand', 'og-remove-background.png'))).toBe(on);
+    expect(existsSync(join(DIST, 'vendor', 'onnxruntime-web'))).toBe(on);
+    expect(existsSync(join(DIST, 'vendor', 'birefnet-lite-512'))).toBe(on);
+    expect(headers.includes('Cross-Origin-Embedder-Policy')).toBe(on);
+    if (on) {
+      expect(headers).toContain('/remove-background/*\n  Cross-Origin-Embedder-Policy: require-corp');
+      // COEP never in the site-wide block (the worker scripts it also covers are this page's only).
+      const siteWide = headers.split(/\r?\n(?=\S)/).find((b) => b.startsWith('/*'))!;
+      expect(siteWide).toContain('Content-Security-Policy');
+      expect(siteWide).not.toContain('Cross-Origin-Embedder-Policy');
+      const page = readFileSync(join(DIST, 'remove-background', 'index.html'), 'utf8');
+      expect(page).not.toMatch(/onnxruntime|birefnet|modulepreload[^>]*bg\./);
+      expect(page).toContain('유리나 투명한 물건, 여러 사람이 함께 나온 사진, 복잡한 배경은 잘 안 될 수 있어요.');
+      expect(page).not.toMatch(/remove\.bg/i);
+    }
+    // The other state is refused by check-dist on this build.
+    const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_BG_REMOVE: on ? '0' : '1' }, encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(on ? /names \/remove-background\/ in a build with PUBLIC_BG_REMOVE off/ : /remove-background\/index\.html: no file found/);
+  });
+
+  it('precache (Arch C2 ruling 3): no /remove-background/ page, controller, worker, engine or model file', async () => {
+    need();
+    const { precacheList } = await import('../../scripts/gen-sw.mjs');
+    const { urls } = precacheList(DIST);
+    expect(urls.filter((u: string) => /remove-background|\/_astro\/(bg\.|infer\.worker|fusion\.worker)|onnxruntime|birefnet/.test(u))).toEqual([]);
   });
 
   it('meta, og and JSON-LD of the home page name the live tools only (built HTML)', () => {
@@ -651,8 +701,8 @@ describe('built output', () => {
     const lists = homeLd.filter((x) => x['@type'] === 'ItemList');
     expect(lists.length).toBe(1);
     const entries = lists[0]!.itemListElement as { position: number; item: Record<string, unknown> }[];
-    expect(entries.map((e) => e.position)).toEqual(LIVE_TOOLS.map((_, i) => i + 1));
-    LIVE_TOOLS.forEach((t, i) => {
+    expect(entries.map((e) => e.position)).toEqual(builtLive().map((_, i) => i + 1));
+    builtLive().forEach((t, i) => {
       const it = entries[i]!.item;
       expect(['WebApplication', 'SoftwareApplication']).toContain(it['@type']);
       expect(it).toMatchObject({ name: t.name, url: new URL(`/${t.slug}/`, site).href, isAccessibleForFree: true });
@@ -776,7 +826,7 @@ describe('built output', () => {
 
   it('Growth T11: internal links resolve; queries only as valid tool deep links; guides link out and are listed', () => {
     need();
-    const live = LIVE_TOOLS.map((t) => t.slug);
+    const live = builtLive().map((t) => t.slug);
     const broken: string[] = [];
     for (const f of walk(DIST, /\.html$/)) {
       const html = readFileSync(f, 'utf8');

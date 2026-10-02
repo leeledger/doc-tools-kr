@@ -1,2 +1,4 @@
 # Binary vendor assets (SHA-256 pinned; never touch line endings).
 *.task binary
+# BiRefNet_lite 512 fp16 model parts (C2; our own ONNX export, SHA-256 in manifest.json).
+vendor-assets/birefnet-lite-512/** binary

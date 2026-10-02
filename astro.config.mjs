@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
 import { autoframeOn } from './scripts/lib/autoframe.mjs';
+import { BG_PATH, bgRemoveOn } from './scripts/lib/bgremove.mjs';
 import { beaconPath } from './scripts/lib/beacon-path.mjs';
 import { rhwpNoDefaultWasm } from './scripts/lib/vite-rhwp.mjs';
 
@@ -13,6 +14,18 @@ const env = loadEnv(process.env.NODE_ENV === 'development' ? 'development' : 'pr
 const errorBeaconPath = beaconPath(env.PUBLIC_ERROR_BEACON_PATH);
 // Step 4 kill switch: false makes the MediaPipe import dead code (no chunk, no vendor files).
 const idPhotoAutoframe = autoframeOn(env.PUBLIC_ID_PHOTO_AUTOFRAME);
+// Sprint C, C2 release flag (scripts/lib/bgremove.mjs): the /remove-background/ page exists only when on. Its source
+// lives outside src/pages/ and is injected here, so a flag-off build has no such route at all.
+const bgRemove = bgRemoveOn(env.PUBLIC_BG_REMOVE);
+/** @type {import('astro').AstroIntegration} */
+const bgRemoveRoute = {
+  name: 'docttak-bg-remove',
+  hooks: {
+    'astro:config:setup': ({ injectRoute }) => {
+      if (bgRemove) injectRoute({ pattern: BG_PATH, entrypoint: './src/tools/remove-background/page.astro' });
+    },
+  },
+};
 
 export default defineConfig({
   output: 'static',
@@ -20,6 +33,7 @@ export default defineConfig({
   trailingSlash: 'always',
   build: { format: 'directory', inlineStylesheets: 'never' },
   devToolbar: { enabled: false },
+  integrations: [bgRemoveRoute],
   vite: {
     build: {
       sourcemap: false,
@@ -48,6 +62,6 @@ export default defineConfig({
     resolve: { alias: [{ find: /^brotli\/decompress(\.js)?$/, replacement: fileURLToPath(new URL('./src/lib/hwp/pdf/brotli-stub.ts', import.meta.url)) }] },
     // rhwpNoDefaultWasm: one rhwp_bg.wasm in dist/ (Step 5; see scripts/lib/vite-rhwp.mjs).
     worker: { format: 'es', plugins: () => [rhwpNoDefaultWasm()] },
-    define: { __ERROR_BEACON_PATH__: JSON.stringify(errorBeaconPath), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe) },
+    define: { __ERROR_BEACON_PATH__: JSON.stringify(errorBeaconPath), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe), __BG_REMOVE__: JSON.stringify(bgRemove) },
   },
 });

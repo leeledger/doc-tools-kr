@@ -39,6 +39,54 @@ export interface Tool {
   keywords: string[];
 }
 
+/**
+ * 배경 지우기 (Sprint C, C2). In TOOLS only when the release flag is on (PUBLIC_BG_REMOVE, scripts/lib/bgremove.mjs):
+ * with it off there is no page, so no nav link, card, sitemap or llms.txt line may name it.
+ * name = h1 (COPY.md rule, as C1); the brief's shorter name "배경 지우기" would break it.
+ */
+export const BG_REMOVE_TOOL: Tool = {
+  slug: 'remove-background',
+  name: '사진 배경 지우기 (누끼)',
+  title: '사진 배경 지우기·누끼 따기 무료 — 투명 PNG | 문서딱',
+  description:
+    '사진 배경 지우기와 누끼 따기를 무료로. 사람·상품·반려동물 사진에서 배경을 지워 투명한 PNG나 흰색·파란색 배경으로 저장합니다. 사진은 내 폰·컴퓨터 밖으로 보내지 않습니다.',
+  h1: '사진 배경 지우기 (누끼)',
+  summary: '사진 배경을 지워 투명한 PNG나 흰 배경 사진으로 저장합니다.',
+  // Short on purpose: the icon is in every page's menu, and C2 may not grow the precache (Arch ruling 3).
+  icon: '<circle cx="12" cy="9" r="4"/><path d="M4 21a8 7 0 0 1 16 0" stroke-dasharray="2 2"/>',
+  status: 'live',
+  updated: '2026-10-02',
+  faq: [
+    {
+      q: '누끼 따기는 어떻게 하나요?',
+      a: '사진을 고르면 이 기기 안에서 사람이나 물건을 찾아 배경을 지웁니다. 처음 한 번은 배경을 지우는 프로그램을 받아야 해서, 받기 전에 크기를 알려 드리고 먼저 묻습니다. 한 번 받으면 이 기기에 남아 다음부터는 바로 시작합니다.',
+    },
+    {
+      q: '잘 맞는 사진은요?',
+      a: '증명사진, 상품, 반려동물, 자동차처럼 하나가 크게 나온 사진에 잘 맞습니다. 유리나 투명한 물건, 여러 사람이 함께 나온 사진, 복잡한 배경은 잘 안 될 수 있습니다. 종이에 찍은 도장·서명·로고는 전자서명·도장 이미지 만들기가 더 잘 맞습니다.',
+      links: [{ href: '/stamp-signature/', text: '전자서명·도장 이미지 만들기' }],
+    },
+    {
+      q: '저장되는 사진의 크기는요?',
+      a: 'PC에서는 긴 변 4,096픽셀, 휴대폰에서는 긴 변 2,048픽셀까지 고른 사진 크기 그대로 저장합니다. 그보다 큰 사진은 이 크기로 줄여 저장합니다.',
+    },
+    {
+      q: '배경을 흰색이나 파란색으로 바꿀 수 있나요?',
+      a: '네. 투명, 흰색, 파란색 중에서 고를 수 있습니다. 투명은 PNG로, 흰색·파란색은 JPG로 저장하고 PNG로도 저장할 수 있습니다. 증명사진 규격에 맞추려면 저장한 사진을 여권·증명사진 규격 맞추기에서 열어 주세요.',
+      links: [{ href: '/id-photo/', text: '여권·증명사진 규격 맞추기' }],
+    },
+    {
+      q: '제 사진이 어디로 보내지나요?',
+      a: '어디로도 보내지 않습니다. 사진은 이 기기 안에서만 처리됩니다. 처음에는 배경을 지우는 프로그램만 받고, 사진은 인터넷으로 보내지 않습니다.',
+    },
+    {
+      q: '아이폰 사진(HEIC)도 되나요?',
+      a: '아이폰 사진 형식(HEIC)은 기기나 앱에 따라 열리지 않을 수 있습니다. 그럴 때는 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 고르거나, 사진을 JPG로 내보낸 뒤 다시 선택해 주세요.',
+    },
+  ],
+  keywords: ['배경 지우기', '누끼 따기', '사진 배경 제거', '배경 투명하게', '누끼'],
+};
+
 export const TOOLS: Tool[] = [
   {
     slug: 'pdf-merge',
@@ -235,6 +283,7 @@ export const TOOLS: Tool[] = [
     ],
     keywords: ['전자서명만들기', '온라인도장만들기', '도장이미지만들기', '전자도장', '도장배경제거', '싸인누끼', '도장누끼'],
   },
+  ...(__BG_REMOVE__ ? [BG_REMOVE_TOOL] : []),
   {
     slug: 'hwp-to-pdf',
     name: 'HWP PDF 변환',

@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { autoframeOn } from './lib/autoframe.mjs';
+import { bgRemoveOn } from './lib/bgremove.mjs';
 import { publicEnv } from './lib/dist.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -36,11 +37,11 @@ export function allowed(expr) {
  * Problems among the manifest's compiled-in components. `autoframe` entries (MediaPipe) are judged only when
  * they ship. An exception matches on the exact component name and license.
  */
-export function componentProblems(manifest, { autoframe, exceptions = EXCEPTIONS }) {
+export function componentProblems(manifest, { autoframe, bgremove = false, exceptions = EXCEPTIONS }) {
   const problems = [];
   const used = [];
   for (const e of manifest.packages) {
-    if (!e.component || (e.autoframe && !autoframe)) continue;
+    if (!e.component || (e.autoframe && !autoframe) || (e.bgremove && !bgremove)) continue;
     if (allowed(e.license)) continue;
     const ex = exceptions.find((x) => x.component === e.component && x.license === e.license);
     if (ex) used.push(ex);
@@ -92,8 +93,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   for (const [k, v] of [...seen].sort()) console.log(`  ${k.padEnd(48)} ${v}`);
   const manifest = JSON.parse(readFileSync(join(root, 'licenses.manifest.json'), 'utf8'));
   const autoframe = autoframeOn(publicEnv().PUBLIC_ID_PHOTO_AUTOFRAME);
-  const comp = componentProblems(manifest, { autoframe });
-  const components = manifest.packages.filter((e) => e.component && (!e.autoframe || autoframe));
+  const bgremove = bgRemoveOn(publicEnv().PUBLIC_BG_REMOVE);
+  const comp = componentProblems(manifest, { autoframe, bgremove });
+  const components = manifest.packages.filter((e) => e.component && (!e.autoframe || autoframe) && (!e.bgremove || bgremove));
   for (const e of components) console.log(`  [component] ${`${e.component} ${e.version}`.padEnd(36)} ${e.license}`);
   for (const x of comp.used) console.log(`  exception: ${x.component} ${x.license} (scope ${x.scope}, decided ${x.decided})`);
   const all = [...problems, ...comp.problems];

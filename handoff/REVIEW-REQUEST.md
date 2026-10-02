@@ -1,3 +1,85 @@
+# Review Request — Sprint C, C2 사진 배경 지우기 (/remove-background/)
+Date: 2026-10-02
+Ready for Review: YES. Status DONE_WITH_CONCERNS: precache headroom and the per-photo engine start (BUILD-LOG "C2 build notes", decisions 7 and 9). The release flag stays off.
+
+**Tree:** branch `c2` from main 18e5827. **Flag:** `PUBLIC_BG_REMOVE` (default `0`). With it off, check-dist proves that no file, link or line of the page ships. With it on, the whole tool ships.
+
+## Files Changed
+- Model and provenance:
+  - `vendor-assets/birefnet-lite-512/aa62cd87-ce158794/`: our export, 4 parts of 23 MiB at most, plus `manifest.json`. The parts were re-cut from 24 MiB; same bytes, same `sha256Total`.
+  - `scripts/model/birefnet/{export.py,parity.py,metrics.py,fix_wide_ops.py,tiny.py,requirements.lock,README.md}`.
+  - parity.py runs on the committed parts. Its real set is 49 photos; l04 is off-topic (Arch ruling 1).
+- Engine and assets:
+  - `package.json`: `onnxruntime-web` 1.30.0 (exact) and `regress:bgremove`.
+  - `scripts/copy-vendor.mjs`: ORT and model copied only with the flag on, every SHA-256 checked, `src/generated/bgremove.json` written.
+- Library, `src/lib/bgremove/`:
+  - `assets.ts`: consent sizes, parts, SHA-256, retry, Cache Storage, quota, old caches.
+  - `session.ts`: backend choice, one worker per photo, fallback rule.
+  - `infer-core.ts` + `infer.worker.ts`: the ORT session and run, then dispose and release.
+  - `infer.ts`: Pillow-exact input resize, normalisation, area and validity checks, 8-bit mask resize.
+  - `fusion.ts` + `fusion.worker.ts`: blur-fusion ×2.
+  - `guard.ts`: crash marker.
+- Page, `src/tools/remove-background/`:
+  - `page.astro`: injected by `astro.config.mjs` only when the flag is on.
+  - `entry.ts` (lazy), `bg.ts` (controller), `model.ts` (states), `copy.ts`, `limits.ts`, `bg.css`.
+- Site data:
+  - `src/data/tools.ts`: `BG_REMOVE_TOOL`, in TOOLS only with the flag.
+  - `src/data/og.json`, `src/data/site.ts` (8-name description), `src/env.d.ts`, `vitest.config.ts`.
+- Build and headers:
+  - `scripts/gen-headers.mjs`: COEP on the page and on its 3 worker-script paths (decision 5).
+  - `scripts/gen-sw.mjs` + `src/sw/sw.ts`: page not precached; model and runtime network-only in the SW.
+  - `scripts/gen-brand.mjs`: share image only with the flag.
+  - `scripts/check-dist.mjs`: both flag states, ORT and model rows, manifest SHA-256, no JSEP/all builds, lazy controller.
+- Licences:
+  - `scripts/{gen,check}-licenses.mjs` and `licenses.manifest.json`: `bgremove` entries.
+  - `licenses/third-party/{onnxruntime,birefnet}/` and `SOURCES.md`.
+- CI and test config:
+  - `.github/workflows/ci.yml`: the checks job builds flag-on and runs `regress:bgremove --fixtures-only --backend wasm`; the chromium and mobile-safari jobs build `dist-bg/` and run the bg projects.
+  - `playwright.config.ts`: `bg-chromium` and `bg-mobile-safari`; other projects ignore the spec.
+  - `lighthouserc.json`: + `/remove-background/`.
+- Tests:
+  - `tests/unit/bgremove.test.ts`: new, 42 tests.
+  - `tests/unit/postbuild.test.ts`: flag-aware build env and live list, 2 new tests, brand exemption.
+  - `tests/unit/network-guard.test.ts`: allowlist entry.
+  - `tests/e2e/remove-background.spec.ts`: new, 6 tests, one of them `@model`.
+- Fixtures and regress:
+  - `tests/fixtures/bgremove/` and `build-bgremove.py`, documented in `SOURCES.md`.
+  - `scripts/regress/bgremove.mjs` + `bgremove-harness/`.
+  - `scripts/regress/bgremove-mem.py`: Chrome private-memory peak.
+- Docs: `docs/COPY.md` (해요체 exception), `.gitattributes`, `.gitignore`.
+
+## Numbers
+- Parity on the committed parts: exit 0.
+  - GT: MAE 0.00484, IoU 0.9423.
+  - Empty masks: 3/49 (g01, m02, t01); l04 is off-topic.
+  - fp16 vs fp32: 3.1e-5; fp32 vs torch: max 9.7e-5.
+- regress full (69 images, WebGPU): browser vs Python ≤ 0.00059. GT: MAE 0.00482, IoU 0.9423. Empty masks: 3/49.
+- Root cause fixed on the way (BUILD-LOG decision 14):
+  - A canvas resize gave diffs up to 0.0086 on 5 real photos.
+  - The input resize is now a byte-exact port of Pillow BILINEAR, which brought those photos to ≤ 0.00009.
+- Peak private memory, Chrome, 12 MP photo: WebGPU 2.26 GB, WASM 2.00 GB (C2.0 probe: 2.96 / 3.83 GB).
+- Time per photo, end to end on this PC:
+  - WebGPU: 17–19 s (session about 8 s + first run 3 s + 12 MP fusion and saving).
+  - WASM: 13–17 s.
+  - Fusion: 0.9–1.3 s at 4 MP.
+- Precache: 448.8 / 450 KB with the flag on, 444.8 with it off. UI fonts: +0.6 KB.
+- Initial JS of the page: 9.4 KB gzip; lazy controller 12.0 KB.
+- Gates: check 0 errors; unit 781/781; both builds + check-dist; licences in both states; e2e bg-chromium + bg-mobile-safari 11 passed, 1 skipped; screenshots at 390 and 1280 px, light and dark.
+
+## Open Questions (Arch)
+1. Decision 5: COEP on `/_astro/infer.worker*`, `/_astro/fusion.worker*` and `/vendor/onnxruntime-web/*` as well as on the page. Without it Chrome does not start the workers. OK?
+2. Decision 7: ruling 6 (release after each image) makes every photo pay a new session.
+   - Measured: WebGPU about 10 s create + 3.5 s first run; WASM about 7 s + 2.7 s on this PC.
+   - Keep it, or keep the worker alive between photos on desktop?
+3. Decision 9: precache 448.8 / 450 KB on this PC with the flag on (about 449.6 on CI). The next tool needs a precache decision.
+4. Decision 16: the brand test exempts the brief's cache name `docttak-model-birefnet-`. Keep it, or rename the cache?
+
+## Out of Scope (logged in BUILD-LOG Known Gaps)
+- Brush erase/restore, batch, 1024 고화질, guided filter, cross-page hand-off to /id-photo/, WebGL fusion. Fusion is 1.1–1.3 s at 4 MP, under the 1.5 s budget.
+- `scripts/qa/visual.mjs` has no /remove-background/ shots: it runs on the flag-off build. Screenshots for this step were taken with a scratch script.
+
+---
+
 # Review Request — G2 A3 round 2 (Arch rulings)
 Date: 2026-10-02
 Ready for Review: YES — status DONE (29 indexable /guide/ URLs accepted by Arch)

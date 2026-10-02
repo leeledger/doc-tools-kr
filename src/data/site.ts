@@ -20,7 +20,9 @@ export const liveNames = (tools: readonly Tool[] = LIVE_TOOLS): string => tools.
 export function defaultDescription(tools: readonly Tool[] = LIVE_TOOLS): string {
   // Sprint C (C1): with seven tools the names alone are 85 characters, so the tagline sentence left the template
   // (it is the page title's); the text stays within 80–120.
-  return `${liveNames(tools)}. 파일은 내 폰·컴퓨터 밖으로 나가지 않아요. 무료.`;
+  // Sprint C (C2): with the eighth tool the names are 100 characters, so the shorter sentence keeps it at 120.
+  const long = `${liveNames(tools)}. 파일은 내 폰·컴퓨터 밖으로 나가지 않아요. 무료.`;
+  return [...long].length <= 120 ? long : `${liveNames(tools)}. 파일은 밖으로 안 나가요. 무료.`;
 }
 
 /** Ads stay off in this phase. AdSlot renders nothing while this is false. */

@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autoframeOn } from './lib/autoframe.mjs';
+import { bgRemoveOn } from './lib/bgremove.mjs';
 import { publicEnv } from './lib/dist.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -12,6 +13,8 @@ const errors = [];
 const out = [];
 // Entries marked "autoframe" (MediaPipe, Step 4) ship only when PUBLIC_ID_PHOTO_AUTOFRAME is on.
 const autoframe = autoframeOn(publicEnv().PUBLIC_ID_PHOTO_AUTOFRAME);
+// Entries marked "bgremove" (onnxruntime-web, BiRefNet; Sprint C, C2) ship only when PUBLIC_BG_REMOVE is on.
+const bgremove = bgRemoveOn(publicEnv().PUBLIC_BG_REMOVE);
 /** A license file already embedded by an earlier entry is referenced, not repeated (the page stays small). */
 const embedded = new Map();
 
@@ -38,6 +41,7 @@ function localTexts(entry, label) {
 
 for (const entry of manifest.packages) {
   if (entry.autoframe && !autoframe) continue;
+  if (entry.bgremove && !bgremove) continue;
   if (entry.component) {
     // Code compiled into another package: no npm package of its own, so every field is in the manifest.
     for (const k of ['version', 'license', 'use', 'homepage']) {

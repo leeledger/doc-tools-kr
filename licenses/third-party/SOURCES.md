@@ -79,3 +79,14 @@ Step 4, 0.2). Retrieved 2026-09-30.
 
 Model cards (Apache-2.0): Face Mesh V2, Blendshape V2, BlazeFace (Short Range) under
 https://storage.googleapis.com/mediapipe-assets/ (linked from /licenses/).
+
+## 사진 배경 지우기 (Sprint C, C2; shipped only with PUBLIC_BG_REMOVE=1)
+
+| File | Source |
+|---|---|
+| `onnxruntime/LICENSE` | https://raw.githubusercontent.com/microsoft/onnxruntime/v1.30.0/LICENSE (tag `v1.30.0` = commit `f2c39fe2f838cf35ce7da92824f5a5e3ee6e88a7`, `gh api repos/microsoft/onnxruntime/git/ref/tags/v1.30.0`; downloaded 2026-10-02, verbatim). The `onnxruntime-web@1.30.0` npm package declares `"license": "MIT"` but ships no licence file (Arch C2.0 ruling: take it from the tag). |
+| `onnxruntime/ThirdPartyNotices.txt` | https://raw.githubusercontent.com/microsoft/onnxruntime/v1.30.0/ThirdPartyNotices.txt (same tag and commit, downloaded 2026-10-02, verbatim, 338,088 bytes). |
+| `birefnet/LICENSE` | https://github.com/ZhengPeng7/BiRefNet/blob/ebcc0bc8ec7fe919cec829f2dea656b3078acddc/LICENSE ("MIT License / Copyright (c) 2024 ZhengPeng"), the copy taken at C2.0 (`spikes/bg-remove/export/provenance/github_LICENSE_ebcc0bc8.txt`). The weights are `ZhengPeng7/BiRefNet_lite` at HF commit `aa62cd87eafb9cc43056d08ef3615a14628b831d`; its model card front matter says `license: mit` (the HF repository has no LICENSE file). Our ONNX export of those weights is `vendor-assets/birefnet-lite-512/aa62cd87-ce158794/` (scripts/model/birefnet/). |
+
+Blur-fusion (the foreground colour step) is our own implementation of Forte & Pitié, "Approximate Fast Foreground
+Colour Estimation" (ICIP 2021), written from the paper; no code was copied, so it has no licence row.

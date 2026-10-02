@@ -15,9 +15,12 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
  * - lib/hwp/wasm-browser.ts: rhwp wasm, own origin (Step 5; also its prefetch during the file dialog).
  * - lib/hwp/pdf/font-source.ts: HWP PDF fonts, own origin: the face list and the .woff slices under
  *   /fonts/hwp/ (HWP direct). Never file data.
+ * - lib/bgremove/assets.ts: GETs of the versioned /vendor/onnxruntime-web/ engine parts and the
+ *   /vendor/birefnet-lite-512/ model parts + manifest (Sprint C, C2), only after the user agreed; the photo stays in
+ *   the page and its workers.
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
-const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts'];
 /** sendBeacon only in the error-beacon stub, which is off (and dropped from the bundle) unless configured. */
 const BEACON_ALLOWLIST: string[] = ['lib/ui/beacon.ts'];
 

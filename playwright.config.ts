@@ -10,6 +10,14 @@ const PORT = Number(process.env.E2E_PORT ?? 4173);
  */
 const MANUAL_PORT = Number(process.env.E2E_MANUAL_PORT ?? 4181);
 const MANUAL = existsSync('dist-noauto/id-photo/index.html');
+/**
+ * 사진 배경 지우기 (Sprint C, C2): the page exists only in a PUBLIC_BG_REMOVE=1 build, built into dist-bg/. Its spec runs
+ * there as bg-chromium and bg-mobile-safari (brief: chromium + mobile-safari), and nowhere else. Only when the folder
+ * exists (the gate run and the CI chromium / mobile-safari jobs build it).
+ */
+const BG_PORT = Number(process.env.E2E_BG_PORT ?? 4182);
+const BG = existsSync('dist-bg/remove-background/index.html');
+const BG_SPEC = /remove-background\.spec\.ts$/;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -31,6 +39,8 @@ export default defineConfig({
     // do not change; tests/e2e/sw.spec.ts opts back in with serviceWorkers: 'allow'.
     serviceWorkers: 'block',
   },
+  // The other projects run against dist/ (flag off), where /remove-background/ does not exist.
+  testIgnore: BG_SPEC,
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     // Firefox on CI: Playwright's Firefox driver sometimes drops navigation events under load, so page.goto times out
@@ -47,6 +57,12 @@ export default defineConfig({
           { name: 'manual-firefox', retries: process.env.CI ? 2 : 1, testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Firefox'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } },
         ]
       : []),
+    ...(BG
+      ? [
+          { name: 'bg-chromium', testIgnore: [], testMatch: BG_SPEC, use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${BG_PORT}` } },
+          { name: 'bg-mobile-safari', testIgnore: [], testMatch: BG_SPEC, use: { ...devices['iPhone 14'], baseURL: `http://127.0.0.1:${BG_PORT}` } },
+        ]
+      : []),
   ],
   webServer: [
     {
@@ -58,5 +74,6 @@ export default defineConfig({
     ...(MANUAL
       ? [{ command: 'node tests/e2e/serve.mjs', url: `http://127.0.0.1:${MANUAL_PORT}/`, reuseExistingServer: !process.env.CI, env: { PORT: String(MANUAL_PORT), DIST: 'dist-noauto' } }]
       : []),
+    ...(BG ? [{ command: 'node tests/e2e/serve.mjs', url: `http://127.0.0.1:${BG_PORT}/`, reuseExistingServer: !process.env.CI, env: { PORT: String(BG_PORT), DIST: 'dist-bg' } }] : []),
   ],
 });

@@ -8,6 +8,8 @@
 // request ─► not GET ──────────────────────────────► browser default (no respondWith)
 //         ─► other origin ─────────────────────────► browser default
 //         ─► /sw.js, /deploy-manifest.json, /api/* ─► browser default
+//         ─► /vendor/birefnet-lite-512/, /vendor/onnxruntime-web/ ► browser default (C2: the tool's own Cache Storage
+//            keeps them; a second copy here would double ~120 MB on the device)
 //         ─► navigation ───────────────────────────► network first (3 s), then cache, then /offline/
 //         ─► /_astro/ /vendor/ /fonts/ /brand/ ────► cache first; stores only res.ok && basic
 //         ─► anything else ────────────────────────► browser default
@@ -19,6 +21,8 @@ declare const __PRECACHE__: string[];
 export const CACHE_PREFIX = 'anolim-';
 export const RUNTIME_PREFIXES = ['/_astro/', '/vendor/', '/fonts/', '/brand/'];
 export const BYPASS = ['/sw.js', '/deploy-manifest.json'];
+/** 배경 지우기 (Sprint C, C2): the model and the runtime go straight to the network (src/lib/bgremove/assets.ts caches them). */
+export const NETWORK_PREFIXES = ['/vendor/birefnet-lite-512/', '/vendor/onnxruntime-web/'];
 export const NAV_TIMEOUT_MS = 3000;
 /** The precached page shown for a navigation that neither the network nor the cache can answer. */
 export const OFFLINE_PAGE = '/offline/';
@@ -36,6 +40,7 @@ export function route(req: RequestLike, origin: string): Route {
   const url = new URL(req.url);
   if (url.origin !== origin) return 'default';
   if (BYPASS.includes(url.pathname) || url.pathname.startsWith('/api/')) return 'default';
+  if (NETWORK_PREFIXES.some((p) => url.pathname.startsWith(p))) return 'default';
   if (req.mode === 'navigate') return 'navigate';
   if (RUNTIME_PREFIXES.some((p) => url.pathname.startsWith(p))) return 'runtime';
   return 'default';

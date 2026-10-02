@@ -1,0 +1,179 @@
+---
+// /remove-background/ (Sprint C, C2): the subject of a photo cut out on this device (BiRefNet_lite 512, our own ONNX
+// export), saved as a transparent PNG or on white or blue. Injected by astro.config.mjs only when PUBLIC_BG_REMOVE is
+// on. The controller loads lazily (entry.ts); the engine and model only after a photo and the user's OK.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import { downloadBytes } from '../../lib/bgremove/assets';
+import { COPY, FIT_LINE, STAMP_LINK_TEXT } from './copy';
+// Page-only styles, inlined (the /stamp-signature/ pattern): no other page carries them.
+import bgCss from './bg.css?inline';
+
+const tool = getTool('remove-background');
+const stamp = getTool('stamp-signature');
+const idPhoto = getTool('id-photo');
+const jsonLd = toolJsonLd(tool, Astro.site);
+const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+const firstTime = COPY.firstTime(Math.max(downloadBytes('webgpu'), downloadBytes('wasm')));
+const backgrounds = [
+  { value: 'transparent', label: '투명' },
+  { value: 'white', label: '흰색' },
+  { value: 'blue', label: '파란색' },
+];
+const limits = [
+  '유리나 투명한 물건은 비치는 부분이 지워지거나 남을 수 있어요.',
+  '여러 사람이 함께 나온 사진은 한 사람만 남거나 아무도 못 찾을 수 있어요.',
+  '배경이 복잡하거나 피사체가 작게 나온 사진은 다른 부분이 남을 수 있어요.',
+  '머리카락 끝처럼 가는 부분은 조금 흐려질 수 있어요.',
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={bgCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">사진을 고르면 사람이나 물건만 남기고 배경을 지워, 투명한 PNG나 흰색·파란색 배경 사진으로 저장합니다. 사진은 이 기기 안에서만 처리됩니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div class="bg" id="bg-tool" data-state="empty">
+        <div class="bg-intro">
+          <p>{FIT_LINE}</p>
+          <p>{firstTime} <a href={`/${stamp.slug}/`}>{STAMP_LINK_TEXT}</a></p>
+        </div>
+        <p class="error-box" id="bg-crash" role="alert" hidden></p>
+
+        <div class="drop" id="bg-drop">
+          <p class="bg-privacy">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+          <input id="bg-input" class="file-input" type="file" accept={accept}>
+          <label class="btn primary" for="bg-input">사진 선택</label>
+          <p class="drop-hint">또는 여기에 사진 한 장을 끌어다 놓으세요 (JPG·PNG·WebP)</p>
+          <p class="drop-hint-touch">휴대폰의 사진 보관함이나 「파일」 앱에서 고를 수 있습니다 (JPG·PNG·WebP).</p>
+        </div>
+
+        <div class="bg-panel" id="bg-consent" role="group" aria-labelledby="bg-consent-text" hidden>
+          <p id="bg-consent-text"></p>
+          <p>{COPY.consentKeep}</p>
+          <p id="bg-low-device" hidden>{COPY.lowDevice}</p>
+          <div class="bg-row">
+            <button type="button" class="btn primary" id="bg-start">받고 시작</button>
+            <button type="button" class="btn ghost" id="bg-consent-cancel">취소</button>
+          </div>
+        </div>
+
+        <div class="progress-box bg-progress" id="bg-progress" hidden>
+          <p id="bg-progress-text">{COPY.opening}</p>
+          <progress id="bg-bar" aria-labelledby="bg-progress-text"></progress>
+          <div class="bg-row"><button type="button" class="btn ghost" id="bg-cancel" hidden>취소</button></div>
+        </div>
+        <p class="hint" id="bg-note" hidden></p>
+
+        <p class="error-box" id="bg-error" role="alert" data-live="alert" hidden></p>
+        <div class="bg-row"><button type="button" class="btn primary" id="bg-retry" hidden>다시 시도</button></div>
+
+        <div class="bg-panel" id="bg-nosubject" role="group" aria-labelledby="bg-nosubject-text" hidden>
+          <p id="bg-nosubject-text"><strong>{COPY.nosubject}</strong></p>
+          <p>{COPY.nosubjectPaper(stamp.name)} <a href={`/${stamp.slug}/`}>{stamp.name}</a></p>
+          <div class="bg-row"><button type="button" class="btn ghost" data-new>다른 사진 고르기</button></div>
+        </div>
+
+        <div class="bg-result" id="bg-result" hidden>
+          <h2 id="bg-done-title" tabindex="-1">{COPY.done}</h2>
+          <figure class="bg-stage" id="bg-stage" data-bg="transparent">
+            <canvas id="bg-canvas" role="img" aria-label="배경을 지운 결과 미리보기"></canvas>
+          </figure>
+          <div class="bg-fieldset-row">
+            <fieldset class="levels">
+              <legend>배경</legend>
+              <div class="chips">
+                {backgrounds.map((b, i) => <label class="chip"><input type="radio" name="bg-bg" value={b.value} checked={i === 0}><span>{b.label}</span></label>)}
+              </div>
+            </fieldset>
+            <fieldset class="levels" id="bg-format" hidden>
+              <legend>저장 형식</legend>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="bg-format" value="jpeg" checked><span>JPG</span></label>
+                <label class="chip"><input type="radio" name="bg-format" value="png"><span>PNG</span></label>
+              </div>
+            </fieldset>
+          </div>
+          <div class="bg-row">
+            <button type="button" class="btn primary" id="bg-download" disabled>PNG로 내려받기</button>
+            <button type="button" class="btn ghost" id="bg-compare" aria-pressed="false">원본과 비교</button>
+            <button type="button" class="btn ghost" id="bg-new">다른 사진 고르기</button>
+          </div>
+          <p class="save-name" id="bg-save-name"></p>
+          <p>증명사진으로 쓰려면 <a href={`/${idPhoto.slug}/`}>{idPhoto.name}</a>에서 저장한 사진을 열어 주세요.</p>
+          <Share name={tool.name} text={sharePreview('/remove-background/', Astro.site!).description} id="bg-share" />
+        </div>
+
+        <EngineError />
+        <p class="visually-hidden" id="bg-status" aria-live="polite" data-live="status"></p>
+
+        <div class="notice bg-limits" role="note" aria-labelledby="bg-limits-title">
+          <p class="bg-limits-title" id="bg-limits-title">이럴 때는 잘 안 될 수 있어요</p>
+          <ul>
+            {limits.map((t) => <li>{t}</li>)}
+          </ul>
+        </div>
+      </div>
+      <AdSlot id="remove-background-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>사진 고르기</strong><span>사람이나 물건이 크게 나온 사진을 고릅니다. 처음 한 번은 배경을 지우는 프로그램을 받을지 먼저 묻습니다.</span></li>
+        <li><strong>결과 확인</strong><span>배경을 지운 결과를 투명·흰색·파란색 배경에서 보고, 「원본과 비교」로 원래 사진과 비교합니다.</span></li>
+        <li><strong>내려받기</strong><span>투명 배경은 누끼.png, 흰색·파란색 배경은 누끼-흰배경.jpg처럼 저장됩니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">안전한 이유</h2>
+      <ul class="points">
+        <li><strong>밖으로 보내지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 보내지지 않습니다. 처음에는 배경을 지우는 프로그램만 받습니다.</span></li>
+        <li><strong>저장하지 않습니다</strong><span>만든 사진은 내려받은 파일에만 남고, 창을 닫으면 사라집니다.</span></li>
+        <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => (
+            <p><a href={l.href} {...(l.href.startsWith('http') ? { rel: 'noopener noreferrer', target: '_blank' } : {})}>{l.text}</a></p>
+          ))}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['id-photo', 'stamp-signature', 'photo-compress']} />
+  <div class="wrap narrow"><AdSlot id="remove-background-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import './entry';
+</script>

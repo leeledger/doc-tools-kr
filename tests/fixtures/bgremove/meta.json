@@ -1,0 +1,59 @@
+{
+ "exportId": "aa62cd87-ce158794",
+ "fixtures": {
+  "cc0-person": {
+   "width": 480,
+   "height": 640,
+   "fg": "File:Woman in White Sleeveless Dress Sitting on Gray Concrete Seat during Daytime transparent.png",
+   "fgPage": "https://commons.wikimedia.org/wiki/File:Woman_in_White_Sleeveless_Dress_Sitting_on_Gray_Concrete_Seat_during_Daytime_transparent.png",
+   "bg": "File:Grass at a lawn with morning dew 05.jpg",
+   "bgPage": "https://commons.wikimedia.org/wiki/File:Grass_at_a_lawn_with_morning_dew_05.jpg",
+   "license": "CC0",
+   "pythonArea": 0.3346405029296875,
+   "pythonGt": {
+    "mae": 0.002770997118204832,
+    "iou": 0.9946303781027982
+   }
+  },
+  "cc0-dog": {
+   "width": 640,
+   "height": 480,
+   "fg": "File:Transparent-jack-russell-puppy-dog.png",
+   "fgPage": "https://commons.wikimedia.org/wiki/File:Transparent-jack-russell-puppy-dog.png",
+   "bg": "File:Weatherworn top of wooden table.jpg",
+   "bgPage": "https://commons.wikimedia.org/wiki/File:Weatherworn_top_of_wooden_table.jpg",
+   "license": "CC0",
+   "pythonArea": 0.1973724365234375,
+   "pythonGt": {
+    "mae": 0.0035743005573749542,
+    "iou": 0.9886220800208949
+   }
+  },
+  "cc0-pet": {
+   "width": 640,
+   "height": 480,
+   "fg": "File:Cat Stretch.png",
+   "fgPage": "https://commons.wikimedia.org/wiki/File:Cat_Stretch.png",
+   "bg": "File:Office interior 2022 queue.jpg",
+   "bgPage": "https://commons.wikimedia.org/wiki/File:Office_interior_2022_queue.jpg",
+   "license": "CC0",
+   "pythonArea": 0.036712646484375,
+   "pythonGt": {
+    "mae": 0.008216911926865578,
+    "iou": 0.8161245780914391
+   }
+  },
+  "fusion-a": {
+   "width": 128,
+   "height": 96,
+   "r1": 12,
+   "r2": 2
+  },
+  "fusion-b": {
+   "width": 80,
+   "height": 60,
+   "r1": 5,
+   "r2": 1
+  }
+ }
+}
