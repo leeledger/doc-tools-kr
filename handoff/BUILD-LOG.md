@@ -1756,3 +1756,15 @@ Status: **DONE**.
   - e2e bg-chromium + bg-mobile-safari: 11 passed, 1 skipped.
   - No model or runtime code changed, so no parity run.
 - **CI round 3** (https://github.com/leeledger/doc-tools-kr/actions/runs/36991681913, commit 0d01241): **green on attempt 2**. Attempt 1 failed on two things outside C2: a Lighthouse runner `NO_NAVSTART` error in checks, and the id-photo "adjust" checkbox test on mobile-safari ("Clicking the checkbox did not change its state", the same flake class as round 1). Both passed on the re-run of the failed jobs. bg-mobile-safari passed on both attempts.
+
+## C2-cloud — spike + brief (2026-10-02, branch `c2-cloud`, never main)
+- Owner decision: 배경 지우기 should run in the cloud by default; on-device (C2) stays as the opt-in "사진을 보내지 않고 기기에서 처리".
+- Spike: Pages Function `functions/api/remove-bg.ts` + `public/_routes.json` (`/api/*` only) + Commons test photos in `public/spike/`. No wrangler file, no dashboard change.
+  - Pages Functions have no Images binding (`env.IMAGES` undefined).
+  - `cf.image {segment:"foreground"}` works on our Free account.
+  - Cold time 3.1-6.3 s on the server (median 4.6 s wall). Model res 1024 long edge.
+  - GT (16): cloud MAE 0.0038 / IoU 0.966 / edge 0.053 vs on-device lite-512 0.0048 / 0.942 / 0.078.
+  - PNG output is palette, so it is banned. WebP q100 gives 256-level alpha. No colour decontamination, so blur-fusion is still needed.
+- Design: Pages Function -> service binding -> Worker `docttak-bg` with the Images binding. Send a <=1024 px copy only, use the alpha only, fuse on the device. Full brief: `handoff/ARCHITECT-BRIEF-C2-CLOUD.md`.
+- Blocked on owner-only items (brief §9): create the Worker + Images binding, the Pages service binding (Preview), the privacy-officer name, approval of the copy and the CLAUDE.md rule change. `wrangler whoami`: not authenticated.
+- About 60 of 5,000 monthly unique transformations used by the spike.
