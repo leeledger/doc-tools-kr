@@ -2,6 +2,30 @@
 Date: 2026-10-02
 Ready for Builder: YES
 
+# Review Feedback — Sprint C, C1 integration (/stamp-signature/, c1 @ 487372f)
+Date: 2026-10-02
+Ready for Builder: YES
+
+Arch-approved decisions 1–6 were not re-opened.
+
+## Real-photo check (Commons stand-ins; the owner gate stays open)
+11 Wikimedia Commons files are in `C:\dev\doc-tools-kr\spikes\ink-real\` (gitignored; licences in `SOURCES.json`: CC0 ×2, PD ×2, CC BY 4.0, CC BY 2.0, CC BY-SA 4.0 ×5). I cropped them the way a user would frame a phone photo. I ran the shipped `processInk` on the work copy (long edge ≤ 2,400) in all 3 modes, and ran the page itself in Playwright.
+Contact sheet: `spikes\ink-real\contact-sheet.png` (photo | alpha | 자동 on checker/white/dark | 빨간 도장 | 검정·파란 서명). Control retries: `sheetC.png`.
+
+| Photo | Licence | Verdict |
+|---|---|---|
+| c01 red seal on textured paper, side light (Signature seal 2025-04-17) | CC0 | PASS: no paper residue, strokes whole, red kept, guess red → 도장.png. The seal object in the frame is keyed too (it is not paper; expected). |
+| c02 faded seal on an aged scroll | CC0 | PARTIAL: the seal is whole and its colour kept. The scroll edge leaves a thin vertical line. 자동 guesses **black** (dull maroon) → 서명.png. 빨간 도장 mode is clean. |
+| r05 seal scan (개인인장) | CC BY-SA 4.0 | PASS. |
+| c03 / c11 exhibition sheets of seals, glare, curled strips | CC BY-SA 4.0 | PASS for the seals. The shadows at the strip edges come through as lines (the paper is not flat). |
+| r06 brown marker signature | PD | PASS: brown kept, clean edges. |
+| c09 pencil signature, light gradient | CC BY-SA 4.0 | PASS (faint, as pencil is). |
+| c10 ink signature on a letter | CC BY-SA 4.0 | PASS (other handwriting inside the frame is kept, as expected). |
+| r08 thin blue ballpoint on glossy paper, 990 px | CC BY 2.0 | WEAK: the loops break up. 아주 진하게 helps only a little. |
+| c07 signature on brown kraft/cork board | CC BY 4.0 | 자동 **FAIL** (the texture keys: 18.8 % ink, heavy residue; guess red). 검정·파란 서명 mode is **clean**. |
+
+Overall: stamps and dark-ink signatures on white or off-white paper under uneven light come out clean, with colour kept and a tight crop. These results are not "clearly bad", so there is no Must Fix. The brief's owner-photo gate (6 photos + JSON, `regress:ink` without --fixtures-only) is still required before 11-15.
+
 ## Must Fix
 None.
 
@@ -24,6 +48,23 @@ None.
 
 ## Cleared
 A3 round 2 facts, the tightened one-quote spec check with its tests, copy rules and visuals all pass. The three Should Fix items are wording only. **A3 clear.**
+- `src/lib/ink/key.ts` processInk (confidence 9). `const isRed = color === 'red' || (color === 'original' && key.guess === 'red');` makes the file name follow the colour guess even when the user picked a mode. c07 in 검정·파란 서명 mode downloads as **도장.png**. Fix: `mode === 'sign'` → 서명.png and `mode === 'red'` → 도장.png. Keep the guess for 자동 only, and keep the explicit colour override. Add a unit case.
+- `src/tools/stamp-signature/photo.ts` openFile (confidence 6). `resetControls()` runs only in `toEmpty()` (the 다른 사진 고르기 button). The drop zone is also shown in the `error` phase (`drop.hidden = p !== 'empty' && p !== 'error'`). After a worker crash, a photo picked from there keeps the old mode, 진하기 and colour. Fix: call `resetControls()` at the start of `openFile`.
+- BUILD-LOG C1 gates: the precache figures are stale. This build (local) and CI run 36944842539 both say **445.1 KB (flag 0) / 447.4 KB (flag 1)** of 450, not 444.3 / 446.6. The figure is real and deterministic, but there is 2.6 KB of headroom on the flag-on build. Correct the log.
+- Honest limits / mode help: a signature on brown or coloured board fails in 자동 and is clean in 검정·파란 서명. A cheap help line under 찾을 것 (e.g. "종이가 누렇거나 갈색이면 검정·파란 서명을 고르세요") would turn the c07 failure into a one-tap fix. Glyph cost: check the UI font. Otherwise log it.
+
+## Escalate to Architect
+- Precache headroom is 2.6 KB on the flag-on build. C2 adds a page plus an entry, so it will not fit at 450 without a decision: raise the budget, or take more out of the precache. This is a budget call, not a code call.
+- 자동 mode on non-white grounds: the brief fixes 자동 to the `mn` plane, which keys kraft or brown texture. One option is "if guess = black, re-key on lum" (the 서명 path). That changes the brief's algorithm, so it is Arch's call. The owner photos (one on yellow paper) will show whether it matters.
+- Thin, faint ballpoint (r08) breaks up. Add "아주 가늘고 흐린 볼펜 서명은 끊겨 보일 수 있어요" to the honest limits? Copy/product call.
+
+## Cleared
+- **Legal.** 전자서명법 is current (DRF: MST 236201, 현행, 시행 2022-10-20, 법률 제18479호). The 4 statute quotes and 4 Microsoft quotes pass `check:quotes` **121/121 verbatim**. e-signature-law never says that an image is a 전자서명, has no 인감 comparison and no inferred advice, and ends with the 받는 곳 line. The FAQ and the tool page make no legal claims.
+- **Page.** CSP unchanged, no stamp-specific headers, no fetch/XHR/beacon in the new code. Over 4 runs (390 and 1280, light and dark): 0 external requests, 0 non-GET requests, 0 console errors. Controls and worker are lazy: nothing loads with the page, and the ink worker loads only after a photo. The PNG is colour type 6 (RGBA). The blank-paper message blocks the download. The pad download is disabled until a stroke, and works with mouse and with CDP touch. Keyboard users are pointed to the photo tab.
+- **Budgets.** Ink worker 5.0 / 6.1 KB, controls 11.4 / 13.5 KB, initial JS 8.3 KB, UI fonts 137.1 KB total (matches the +208 B claim).
+- **Copy and visual.** No 업로드/서버/브라우저 and no contact lines. Brand 문서딱. The 5 FAQ items are real questions. Light and dark at both widths look correct (the pad stays white in dark mode by design).
+
+Step C1 is clear.
 
 ---
 

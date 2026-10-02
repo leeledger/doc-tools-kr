@@ -1,44 +1,49 @@
 {
  "gt14": {
-  "iou": 0.9189,
+  "iou": 0.9236,
   "residue": 0,
-  "deltaE": 4.04
+  "deltaE": 4.24
  },
  "gt14-shadow": {
-  "iou": 0.9017,
+  "iou": 0.9087,
   "residue": 0,
-  "deltaE": 4.2
+  "deltaE": 4.25
  },
  "gt14-yellow": {
-  "iou": 0.9888,
+  "iou": 0.9261,
   "residue": 0,
-  "deltaE": 5.61
+  "deltaE": 6.13
  },
  "gt14-jpeg": {
-  "iou": 0.9099,
+  "iou": 0.9197,
   "residue": 0,
-  "deltaE": 5.57
+  "deltaE": 5.44
+ },
+ "gt14-kraft": {
+  "iou": 0.8371,
+  "residue": 0,
+  "deltaE": 3.22
  },
  "gt15": {
-  "iou": 0.9017,
+  "iou": 0.9034,
   "residue": 0,
   "deltaE": 2.71,
-  "compErrWhite": 0.0358
+  "compErrWhite": 0.0353
  },
  "gt15-shadow": {
-  "iou": 0.8921,
+  "iou": 0.9179,
   "residue": 0,
-  "deltaE": 2.94
+  "deltaE": 2.86
  },
  "gt15-yellow": {
-  "iou": 0.9119,
+  "iou": 0.9124,
   "residue": 0,
-  "deltaE": 2.73
+  "deltaE": 2.72
  },
  "gt15-jpeg": {
-  "iou": 0.8845,
+  "iou": 0.8883,
   "residue": 0,
-  "deltaE": 3.12
+  "deltaE": 3.1
  },
  "gt15-stampOnText": {
   "iou": 0.8907,
@@ -46,23 +51,23 @@
   "deltaE": 4.53
  },
  "gt16": {
-  "iou": 0.9954,
+  "iou": 0.9974,
   "residue": 0,
-  "deltaE": 0.92
+  "deltaE": 0.53
  },
  "gt16-shadow": {
-  "iou": 0.9941,
+  "iou": 0.9962,
   "residue": 0,
-  "deltaE": 3.62
+  "deltaE": 5.81
  },
  "gt16-yellow": {
-  "iou": 0.9985,
+  "iou": 0.9977,
   "residue": 0,
-  "deltaE": 1.12
+  "deltaE": 0.87
  },
  "gt16-jpeg": {
-  "iou": 0.9944,
+  "iou": 0.9971,
   "residue": 0,
-  "deltaE": 1.8
+  "deltaE": 1.08
  }
 }

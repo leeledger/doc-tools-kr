@@ -1466,7 +1466,7 @@ Status: DONE_WITH_CONCERNS (all gates pass on this PC; the real-photo gate is pe
 ### Decisions (never stop; Arch please confirm the ones marked)
 1. **name = h1 = `전자서명·도장 이미지 만들기`** (brief: name `전자서명·도장 이미지`). COPY.md and a unit test require name = h1; the H1 carries the keyword.
 2. **Arch: home share preview no longer lists the tools.** With 7 tools the names alone are 85 characters, over the 80-character og:description limit. `/` og description = the tagline sentence (same as `*`); the polish unit/e2e tests now check "no soon tool" for og instead of "every live tool". The meta description keeps every name: template shortened to `{names}. 파일은 내 폰·컴퓨터 밖으로 나가지 않아요. 무료.` (115 chars, limit 120).
-3. **Arch: precache.** The page adds ~28 KB (HTML + entry) to the precache: 444.3 KB of 450. Precaching the photo controller as well (the /id-photo/ rule, gen-sw matches `controller*`) would be 455 KB, so the controller is named `photo.ts` and is not precached; after a first use it is in the runtime cache. Offline on a first-ever visit, the page shows the engine panel (tested path). FAQ JSON-LD left out of this page (id-photo has none either) to save ~3 KB.
+3. **Arch: precache.** The page adds ~28 KB (HTML + entry) to the precache: 445.1 KB of 450 (flag off). Precaching the photo controller as well (the /id-photo/ rule, gen-sw matches `controller*`) would be 455 KB, so the controller is named `photo.ts` and is not precached; after a first use it is in the runtime cache. Offline on a first-ever visit, the page shows the engine panel (tested path). FAQ JSON-LD left out of this page (id-photo has none either) to save ~3 KB.
 4. **Arch: check-dist ink worker budget 6.1 KB** (C1-core recorded 4.75 KB from round 1; round 2's ink colour grew the worker to 5.05 KB gzip; budget = measured + 20 %). Lazy controls (photo + pad + what only they import) 11.3 KB gzip, budget 13.5 KB.
 5. Area messages in 합니다체 (tool copy rule), same meaning as the brief: `도장이나 서명을 찾지 못했습니다. 진하기를 높이거나, 환한 곳에서 종이를 가까이 다시 찍어 주세요.` / `종이 전체를 도장이나 서명으로 읽었습니다. 종이만 나오게 환한 곳에서 다시 찍어 주세요.` (`잡혔` would add a glyph).
 6. UI copy written onto existing glyphs: **UI font delta +208 bytes (1 glyph, 빨)** on the shipping build (flag 0: 140,136 -> 140,344 bytes). Avoided: 밝/잘/룩/짝/뿐/혔/듭/랑/탕/점/펜. C2 has ~1.8 KB left of the 2.0 KB.
@@ -1477,7 +1477,7 @@ Status: DONE_WITH_CONCERNS (all gates pass on this PC; the real-photo gate is pe
 
 ### Gates (this PC)
 - `npm run check` 0 errors; `npm test` 43 files / 731 tests pass.
-- Both builds + check-dist OK; precache 444.3 KB (flag 0) / 446.6 KB (flag 1) of 450; initial JS /stamp-signature/ 8.3 KB gzip; ink worker 5.0 / 6.1 KB; controls 11.3 / 13.5 KB.
+- Both builds + check-dist OK; precache 445.1 KB (flag 0) / 447.4 KB (flag 1) of 450 (corrected in the review round: the first figures were stale); initial JS /stamp-signature/ 8.3 KB gzip; ink worker 5.0 / 6.1 KB; controls 11.3 / 13.5 KB.
 - `check:licenses` OK (no new dependency); `check:quotes` 121/121 verbatim (+8: 4 law.go.kr, 4 Microsoft).
 - `regress:ink -- --fixtures-only` 94/94 (PARTIAL: real photos pending).
 - e2e (port 4573): stamp-signature.spec on chromium, firefox, webkit, mobile-chrome, mobile-safari: 40 run, 38 passed, 2 skipped (the keyboard-tabs test is desktop-only); webkit/mobile-safari photo test repeated 5× clean after fixing a test race. site + growth + hubs + polish (chromium, mobile-safari) pass; sw + preload chromium pass. One mobile-safari growth share test flaked once and passed on rerun (not touched by C1).
@@ -1491,3 +1491,17 @@ Status: DONE_WITH_CONCERNS (all gates pass on this PC; the real-photo gate is pe
 - Hancom "한글에 넣기" section: no fetchable official Hancom help page found; add when one is quoted.
 - Offline first-ever visit of /stamp-signature/ shows the engine panel (controller not precached, decision 3).
 - Text-to-도장 generator: out of scope (owner decision).
+
+### C1 review round (Bob, 2026-10-02; Richard cleared C1, no Must Fix; Arch rulings 1-7)
+Status: DONE.
+1. **자동 = classify, then key with that mode's own path** (`key.ts` `classifyInk`, `keyInk`). Red -> exactly the 빨간 도장 keying (min(R,G,B) + red filter); black/blue -> exactly the 검정·파란 서명 keying (luma). The classifier runs on a copy box-averaged to ~600 px long edge: a first min(R,G,B) key finds the strong ink (a > 0.5); a pixel is red when its redness exceeds the redness of the paper around it (paperColor) by > 0.15; red when >= 15 % of the strong ink is red (`INK.redShare`). A weighted *mean* (tried first) sent the seal sheets c03/c11 and r01 (red seal next to its dark wooden stamp) to 서명 keying, which drops red; the *share* separates cleanly: red sets 0.28-1.0, black/blue sets 0-0.05 on Richard's 12 photos and all 14 fixtures. The guess is cached per 진하기 step.
+   - New fixture **gt14-kraft** (`build-ink.py`): dark signature on brown kraft board (#9C744E, mottling, fibres, flecks, chroma noise strongest in blue; min-channel 5-95 % spread ±10 %, c07 ±14 %). Gates: residue <= 0.2 %, 자동 guess black, status ok, ΔE <= 10. Its IoU is reported, not gated (0.837: strokes pick up texture at their edges); the brief's IoU gates on the other 13 fixtures are unchanged. The old 자동 fails it (residue 1.13 %, IoU 0.75); the new one passes (residue 0.000 %).
+   - All 13 existing fixtures stay within every gate; re-baselined (gt14-yellow IoU 0.989 -> 0.926 in 서명 keying, gt16-shadow ΔE 3.6 -> 5.8; both inside the gates). regress:ink 101/101. Pipeline 2400×1800 711-840 ms in Node (was 663-768; target 600, not a gate).
+   - Real photos (Richard's 12, `C:\dev\doc-tools-kr\spikes\ink-real\sheet-c1fix.png` + `.json`): c07 kraft now clean in 자동 (2.76 % ink, guess black; was 18.8 %, red); c01/r05/c03/c11/r01 red; signatures black. In the sheet a salmon tile is the script's placeholder for "no output" (status noink), not a result.
+2. File name follows the mode: 빨간 도장 -> 도장.png, 검정·파란 서명 -> 서명.png; 자동: a fixed colour decides, else the guess. Unit cases.
+3. `resetControls()` at the start of `openFile` (also after an error or a crash). e2e: a photo picked straight from the input starts at 자동 / 보통.
+4. Limits list: `아주 가늘고 흐린 서명은 끊겨 보일 수 있습니다.` (볼펜 dropped: 펜 would be a new glyph; UI font delta still +208 B). The guide keeps 볼펜 (system font).
+5. 빨간 도장 on a blue signature (r08, c09, c10; Richard's s01/s03 are the same case): status noink, no output, the message blocks the download. Unit + e2e. The "salmon rectangle" was the sheet's no-output placeholder.
+6. Precache: CI and Richard's build read **445.1 KB (flag off) / 447.4 KB (flag on)** of 450; this PC reads 444.3 / 446.6 for the same tree. CI is the figure of record.
+7. **Arch ruling (for C2): C2's page adds 0 bytes to the precache.** Its controller and runtime are runtime-cached only, like C1's photo.ts: the tool needs a ~100 MB download anyway, so offline-first gives nothing.
+- Ink worker 5.4 KB gzip (budget 6.1). Gates: check 0 errors; unit 735/735; both builds + check-dist OK; regress:ink 101/101; stamp-signature e2e chromium + mobile-safari 15 passed, 1 skipped (desktop-only keyboard test).

@@ -219,8 +219,12 @@ for (const [id, m] of Object.entries(meta)) {
   const rgbaOrig = ink.renderInk(img, key, 'original');
   const row = { iou: +v.toFixed(4), mode: m.mode, status: key.status, guess: key.guess, ms: Math.round(ms) };
   const min = m.variant === 'base' ? IOU_MIN[m.gt] : IOU_HARD_MIN;
-  check(`${id} IoU@0.5 (${m.mode}) >= ${min}`, v >= min, v.toFixed(4));
+  // gt14-kraft (Arch ruling, C1 review) is gated on residue, guess, status and colour; its IoU is information.
+  if (m.iouGate === false) console.log(`INFO ${id} IoU@0.5 (${m.mode}): ${v.toFixed(4)} (not gated)`);
+  else check(`${id} IoU@0.5 (${m.mode}) >= ${min}`, v >= min, v.toFixed(4));
   check(`${id} area status ok`, key.status === 'ok', `${key.status}, ink ${(key.inkShare * 100).toFixed(2)}%`);
+  // 자동 classification (Arch ruling, C1 review): a fixture may pin the guess (gt14-kraft: black, so 서명 keying).
+  if (m.guess) check(`${id} 자동 guess ${m.guess}`, key.guess === m.guess, key.guess);
   if (m.variant === 'base' && COMP_ERR_MAX[m.gt] !== undefined) {
     // Spike definition: our alpha with the photo's own ink colour (원래 색, the default), on white, edge band only.
     const ce = compErr(key.alpha, rgbaOrig, gt, m.ink, img.width, img.height);

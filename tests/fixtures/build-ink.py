@@ -12,6 +12,9 @@
 #   -yellow  paper tone #E9DDB5 instead of the spike's light grey
 #   -jpeg    saved at JPEG q70 instead of q92
 #   gt15-stampOnText  gt15 over black printed text lines (GT = the stamp only; scored in 빨간 도장 mode)
+#   gt14-kraft  a dark signature on brown kraft board with fibres and flecks (C1 review, Richard's c07 / Arch's
+#               "d17-like" case): 자동 must classify it black/blue and leave no texture (residue <= 0.2 %).
+#               IoU is reported, not gated: on board this textured the strokes pick up texture at their edges.
 # meta.json records the GT ink colour (for the composite error) and the scoring mode of each fixture.
 # Run: python tests/fixtures/build-ink.py
 import json
@@ -43,6 +46,22 @@ def paper(rng, base=(0.93, 0.92, 0.89)):
     g = (rng.normal(0, 1, (H // 4, W // 4)) * 40 + 128).clip(0, 255).astype(np.uint8)
     grain = np.array(Image.fromarray(g).resize((W, H), Image.BICUBIC)) / 255 - 0.5
     P = np.array(base)[None, None, :] * light[..., None] + 0.03 * grain[..., None] + rng.normal(0, 0.008, (H, W, 1))
+    return P.clip(0, 1)
+
+
+def kraft(rng, base):
+    """Brown kraft board: the room light, coarse mottling, horizontal fibres and a few darker flecks."""
+    def up(a, size=(W, H)):
+        g = ((a * 40) + 128).clip(0, 255).astype(np.uint8)
+        return np.array(Image.fromarray(g).resize(size, Image.BICUBIC)) / 255 - 0.5
+    mottle = up(rng.normal(0, 1, (H // 24, W // 24)))
+    fibres = up(rng.normal(0, 1, (H // 2, W // 24)))
+    fleck = (rng.random((H, W)) < 0.0015).astype(np.uint8) * 255
+    fleck = np.array(Image.fromarray(fleck).filter(ImageFilter.GaussianBlur(1.2))).astype(np.float32) / 255
+    T = 0.22 * mottle + 0.18 * fibres - 0.6 * fleck.clip(0, 0.25)
+    # Fine per-channel noise, strongest in blue (the darkest channel of brown board, as phone JPEGs show it).
+    noise = rng.normal(0, 1, (H, W, 3)) * np.array([0.016, 0.024, 0.036])[None, None, :]
+    P = np.array(base)[None, None, :] * (LIGHT * (1 + T))[..., None] + noise
     return P.clip(0, 1)
 
 
@@ -147,6 +166,11 @@ def main():
         yel = tuple(c / 255 for c in (0xE9, 0xDD, 0xB5))
         save(f"{gid}-yellow", compose(A, ink, pap(yel)), 92, meta, {**base, "variant": "yellow", "jpegQ": 92, "paper": "#E9DDB5"})
         save(f"{gid}-jpeg", compose(A, ink, P), 70, meta, {**base, "variant": "jpeg", "jpegQ": 70})
+        if gid == "gt14":
+            kr = tuple(c / 255 for c in (0x9C, 0x74, 0x4E))
+            dark = (0.09, 0.08, 0.08)
+            info = {**base, "ink": list(dark), "variant": "kraft", "jpegQ": 92, "paper": "#9C744E", "guess": "black", "iouGate": False, "desc": "dark signature on brown kraft board"}
+            save("gt14-kraft", compose(A, dark, kraft(np.random.default_rng(SEED * 1000 + 50), kr)), 92, meta, info)
         if gid == "gt15":
             printed = compose(text, (0.08, 0.08, 0.08), P)
             save("gt15-stampOnText", compose(A, ink, printed), 92, meta, {**base, "variant": "stampOnText", "mode": "red", "jpegQ": 92})
