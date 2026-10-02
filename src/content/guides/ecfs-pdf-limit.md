@@ -58,7 +58,7 @@ spec:
     mb: 20
     format: HWP·DOC·PDF·JPG 등
     source: 1
-  - label: 전자소송 첨부파일 (모두 합쳐)
+  - label: 전자소송 첨부파일 (총용량)
     kind: upload
     mb: 100
     source: 5

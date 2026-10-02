@@ -1,3 +1,32 @@
+# Review Feedback — G2 A3 (66f7979 on g2-a3)
+Date: 2026-10-02
+Ready for Builder: YES
+
+## Must Fix
+None.
+
+## Should Fix
+- src/content/guides/yearend-tax-pdf.md (body "## 회사마다 받는 방식이 달라요": "받는 방식은 크게 세 가지예요") (confidence: 7). NTS cntntsId=7706 lists **5** 유형. Types 3–5 are all 홈택스-based, so grouping them is defensible, but "세 가지" is our count, not NTS's. Fix: drop the count ("…받는 방식이 회사마다 달라요. 근로자가 내는 방식으로 보면 이래요.") or say NTS sorts companies into 5 types.
+- src/content/guides/kakao-photo.md FAQ "PC 카카오톡…": "한 번에 최대 100개까지" (confidence: 6). Source 1073209414 says "개당 최대 300MB/ 최대 100개까지 전송할 수 있습니다". It does not say "한 번에". Fix: "최대 100개까지" (the body table already words it that way).
+- Hub row label "전자소송 첨부파일 (모두 합쳐)" (confidence: 5, optional). The court's word is "총용량". Consider "(총용량)" so the label also follows the agency. Its 용량 맞추기 link opens /pdf-compress/?target=20, which is acceptable because the per-file cap still applies.
+- Info only: live ecfs quote 1 has a line break between "PNG" and "(PDF파일로 자동변환…". The guide joins them with a space. This is acceptable and needs no change.
+
+## Escalate to Architect
+- None. (Bob's open item, per-claim citation for body-text numbers, is already logged. Brief it if wanted.)
+
+## Verified
+- check:quotes: **130/130 verbatim** live, which includes all kakao-photo and yearend-tax-pdf quotes. Kakao context re-read: 묶어보내기 해제 ("묶어보내기를 원하지 않는 경우…해제") and "여러 장의 사진은 하나의 말풍선" back the body. The yearend inference ("hand in unchanged") is gone, and the page now defers to the company's instructions.
+- ecfs, headless Chromium on the live 전자소송포털 FAQ (질문+내용 search, 3 items opened). All 8 browser quotes are present: "PDF 형식이 아닌 문서 파일은…" (quotes 1–2), "종이서류로 되어 있는 서증…" (3–5, including "스캐너(또는 스캔기능이 있는 복합기)" behind body step 1), and "동영상이나 음성자료…" (6–8, so "형식이 다르거나 큰 파일은 직접 방문" is correctly scoped to 동영상·음성, and PPT/PPTX really sits in that list). "100M" is the court's spelling.
+- Number check: `rowQuote` needs every number of a literal row in ONE quote (cited `source`, else the first quote stating all of them). The hub limit is taken from that quote only. Literal rows no longer fall back to presets/toolFacts, so the check is stricter than before. `M` is its own unit and is matched only by a quote that writes "100M". Tests cover a cited quote missing the number, a bad index, numbers split across quotes, own-quote limit wording, and the live ecfs rows. They are meaningful.
+- Hub 형식 column holds formats only (HWP·DOC·PDF·JPG 등 / 안내 없음 / MP4·MP3·AVI 등). Limits are in the court's words (20MB까지 / 100M 이하 / 100 MB까지).
+- Copy: brand 문서딱. No 업로드/서버/브라우저 outside quotes, no contact lines. ?target=20 is a valid pdf-compress chip.
+- Visual :4473, ecfs/kakao/yearend/upload-limits at 390 and 1280 in light and dark: no page overflow (scrollWidth = clientWidth in all 16). The hub table scrolls inside its box on phones as designed. Dark contrast is fine.
+
+## Cleared
+A3 round 2 facts, the tightened one-quote spec check with its tests, copy rules and visuals all pass. The three Should Fix items are wording only. **A3 clear.**
+
+---
+
 # Review Feedback — G2 A2 (8b47d72, 51191f5 on g2-a2)
 Date: 2026-10-02
 Ready for Builder: NO → fixed in 0005334
