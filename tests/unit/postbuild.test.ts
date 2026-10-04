@@ -385,6 +385,35 @@ describe('built output', () => {
     PUBLIC_ID_PHOTO_AUTOFRAME: existsSync(join(DIST, 'vendor', 'mediapipe')) ? '1' : '0',
     // Sprint C, C2: and /remove-background/ only when it was built with PUBLIC_BG_REMOVE on.
     PUBLIC_BG_REMOVE: existsSync(join(DIST, 'remove-background')) ? '1' : '0',
+    // C2-cloud: and the cloud path (with the privacy officer and contact it needs) when /privacy/ has its section.
+    ...(cloudBuilt()
+      ? { PUBLIC_BG_CLOUD: '1', PUBLIC_PRIVACY_OFFICER: process.env.PUBLIC_PRIVACY_OFFICER || '이종림', PUBLIC_CONTACT_EMAIL: process.env.PUBLIC_CONTACT_EMAIL || 'robotncoding@kakao.com' }
+      : { PUBLIC_BG_CLOUD: '0' }),
+  });
+  /** The build under test has the 배경 지우기 cloud path (PUBLIC_BG_CLOUD=1): its privacy page has section id="bg". */
+  function cloudBuilt(): boolean {
+    return existsSync(join(DIST, 'privacy', 'index.html')) && readFileSync(join(DIST, 'privacy', 'index.html'), 'utf8').includes('id="bg"');
+  }
+
+  it('C2-cloud: the cloud path and its exception wording only with PUBLIC_BG_CLOUD on; check-dist refuses the other state; no /spike/', () => {
+    need();
+    const on = cloudBuilt();
+    expect(existsSync(join(DIST, 'spike'))).toBe(false);
+    const callers = walk(join(DIST, '_astro'), /\.js$/).filter((f) => readFileSync(f, 'utf8').includes('/api/remove-bg'));
+    expect(callers.length > 0).toBe(on);
+    expect(readFileSync(join(DIST, 'index.html'), 'utf8').includes('배경 지우기만 예외예요')).toBe(on);
+    expect(readFileSync(join(DIST, 'terms', 'index.html'), 'utf8').includes('배경 지우기 제외')).toBe(on);
+    const other = on
+      ? { ...buildEnv(), PUBLIC_BG_CLOUD: '0' }
+      : { ...buildEnv(), PUBLIC_BG_REMOVE: '1', PUBLIC_BG_CLOUD: '1', PUBLIC_PRIVACY_OFFICER: '', PUBLIC_CONTACT_EMAIL: '' };
+    const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: other, encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    if (on) expect(r.stderr).toMatch(/calls \/api\/remove-bg in a build with PUBLIC_BG_CLOUD off/);
+    else {
+      expect(r.stderr).toContain('PUBLIC_BG_CLOUD is on but PUBLIC_PRIVACY_OFFICER is not set');
+      expect(r.stderr).toContain('PUBLIC_BG_CLOUD is on but PUBLIC_CONTACT_EMAIL is not a valid address');
+      expect(r.stderr).toContain('index.html: no 배경 지우기 exception wording in a build with PUBLIC_BG_CLOUD on');
+    }
   });
 
   it('an invalid PUBLIC_CONTACT_EMAIL fails the build (check-dist)', () => {
@@ -405,7 +434,9 @@ describe('built output', () => {
     expect(r.stderr).toContain('the error beacon is enabled but PUBLIC_CONTACT_EMAIL is not set');
     // "//host" is not a same-origin path, so the beacon stays off and nothing is required.
     const off = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...base, PUBLIC_ERROR_BEACON_PATH: '//evil.example/e' }, encoding: 'utf8' });
-    expect(off.status).toBe(0);
+    // C2-cloud: a build with the cloud path needs the contact anyway (privacy gate).
+    expect(off.status).toBe(cloudBuilt() ? 1 : 0);
+    if (cloudBuilt()) expect(off.stderr).toContain('PUBLIC_BG_CLOUD is on but PUBLIC_CONTACT_EMAIL is not a valid address');
   });
 
   it('service worker: /offline/ is precached as the fallback, /404.html is not; the kill switch never reloads a tab', async () => {
@@ -489,8 +520,9 @@ describe('built output', () => {
     expect(found).toEqual([]);
     // Owner's brand rule: the name is always 문서딱. "docttak" appears only as the domain (docttak.com), never
     // as a name ("Docttak", "DOCTTAK", "독딱").
-    // Sprint C, C2: the brief's Cache Storage name `docttak-model-birefnet-<exportId>` is an internal key, never shown.
-    const misnamed = files.filter((f) => /독딱|docttak(?!\.com|-model-birefnet-)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.com/gi, '')));
+    // Sprint C, C2: the brief's Cache Storage name `docttak-model-birefnet-<exportId>` is an internal key, never shown;
+    // so is C2-cloud's localStorage key `docttak-bg-mode`.
+    const misnamed = files.filter((f) => /독딱|docttak(?!\.com|-model-birefnet-|-bg-mode)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.com/gi, '')));
     expect(misnamed).toEqual([]);
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
     expect(home).toContain('<meta property="og:site_name" content="문서딱">');

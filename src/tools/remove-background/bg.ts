@@ -5,8 +5,13 @@
 //   -> engine worker (one session kept between photos; disposed after 2 min idle, 60 s hidden, pagehide, a crash,
 //      or after every photo on low-memory devices: Arch round 2) -> area check -> 8-bit mask at work size
 //   -> blur-fusion worker -> preview (투명 / 흰색 / 파란색, 원본과 비교) -> PNG / JPG
-// The photo never leaves the page: its pixels go only to our own workers. The only requests are GETs of our own
-// /vendor/ engine and model files, made after the user agreed (or from this tool's Cache Storage).
+// On this path the photo never leaves the page: its pixels go only to our own workers. The only requests are GETs of
+// our own /vendor/ engine and model files, made after the user agreed (or from this tool's Cache Storage).
+//
+// C2-cloud (brief handoff/ARCHITECT-BRIEF-C2-CLOUD.md §4; only with __BG_CLOUD__): pick -> ready -> 배경 지우기 (the
+// press is the consent) -> a <= 1024 px JPEG copy POSTed to /api/remove-bg (lib/bgremove/cloud.ts, loaded after the
+// pick) -> its alpha, scaled up -> the same blur-fusion and result as above. "사진을 보내지 않고 기기에서 처리"
+// (remembered in localStorage, lib/bgremove/mode.ts) enters the path above; so does a full monthly quota, with a notice.
 import {
   AssetError,
   browserDeps,
@@ -27,7 +32,9 @@ import {
 } from '../../lib/bgremove/assets';
 import { clearAttempt, markAttempt, workEdge } from '../../lib/bgremove/guard';
 import { OPT_LEVEL, type InitRequest } from '../../lib/bgremove/infer-core';
+import type { Mask } from '../../lib/bgremove/cloud';
 import { fusionRadii, hasSubject, pilResizeRgba, resizeMask, SIZE, toInput, validMask } from '../../lib/bgremove/infer';
+import { chooseDevice, deviceChosen } from '../../lib/bgremove/mode';
 import { plainCutout } from '../../lib/bgremove/fusion';
 import type { FusionRequest, FusionResponse } from '../../lib/bgremove/fusion.worker';
 import { disposeTimers, EngineError, keepEngine, pickBackend, shouldFallBack, startEngine, type EngineHandle, type WorkerLike } from '../../lib/bgremove/session';
@@ -38,12 +45,15 @@ import { HEAD_BYTES, TAIL_BYTES, orientedSize, sniffImage } from '../../lib/imag
 import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError } from '../../lib/ui/engine-error';
-import { BG_COLORS, COPY, dims, fileName, saveLabel, type BgChoice, type SaveFormat } from './copy';
+import { BG_COLORS, CLOUD, COPY, dims, fileName, saveLabel, type BgChoice, type SaveFormat } from './copy';
 import { checkDims, checkFileBytes, LIMITS, LOW_DEVICE_MEMORY } from './limits';
 import { move, view, type Phase } from './model';
 
 const createInferWorker = (): WorkerLike => new Worker(new URL('../../lib/bgremove/infer.worker.ts', import.meta.url), { type: 'module' }) as unknown as WorkerLike;
 const createFusionWorker = (): Worker => new Worker(new URL('../../lib/bgremove/fusion.worker.ts', import.meta.url), { type: 'module' });
+type CloudModule = typeof import('../../lib/bgremove/cloud');
+/** After this long without an answer the line says the photo is being worked on (fetch reports no upload progress). */
+const SENT_AFTER_MS = 1500;
 
 function must<T extends HTMLElement>(id: string): T {
   const e = document.getElementById(id);
@@ -120,6 +130,10 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   const downloadBtn = must<HTMLButtonElement>('bg-download');
   const saveName = must<HTMLElement>('bg-save-name');
   const newBtn = must<HTMLButtonElement>('bg-new');
+  // C2-cloud elements: only in a build with the cloud path on.
+  const ready = document.getElementById('bg-ready');
+  const deviceRetry = document.getElementById('bg-device-retry');
+  const modeLine = document.getElementById('bg-mode');
 
   const deps = browserDeps();
   const storage = sessionStore();
@@ -143,6 +157,9 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   let comparing = false;
   /** The work copy's pixels between the model input and the fusion worker (transferred there). */
   let photoPx: ImageData | null = null;
+  /** C2-cloud: which path the current photo took (what 다시 시도 repeats). */
+  let via: 'cloud' | 'device' = 'device';
+  let cloudModule: Promise<CloudModule> | null = null;
 
   const say = (m: string): void => live('status', m, root);
 
@@ -164,6 +181,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     root.dataset.state = phase;
     const v = view(phase);
     drop.hidden = !v.drop;
+    if (ready) ready.hidden = !v.ready;
     consent.hidden = !v.consent;
     progress.hidden = !v.progress;
     cancelBtn.hidden = !v.cancel;
@@ -172,10 +190,11 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     if (!v.bytes) bar.removeAttribute('value');
   }
 
-  function showError(m: string, retry: boolean): void {
+  function showError(m: string, retry: boolean, device = false): void {
     errorBox.textContent = m;
     errorBox.hidden = false;
     retryBtn.hidden = !retry;
+    if (deviceRetry) deviceRetry.hidden = !device;
     live('alert', m, root);
   }
 
@@ -183,6 +202,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     errorBox.hidden = true;
     errorBox.textContent = '';
     retryBtn.hidden = true;
+    if (deviceRetry) deviceRetry.hidden = true;
     clearAlert(root);
   }
 
@@ -247,11 +267,11 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
    * The cut-out at work size: blur-fusion in its worker, which gets the pixels and the alpha transferred (no copy
    * stays here). When it fails (accepted degrade) both are made again and the photo's own colours are used.
    */
-  async function cutOut(bm: ImageBitmap, mask: Float32Array, read: ImageData | null): Promise<ImageData | null> {
+  async function cutOut(bm: ImageBitmap, m: Mask, read: ImageData | null): Promise<ImageData | null> {
     const px = read ?? workPixels(bm);
     if (!px) return null;
     const { width, height } = px;
-    const alpha = resizeMask(mask, SIZE, SIZE, width, height);
+    const alpha = resizeMask(m.mask, m.width, m.height, width, height);
     const { r1, r2 } = fusionRadii(Math.max(width, height));
     const req: FusionRequest = { rgba: px.data.buffer as ArrayBuffer, alpha: alpha.buffer as ArrayBuffer, width, height, r1, r2 };
     let out: ArrayBuffer | null = null;
@@ -272,7 +292,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     if (out) return new ImageData(new Uint8ClampedArray(out), width, height);
     const again = workPixels(bm);
     if (!again) return null;
-    return new ImageData(plainCutout(again.data, resizeMask(mask, SIZE, SIZE, width, height)) as Uint8ClampedArray<ArrayBuffer>, width, height);
+    return new ImageData(plainCutout(again.data, resizeMask(m.mask, m.width, m.height, width, height)) as Uint8ClampedArray<ArrayBuffer>, width, height);
   }
 
   /** A running engine for `be`: the live one, or loaded (cache or network) and started; null when handled (error, 취소). */
@@ -375,23 +395,24 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     }
     // Low-memory devices drop the engine after every photo; elsewhere the idle timer (re-armed above) does it.
     if (!keep) disposeEngine();
-    await finish(my, mask);
+    await finish(my, { mask, width: SIZE, height: SIZE }, COPY.finishing);
   }
 
-  async function finish(my: number, mask: Float32Array): Promise<void> {
+  /** The mask (the model's 512 one, or the cloud answer's alpha) -> the cut-out at work size, or nosubject. */
+  async function finish(my: number, m: Mask, refining: string): Promise<void> {
     if (!bitmap) return;
-    if (!validMask(mask)) return fail(my, COPY.engine);
-    if (!hasSubject(mask)) {
+    if (!validMask(m.mask)) return fail(my, COPY.engine);
+    if (!hasSubject(m.mask)) {
       clearAttempt(storage);
       setPhase('nosubject');
       say(COPY.nosubject);
       return;
     }
     setPhase('working');
-    busy(COPY.finishing);
+    busy(refining);
     const read = photoPx;
     photoPx = null;
-    const out = await cutOut(bitmap, mask, read);
+    const out = await cutOut(bitmap, m, read);
     if (my !== run) return;
     if (!out) return fail(my, COPY.crashed, true);
     clearAttempt(storage);
@@ -502,6 +523,30 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
       return fail(my, d2);
     }
     bitmap = d.src;
+    if (__BG_CLOUD__ && !deviceChosen()) {
+      // The cloud client is fetched now, while the user reads the panel (brief §4: loaded after the pick).
+      loadCloud().catch(() => undefined);
+      via = 'cloud';
+      setPhase('ready');
+      say(CLOUD.ready);
+      document.getElementById('bg-send')?.focus();
+      return;
+    }
+    return onDevice(my);
+  }
+
+  function loadCloud(): Promise<CloudModule> {
+    cloudModule ??= import('../../lib/bgremove/cloud').catch((err: unknown) => {
+      cloudModule = null;
+      throw err;
+    });
+    return cloudModule;
+  }
+
+  /** The C2 path for the open photo: a live or cached engine starts at once, otherwise the consent panel. */
+  async function onDevice(my: number): Promise<void> {
+    if (!bitmap || my !== run) return;
+    via = 'device';
     // A live engine is used as it is; after a WebGPU failure this page stays on WASM.
     backend = engine && !engine.disposed ? engine.backend : gpuFailed ? 'wasm' : await pickBackend();
     if (my !== run) return;
@@ -527,6 +572,70 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     void process(my, backend, input);
   }
 
+  /** C2-cloud: one press of 배경 지우기 = one request. Errors offer 다시 시도 and 기기에서 처리; nothing is retried here. */
+  async function sendCloud(my: number): Promise<void> {
+    const bm = bitmap;
+    if (!bm || my !== run) return;
+    via = 'cloud';
+    hideError();
+    setPhase('sending');
+    busy(CLOUD.sending);
+    abort = new AbortController();
+    const signal = abort.signal;
+    const later = setTimeout(() => {
+      if (my === run && phase === 'sending') busy(CLOUD.working);
+    }, SENT_AFTER_MS);
+    try {
+      let mod: CloudModule;
+      try {
+        mod = await loadCloud();
+      } catch {
+        return cloudFail(my, 'failed');
+      }
+      const copy = await mod.makeCopy(bm, (w, h) => {
+        const k = canvas2d(w, h);
+        return k && { canvas: k.c, g: k.g };
+      });
+      if (my !== run) return;
+      if (!copy) return cloudFail(my, 'failed');
+      const r = await mod.requestCutout(copy.bytes, signal);
+      if (my !== run) return;
+      abort = null;
+      if (!r.ok) return r.why === 'aborted' ? undefined : cloudFail(my, r.why);
+      setPhase('working');
+      busy(CLOUD.refining);
+      const m = await mod.decodeAlpha(r.blob, copy);
+      if (my !== run) return;
+      if (!m) return cloudFail(my, 'failed');
+      await finish(my, m, CLOUD.refining);
+    } finally {
+      clearTimeout(later);
+    }
+  }
+
+  function cloudFail(my: number, why: 'busy' | 'quota' | 'failed'): void {
+    if (my !== run) return;
+    abort = null;
+    if (why === 'quota') {
+      // Brief §4: the month's free quota is used up -> the on-device path, with a notice (not remembered).
+      showError(CLOUD.quota, false);
+      void onDevice(my);
+      return;
+    }
+    setPhase('error');
+    showError(why === 'busy' ? CLOUD.busy : CLOUD.failed, true, true);
+  }
+
+  /** "사진을 보내지 않고 기기에서 처리": remembered on this device; the open photo goes the C2 way. */
+  function toDevice(): void {
+    chooseDevice(true);
+    if (modeLine) modeLine.hidden = false;
+    hideError();
+    if (!bitmap) return toEmpty();
+    run++;
+    void onDevice(run);
+  }
+
   input.addEventListener('change', () => {
     const f = input.files?.[0];
     if (f) void openFile(f);
@@ -543,22 +652,42 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     if (f) void openFile(f);
   });
 
-  startBtn.addEventListener('click', () => start(run));
+  startBtn.addEventListener('click', () => {
+    hideError();
+    start(run);
+  });
   consentCancel.addEventListener('click', () => {
     toEmpty();
     input.focus();
   });
   cancelBtn.addEventListener('click', () => {
+    const sending = phase === 'sending';
     toEmpty();
-    say(COPY.cancelled);
+    say(__BG_CLOUD__ && sending ? CLOUD.sendCancelled : COPY.cancelled);
     input.focus();
   });
   retryBtn.addEventListener('click', () => {
     hideError();
     if (!bitmap) return toEmpty();
     run++;
-    start(run);
+    if (__BG_CLOUD__ && via === 'cloud') void sendCloud(run);
+    else start(run);
   });
+  if (__BG_CLOUD__) {
+    document.getElementById('bg-send')?.addEventListener('click', () => void sendCloud(run));
+    document.getElementById('bg-device')?.addEventListener('click', toDevice);
+    deviceRetry?.addEventListener('click', toDevice);
+    document.getElementById('bg-ready-cancel')?.addEventListener('click', () => {
+      toEmpty();
+      input.focus();
+    });
+    if (modeLine) modeLine.hidden = !deviceChosen();
+    document.getElementById('bg-mode-back')?.addEventListener('click', () => {
+      chooseDevice(false);
+      if (modeLine) modeLine.hidden = true;
+      input.focus();
+    });
+  }
   for (const el of root.querySelectorAll<HTMLInputElement>('input[name="bg-bg"], input[name="bg-format"]')) el.addEventListener('change', updateSave);
   compareBtn.addEventListener('click', () => {
     comparing = !comparing;

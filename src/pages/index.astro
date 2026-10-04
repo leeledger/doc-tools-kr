@@ -41,7 +41,8 @@ const jsonLd = [
       <p class="eyebrow">파일이 밖으로 안 나가요 · 가입 없음 · 무료</p>
       <h1>내야 하는 문서·사진, <br>용량과 규격에 딱 맞춰 드려요</h1>
       <p class="lead">지금 쓸 수 있는 도구: {liveNames()}.
-        사진과 서류는 내 폰·컴퓨터 안에서만 고쳐요. 어디로도 보내지 않아요.</p>
+        사진과 서류는 내 폰·컴퓨터 안에서만 고쳐요. 어디로도 보내지 않아요.{__BG_CLOUD__ && '*'}</p>
+      {__BG_CLOUD__ && <p class="hero-note">* 배경 지우기만 예외예요. 사진을 잠깐 보내 처리하고 바로 지워요. 원하면 보내지 않고 처리할 수도 있어요.</p>}
       <div class="hero-cta">
         <a class="btn primary" href="#tools">도구 둘러보기</a>
         <a class="btn ghost" href="#privacy">어떻게 안전한가요?</a>
@@ -102,7 +103,7 @@ const jsonLd = [
           주민등록번호가 담긴 서류, 계약서, 증명사진도 다른 곳을 거치지 않습니다.</p>
       </div>
       <ul class="points">
-        <li><strong>밖으로 보내지 않음</strong><span>파일은 인터넷으로 어디에도 보내지지 않습니다.</span></li>
+        <li><strong>밖으로 보내지 않음</strong><span>파일은 인터넷으로 어디에도 보내지지 않습니다.{__BG_CLOUD__ && ' (배경 지우기는 예외, 아래 설명)'}</span></li>
         <li><strong>저장 없음</strong><span>작업한 파일은 창을 닫으면 사라집니다.</span></li>
         <li><strong>설치·가입 없음</strong><span>PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있습니다. 한 번 쓴 도구는 인터넷을 끊어도 동작합니다. 비행기 모드에서 직접 확인해 보세요.</span></li>
       </ul>

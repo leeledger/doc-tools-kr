@@ -82,3 +82,6 @@ Built by `python tests/fixtures/build-bgremove.py` (export venv: numpy, Pillow, 
 | `meta.json` | `build-bgremove.py` | sizes, sources, Python area and GT IoU/MAE per fixture |
 
 All foregrounds and backgrounds of the photo fixtures are CC0 on Wikimedia Commons (pages in `meta.json`); the other spike GT images mix CC BY / CC BY-SA sources and stay local.
+
+## bgcloud/ (C2-cloud e2e)
+- `disc.webp`, `empty.webp`: drawn by `tests/fixtures/build-bgcloud.mjs` (no third-party content). The RGBA WebP answers that `tests/e2e/remove-background.cloud.spec.ts` gives for `/api/remove-bg`: the alpha of the spec's red-disc photo, and an empty alpha.

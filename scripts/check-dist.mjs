@@ -6,6 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
 import { autoframeOn } from './lib/autoframe.mjs';
+import { API_PATH as CLOUD_API, EXCEPTION_PAGES, EXCEPTION_RE, bgCloudOn, privacyGate } from './lib/bgcloud.mjs';
 import { bgRemoveOn } from './lib/bgremove.mjs';
 import { beaconPath } from './lib/beacon-path.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
@@ -177,6 +178,33 @@ if (!bgOn) {
     if (controller.some((f) => initial.has(f))) errors.push('the /remove-background/ controller (bg*.js) loads with the page');
     budget('remove-background controller (bg*.js, lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 14 * KB);
     if (/rel="(preload|modulepreload|prefetch)"[^>]*(onnxruntime|birefnet)/.test(html)) errors.push('remove-background/index.html preloads the engine or the model');
+  }
+}
+// C2-cloud (brief §7, §10, §11): the cloud path of 배경 지우기. Off: no call to /api/remove-bg in any file and no
+// exception wording on any page. On: the privacy gate (officer + contact), the exception wording on exactly the four
+// allowed pages, the 3항 section and officer line on /privacy/, and the cloud client never in the page's initial JS.
+// Always: the spike's test photos (public/spike/) never ship.
+for (const f of files) if (f.path.startsWith('spike/')) errors.push(`${f.path}: spike test photo in dist/`);
+for (const e of privacyGate(env)) errors.push(e);
+const cloudOn = bgCloudOn(env);
+const exceptionPages = [...pageHtml].filter(([, html]) => EXCEPTION_RE.test(html.replace(/<[^>]+>/g, ''))).map(([p]) => p);
+if (!cloudOn) {
+  for (const f of match(/\.(html|xml|txt|json|webmanifest|m?js)$/)) if (read(f).includes(CLOUD_API)) errors.push(`${f} calls ${CLOUD_API} in a build with PUBLIC_BG_CLOUD off`);
+  for (const p of exceptionPages) errors.push(`${p}: 배경 지우기 exception wording in a build with PUBLIC_BG_CLOUD off`);
+} else {
+  for (const p of exceptionPages) if (!EXCEPTION_PAGES.includes(p)) errors.push(`${p}: 배경 지우기 exception wording outside ${EXCEPTION_PAGES.join(', ')}`);
+  for (const p of EXCEPTION_PAGES) if (!exceptionPages.includes(p)) errors.push(`${p}: no 배경 지우기 exception wording in a build with PUBLIC_BG_CLOUD on`);
+  const privacy = pageHtml.get('privacy/index.html') ?? '';
+  if (!privacy.includes('id="bg"')) errors.push('privacy/index.html: no 배경 지우기 section (id="bg")');
+  if (!privacy.includes(env.PUBLIC_PRIVACY_OFFICER?.trim() || '\u0000')) errors.push('privacy/index.html: the 개인정보 보호책임자 is not named');
+  const bgHtml = pageHtml.get('remove-background/index.html');
+  const clients = match(/\.m?js$/).filter((f) => read(f).includes(CLOUD_API));
+  if (!clients.length) errors.push(`no script calls ${CLOUD_API} in a build with PUBLIC_BG_CLOUD on`);
+  // Brief §4: the cloud client is about 3 KB (1.3 KB gzip measured at C2-cloud).
+  budget('cloud client (cloud*.js, lazy)', clients.filter((f) => /^_astro\/cloud\.[\w-]{8}\.js$/.test(f)), 3 * KB);
+  if (bgHtml) {
+    const initial = new Set(initialJs(bgHtml));
+    for (const f of clients) if (initial.has(f)) errors.push(`${f}: the cloud client loads with /remove-background/ (it loads after the pick)`);
   }
 }
 // Test inputs never ship: no tests/ path and no file named like a committed corpus photo.

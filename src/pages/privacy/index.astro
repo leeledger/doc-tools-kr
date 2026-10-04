@@ -1,19 +1,27 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { SITE } from '../../data/site';
+import { CONTACT_EMAIL, PRIVACY_OFFICER, SITE } from '../../data/site';
 import { josa } from '../../lib/ui/josa';
-import { PRIVACY_REVISED } from '../../data/legal';
+import { PRIVACY_CLOUD, PRIVACY_REVISED, PRIVACY_V1 } from '../../data/legal';
 import { BEACON_ENABLED } from '../../lib/ui/beacon';
+import { downloadBytes } from '../../lib/bgremove/assets';
+import { aboutMB } from '../../tools/remove-background/copy';
 
 // Owner decision (Polish Q): a short, plain statement. No contact, operator or privacy-officer details while
 // the site takes no personal data; ads or the error beacon need a full policy first (check-dist enforces a
 // contact address for both). The anonymous error statistics section exists only while the beacon is on, so
 // the policy and the code cannot drift apart (Polish P.18).
-const n = (base: number): number => (BEACON_ENABLED && base >= 5 ? base + 1 : base);
+// C2-cloud (brief §7.1): with the 배경 지우기 cloud path on, section 3 says what is sent, to whom and how to refuse,
+// and the policy names the 개인정보 보호책임자 (owner-approved 2026-10-02; the build fails without the two values).
+// The items follow 개인정보 보호법 제28조의8 제2항 and 제30조 제1항 (law.go.kr, fetched 2026-10-02; BUILD-LOG C2-cloud).
+const cloud = __BG_CLOUD__;
+const n = (base: number): number => base + (cloud && base >= 3 ? 1 : 0) + (BEACON_ENABLED && base >= 5 ? 1 : 0);
+const deviceMB = aboutMB(Math.max(downloadBytes('webgpu'), downloadBytes('wasm')));
+const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
 ---
 <Base
   title={`개인정보 처리방침 | ${SITE.name}`}
-  description={`${SITE.name} 개인정보 처리방침입니다. 회원가입이 없고 개인정보를 받지 않으며, 파일은 내 폰·컴퓨터 안에서만 처리해 어디로도 보내지 않아요.`}
+  description={`${SITE.name} 개인정보 처리방침입니다. 회원가입이 없고 개인정보를 받지 않으며, 파일은 내 폰·컴퓨터 안에서만 처리해 어디로도 보내지 않아요.${cloud ? ' (배경 지우기만 예외)' : ''}`}
 >
   <div class="prose">
     <div class="wrap narrow">
@@ -23,25 +31,56 @@ const n = (base: number): number => (BEACON_ENABLED && base >= 5 ? base + 1 : ba
       <h2>1. 받는 개인정보가 없어요</h2>
       <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. 쿠키와 방문 분석 도구도 쓰지 않아요.</p>
 
-      <h2>2. 파일은 어디로도 보내지 않아요</h2>
+      <h2>2. 파일은 어디로도 보내지 않아요{cloud && ' (배경 지우기만 예외: 3항)'}</h2>
       <p>고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요. 운영자나 다른 곳으로 보내지 않고, 저장하지도 않아요. PDF 비밀번호도 처리하는 동안에만 쓰고 저장하거나 보내지 않아요. 창을 닫으면 모두 사라져요.</p>
 
-      <h2>3. 사이트를 여는 기록</h2>
+      {cloud && (
+        <>
+          <h2 id="bg">3. 배경 지우기에서 사진을 보내는 경우</h2>
+          <p>사진 배경 지우기에서 「사진을 보내지 않고 기기에서 처리」를 고르지 않고 「배경 지우기」를 누를 때만 해당해요.</p>
+          <ul>
+            <li><strong>목적:</strong> 사진의 배경을 지우기 위해서만 써요.</li>
+            <li><strong>항목:</strong> 고른 사진을 긴 변 1024픽셀 이하로 줄인 사본 1장. 사진 속 위치 정보 같은 부가 정보는 빼고 보내요. 이름·연락처 등은 받지 않아요. 사진에 얼굴이 나오면 그 얼굴도 포함돼요.</li>
+            <li><strong>처리와 보관:</strong> 처리하는 동안만 쓰고, 결과를 돌려준 즉시 지워요. {josa(SITE.name, '은/는')} 사진을 저장하지 않아요. Cloudflare는 사진을 AI 학습이나 서비스 개선에 쓰지 않는다고 밝히고 있어요. Cloudflare의 처리 기록 보관은 <a href={CF_POLICY} rel="noopener">Cloudflare 개인정보처리방침</a>을 따라요.</li>
+            <li><strong>처리 위탁:</strong> Cloudflare, Inc. (사진의 배경 지우기 처리)</li>
+          </ul>
+          <p><strong>국외 이전</strong></p>
+          <ul>
+            <li>받는 자: Cloudflare, Inc. (미국), <a href="mailto:privacyquestions@cloudflare.com">privacyquestions@cloudflare.com</a></li>
+            <li>국가: 미국 및 Cloudflare 처리 장치가 있는 나라 (실제 처리 위치는 요청을 받은 Cloudflare 거점에 따라 달라요)</li>
+            <li>시기·방법: 배경 지우기를 누를 때 암호화된 통신(HTTPS)으로</li>
+            <li>항목: 위 사본 1장</li>
+            <li>이용 목적: 사진의 배경 지우기</li>
+            <li>보유·이용 기간: 처리 직후 삭제 (Cloudflare의 처리 기록 보관은 Cloudflare 개인정보처리방침을 따라요)</li>
+            <li>거부 방법과 효과: 「기기에서 처리」를 고르면 사진을 보내지 않아요. 기능은 같지만 처음 한 번 {josa(deviceMB, '을/를')} 받아요.</li>
+          </ul>
+        </>
+      )}
+
+      <h2>{n(3)}. 사이트를 여는 기록</h2>
       <p>이 사이트는 호스팅 업체 Cloudflare를 통해 제공돼요. 사이트를 여는 기록(접속 기록: IP 주소, 쓰는 기기와 앱의 종류 등)은 Cloudflare가 보안과 운영을 위해 잠시 보관할 수 있어요. 자세한 내용은 <a href="https://www.cloudflare.com/ko-kr/privacypolicy/" rel="noopener">Cloudflare 개인정보 처리방침</a>을 참고해 주세요.</p>
 
-      <h2>4. 광고</h2>
+      <h2>{n(4)}. 광고</h2>
       <p>지금은 광고가 없어요. 광고(Google AdSense 등)를 싣게 되면, 그 전에 이 방침을 고치고 필요한 동의 절차를 먼저 마련할게요.</p>
 
       {BEACON_ENABLED && (
         <>
-          <h2>5. 익명 오류 통계</h2>
+          <h2>{n(5) - 1}. 익명 오류 통계</h2>
           <p>도구가 처리 도중 실패하면(처리 도구를 불러오지 못했거나 처리할 양이 너무 많은 경우 등) 열 번에 한 번꼴로 익명 오류 기록을 이 사이트로 보내요. 기록에는 도구 이름, 실패한 단계, 오류 종류, 쓰는 앱의 종류와 버전, 기기 종류(휴대폰 또는 PC), 사이트 버전만 담겨요. 파일 이름, 크기, 내용과 IP 주소는 담지 않아요.</p>
         </>
       )}
 
-      <h2>{n(5)}. 변경 이력</h2>
+      {cloud && (
+        <>
+          <h2>{n(5)}. 개인정보 보호책임자</h2>
+          <p>이름 {PRIVACY_OFFICER}, 연락처 <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+        </>
+      )}
+
+      <h2>{n(5) + (cloud ? 1 : 0)}. 변경 이력</h2>
       <ul>
-        <li>{PRIVACY_REVISED}: 쉬운 말로 다시 쓰고 서비스 이름을 {josa(SITE.name, '으로/로')} 바꿈, 이용약관 신설</li>
+        {cloud && <li>{PRIVACY_CLOUD}: 배경 지우기에서 사진을 보내는 경우(3항)와 개인정보 보호책임자를 더함</li>}
+        <li>{PRIVACY_V1}: 쉬운 말로 다시 쓰고 서비스 이름을 {josa(SITE.name, '으로/로')} 바꿈, 이용약관 신설</li>
         <li>2026년 9월 29일: 처음 제정</li>
       </ul>
     </div>

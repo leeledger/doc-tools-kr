@@ -1,21 +1,9 @@
-// SPIKE (branch c2-cloud only, never main): cloud background removal probe.
-// Brief: handoff/ARCHITECT-BRIEF-C2-CLOUD.md. No storage, no logging of image bytes.
-//
-// GET  /api/remove-bg?probe=1                 -> which runtime features exist (no image work)
-// GET  /api/remove-bg?src=/spike/s01.jpg&f=  -> cf.image { segment: "foreground" } on a same-origin
-//                                                static test photo (fetch subrequest path; needs no binding)
-// POST /api/remove-bg  (body = image bytes)   -> forwarded to the docttak-bg Worker via service binding BG
-//                                                (Pages Functions have no Images binding; 501 without BG)
+// POST /api/remove-bg (C2-cloud, brief handoff/ARCHITECT-BRIEF-C2-CLOUD.md §3, §5, §6). Pages Function: cheap guards,
+// then the request goes unchanged to the docttak-bg Worker over the service binding BG (Pages Functions have no
+// Images binding). public/_routes.json runs Functions on /api/* only, so static pages stay free.
+// Privacy: no storage, no logging, no request data in any answer; the body is streamed through, never read here.
 
-interface ImagesBinding {
-  input(stream: ReadableStream | ArrayBuffer): {
-    transform(o: Record<string, unknown>): {
-      output(o: { format: string }): Promise<{ response(o?: { headers?: Record<string, string> }): Response }>;
-    };
-  };
-}
-interface Env {
-  IMAGES?: ImagesBinding;
+export interface Env {
   BG?: { fetch(r: Request): Promise<Response> };
 }
 interface Ctx {
@@ -23,51 +11,37 @@ interface Ctx {
   env: Env;
 }
 
-const MAX_BYTES = 2_000_000;
+/** The page sends a ≤ 1024 px JPEG of about 150-300 KB; the Worker checks the same cap. */
+export const MAX_BYTES = 2_000_000;
 const TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const NO_STORE = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
+const HEADERS = {
+  'Cache-Control': 'no-store, private',
+  'CDN-Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Robots-Tag': 'noindex',
+};
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
+function json(status: number, error: string, extra: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify({ error }), {
     status,
-    headers: { ...NO_STORE, 'Content-Type': 'application/json; charset=utf-8' },
+    headers: { ...HEADERS, ...extra, 'Content-Type': 'application/json; charset=utf-8' },
   });
 }
 
-export async function onRequestGet({ request, env }: Ctx): Promise<Response> {
-  const url = new URL(request.url);
-  if (url.searchParams.get('probe') === '1') {
-    return json(200, { images: typeof env.IMAGES, colo: (request as unknown as { cf?: { colo?: string } }).cf?.colo ?? null });
+export async function onRequest({ request, env }: Ctx): Promise<Response> {
+  if (request.method !== 'POST') return json(405, 'method', { Allow: 'POST' });
+  // Only our own page may call it: browsers set Sec-Fetch-Site on every request (a cross-site form post says
+  // "cross-site", a script on another site cannot change it).
+  if (request.headers.get('sec-fetch-site') !== 'same-origin') return json(403, 'origin');
+  const len = Number(request.headers.get('content-length') ?? '');
+  if (!Number.isInteger(len) || len < 1 || len > MAX_BYTES) return json(413, 'size');
+  const type = (request.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
+  if (!TYPES.has(type)) return json(415, 'type');
+  // No binding (production before the owner sets it): the page shows its "지금은 처리할 수 없어요" line.
+  if (!env.BG) return json(503, 'engine');
+  try {
+    return await env.BG.fetch(request);
+  } catch {
+    return json(502, 'engine');
   }
-  const src = url.searchParams.get('src') ?? '';
-  if (!/^\/spike\/[a-z0-9]+\.jpg$/.test(src)) return json(400, { error: 'src' });
-  const f = url.searchParams.get('f') ?? '';
-  const image: Record<string, unknown> = { segment: 'foreground' };
-  if (f === 'png' || f === 'webp' || f === 'avif' || f === 'json') image.format = f;
-  if (f === 'webp') image.quality = 100;
-  const bust = url.searchParams.get('v');
-  const target = new URL(src, url.origin);
-  if (bust) target.searchParams.set('v', bust);
-  const t0 = Date.now();
-  const res = await fetch(target.toString(), { cf: { image } } as RequestInit);
-  const ms = Date.now() - t0;
-  const headers = new Headers(res.headers);
-  headers.set('Cache-Control', 'no-store');
-  headers.set('Server-Timing', `seg;dur=${ms}`);
-  headers.set('X-Spike-Status', String(res.status));
-  return new Response(res.body, { status: res.status, headers });
-}
-
-export async function onRequestPost({ request, env }: Ctx): Promise<Response> {
-  const type = (request.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
-  if (!TYPES.has(type)) return json(415, { error: 'type' });
-  const len = Number(request.headers.get('content-length') ?? '0');
-  if (!len || len > MAX_BYTES) return json(413, { error: 'size' });
-  if (request.headers.get('sec-fetch-site') !== 'same-origin') return json(403, { error: 'origin' });
-  // Service binding to the docttak-bg Worker (brief §3). The body is streamed through, never stored.
-  if (env.BG) return env.BG.fetch(request);
-  if (!env.IMAGES || !request.body) return json(501, { error: 'no-images-binding' });
-  const t0 = Date.now();
-  const out = await env.IMAGES.input(request.body).transform({ segment: 'foreground' }).output({ format: 'image/png' });
-  return out.response({ headers: { ...NO_STORE, 'Server-Timing': `seg;dur=${Date.now() - t0}` } });
 }

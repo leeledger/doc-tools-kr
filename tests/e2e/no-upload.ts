@@ -2,6 +2,9 @@
 // records every request of the browser context (including worker requests) and every websocket,
 // then fails the test if anything could have carried data off the device.
 import { test as base, expect, type BrowserContext, type Page, type Request, type Response } from '@playwright/test';
+import { uploadProblems, type AllowedUpload } from './upload-guard';
+
+export type { AllowedUpload };
 
 export interface NetworkLog {
   requests: Request[];
@@ -17,33 +20,19 @@ export function recordNetwork(context: BrowserContext, page: Page): NetworkLog {
   return log;
 }
 
-export function expectNoUpload(log: NetworkLog, baseURL: string, navigated = true): void {
-  const origin = new URL(baseURL).origin;
-  const problems: string[] = [];
-  for (const r of log.requests) {
-    const url = r.url();
-    const scheme = url.slice(0, url.indexOf(':') + 1);
-    if (!['GET', 'HEAD'].includes(r.method())) problems.push(`${r.method()} ${url}`);
-    if (r.postDataBuffer() !== null) problems.push(`request body on ${url}`);
-    if (scheme !== 'blob:' && scheme !== 'data:' && new URL(url).origin !== origin) problems.push(`third-party ${url}`);
-  }
-  for (const ws of log.websockets) problems.push(`websocket ${ws}`);
-  for (const r of log.responses) {
-    const url = r.url();
-    if (!url.startsWith(origin)) continue;
-    const csp = r.headers()['content-security-policy'] ?? '';
-    if (!/(^|;)\s*connect-src 'self'\s*(;|$)/.test(csp)) problems.push(`no CSP connect-src 'self' on ${url}`);
-  }
-  expect(problems, 'network activity that could carry file data').toEqual([]);
+export function expectNoUpload(log: NetworkLog, baseURL: string, navigated = true, allowUpload: readonly AllowedUpload[] = []): void {
+  expect(uploadProblems(log, baseURL, allowUpload), 'network activity that could carry file data').toEqual([]);
   if (navigated) expect(log.requests.length, 'the recorder saw the page load').toBeGreaterThan(0);
 }
 
-export const test = base.extend<{ network: NetworkLog }>({
+export const test = base.extend<{ network: NetworkLog; allowUpload: AllowedUpload[] }>({
+  // Empty for every spec: only the 배경 지우기 cloud spec sets it (test.use), for its one endpoint.
+  allowUpload: [[], { option: true }],
   network: [
-    async ({ context, page, baseURL }, use) => {
+    async ({ context, page, baseURL, allowUpload }, use) => {
       const log = recordNetwork(context, page);
       await use(log);
-      expectNoUpload(log, baseURL!, page.url() !== 'about:blank');
+      expectNoUpload(log, baseURL!, page.url() !== 'about:blank', allowUpload);
     },
     { auto: true },
   ],

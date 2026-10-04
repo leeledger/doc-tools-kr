@@ -13,7 +13,7 @@ import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import { downloadBytes } from '../../lib/bgremove/assets';
-import { COPY, FIT_LINE, NOT_FOR_ID, NOT_FOR_ID_SOURCE, STAMP_LINK_TEXT } from './copy';
+import { aboutMB, CLOUD, COPY, FIT_LINE, NOT_FOR_ID, NOT_FOR_ID_SOURCE, STAMP_LINK_TEXT } from './copy';
 // Page-only styles, inlined (the /stamp-signature/ pattern): no other page carries them.
 import bgCss from './bg.css?inline';
 
@@ -21,7 +21,13 @@ const tool = getTool('remove-background');
 const stamp = getTool('stamp-signature');
 const jsonLd = toolJsonLd(tool, Astro.site);
 const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
-const firstTime = COPY.firstTime(Math.max(downloadBytes('webgpu'), downloadBytes('wasm')));
+const deviceBytes = Math.max(downloadBytes('webgpu'), downloadBytes('wasm'));
+const firstTime = COPY.firstTime(deviceBytes);
+// C2-cloud (brief §4, §7.3): with the cloud path on, 배경 지우기 sends a reduced copy by default; the notice above the
+// picker says so, and "사진을 보내지 않고 기기에서 처리" (the C2 engine) is one press away in every state.
+const cloud = __BG_CLOUD__;
+const deviceMB = aboutMB(deviceBytes);
+const [noticeA, noticeB, noticeC] = CLOUD.noticeDevice(deviceMB);
 const backgrounds = [
   { value: 'transparent', label: '투명' },
   { value: 'white', label: '흰색' },
@@ -40,7 +46,7 @@ const limits = [
   <section class="tool-hero" aria-labelledby="tool-title">
     <div class="wrap narrow">
       <h1 id="tool-title">{tool.h1}</h1>
-      <p class="lead">사진을 고르면 사람이나 물건만 남기고 배경을 지워, 투명한 PNG나 흰색·파란색 배경 사진으로 저장합니다. 사진은 이 기기 안에서만 처리됩니다.</p>
+      <p class="lead">사진을 고르면 사람이나 물건만 남기고 배경을 지워, 투명한 PNG나 흰색·파란색 배경 사진으로 저장합니다.{!cloud && ' 사진은 이 기기 안에서만 처리됩니다.'}</p>
     </div>
   </section>
 
@@ -49,17 +55,35 @@ const limits = [
       <div class="bg" id="bg-tool" data-state="empty">
         <div class="bg-intro">
           <p>{FIT_LINE}</p>
-          <p>{firstTime} <a href={`/${stamp.slug}/`}>{STAMP_LINK_TEXT}</a></p>
+          <p>{!cloud && `${firstTime} `}<a href={`/${stamp.slug}/`}>{STAMP_LINK_TEXT}</a></p>
+          {cloud && (
+            <div class="notice bg-notice" id="bg-notice" role="note">
+              <p>{CLOUD.notice} <a href="/privacy/#bg">{CLOUD.noticeMore}</a></p>
+              <p>{noticeA}<strong>{noticeB}</strong>{noticeC}</p>
+            </div>
+          )}
         </div>
         <p class="error-box" id="bg-crash" role="alert" hidden></p>
 
         <div class="drop" id="bg-drop">
-          <p class="bg-privacy">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+          {!cloud && <p class="bg-privacy">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>}
+          {cloud && <p class="bg-mode" id="bg-mode" hidden>{CLOUD.modeLine} <button type="button" class="link-btn" id="bg-mode-back">{CLOUD.modeBack}</button></p>}
           <input id="bg-input" class="file-input" type="file" accept={accept}>
           <label class="btn primary" for="bg-input">사진 선택</label>
           <p class="drop-hint">또는 여기에 사진 한 장을 끌어다 놓으세요 (JPG·PNG·WebP)</p>
           <p class="drop-hint-touch">휴대폰의 사진 보관함이나 「파일」 앱에서 고를 수 있습니다 (JPG·PNG·WebP).</p>
         </div>
+
+        {cloud && (
+          <div class="bg-panel" id="bg-ready" role="group" aria-labelledby="bg-ready-text" hidden>
+            <p id="bg-ready-text">{CLOUD.ready}</p>
+            <div class="bg-row">
+              <button type="button" class="btn primary" id="bg-send" aria-describedby="bg-notice">{CLOUD.send}</button>
+              <button type="button" class="btn ghost" id="bg-ready-cancel">취소</button>
+            </div>
+            <p><button type="button" class="link-btn" id="bg-device">{CLOUD.device(deviceMB)}</button></p>
+          </div>
+        )}
 
         <div class="bg-panel" id="bg-consent" role="group" aria-labelledby="bg-consent-text" hidden>
           <p id="bg-consent-text"></p>
@@ -81,7 +105,10 @@ const limits = [
         <p class="hint" id="bg-fallback" role="status" hidden></p>
 
         <p class="error-box" id="bg-error" role="alert" data-live="alert" hidden></p>
-        <div class="bg-row"><button type="button" class="btn primary" id="bg-retry" hidden>다시 시도</button></div>
+        <div class="bg-row">
+          <button type="button" class="btn primary" id="bg-retry" hidden>다시 시도</button>
+          {cloud && <button type="button" class="btn ghost" id="bg-device-retry" hidden>{CLOUD.deviceButton}</button>}
+        </div>
 
         <div class="bg-panel" id="bg-nosubject" role="group" aria-labelledby="bg-nosubject-text" hidden>
           <p id="bg-nosubject-text"><strong>{COPY.nosubject}</strong></p>
@@ -139,7 +166,7 @@ const limits = [
     <div class="wrap narrow">
       <h2 id="howto-title">사용 방법</h2>
       <ol class="steps">
-        <li><strong>사진 고르기</strong><span>사람이나 물건이 크게 나온 사진을 고릅니다. 처음 한 번은 배경을 지우는 프로그램을 받을지 먼저 묻습니다.</span></li>
+        <li><strong>사진 고르기</strong><span>{cloud ? '사람이나 물건이 크게 나온 사진을 고르고 「배경 지우기」를 누릅니다. 사진을 보내고 싶지 않으면 「사진을 보내지 않고 기기에서 처리」를 고릅니다.' : '사람이나 물건이 크게 나온 사진을 고릅니다. 처음 한 번은 배경을 지우는 프로그램을 받을지 먼저 묻습니다.'}</span></li>
         <li><strong>결과 확인</strong><span>배경을 지운 결과를 투명·흰색·파란색 배경에서 보고, 「원본과 비교」로 원래 사진과 비교합니다.</span></li>
         <li><strong>내려받기</strong><span>투명 배경은 누끼.png, 흰색·파란색 배경은 누끼-흰배경.jpg처럼 저장됩니다.</span></li>
       </ol>
@@ -150,7 +177,11 @@ const limits = [
     <div class="wrap narrow">
       <h2 id="why-title">안전한 이유</h2>
       <ul class="points">
-        <li><strong>밖으로 보내지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 보내지지 않습니다. 처음에는 배경을 지우는 프로그램만 받습니다.</span></li>
+        {cloud ? (
+          <li><strong>줄인 사본만 잠깐 보냅니다</strong><span>긴 변 1024픽셀 이하로 줄인 사본 1장만 보내 배경을 지우고, 결과를 받으면 바로 지웁니다. 위치 정보 같은 부가 정보는 빼고 보냅니다. 보내고 싶지 않으면 기기에서 처리할 수 있습니다.</span></li>
+        ) : (
+          <li><strong>밖으로 보내지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 보내지지 않습니다. 처음에는 배경을 지우는 프로그램만 받습니다.</span></li>
+        )}
         <li><strong>저장하지 않습니다</strong><span>만든 사진은 내려받은 파일에만 남고, 창을 닫으면 사라집니다.</span></li>
         <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
       </ul>

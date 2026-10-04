@@ -56,6 +56,31 @@ export const COPY = {
   saved: (name: string) => `${name} 파일을 내려받아요.`,
 } as const;
 
+/**
+ * C2-cloud (brief §4 and §7.3, owner-approved 2026-10-02): the cloud path's lines. `deviceMB` is the page's real
+ * first download (aboutMB), where the brief says "약 100 MB".
+ */
+export const CLOUD = {
+  notice: '배경 지우기를 누르면 사진을 작게 줄인 사본 1장을 Cloudflare(미국 회사)로 보내 배경을 지우고, 결과를 받으면 바로 지워요. 문서딱은 사진을 저장하지 않아요.',
+  noticeMore: '자세히',
+  noticeDevice: (deviceMB: string) => ['보내고 싶지 않으면 ', '사진을 보내지 않고 기기에서 처리', `를 고르세요 (처음 한 번 ${deviceMB}).`] as const,
+  send: '배경 지우기',
+  device: (deviceMB: string) => `사진을 보내지 않고 기기에서 처리 (처음 한 번 ${deviceMB} 받기)`,
+  /** Builder copy (not in the brief): the ready panel's line. */
+  ready: '사진을 골랐어요. 배경 지우기를 누르세요.',
+  sending: '사진을 보내는 중…',
+  working: '배경을 지우는 중… (보통 5초쯤)',
+  refining: '가장자리를 다듬는 중…',
+  busy: '잠시 사용이 많아요. 1분 뒤 다시 해 보세요.',
+  quota: '이번 달 무료 처리량이 다 찼어요. 이 기기에서 처리할 수 있어요.',
+  failed: '지금은 처리할 수 없어요. 다시 시도하거나 기기에서 처리해 보세요.',
+  deviceButton: '기기에서 처리',
+  /** Builder copy (not in the brief): 취소 while sending, and the remembered choice with its way back. */
+  sendCancelled: '보내기를 멈췄어요.',
+  modeLine: '사진을 보내지 않고 기기에서 처리하도록 골라 두었어요.',
+  modeBack: '사진을 보내서 처리하기로 바꾸기',
+} as const;
+
 /** "600×450픽셀" (docs/COPY.md). */
 export function dims(w: number, h: number): string {
   return `${w.toLocaleString('ko-KR')}×${h.toLocaleString('ko-KR')}픽셀`;

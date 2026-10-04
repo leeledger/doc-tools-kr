@@ -82,6 +82,7 @@ a { color: inherit; }
   margin: 0; font-size: clamp(32px, 5.4vw, 54px); line-height: 1.22; letter-spacing: -0.03em; font-weight: 800;
 }
 .lead { margin: 22px 0 0; max-width: 640px; font-size: clamp(17px, 2vw, 19px); color: var(--muted); }
+.hero-note { margin: 10px 0 0; max-width: 640px; font-size: 14px; color: var(--muted); }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
 
 .btn {

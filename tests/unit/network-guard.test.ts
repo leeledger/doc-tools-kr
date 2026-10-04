@@ -18,9 +18,13 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
  * - lib/bgremove/assets.ts: GETs of the versioned /vendor/onnxruntime-web/ engine parts and the
  *   /vendor/birefnet-lite-512/ model parts + manifest (Sprint C, C2), only after the user agreed; the photo stays in
  *   the page and its workers.
+ * - lib/bgremove/cloud.ts (C2-cloud, the one exception to "no file bytes leave the device", owner-approved
+ *   2026-10-02): one same-origin POST of a <= 1024 px JPEG copy to /api/remove-bg, after the user pressed 배경 지우기,
+ *   only in a build with PUBLIC_BG_CLOUD on (dead code otherwise; check-dist proves the flag-off bundle never names
+ *   the endpoint). The test below pins it to that one call.
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
-const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts', 'lib/bgremove/cloud.ts'];
 /** sendBeacon only in the error-beacon stub, which is off (and dropped from the bundle) unless configured. */
 const BEACON_ALLOWLIST: string[] = ['lib/ui/beacon.ts'];
 
@@ -59,6 +63,18 @@ describe('no network APIs in src/', () => {
       .filter((f) => /\bfetch\s*\(/.test(readFileSync(f, 'utf8')))
       .map((f) => relative(SRC, f).split('\\').join('/'));
     expect(hits.filter((h) => h.startsWith('lib/hwp/')).sort()).toEqual(['lib/hwp/pdf/font-source.ts', 'lib/hwp/wasm-browser.ts']);
+  });
+
+  it('the 배경 지우기 cloud client makes one fetch, a POST to the same-origin /api/remove-bg, loaded only behind __BG_CLOUD__', () => {
+    const src = readFileSync(join(SRC, 'lib', 'bgremove', 'cloud.ts'), 'utf8');
+    expect(src.match(/\bfetch\s*\(/g)).toHaveLength(1);
+    expect(src).toMatch(/export const API_PATH = '\/api\/remove-bg';/);
+    expect(src).toMatch(/fetcher\(API_PATH, \{\s*method: 'POST'/);
+    expect(src).not.toMatch(/https?:\/\//);
+    const importers = all.filter((f) => readFileSync(f, 'utf8').includes('lib/bgremove/cloud')).map((f) => relative(SRC, f).split('\\').join('/'));
+    expect(importers).toEqual(['tools/remove-background/bg.ts']);
+    const bg = readFileSync(join(SRC, 'tools', 'remove-background', 'bg.ts'), 'utf8');
+    expect(bg).toMatch(/if \(__BG_CLOUD__ && !deviceChosen\(\)\) \{/);
   });
 
   it('uses sendBeacon only in the beacon stub', () => {

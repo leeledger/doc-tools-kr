@@ -5,6 +5,7 @@
 //
 //   npm run regress:bgremove -- --fixtures-only     (CI) the committed CC0 fixtures, tests/fixtures/bgremove/
 //   npm run regress:bgremove                         (owner PC) + the spike sets: 16 GT and the 49 real photos
+//   npm run regress:bgremove -- --engine cloud       (owner PC, never CI) the cloud path against GT: bgremove-cloud.mjs
 //   options: --backend wasm|webgpu|auto (default auto: WebGPU when Chromium offers an adapter), --channel chrome,
 //            --opt all|basic|disabled (session graph optimisation; default: the page's OPT_LEVEL), --only a01,b02
 //
@@ -33,6 +34,11 @@ const SPIKE = process.env.BGREMOVE_SPIKE ?? 'C:/dev/doc-tools-kr/spikes/bg-remov
 const PARITY = join(root, 'scripts', 'model', 'birefnet', 'out', `parity-${EXPORT}`, 'masks_fp16');
 const OFF_TOPIC = new Set(['l04']);
 const GATE = { browserMean: 0.002, fixtureDelta: 0.005, gtMae: 0.005, gtIou: 0.94, emptyMax: 3, fusionMs: 1500 };
+
+// C2-cloud: --engine cloud measures the Cloudflare path instead (owner PC only; scripts/regress/bgremove-cloud.mjs).
+if (arg('--engine') === 'cloud') {
+  await import('./bgremove-cloud.mjs');
+}
 
 if (!existsSync(join(root, 'public', 'vendor', 'birefnet-lite-512', EXPORT, 'model.part0'))) {
   console.error('regress:bgremove: public/vendor/ has no model. Run `PUBLIC_BG_REMOVE=1 node scripts/copy-vendor.mjs` first.');

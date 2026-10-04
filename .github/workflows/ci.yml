@@ -93,6 +93,16 @@ jobs:
         run: mv dist dist-keep && npm run build && mv dist dist-bg && mv dist-keep dist
         env:
           PUBLIC_BG_REMOVE: '1'
+      # C2-cloud: the cloud path of 배경 지우기 (PUBLIC_BG_CLOUD=1 needs the privacy officer and contact) goes to
+      # dist-bgcloud/ for the cloud-<project> projects, in all five browsers. /api/remove-bg is answered by page.route
+      # fixtures; no test reaches Cloudflare.
+      - name: Build (배경 지우기 cloud on → dist-bgcloud)
+        run: mv dist dist-keep && npm run build && mv dist dist-bgcloud && mv dist-keep dist
+        env:
+          PUBLIC_BG_REMOVE: '1'
+          PUBLIC_BG_CLOUD: '1'
+          PUBLIC_PRIVACY_OFFICER: '이종림'
+          PUBLIC_CONTACT_EMAIL: 'robotncoding@kakao.com'
       - name: Install Playwright browser
         run: |
           case "${{ matrix.project }}" in
@@ -103,13 +113,13 @@ jobs:
       - name: E2E (no-upload assertion, axe)
         run: |
           if [ "${{ matrix.project }}" = chromium ]; then
-            npx playwright test --project=chromium --project=manual-chromium --project=bg-chromium
+            npx playwright test --project=chromium --project=manual-chromium --project=bg-chromium --project=cloud-chromium
           elif [ "${{ matrix.project }}" = mobile-safari ]; then
-            npx playwright test --project=mobile-safari --project=bg-mobile-safari
+            npx playwright test --project=mobile-safari --project=bg-mobile-safari --project=cloud-mobile-safari
           elif [ "${{ matrix.project }}" = firefox ]; then
-            npx playwright test --project=firefox --project=manual-firefox
+            npx playwright test --project=firefox --project=manual-firefox --project=cloud-firefox
           else
-            npx playwright test --project=${{ matrix.project }}
+            npx playwright test --project=${{ matrix.project }} --project=cloud-${{ matrix.project }}
           fi
       - uses: actions/upload-artifact@v4
         if: failure()

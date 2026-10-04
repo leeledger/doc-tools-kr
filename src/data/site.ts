@@ -45,6 +45,11 @@ const env = (v: unknown): string | undefined => (typeof v === 'string' && v.trim
  * the footer shows it; an invalid value fails the build (scripts/check-dist.mjs).
  */
 export const CONTACT_EMAIL = env(import.meta.env.PUBLIC_CONTACT_EMAIL);
+/**
+ * 개인정보 보호책임자 (C2-cloud, brief §7.1). Published only on /privacy/ and only with the 배경 지우기 cloud path on;
+ * the build fails without it then (scripts/lib/bgcloud.mjs privacyGate).
+ */
+export const PRIVACY_OFFICER = env(import.meta.env.PUBLIC_PRIVACY_OFFICER);
 /** Optional; rendered only when set. */
 export const BIZ_REG_NO = env(import.meta.env.PUBLIC_BIZ_REG_NO);
 
@@ -76,12 +81,15 @@ export interface SharePreview {
 
 /** The share preview of a page path (src/data/og.json; unlisted paths take "*"). */
 export function sharePreview(path: string, site: URL | string): SharePreview {
-  const pages = og.pages as Record<string, { image: string; description: string }>;
+  const pages = og.pages as Record<string, { image: string; description: string; cloud?: { description: string } }>;
   const entry = pages[path] ?? pages['*']!;
-  const img = (og.images as Record<string, { title: string; line: string }>)[entry.image]!;
+  const img = (og.images as Record<string, { title: string; line: string; cloudLine?: string }>)[entry.image]!;
+  // C2-cloud: with the 배경 지우기 cloud path on, its preview no longer says the photo stays on the device.
+  const description = (__BG_CLOUD__ && entry.cloud ? entry.cloud.description : entry.description).replace('{tools}', liveNames());
+  const line = __BG_CLOUD__ && img.cloudLine ? img.cloudLine : img.line;
   return {
     image: new URL(`/brand/og-${entry.image}.png`, site).href,
-    description: entry.description.replace('{tools}', liveNames()),
-    alt: `${SITE.name}: ${img.title}. ${img.line}`,
+    description,
+    alt: `${SITE.name}: ${img.title}. ${line}`,
   };
 }

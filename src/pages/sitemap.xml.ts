@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { LIVE_TOOLS } from '../data/tools';
-import { LEGAL_UPDATED } from '../data/legal';
+import { LEGAL_UPDATED, PRIVACY_TERMS_UPDATED } from '../data/legal';
 import { guidePath, hubs, publishedGuides } from '../data/guides';
 
 // Every indexable page with its lastmod (Growth G.3). Never a query URL: deep links canonicalize to the tool page.
@@ -15,8 +15,8 @@ export const GET: APIRoute = async ({ site }) => {
     ...tools,
     ...guideIndex,
     ...guideRows,
-    ['/privacy/', LEGAL_UPDATED],
-    ['/terms/', LEGAL_UPDATED],
+    ['/privacy/', PRIVACY_TERMS_UPDATED],
+    ['/terms/', PRIVACY_TERMS_UPDATED],
     ['/licenses/', LEGAL_UPDATED],
   ];
   const urls = rows.map(([p, d]) => `  <url><loc>${new URL(p, site).href}</loc><lastmod>${d}</lastmod></url>`).join('\n');

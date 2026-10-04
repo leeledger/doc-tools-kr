@@ -223,12 +223,16 @@ export function buildIco(pngs) {
 /** Share images that ship only with their release flag on (Sprint C, C2: PUBLIC_BG_REMOVE). */
 export const FLAGGED_IMAGES = { 'remove-background': 'bgRemove' };
 
-/** Every output, keyed by its path under public/. `flags.bgRemove`: the /remove-background/ image ships (default off). */
-export function renderBrand(domain = ogDomain(), flags = { bgRemove: false }) {
+/**
+ * Every output, keyed by its path under public/. `flags.bgRemove`: the /remove-background/ image ships (default off);
+ * `flags.bgCloud`: it carries the cloud-path line.
+ */
+export function renderBrand(domain = ogDomain(), flags = /** @type {{ bgRemove?: boolean, bgCloud?: boolean }} */ ({ bgRemove: false, bgCloud: false })) {
   const ogImages = Object.fromEntries(
     Object.entries(OG.images)
       .filter(([name]) => !(name in FLAGGED_IMAGES) || flags[FLAGGED_IMAGES[name]])
-      .map(([name, image]) => [`brand/og-${name}.png`, ogImage(image, domain)]),
+      // C2-cloud: with the cloud path on, the 배경 지우기 image takes its cloudLine (no "내 폰·PC 안에서만").
+      .map(([name, image]) => [`brand/og-${name}.png`, ogImage(flags.bgCloud && image.cloudLine ? { ...image, line: image.cloudLine } : image, domain)]),
   );
   return {
     'favicon.ico': buildIco([16, 32, 48].map((size) => ({ size, data: icon(size) }))),
@@ -245,7 +249,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   mkdirSync(join(pub, 'brand'), { recursive: true });
   const { publicEnv } = await import('./lib/dist.mjs');
   const { bgRemoveOn } = await import('./lib/bgremove.mjs');
-  const out = renderBrand(ogDomain(), { bgRemove: bgRemoveOn(publicEnv().PUBLIC_BG_REMOVE) });
+  const { bgCloudOn } = await import('./lib/bgcloud.mjs');
+  const env = publicEnv();
+  const out = renderBrand(ogDomain(), { bgRemove: bgRemoveOn(env.PUBLIC_BG_REMOVE), bgCloud: bgCloudOn(env) });
   // A share image whose page entry was removed (or the old single og.png) must not ship.
   for (const f of readdirSync(join(pub, 'brand'))) if (/^og.*\.png$/.test(f) && !(`brand/${f}` in out)) rmSync(join(pub, 'brand', f));
   for (const [path, data] of Object.entries(out)) writeFileSync(join(pub, path), data);

@@ -18,6 +18,15 @@ const MANUAL = existsSync('dist-noauto/id-photo/index.html');
 const BG_PORT = Number(process.env.E2E_BG_PORT ?? 4182);
 const BG = existsSync('dist-bg/remove-background/index.html');
 const BG_SPEC = /remove-background\.spec\.ts$/;
+/**
+ * C2-cloud: the cloud path of 배경 지우기 exists only in a build with PUBLIC_BG_REMOVE=1 and PUBLIC_BG_CLOUD=1 (plus the
+ * privacy officer and contact), built into dist-bgcloud/. Its spec runs there in all five browsers (cloud-*), and
+ * nowhere else. /api/remove-bg is answered by page.route fixtures: no test reaches Cloudflare.
+ */
+const CLOUD_PORT = Number(process.env.E2E_CLOUD_PORT ?? 4183);
+const CLOUD = existsSync('dist-bgcloud/remove-background/index.html');
+const CLOUD_SPEC = /remove-background\.cloud\.spec\.ts$/;
+const CLOUD_DEVICES = { chromium: 'Desktop Chrome', firefox: 'Desktop Firefox', webkit: 'Desktop Safari', 'mobile-chrome': 'Pixel 7', 'mobile-safari': 'iPhone 14' } as const;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -40,7 +49,7 @@ export default defineConfig({
     serviceWorkers: 'block',
   },
   // The other projects run against dist/ (flag off), where /remove-background/ does not exist.
-  testIgnore: BG_SPEC,
+  testIgnore: [BG_SPEC, CLOUD_SPEC],
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     // Firefox on CI: Playwright's Firefox driver sometimes drops navigation events under load, so page.goto times out
@@ -63,6 +72,15 @@ export default defineConfig({
           { name: 'bg-mobile-safari', testIgnore: [], testMatch: BG_SPEC, use: { ...devices['iPhone 14'], baseURL: `http://127.0.0.1:${BG_PORT}` } },
         ]
       : []),
+    ...(CLOUD
+      ? Object.entries(CLOUD_DEVICES).map(([name, device]) => ({
+          name: `cloud-${name}`,
+          testIgnore: [],
+          testMatch: CLOUD_SPEC,
+          ...(name === 'firefox' ? { retries: process.env.CI ? 2 : 1 } : {}),
+          use: { ...devices[device], baseURL: `http://127.0.0.1:${CLOUD_PORT}` },
+        }))
+      : []),
   ],
   webServer: [
     {
@@ -75,5 +93,6 @@ export default defineConfig({
       ? [{ command: 'node tests/e2e/serve.mjs', url: `http://127.0.0.1:${MANUAL_PORT}/`, reuseExistingServer: !process.env.CI, env: { PORT: String(MANUAL_PORT), DIST: 'dist-noauto' } }]
       : []),
     ...(BG ? [{ command: 'node tests/e2e/serve.mjs', url: `http://127.0.0.1:${BG_PORT}/`, reuseExistingServer: !process.env.CI, env: { PORT: String(BG_PORT), DIST: 'dist-bg' } }] : []),
+    ...(CLOUD ? [{ command: 'node tests/e2e/serve.mjs', url: `http://127.0.0.1:${CLOUD_PORT}/`, reuseExistingServer: !process.env.CI, env: { PORT: String(CLOUD_PORT), DIST: 'dist-bgcloud' } }] : []),
   ],
 });

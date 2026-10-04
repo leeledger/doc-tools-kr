@@ -10,7 +10,7 @@ Free Korean document tools that run 100% in the visitor's browser: PDF 합치기
 - **Never stop, never ask.** Decide yourself and log the decision in `handoff/BUILD-LOG.md`. Only the owner can do logins, captchas, payments and real-phone tests.
 - **Brand:** "문서딱" in all Korean copy. `docttak` only as the domain. Never 안올림/독딱/Docttak as a name.
 - **Plain language:** users don't know 업로드/서버/브라우저/네트워크/EXIF/dpi. Say e.g. "내 폰·컴퓨터 안에서만 고쳐요. 어디로도 보내지 않아요." (docs/COPY.md; enforced by dist tests).
-- **Privacy/runtime:** no file bytes ever leave the device (e2e no-upload fixture on every test), no AI/LLM calls, no third-party scripts, CSP `connect-src 'self'`. Permissive licenses only (no GPL/AGPL/LGPL; MPL only via the logged exception).
+- **Privacy/runtime:** no file bytes ever leave the device (e2e no-upload fixture on every test), except the 배경 지우기 cloud path: a ≤1024 px copy to `/api/remove-bg` (same origin, behind `PUBLIC_BG_CLOUD`; owner-approved 2026-10-02; only `remove-background.cloud.spec.ts` allows that one POST). No AI/LLM calls, no third-party scripts, CSP `connect-src 'self'`. Permissive licenses only (no GPL/AGPL/LGPL; MPL only via the logged exception).
 - **No contact/operator/privacy-officer lines** until ads; build fails if ads or the error beacon are on without `PUBLIC_CONTACT_EMAIL`.
 - Never invent specs: every number on a guide page cites an official source with a fetch date.
 

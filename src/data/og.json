@@ -8,7 +8,7 @@
     "photo-compress": { "title": "사진 용량 줄이기", "line": "원하는 KB에 딱 맞게 — 무료, 내 폰·PC 안에서만" },
     "id-photo": { "title": "여권·증명사진 규격 맞추기", "line": "제출처 크기와 용량에 딱 맞게 — 무료, 내 폰·PC 안에서만" },
     "stamp-signature": { "title": "전자서명·도장 이미지 만들기", "line": "배경 없는 PNG로 — 무료, 내 폰·PC 안에서만" },
-    "remove-background": { "title": "사진 배경 지우기 (누끼)", "line": "투명한 PNG로 — 무료, 내 폰·PC 안에서만" },
+    "remove-background": { "title": "사진 배경 지우기 (누끼)", "line": "투명한 PNG로 — 무료, 내 폰·PC 안에서만", "cloudLine": "투명한 PNG로 — 무료, 가입 없이" },
     "hwp-to-pdf": { "title": "HWP PDF 변환", "line": "한글 프로그램 없이 — 무료, 내 폰·PC 안에서만" },
     "hwp-viewer": { "title": "HWP·HWPX 파일 보기", "line": "설치 없이 바로 열기 — 무료, 내 폰·PC 안에서만" },
     "default": { "title": "문서·사진, 규격에 딱", "line": "PDF·사진·여권사진·HWP — 무료, 내 폰·PC 안에서만" }
@@ -20,7 +20,7 @@
     "/photo-compress/": { "image": "photo-compress", "description": "사진을 100KB·200KB·500KB 등 원하는 용량에 맞춰 줄여요. 촬영 위치 정보는 지워요. 무료." },
     "/id-photo/": { "image": "id-photo", "description": "여권·시험·이력서 사진을 제출처 크기와 용량에 맞춰요. 보정 없이, 사진은 밖으로 안 나가요." },
     "/stamp-signature/": { "image": "stamp-signature", "description": "도장·서명 사진의 종이를 지워 투명한 PNG로 만들어요. 서명은 직접 그려도 돼요. 무료." },
-    "/remove-background/": { "image": "remove-background", "description": "사진의 배경을 지워 투명한 PNG나 흰색·파란색 배경으로 저장해요. 사진은 밖으로 안 나가요." },
+    "/remove-background/": { "image": "remove-background", "description": "사진의 배경을 지워 투명한 PNG나 흰색·파란색 배경으로 저장해요. 사진은 밖으로 안 나가요.", "cloud": { "description": "사진의 배경을 지워 투명한 PNG나 흰색·파란색 배경으로 저장해요. 무료, 가입 없이 바로 써요." } },
     "/hwp-to-pdf/": { "image": "hwp-to-pdf", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 저장해요. 파일은 밖으로 안 나가요." },
     "/hwp-viewer/": { "image": "hwp-viewer", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 쪽을 넘겨 보고 글자도 찾아요. 파일은 밖으로 안 나가요." },
     "/privacy/": { "image": "default", "description": "문서딱은 가입이 없고 개인정보를 받지 않아요. 파일은 내 폰·PC 안에서만 처리해요." },
