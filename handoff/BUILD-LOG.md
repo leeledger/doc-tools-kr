@@ -1786,3 +1786,110 @@ Status: **DONE**.
 - Guards: no Sec-Fetch-Site → 403 `origin`; non-image bytes → 415 `type`. Response headers: `Cache-Control: no-store, private`, `CDN-Cache-Control: no-store`, `X-Robots-Tag: noindex`.
 - Still open: U4 (quota error code; the Worker maps /9422|quota/ to 503 `quota`), phone/LTE latency (§11 step 3), owner §9 step 5 (privacy officer name, §7 copy and the CLAUDE.md rule change). Quota used so far this month: about 65 of 5,000.
 - Next: Bob builds the brief (§3–§10) on `c2-cloud` with `PUBLIC_BG_CLOUD` default 0. The Worker source lives in `workers/bg/` and is deployed with `npx wrangler deploy` from that folder.
+
+## C2-cloud build (Bob, 2026-10-02; worktree `C:\dev\doc-tools\c2`, branch `c2-cloud` from 9361850)
+Status: **DONE_WITH_CONCERNS**. Everything in brief §3–§11 step 4 is built and gated locally. Concerns: nothing is committed or pushed (see "Not done"), and the phone/LTE check (§11 step 3) is still the owner's.
+
+**Owner decisions (relayed by the coordinator)**
+- Owner, 2026-10-02: 개인정보 보호책임자 = 이종림.
+- Owner, 2026-10-02: the contact email is robotncoding@kakao.com. It is `PUBLIC_CONTACT_EMAIL` in flag-on builds; Arch sets it in the Preview env.
+- Owner, 2026-10-02: the brief's §7 copy is approved as written: the privacy policy v2 section, the site-wide promise and the per-tool notice.
+- Owner, 2026-10-02: the CLAUDE.md rule change is approved.
+  - CLAUDE.md "Privacy/runtime" now names the one exception: the 배경 지우기 cloud path, a ≤1024 px copy to `/api/remove-bg`, same origin, behind `PUBLIC_BG_CLOUD`.
+  - Every other rule is unchanged.
+
+**What was built**
+- **Flag `PUBLIC_BG_CLOUD`** (`scripts/lib/bgcloud.mjs`).
+  - Default 0. It takes effect only when `PUBLIC_BG_REMOVE=1` too.
+  - The `__BG_CLOUD__` define turns every cloud branch into dead code when the flag is off. Check: `dist-bg` (BG on, cloud off) has no `cloud*.js`, no `/api/remove-bg` and no `docttak-bg-mode`.
+- **Privacy gate.** With the cloud path on, the build needs `PUBLIC_PRIVACY_OFFICER` and a valid `PUBLIC_CONTACT_EMAIL`. Without them `astro.config.mjs` throws and check-dist fails.
+- **Function `functions/api/remove-bg.ts`.** It exports only `onRequest`, which checks in this order:
+  - not POST → 405;
+  - Sec-Fetch-Site ≠ same-origin → 403;
+  - Content-Length outside 1..2,000,000 → 413;
+  - type not JPEG/PNG/WebP → 415;
+  - then `env.BG.fetch(request)`. No binding → 503 `engine`; the binding throws → 502 `engine`.
+  - The spike's GET `cf.image` probe and its IMAGES fallback are deleted.
+- **Spike photos.** `public/spike/` is removed from git (`git rm`). A copy is kept git-ignored in `spikes/c2-cloud/photos/`. check-dist fails on any `spike/` path in dist.
+- **Worker `workers/bg/`.** Unchanged (spike-2 deployed it). Now unit-tested with fakes.
+- **Client `src/lib/bgremove/cloud.ts`** (1.3 KB gzip, lazy, imported after the pick):
+  - The copy: long edge ≤1024 on white, JPEG q0.9 through a canvas. It is refused, and nothing is sent, if it carries APP1, is empty, or is over 2 MB.
+  - One POST with `credentials: 'omit'`, `cache: 'no-store'`, `redirect: 'error'` and a 30 s timeout. It is never retried by itself.
+  - Answers: 429 → busy; 503 with `quota` or 9422 → quota; anything else → failed.
+  - The WebP is decoded with `premultiplyAlpha: 'none'`. Only its alpha is kept, after checking it has the copy's shape.
+- **Page controller (`bg.ts`, `model.ts`).** New phases `ready` and `sending`.
+  - Pick → ready panel: 배경 지우기 / 취소 / "사진을 보내지 않고 기기에서 처리 (처음 한 번 약 N MB 받기)".
+  - Sending: 사진을 보내는 중…, then after 1.5 s 배경을 지우는 중… (보통 5초쯤). 취소 is available.
+  - Working: 가장자리를 다듬는 중…. The alpha is scaled up to work size with the existing `resizeMask`, then the same blur-fusion worker runs. `finish` and `cutOut` now take a mask of any size.
+  - Busy or failed → the message, 다시 시도 and 기기에서 처리.
+  - Quota → the message, then the C2 path: its consent, or straight to work if the engine is cached. Not remembered.
+  - The device choice is stored as `localStorage docttak-bg-mode=device` (`src/lib/bgremove/mode.ts`, wrapped in try/catch). With it set, a pick takes the C2 path unchanged.
+- **Copy.**
+  - The brief's §4 and §7 lines are used word for word: `CLOUD` in copy.ts, privacy section 3, the home footnote and bullet, the privacy §2 title, the terms description, and the tools.ts description and FAQ.
+  - "약 100 MB" is replaced by the build's real `aboutMB()` (약 110 MB today), on the page and in the privacy 거부 item.
+- **Service worker.** `src/sw/sw.ts` already passed `/api/*` and every non-GET to the browser. Unit tests now pin this for `/api/remove-bg`.
+- **No-upload guard.**
+  - `tests/e2e/upload-guard.ts` makes the rule a pure function with an allowlist: exact method plus same-origin path, with no query or fragment. Allowed responses skip the document CSP check.
+  - `no-upload.ts` gets an `allowUpload` fixture option, default `[]`. Only `remove-background.cloud.spec.ts` sets it.
+- **Regress.** `npm run regress:bgremove -- --engine cloud` (`scripts/regress/bgremove-cloud.mjs`). Owner PC only, never CI.
+- **CI** (`.github/workflows/ci.yml`). Every e2e matrix job builds `dist-bgcloud` and runs `cloud-<project>`. The officer (이종림) and contact (robotncoding@kakao.com) values are set in the workflow; both are public on the privacy page anyway.
+
+**Decisions (builder)**
+1. **Cloud needs both flags.** `PUBLIC_BG_CLOUD=1` with `PUBLIC_BG_REMOVE=0` ships nothing and needs no officer, because there is no page and so no cloud path.
+2. **One press of 배경 지우기 per photo.** That press is the consent (brief §7.3). A remembered device choice skips the ready panel. A cloud choice is never stored.
+3. **Copy written by me, not in the brief.** The owner may want to read these:
+   - ready line: `사진을 골랐어요. 배경 지우기를 누르세요.`
+   - 취소 while sending: `보내기를 멈췄어요.`
+   - the way back from the remembered choice: mode line `사진을 보내지 않고 기기에서 처리하도록 골라 두었어요.` with the button `사진을 보내서 처리하기로 바꾸기`.
+   - privacy section 3 opening line.
+   - a terms §2 sentence (`다만 사진 배경 지우기는 예외로 …`). The terms body said files are never sent, so it had to change along with the description.
+   - the cloud answer to the FAQ "누끼 따기는 어떻게 하나요?".
+   - the page lead, which drops "사진은 이 기기 안에서만 처리됩니다.".
+   - 사용 방법 step 1.
+   - the first 안전한 이유 item, `줄인 사본만 잠깐 보냅니다`.
+   - the share preview: og.json `cloud.description` and the image `cloudLine` (`투명한 PNG로 — 무료, 가입 없이`). The flag-off texts say the photo never leaves.
+4. **Privacy section 3 adds one line the brief lacked: `이용 목적: 사진의 배경 지우기` in the 국외 이전 list.**
+   - Source: law.go.kr 개인정보 보호법 (시행 2025. 10. 2.), fetched 2026-10-02 through lsInfoR.do (the lsInfoP page is a script shell).
+   - 제28조의8 ② lists: "1. 이전되는 개인정보 항목 2. 개인정보가 이전되는 국가, 시기 및 방법 3. 개인정보를 이전받는 자의 성명(법인인 경우에는 그 명칭과 연락처를 말한다) 4. 개인정보를 이전받는 자의 개인정보 이용목적 및 보유ㆍ이용 기간 5. 개인정보의 이전을 거부하는 방법, 절차 및 거부의 효과". The brief's 국외 이전 list had all of these except 이용목적.
+   - 제28조의8 ① 3 가 ("제2항 각 호의 사항을 제30조에 따른 개인정보 처리방침에 공개한 경우") is the basis for disclosing this in the policy.
+   - 제26조 ② (위탁 내용과 수탁자 공개) is covered by the 처리 위탁 line.
+   - 제30조 ① 6 (보호책임자 성명·연락처) is covered by the officer section.
+   - The 시행령 was not fetched. No statute text is quoted on the page, so `check:quotes` does not apply.
+5. **The e2e guard does not check CSP on the allowed upload's response.** Pages Functions do not get `_headers`, and the answer is an image or JSON, never a document.
+6. **The copy is sent as the exact bytes that were checked (a Uint8Array), not a Blob.** Playwright WebKit does not expose Blob request bodies. It also means what was verified is exactly what leaves.
+7. **After a quota fallback, the quota line stays visible during the device run.** It clears on 받고 시작 or on the next photo.
+
+**Gates (2026-10-02, this machine)**
+- `npm run check`: 0 errors, 0 warnings (346 files).
+- `npm test`: 45 files, 841 passed. This includes `bgcloud.test.ts` (52 tests), plus 1 new test each in `network-guard` and `postbuild`.
+- Builds, all with `PUBLIC_SITE_URL=https://docttak.com`:
+  - flag off → `dist`: check-dist OK, 2,372 files.
+  - BG on, cloud off → `dist-bg`: OK. Controller 13.1 / 14 KB.
+  - BG and cloud on (이종림 / robotncoding@kakao.com) → `dist-bgcloud`: OK. Controller 13.8 / 14 KB, cloud client 1.3 / 3 KB, precache 435.8 / 450 KB.
+- Privacy gate:
+  - cloud on without the officer and email → `astro build` throws with both messages.
+  - check-dist on the flag-off dist with cloud on → FAIL.
+  - check-dist on the cloud dist with cloud off → FAIL on `cloud*.js calls /api/remove-bg` and on the exception wording (4 pages).
+- postbuild unit tests against `dist-bgcloud` (swapped in as dist): 45/45.
+- `check:licenses` OK, with BG off and with BG on.
+- `regress:bgremove --engine cloud` (against the preview spike-2 deploy; 16 GT photos; about 16 transformations used): GT mean MAE 0.00397 (gate ≤ 0.0045), IoU 0.9645 (gate ≥ 0.955). 2.1–5.0 s per photo from Seoul.
+- e2e:
+  - cloud-*, all 5 browsers: 45/45 passed, no retries.
+  - bg-chromium: all passed.
+  - chromium: all passed. The id-photo tests needed the auto-framing build (35 passed, 2 skipped).
+  - firefox, webkit, mobile-chrome, mobile-safari and bg-mobile-safari together: 841 passed, 149 skipped, 4 flaky, 0 failed. The 4 flaky tests are in unrelated specs and passed on retry.
+
+**Not done / blocked**
+- **No commit and no push.** My first `git commit` + `git push origin c2-cloud` was denied by the Claude Code auto-mode classifier ("Git Destructive"), and after that even `git log` was denied. All work is uncommitted in the worktree, with `public/spike/` staged as deleted. Arch or the owner needs to commit (split suggested in REVIEW-REQUEST) and push.
+- Still open:
+  - the 시행령 fetch;
+  - U4 (the binding's error code at the quota limit);
+  - the phone/LTE check (§11 step 3);
+  - the weekly quota line (§8; needs the owner's analytics token).
+- Left for Arch, because the owner said to leave every other rule as it is:
+  - CLAUDE.md line 14, "No contact/operator/privacy-officer lines until ads", is no longer true for the cloud build.
+  - The home eyebrow "파일이 밖으로 안 나가요" and the section title "파일이 기기 밖으로 나가지 않습니다" are not in the brief's §7.2 table, so they are unchanged. The hero footnote qualifies them.
+  - The home bullet's approved wording says "(배경 지우기는 예외, 아래 설명)", but the explanation is in the hero footnote above it, not below.
+
+**Known Gaps**
+- The Function also deploys to production. With `PUBLIC_BG_CLOUD=0` the page never calls it. Production has no `BG` binding, so a direct call gets 503 `engine`, but it still counts as a Function request.
