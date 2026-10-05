@@ -1970,3 +1970,33 @@ Status: **DONE**. Gates are green locally (numbers below). Committed, not pushed
 **Known Gaps (not fixed, out of scope)**
 - Home bullet "한 번 쓴 도구는 인터넷을 끊어도 동작합니다" and offline page "한 번 사용한 도구는 인터넷 없이도 열립니다". In the cloud build, 배경 지우기 needs the internet by default. It still works offline on the device path once its engine is stored. This is not a "files leave" claim, so I left it; it is Arch's call.
 - `tests/e2e/remove-background.cloud.spec.ts` has its own small `stubModel` (one part), separate from the device spec's. Deduplicating needs an edit to the device spec, which the auto-mode classifier blocked when I tried to move the helper. I left the device spec untouched.
+
+## C2-cloud round 3 (Bob, 2026-10-05; `c2-cloud` from 167746a)
+Status: **DONE**. Committed, not pushed.
+
+**Arch ruling (relayed by the coordinator):** fix both round-2 leftovers in one small round.
+
+1. **Offline claim (cloud build only).**
+   - Home safety bullet: "배경 지우기를 빼면, 한 번 쓴 도구는 인터넷을 끊어도 동작합니다."
+   - /offline/: "배경 지우기를 빼면, 한 번 사용한 도구는 인터넷 없이도 열립니다."
+   - The flag-on scan now counts these as claims: `CLAIM_RE` adds "인터넷을 끊어도|인터넷 없이도". "인터넷 없이 열 수 없습니다" on the offline page is not caught (it has no 도).
+   - Unit cases are in bgcloud.test.ts.
+2. **smoke-assets false 404s on live docttak.com.**
+   - `scripts/smoke-assets.mjs` gets `NOT_FILES`, an exact set of three paths that the queue skips:
+     - `/vendor/onnxruntime-web/1.30.0/module` and `/vendor/onnxruntime-web/1.30.0/worker_threads`: Node built-ins the ORT bundle imports only under Node.
+     - `/vendor/onnxruntime-web/1.30.0/ort-wasm-simd-threaded.asyncify.wasm`: ORT's default wasm name. We ship that file as .part0/.part1 and pass ORT the bytes.
+   - No pattern, so an ORT upgrade must list its own names.
+   - Reproduced locally on a served dist-bg: without the change, FAIL with exactly those 3 (2,386 URLs); with it, OK (2,383 URLs).
+   - New postbuild unit test: those three are skipped, and a fourth missing name in the same bundle still fails.
+
+**Gates (2026-10-05)**
+- check: 0 errors, 0 warnings, 1 old hint.
+- Unit: 45 files, 848 passed. postbuild with dist-bgcloud swapped in: 47/47.
+- Builds, each with check-dist OK:
+  - off: 2,372 files, precache 431.0 KB;
+  - BG: 2,390 files, 434.8 KB;
+  - cloud: 2,391 files, 436.2 / 450 KB.
+- Flag-off and BG-only text is byte-identical to the round-2 builds, once the build id in `<meta name="build-id">` and asset names is ignored. deploy-manifest.json differs as usual.
+- e2e:
+  - chromium site + polish: 88 passed, 1 skipped.
+  - bg-chromium: 6/6.

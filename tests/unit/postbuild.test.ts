@@ -11,7 +11,7 @@ import { carryAssets, safePath } from '../../scripts/carry-assets.mjs';
 import { reservedNameProblems } from '../../scripts/font-rename.mjs';
 import { buildIco, ogDomain, renderBrand } from '../../scripts/gen-brand.mjs';
 import { domainHeaders } from '../../scripts/gen-headers.mjs';
-import { smokeAssets } from '../../scripts/smoke-assets.mjs';
+import { NOT_FILES, smokeAssets } from '../../scripts/smoke-assets.mjs';
 import { startServer } from '../e2e/serve.mjs';
 import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
 import { parse as parseYaml } from 'yaml';
@@ -200,7 +200,7 @@ describe('carry-assets (P.2)', () => {
 describe('smoke-assets (P.3)', () => {
   const page = (extra = '') =>
     `<!doctype html><html><head><meta name="build-id" content="s1"><link rel="stylesheet" href="/_astro/s.css"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="data:image/svg+xml,x"><meta property="og:image" content="https://doc-tools-kr.pages.dev/brand/og.png"><script type="module" src="/_astro/a.js"></script>${extra}</head></html>`;
-  function site(): string {
+  function site(extra: Record<string, string> = {}): string {
     const dir = fakeDist('s1', {
       'index.html': page(),
       'privacy/index.html': page(),
@@ -221,6 +221,7 @@ describe('smoke-assets (P.3)', () => {
       'brand/i.png': 'png',
       'manifest.webmanifest': JSON.stringify({ icons: [{ src: '/brand/i.png' }] }),
       'sw.js': '// sw',
+      ...extra,
     });
     writeFileSync(join(dir, '_headers'), readFileSync(join(ROOT, 'public', '_headers')));
     return dir;
@@ -262,6 +263,29 @@ describe('smoke-assets (P.3)', () => {
       expect(problems).toContain('/_astro/w.wasm content-type "application/octet-stream", expected application/wasm');
       expect(problems).toContain('/_astro/gone.js HTTP 404');
       expect(problems.some((p: string) => p.includes('ancient'))).toBe(false);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('C2-cloud r3: skips exactly the three non-file names in the onnxruntime-web bundle; a fourth missing name still fails', async () => {
+    const ort = '/vendor/onnxruntime-web/1.30.0/';
+    const dir = site({
+      '_astro/a.js': `const o="${ort}ort.wasm.min.mjs";`,
+      'vendor/onnxruntime-web/1.30.0/ort.wasm.min.mjs':
+        'import("module");import("worker_threads");const a=new URL("ort-wasm-simd-threaded.asyncify.wasm",import.meta.url);const b=new URL("ort-other.wasm",import.meta.url);',
+    });
+    await carryAssets({ dist: dir, enabled: false, source: '', log: quiet });
+    const server = await startServer({ root: dir, port: 0 });
+    const seen: string[] = [];
+    const spy = (async (url: string, init?: RequestInit) => ((seen.push(new URL(url).pathname), fetch(url, init)))) as typeof fetch;
+    try {
+      const r = await smokeAssets(server.url, { fetchImpl: spy });
+      const problems = r.failures.map((f: { url: string; problem: string }) => `${new URL(f.url).pathname} ${f.problem}`);
+      expect(problems).toEqual([`${ort}ort-other.wasm HTTP 404`]);
+      expect(seen).toContain(`${ort}ort.wasm.min.mjs`);
+      for (const n of ['module', 'worker_threads', 'ort-wasm-simd-threaded.asyncify.wasm']) expect(seen).not.toContain(ort + n);
+      expect([...NOT_FILES]).toEqual(['module', 'worker_threads', 'ort-wasm-simd-threaded.asyncify.wasm'].map((n) => ort + n));
     } finally {
       await server.close();
     }

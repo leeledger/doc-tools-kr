@@ -405,6 +405,12 @@ describe('site-wide "files never leave" claims with the cloud path on (round 2, 
     expect(unqualifiedClaims('무료, 내 폰·PC 안에서만')).toHaveLength(1);
     expect(unqualifiedClaims('무료, 가입 없이')).toEqual([]);
     for (const c of ['파일은 다른 곳의 컴퓨터로 전송되지 않으며', '인터넷으로 보내지지 않습니다', '기기 밖으로 나가지 않습니다']) expect(unqualifiedClaims(c), c).toHaveLength(1);
+    // Round 3 (Arch): the offline promise is a site-wide claim too.
+    for (const c of ['한 번 쓴 도구는 인터넷을 끊어도 동작합니다.', '한 번 사용한 도구는 인터넷 없이도 열립니다.']) {
+      expect(unqualifiedClaims(c), c).toHaveLength(1);
+      expect(unqualifiedClaims(`배경 지우기를 빼면, ${c}`), c).toEqual([]);
+    }
+    expect(unqualifiedClaims('인터넷에 연결되어 있지 않아 인터넷 없이 열 수 없습니다.')).toEqual([]);
   });
   it('page text: meta and alt text count, JSON-LD counts, other scripts and tags do not; entities decoded', () => {
     const html = '<meta name="description" content="파일은 밖으로 안 나가요"><img alt="&quot;무료&quot;" src="a.png"><script>const s = "어디로도 보내지 않아요";</script><script type="application/ld+json">{"d":"x"}</script><p>a<b>b</b></p>';

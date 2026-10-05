@@ -10,7 +10,7 @@ import { SITE } from '../../data/site';
     <div class="wrap narrow">
       <h1>인터넷에 연결되어 있지 않습니다</h1>
       <p>이 페이지는 아직 이 기기에 저장되지 않아 인터넷 없이 열 수 없습니다. 연결을 확인한 뒤 다시 시도해 주세요.</p>
-      <p>한 번 사용한 도구는 인터넷 없이도 열립니다.</p>
+      <p>{__BG_CLOUD__ ? '배경 지우기를 빼면, 한 번 사용한 도구는 인터넷 없이도 열립니다.' : '한 번 사용한 도구는 인터넷 없이도 열립니다.'}</p>
       <ul class="nf-tools">
         {LIVE_TOOLS.map((t) => <li><a href={`/${t.slug}/`}>{t.name}</a></li>)}
       </ul>

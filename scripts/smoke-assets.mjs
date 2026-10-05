@@ -11,6 +11,17 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const PARALLEL = 8;
+/**
+ * Paths the reference scan finds inside the onnxruntime-web bundle (배경 지우기) that are not files and never get
+ * requested by the page (C2-cloud round 3, Arch). `module` and `worker_threads` are Node built-ins its code imports
+ * only under Node. The `.asyncify.wasm` name is the file it would fetch by default, but the page loads it from our
+ * .part0/.part1 split and hands ORT the bytes. Exact paths on purpose: an ORT upgrade must list its own.
+ */
+export const NOT_FILES = new Set([
+  '/vendor/onnxruntime-web/1.30.0/module',
+  '/vendor/onnxruntime-web/1.30.0/worker_threads',
+  '/vendor/onnxruntime-web/1.30.0/ort-wasm-simd-threaded.asyncify.wasm',
+]);
 const ASSET_LITERAL = /["'`](\/(?:_astro|vendor|fonts|brand)\/[^"'`$\s]+)["'`]/g;
 
 const TYPE_RULES = [
@@ -87,7 +98,7 @@ export async function smokeAssets(baseUrl, { previous = null, fetchImpl = fetch,
   const queue = [];
   const queued = new Set();
   const enqueue = (url, kind) => {
-    if (!url || queued.has(url)) return;
+    if (!url || queued.has(url) || NOT_FILES.has(new URL(url).pathname)) return;
     queued.add(url);
     queue.push([url, kind]);
   };

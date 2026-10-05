@@ -46,8 +46,9 @@ export const EXCEPTION_PAGES = ['index.html', 'privacy/index.html', 'terms/index
  * Site-wide "files never leave" claims (C2-cloud round 2, owner 2026-10-05). With the cloud path on, every claim
  * outside a local tool's own page needs the 배경 지우기 exception next to it: the approved exception wording, or the
  * cloud variant "배경 지우기를 빼면 …". With it off, none of that wording ships in any text file.
+ * Round 3 (Arch): "works without the internet" counts too, as 배경 지우기 needs it by default in the cloud build.
  */
-export const CLAIM_RE = /(밖으로|어디로도|어디에도|다른 곳으로|다른 곳의 컴퓨터로|인터넷으로) ?(안 ?나가|나가지 않|보내지 않|보내지지 않|전송되지 않)|안에서만/g;
+export const CLAIM_RE = /(밖으로|어디로도|어디에도|다른 곳으로|다른 곳의 컴퓨터로|인터넷으로) ?(안 ?나가|나가지 않|보내지 않|보내지지 않|전송되지 않)|안에서만|인터넷을 끊어도|인터넷 없이도/g;
 /** The exception named next to a claim: EXCEPTION_RE or the cloud variant ("배경 지우기를 빼면", "배경 지우기 외엔"). */
 export const QUALIFIER_RE = new RegExp(`${EXCEPTION_RE.source}|배경 지우기(를)? ?(빼면|빼고|외엔|외에는)`);
 /** How far from a claim (characters of page text) the exception may stand: the footnote below, the heading above. */
