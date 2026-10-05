@@ -2000,3 +2000,9 @@ Status: **DONE**. Committed, not pushed.
 - e2e:
   - chromium site + polish: 88 passed, 1 skipped.
   - bg-chromium: 6/6.
+
+## C2-cloud round 4 (Arch, 2026-10-05; Richard rounds 2–3 clear, two copy notes)
+- Home meta description, cloud build, short form: "… 파일 보기. 무료, 가입 없이." (no clipped claim; the share descriptions carry the full sentence). Flag-off text unchanged.
+- Home privacy paragraph, cloud build: "증명사진" dropped from "…서류, 계약서, 증명사진도 다른 곳을 거치지 않습니다" (ID photos are the likeliest 배경 지우기 input). Flag-off text unchanged.
+- Gates: unit 848/848 (one run had 1 flaky failure, the rerun passed clean); BG+cloud build check-dist OK (precache 436.1 / 450 KB); BG-only build check-dist OK, 2,390 files, description and 증명사진 line identical to before.
+- After deploy: re-fetch / and the default share image in the Kakao and Facebook share debuggers (Richard: images keep their URLs, 1-day cache).

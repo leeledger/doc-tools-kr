@@ -22,9 +22,10 @@ export function defaultDescription(tools: readonly Tool[] = LIVE_TOOLS, cloud: b
   // (it is the page title's); the text stays within 80–120.
   // Sprint C (C2): with the eighth tool the names are 100 characters, so the shorter sentence keeps it at 120.
   // C2-cloud round 2 (owner 2026-10-05): with the 배경 지우기 cloud path on, the claim names that one exception.
+  // Round 4 (Arch, Richard's note): the short cloud form makes no claim at all rather than a clipped one.
   const names = liveNames(tools);
   const [long, short] = cloud
-    ? [`${names}. 배경 지우기를 빼면 파일은 밖으로 안 나가요. 무료.`, `${names}. 배경 지우기 외엔 기기 안에서만.`]
+    ? [`${names}. 배경 지우기를 빼면 파일은 밖으로 안 나가요. 무료.`, `${names}. 무료, 가입 없이.`]
     : [`${names}. 파일은 내 폰·컴퓨터 밖으로 나가지 않아요. 무료.`, `${names}. 파일은 밖으로 안 나가요. 무료.`];
   return [...long].length <= 120 ? long : short;
 }
