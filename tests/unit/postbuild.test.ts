@@ -21,6 +21,7 @@ import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { parseHref } from '../../src/lib/ui/deeplink';
 import { HUB_KIND, HUB_SLUGS } from '../../src/data/hubs';
 import { DUP_LIMIT, articleText, duplicatePairs, jaccard, shingles } from '../../scripts/lib/shingles.mjs';
+import { CLAIM_FILE_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, claimText, unqualifiedClaims } from '../../scripts/lib/bgcloud.mjs';
 
 const ROOT = join(__dirname, '..', '..');
 const DIST = join(ROOT, 'dist');
@@ -408,11 +409,31 @@ describe('built output', () => {
       : { ...buildEnv(), PUBLIC_BG_REMOVE: '1', PUBLIC_BG_CLOUD: '1', PUBLIC_PRIVACY_OFFICER: '', PUBLIC_CONTACT_EMAIL: '' };
     const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: other, encoding: 'utf8' });
     expect(r.status).toBe(1);
-    if (on) expect(r.stderr).toMatch(/calls \/api\/remove-bg in a build with PUBLIC_BG_CLOUD off/);
-    else {
+    if (on) {
+      expect(r.stderr).toMatch(/calls \/api\/remove-bg in a build with PUBLIC_BG_CLOUD off/);
+      expect(r.stderr).toContain('llms.txt: 배경 지우기 cloud wording in a build with PUBLIC_BG_CLOUD off');
+    } else {
       expect(r.stderr).toContain('PUBLIC_BG_CLOUD is on but PUBLIC_PRIVACY_OFFICER is not set');
       expect(r.stderr).toContain('PUBLIC_BG_CLOUD is on but PUBLIC_CONTACT_EMAIL is not a valid address');
       expect(r.stderr).toContain('index.html: no 배경 지우기 exception wording in a build with PUBLIC_BG_CLOUD on');
+      for (const f of ['index.html', '404.html', 'offline/index.html', 'llms.txt']) expect(r.stderr).toContain(`${f}: "files never leave" without the 배경 지우기 exception`);
+    }
+  });
+
+  it('C2-cloud round 2: cloud on, no site-wide "files never leave" claim without the exception (html and txt/xml/json); off, none of the cloud wording anywhere', () => {
+    need();
+    const on = cloudBuilt();
+    const texts = walk(DIST, CLAIM_FILE_RE).map((f) => {
+      const rel = f.slice(DIST.length + 1).replaceAll('\\', '/');
+      return [rel, claimText(rel, readFileSync(f, 'utf8'))] as const;
+    });
+    expect(texts.map(([f]) => f)).toEqual(expect.arrayContaining(['index.html', '404.html', 'offline/index.html', 'llms.txt', 'sitemap.xml']));
+    if (on) {
+      const bad = texts.filter(([f]) => !LOCAL_SCOPE_RE.test(f)).flatMap(([f, t]) => unqualifiedClaims(t).map((c) => `${f}: ${c}`));
+      expect(bad).toEqual([]);
+      expect(texts.find(([f]) => f === 'llms.txt')![1]).toContain('배경 지우기를 빼면');
+    } else {
+      expect(texts.filter(([, t]) => QUALIFIER_RE.test(t)).map(([f]) => f)).toEqual([]);
     }
   });
 

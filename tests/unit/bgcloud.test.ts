@@ -11,7 +11,10 @@ import { chooseDevice, deviceChosen, MODE_KEY } from '../../src/lib/bgremove/mod
 import { move, view } from '../../src/tools/remove-background/model';
 import { CLOUD } from '../../src/tools/remove-background/copy';
 import { route } from '../../src/sw/sw';
-import { bgCloudFlag, bgCloudOn, EXCEPTION_RE, privacyGate } from '../../scripts/lib/bgcloud.mjs';
+import { bgCloudFlag, bgCloudOn, claimText, EXCEPTION_RE, LOCAL_SCOPE_RE, privacyGate, QUALIFIER_BEFORE, QUALIFIER_RE, unqualifiedClaims } from '../../scripts/lib/bgcloud.mjs';
+import og from '../../src/data/og.json';
+import { defaultDescription } from '../../src/data/site';
+import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { isAllowedUpload, uploadProblems, type RequestLike, type ResponseLike } from '../e2e/upload-guard';
 
 const ROOT = join(__dirname, '..', '..');
@@ -389,6 +392,51 @@ describe('flag and privacy gate (scripts/lib/bgcloud.mjs)', () => {
     expect(privacyGate({ ...on, PUBLIC_CONTACT_EMAIL: 'nope' })).toEqual([expect.stringContaining('PUBLIC_CONTACT_EMAIL')]);
     expect(privacyGate({ PUBLIC_BG_CLOUD: '0' })).toEqual([]);
     expect(privacyGate({ PUBLIC_BG_CLOUD: '1' })).toEqual([]);
+  });
+});
+
+describe('site-wide "files never leave" claims with the cloud path on (round 2, owner 2026-10-05)', () => {
+  it('a claim needs the 배경 지우기 exception next to it: before (heading), after (footnote), not far away', () => {
+    expect(unqualifiedClaims('도구 모음. 파일은 밖으로 안 나가요. 무료.')).toHaveLength(1);
+    expect(unqualifiedClaims('도구 모음. 배경 지우기를 빼면 파일은 밖으로 안 나가요. 무료.')).toEqual([]);
+    expect(unqualifiedClaims('내 폰·컴퓨터 안에서만 고쳐요. 어디로도 보내지 않아요.* * 배경 지우기만 예외예요.')).toEqual([]);
+    expect(unqualifiedClaims('파일은 어디로도 보내지 않아요 (배경 지우기만 예외: 3항) 고른 파일은 내 폰·컴퓨터 안에서만 처리돼요.')).toEqual([]);
+    expect(unqualifiedClaims(`배경 지우기를 빼면 안 나가요.${'가'.repeat(QUALIFIER_BEFORE)} 파일은 밖으로 안 나가요.`)).toHaveLength(1);
+    expect(unqualifiedClaims('무료, 내 폰·PC 안에서만')).toHaveLength(1);
+    expect(unqualifiedClaims('무료, 가입 없이')).toEqual([]);
+    for (const c of ['파일은 다른 곳의 컴퓨터로 전송되지 않으며', '인터넷으로 보내지지 않습니다', '기기 밖으로 나가지 않습니다']) expect(unqualifiedClaims(c), c).toHaveLength(1);
+  });
+  it('page text: meta and alt text count, JSON-LD counts, other scripts and tags do not; entities decoded', () => {
+    const html = '<meta name="description" content="파일은 밖으로 안 나가요"><img alt="&quot;무료&quot;" src="a.png"><script>const s = "어디로도 보내지 않아요";</script><script type="application/ld+json">{"d":"x"}</script><p>a<b>b</b></p>';
+    expect(claimText('a/index.html', html).trim()).toBe('파일은 밖으로 안 나가요 "무료" {"d":"x"}ab');
+    expect(claimText('llms.txt', 'a\n\nb')).toBe('a b');
+  });
+  it('scope: the other tools and the guides are local; home, 404, offline, privacy, terms, llms.txt and 배경 지우기 are not', () => {
+    for (const p of ['pdf-merge/index.html', 'hwp-viewer/index.html', 'guide/passport-photo/index.html', 'guide/photo-sizes/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(true);
+    for (const p of ['index.html', '404.html', 'offline/index.html', 'privacy/index.html', 'terms/index.html', 'guide/index.html', 'llms.txt', 'sitemap.xml', 'remove-background/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(false);
+  });
+  it('og.json: every site-wide share text and image line, as the cloud build uses it, names the exception', () => {
+    const pages = og.pages as Record<string, { image: string; description: string; cloud?: { description: string } }>;
+    const images = og.images as Record<string, { line: string; cloudLine?: string }>;
+    for (const [path, p] of Object.entries(pages)) {
+      if (LOCAL_SCOPE_RE.test(`${path.slice(1)}index.html`)) continue;
+      expect(unqualifiedClaims(p.cloud?.description ?? p.description), path).toEqual([]);
+      const img = images[p.image]!;
+      expect(unqualifiedClaims(img.cloudLine ?? img.line), `${path} image ${p.image}`).toEqual([]);
+      if (p.cloud) expect([...p.cloud.description].length, path).toBeLessThanOrEqual(80);
+    }
+  });
+  it('home description: the cloud variant names the exception within 80–120 characters; flag off unchanged', () => {
+    const eight = [...LIVE_TOOLS, BG_REMOVE_TOOL];
+    for (const tools of [LIVE_TOOLS, eight]) {
+      const d = defaultDescription(tools, true);
+      expect(unqualifiedClaims(d), d).toEqual([]);
+      expect([...d].length).toBeGreaterThanOrEqual(80);
+      expect([...d].length).toBeLessThanOrEqual(120);
+    }
+    expect(defaultDescription(eight, false)).toBe(`${eight.map((t) => t.name).join('·')}. 파일은 밖으로 안 나가요. 무료.`);
+    expect(defaultDescription(LIVE_TOOLS, false)).toBe(defaultDescription(LIVE_TOOLS));
+    expect(QUALIFIER_RE.test(defaultDescription(eight, false))).toBe(false);
   });
 });
 

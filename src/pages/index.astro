@@ -38,7 +38,7 @@ const jsonLd = [
   <JsonLd slot="head" data={jsonLd} />
   <section class="hero">
     <div class="wrap">
-      <p class="eyebrow">파일이 밖으로 안 나가요 · 가입 없음 · 무료</p>
+      <p class="eyebrow">{__BG_CLOUD__ ? '배경 지우기를 빼면 파일이 밖으로 안 나가요' : '파일이 밖으로 안 나가요'} · 가입 없음 · 무료</p>
       <h1>내야 하는 문서·사진, <br>용량과 규격에 딱 맞춰 드려요</h1>
       <p class="lead">지금 쓸 수 있는 도구: {liveNames()}.
         사진과 서류는 내 폰·컴퓨터 안에서만 고쳐요. 어디로도 보내지 않아요.{__BG_CLOUD__ && '*'}</p>
@@ -97,13 +97,13 @@ const jsonLd = [
   <section id="privacy" class="privacy" aria-labelledby="privacy-title">
     <div class="wrap two-col">
       <div>
-        <h2 id="privacy-title">파일이 기기 밖으로 나가지 않습니다</h2>
+        <h2 id="privacy-title">{__BG_CLOUD__ ? '배경 지우기를 빼면 파일이 기기 밖으로 나가지 않습니다' : '파일이 기기 밖으로 나가지 않습니다'}</h2>
         <p>다른 변환 사이트는 내 파일을 그 회사 컴퓨터로 보낸 뒤 처리합니다.{" "}
           {josa(SITE.name, '은/는')} 처리 프로그램을 이 페이지에 받아 와서 <strong>내 폰·컴퓨터 안에서 바로 처리</strong>합니다.
           주민등록번호가 담긴 서류, 계약서, 증명사진도 다른 곳을 거치지 않습니다.</p>
       </div>
       <ul class="points">
-        <li><strong>밖으로 보내지 않음</strong><span>파일은 인터넷으로 어디에도 보내지지 않습니다.{__BG_CLOUD__ && ' (배경 지우기는 예외, 아래 설명)'}</span></li>
+        <li><strong>밖으로 보내지 않음</strong><span>파일은 인터넷으로 어디에도 보내지지 않습니다.{__BG_CLOUD__ && ' (배경 지우기는 예외: 사진을 잠깐 보내 처리하고 바로 지워요)'}</span></li>
         <li><strong>저장 없음</strong><span>작업한 파일은 창을 닫으면 사라집니다.</span></li>
         <li><strong>설치·가입 없음</strong><span>PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있습니다. 한 번 쓴 도구는 인터넷을 끊어도 동작합니다. 비행기 모드에서 직접 확인해 보세요.</span></li>
       </ul>
@@ -115,7 +115,9 @@ const jsonLd = [
       <h2 id="faq-title">자주 묻는 질문</h2>
       <details>
         <summary>제 파일이 다른 곳에 저장되나요?</summary>
-        <p>아니요. 파일은 지금 쓰는 PC나 휴대폰 안에서만 처리되고, 창을 닫으면 사라집니다.</p>
+        <p>{__BG_CLOUD__
+          ? '아니요. 배경 지우기를 빼면 파일은 지금 쓰는 PC나 휴대폰 안에서만 처리되고, 창을 닫으면 사라집니다. 배경 지우기는 사진을 잠깐 보내 처리하고 바로 지워요.'
+          : '아니요. 파일은 지금 쓰는 PC나 휴대폰 안에서만 처리되고, 창을 닫으면 사라집니다.'}</p>
       </details>
       <details>
         <summary>휴대폰에서도 되나요?</summary>

@@ -1,5 +1,5 @@
-// The no-upload rule as a pure check (tests/e2e/no-upload.ts runs it after every e2e test; tests/unit/upload-guard
-// covers it). No Playwright import here, so the unit tests can load it.
+// The no-upload rule as a pure check (tests/e2e/no-upload.ts runs it after every e2e test; tests/unit/bgcloud.test.ts
+// covers it under "no-upload allowlist"). No Playwright import here, so the unit tests can load it.
 
 /**
  * A request that may carry data (C2-cloud, brief §10): the method and the exact same-origin path, no query. Only

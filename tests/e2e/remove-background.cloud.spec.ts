@@ -3,6 +3,7 @@
 // page.route answers it with committed RGBA WebP fixtures (tests/fixtures/build-bgcloud.mjs) or an error status.
 // The no-upload fixture stays on, with exactly one allowed request: POST /api/remove-bg (no query); every other
 // request of every test is held to the strict rule.
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
@@ -214,6 +215,64 @@ test('503 quota: the notice, and the on-device consent opens without a second re
   // 취소 in the consent panel: back to the picker.
   await page.locator('#bg-consent-cancel').click();
   await expect(page.locator('#bg-drop')).toBeVisible();
+});
+
+/**
+ * The KB-size stand-in model (tests/fixtures/bgremove/tiny.onnx) for the real model URLs, with the controller's model
+ * pin rewritten to it, as remove-background.spec.ts does: lets the on-device path finish here.
+ */
+async function stubModel(page: Page): Promise<void> {
+  const pin = JSON.parse(readFileSync(join(process.cwd(), 'src', 'generated', 'bgremove.json'), 'utf8')).model as { exportId: string; bytes: number; sha256Total: string };
+  const sha = (b: Uint8Array): string => createHash('sha256').update(b).digest('hex');
+  const tiny = readFileSync(join(FIX, 'bgremove', 'tiny.onnx'));
+  const manifest = { exportId: pin.exportId, bytes: tiny.length, parts: [{ name: 'model.part0', bytes: tiny.length, sha256: sha(tiny) }], sha256Total: sha(tiny) };
+  await page.route(/\/_astro\/bg\.[\w-]+\.js$/, async (route: Route) => {
+    const real = await route.fetch();
+    const body = (await real.text()).replaceAll(pin.sha256Total, manifest.sha256Total).replaceAll(`bytes:${pin.bytes}`, `bytes:${tiny.length}`);
+    if (!body.includes(manifest.sha256Total)) throw new Error('the model pin is not in the controller chunk');
+    const h = { ...real.headers() };
+    delete h['content-length'];
+    delete h['content-encoding'];
+    await route.fulfill({ status: 200, headers: h, body });
+  });
+  let headers: Record<string, string> | null = null;
+  await page.route(/\/vendor\/birefnet-lite-512\//, async (route: Route) => {
+    const url = route.request().url();
+    if (!headers) {
+      const real = await route.fetch({ url: url.replace(/[^/]+$/, 'manifest.json') });
+      headers = { ...real.headers() };
+      delete headers['content-length'];
+      delete headers['content-encoding'];
+    }
+    const name = url.split('/').pop()!;
+    if (name === 'manifest.json') return route.fulfill({ status: 200, headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(manifest) });
+    if (name !== 'model.part0') return route.fulfill({ status: 404, headers, body: '' });
+    return route.fulfill({ status: 200, headers: { ...headers, 'content-type': 'application/octet-stream' }, body: tiny });
+  });
+}
+
+test('503 quota with the engine ready: the device result shows without the quota notice next to it', async ({ page }, info) => {
+  test.skip(info.project.name !== 'cloud-chromium', 'runs the on-device engine; chromium is enough (the bg-* projects cover the engine)');
+  test.setTimeout(180_000);
+  await stubModel(page);
+  const { bodies } = await api(page, { status: 503, body: '{"error":"quota"}' });
+  await gotoReady(page, PATH);
+  // First photo: quota -> consent -> 받고 시작 -> result (the notice goes on 받고 시작).
+  await pick(page, SUBJECT);
+  await ready(page);
+  await page.locator('#bg-send').click();
+  await expect(page.locator('#bg-consent')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: '받고 시작' }).click();
+  await expect(page.locator('#bg-result')).toBeVisible({ timeout: 150_000 });
+  // Second photo: the engine is live, so quota goes straight to the device run; the notice must not outlive it.
+  await pick(page, BIG);
+  await ready(page);
+  await page.locator('#bg-send').click();
+  await expect.poll(() => bodies.length).toBe(2);
+  await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'done', { timeout: 150_000 });
+  await expect(page.locator('#bg-result')).toBeVisible();
+  await expect(page.locator('#bg-error')).toBeHidden();
+  await expect(page.locator('#bg-download')).toBeEnabled();
 });
 
 test('5xx, a dropped connection and 30 s without an answer: the "지금은 처리할 수 없어요" line with both buttons', async ({ page }) => {

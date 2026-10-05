@@ -41,3 +41,45 @@ export function privacyGate(env) {
  */
 export const EXCEPTION_RE = /배경 지우기(만|는)? ?(예외|제외)|Cloudflare\(미국 회사\)|사진을 보내지 않고 기기에서 처리/;
 export const EXCEPTION_PAGES = ['index.html', 'privacy/index.html', 'terms/index.html', 'remove-background/index.html'];
+
+/**
+ * Site-wide "files never leave" claims (C2-cloud round 2, owner 2026-10-05). With the cloud path on, every claim
+ * outside a local tool's own page needs the 배경 지우기 exception next to it: the approved exception wording, or the
+ * cloud variant "배경 지우기를 빼면 …". With it off, none of that wording ships in any text file.
+ */
+export const CLAIM_RE = /(밖으로|어디로도|어디에도|다른 곳으로|다른 곳의 컴퓨터로|인터넷으로) ?(안 ?나가|나가지 않|보내지 않|보내지지 않|전송되지 않)|안에서만/g;
+/** The exception named next to a claim: EXCEPTION_RE or the cloud variant ("배경 지우기를 빼면", "배경 지우기 외엔"). */
+export const QUALIFIER_RE = new RegExp(`${EXCEPTION_RE.source}|배경 지우기(를)? ?(빼면|빼고|외엔|외에는)`);
+/** How far from a claim (characters of page text) the exception may stand: the footnote below, the heading above. */
+export const QUALIFIER_BEFORE = 150;
+export const QUALIFIER_AFTER = 80;
+/**
+ * Files whose claims are about one tool that never sends anything: the other tools' pages and the guide pages
+ * (each about such tools). A new tool page is not listed until someone adds it here, so its claims get checked.
+ */
+export const LOCAL_SCOPE_RE = /^(pdf-merge|pdf-compress|photo-compress|id-photo|stamp-signature|hwp-to-pdf|hwp-viewer)\/|^guide\/[^/]+\/index\.html$/;
+/** Text files checked for claims: pages, llms.txt, the sitemap, the manifest and any JSON. */
+export const CLAIM_FILE_RE = /\.(html|txt|xml|json|webmanifest)$/;
+
+const ENTITIES = { '&quot;': '"', '&#39;': "'", '&amp;': '&', '&lt;': '<', '&gt;': '>', '&nbsp;': ' ' };
+
+/** The words of a text file as people and search engines read them: tags out, scripts out except JSON-LD. */
+export function claimText(path, content) {
+  if (!path.endsWith('.html')) return content.replace(/\s+/g, ' ');
+  return content
+    .replace(/<script(?![^>]*application\/ld\+json)[^>]*>[\s\S]*?<\/script>|<style[^>]*>[\s\S]*?<\/style>/g, ' ')
+    .replace(/<(meta|img)\b[^>]*?\b(content|alt)="([^"]*)"[^>]*>/g, ' $3 ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(quot|#39|amp|lt|gt|nbsp);/g, (e) => ENTITIES[e])
+    .replace(/\s+/g, ' ');
+}
+
+/** The claims in `text` with no 배경 지우기 exception within QUALIFIER_BEFORE / QUALIFIER_AFTER characters. */
+export function unqualifiedClaims(text) {
+  const out = [];
+  for (const m of text.matchAll(CLAIM_RE)) {
+    const around = text.slice(Math.max(0, m.index - QUALIFIER_BEFORE), m.index + m[0].length + QUALIFIER_AFTER);
+    if (!QUALIFIER_RE.test(around)) out.push(text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 10).trim());
+  }
+  return out;
+}

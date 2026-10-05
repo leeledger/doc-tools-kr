@@ -418,6 +418,9 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     clearAttempt(storage);
     cut = out;
     paintResult();
+    // A notice from before the run (the cloud quota line, when the engine was ready and no 받고 시작 cleared it)
+    // never stays next to the result.
+    hideError();
     setPhase('done');
     downloadBtn.disabled = false;
     updateSave();
@@ -617,7 +620,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     if (my !== run) return;
     abort = null;
     if (why === 'quota') {
-      // Brief §4: the month's free quota is used up -> the on-device path, with a notice (not remembered).
+      // Brief §4: the month's free quota is used up -> the on-device path, with a notice (not remembered). The
+      // notice goes on 받고 시작 or, when the engine is ready, once the result shows (finish).
       showError(CLOUD.quota, false);
       void onDevice(my);
       return;

@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
 import { autoframeOn } from './lib/autoframe.mjs';
-import { API_PATH as CLOUD_API, EXCEPTION_PAGES, EXCEPTION_RE, bgCloudOn, privacyGate } from './lib/bgcloud.mjs';
+import { API_PATH as CLOUD_API, CLAIM_FILE_RE, EXCEPTION_PAGES, EXCEPTION_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, bgCloudOn, claimText, privacyGate, unqualifiedClaims } from './lib/bgcloud.mjs';
 import { bgRemoveOn } from './lib/bgremove.mjs';
 import { beaconPath } from './lib/beacon-path.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
@@ -188,10 +188,18 @@ for (const f of files) if (f.path.startsWith('spike/')) errors.push(`${f.path}: 
 for (const e of privacyGate(env)) errors.push(e);
 const cloudOn = bgCloudOn(env);
 const exceptionPages = [...pageHtml].filter(([, html]) => EXCEPTION_RE.test(html.replace(/<[^>]+>/g, ''))).map(([p]) => p);
+// C2-cloud round 2 (owner 2026-10-05): off, no exception or cloud-variant wording in any text file (the flag-off
+// copy stays as it was); on, no site-wide "files never leave" claim without the exception next to it.
+const claimFiles = match(CLAIM_FILE_RE).map((f) => [f, claimText(f, read(f).toString('utf8'))]);
 if (!cloudOn) {
   for (const f of match(/\.(html|xml|txt|json|webmanifest|m?js)$/)) if (read(f).includes(CLOUD_API)) errors.push(`${f} calls ${CLOUD_API} in a build with PUBLIC_BG_CLOUD off`);
   for (const p of exceptionPages) errors.push(`${p}: 배경 지우기 exception wording in a build with PUBLIC_BG_CLOUD off`);
+  for (const [f, text] of claimFiles) if (!exceptionPages.includes(f) && QUALIFIER_RE.test(text)) errors.push(`${f}: 배경 지우기 cloud wording in a build with PUBLIC_BG_CLOUD off`);
 } else {
+  for (const [f, text] of claimFiles) {
+    if (LOCAL_SCOPE_RE.test(f)) continue;
+    for (const c of unqualifiedClaims(text)) errors.push(`${f}: "files never leave" without the 배경 지우기 exception (PUBLIC_BG_CLOUD on): …${c}…`);
+  }
   for (const p of exceptionPages) if (!EXCEPTION_PAGES.includes(p)) errors.push(`${p}: 배경 지우기 exception wording outside ${EXCEPTION_PAGES.join(', ')}`);
   for (const p of EXCEPTION_PAGES) if (!exceptionPages.includes(p)) errors.push(`${p}: no 배경 지우기 exception wording in a build with PUBLIC_BG_CLOUD on`);
   const privacy = pageHtml.get('privacy/index.html') ?? '';
