@@ -353,9 +353,9 @@ test('"사진을 보내지 않고 기기에서 처리": the C2 consent, remember
   expect(bodies).toHaveLength(0);
 });
 
-test('the exception wording is on the home, privacy and terms pages, with the officer line; never on another tool', async ({ page }) => {
+test('the exception wording is on the privacy and terms pages, with the officer line; never on the home or another tool', async ({ page }) => {
   await gotoReady(page, '/');
-  await expect(page.locator('.hero-note')).toHaveText('* 배경 지우기만 예외예요. 사진을 잠깐 보내 처리하고 바로 지워요. 원하면 보내지 않고 처리할 수도 있어요.');
+  await expect(page.locator('main')).not.toContainText('예외');
   await gotoReady(page, '/privacy/');
   await expect(page.locator('#bg')).toHaveText('3. 배경 지우기에서 사진을 보내는 경우');
   await expect(page.locator('.prose')).toContainText('개인정보 보호책임자');

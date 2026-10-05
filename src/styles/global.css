@@ -82,7 +82,6 @@ a { color: inherit; }
   margin: 0; font-size: clamp(32px, 5.4vw, 54px); line-height: 1.22; letter-spacing: -0.03em; font-weight: 800;
 }
 .lead { margin: 22px 0 0; max-width: 640px; font-size: clamp(17px, 2vw, 19px); color: var(--muted); }
-.hero-note { margin: 10px 0 0; max-width: 640px; font-size: 14px; color: var(--muted); }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
 
 .btn {
@@ -112,10 +111,6 @@ section h2 { font-size: clamp(24px, 3.2vw, 32px); letter-spacing: -0.02em; line-
 .icon svg { width: 24px; height: 24px; fill: none; stroke: var(--brand); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .status { display: inline-block; font-size: 13px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
 
-.privacy { padding: 72px 0; background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.two-col { display: grid; gap: 40px; grid-template-columns: 1.1fr 1fr; align-items: start; }
-.privacy p { color: var(--muted); margin: 0; }
-.privacy strong { color: var(--text); }
 .points { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .points li { display: grid; gap: 2px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
 .points span { color: var(--muted); font-size: 15.5px; }
@@ -137,8 +132,7 @@ details p { margin: 0 0 18px; color: var(--muted); }
   .hero { padding: 56px 0 48px; }
   .hero h1 br { display: none; }
   .nav-extra { display: none !important; }
-  .two-col { grid-template-columns: 1fr; gap: 28px; }
-  .tools, .privacy, .faq { padding-top: 48px; padding-bottom: 56px; }
+  .tools, .faq { padding-top: 48px; padding-bottom: 56px; }
   .btn { flex: 1 1 auto; }
   /* /hwp-viewer/ page-list sheet: 「닫기」 keeps its own width next to the title (G2 A0 round 2). */
   .hv .hv-sheet-head .btn { flex: 0 0 auto; }

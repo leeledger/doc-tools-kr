@@ -636,7 +636,7 @@ test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedToo
   await open(page);
   await expect(page).toHaveTitle('여권사진·증명사진 사이즈 규격 맞추기 무료 | 문서딱');
   const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
-  expect(desc).toBe('여권사진 규격(413×531 픽셀, 500KB 이하)과 공무원 시험·Q-Net·이력서 증명사진 사이즈에 맞춰 사진을 자르고 용량을 맞춥니다. 사진은 내 폰·컴퓨터 밖으로 보내지 않고, 보정하지 않습니다.');
+  expect(desc).toBe('여권사진 규격(413×531 픽셀, 500KB 이하)과 공무원 시험·Q-Net·이력서 증명사진 사이즈에 맞춰 사진을 자르고 용량을 맞춥니다. 사진은 보정하지 않고, 가입 없이 무료입니다.');
   await expect(page.locator('h1')).toHaveText('여권·증명사진 규격 맞추기');
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute('href'))!).pathname).toBe('/id-photo/');
   const data = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap((j) => JSON.parse(j));

@@ -209,7 +209,7 @@ describe('fixtures and site data', () => {
     expect(n).toBeLessThanOrEqual(120);
     expect(t.description).toContain('hwp pdf 변환');
     expect(t.description).toContain('한글파일 PDF로 변환');
-    expect(t.description).toContain('밖으로 보내지 않습니다');
+    expect(t.description).not.toMatch(/밖으로|보내지 않/); // owner 2026-10-05: says what it does, not where the file goes
     expect(t.keywords).toEqual(['hwp pdf 변환', '한글파일 pdf로 변환', '한글파일 pdf 변환', 'hwp 뷰어', 'hwpx 변환', 'hwpx 열기']);
     expect(t.faq.map((f) => f.q)).toHaveLength(8);
     const ld = faqJsonLd(t) as { '@type': string; mainEntity: unknown[] };

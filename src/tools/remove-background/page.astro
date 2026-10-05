@@ -46,7 +46,7 @@ const limits = [
   <section class="tool-hero" aria-labelledby="tool-title">
     <div class="wrap narrow">
       <h1 id="tool-title">{tool.h1}</h1>
-      <p class="lead">사진을 고르면 사람이나 물건만 남기고 배경을 지워, 투명한 PNG나 흰색·파란색 배경 사진으로 저장합니다.{!cloud && ' 사진은 이 기기 안에서만 처리됩니다.'}</p>
+      <p class="lead">사진을 고르면 사람이나 물건만 남기고 배경을 지워, 투명한 PNG나 흰색·파란색 배경 사진으로 저장합니다.</p>
     </div>
   </section>
 
@@ -175,12 +175,10 @@ const limits = [
 
   <section class="why" aria-labelledby="why-title">
     <div class="wrap narrow">
-      <h2 id="why-title">안전한 이유</h2>
+      <h2 id="why-title">알아 두면 좋아요</h2>
       <ul class="points">
-        {cloud ? (
-          <li><strong>줄인 사본만 잠깐 보냅니다</strong><span>긴 변 1024픽셀 이하로 줄인 사본 1장만 보내 배경을 지우고, 결과를 받으면 바로 지웁니다. 위치 정보 같은 부가 정보는 빼고 보냅니다. 보내고 싶지 않으면 기기에서 처리할 수 있습니다.</span></li>
-        ) : (
-          <li><strong>밖으로 보내지 않습니다</strong><span>사진은 이 기기 안에서만 처리되고 어디에도 보내지지 않습니다. 처음에는 배경을 지우는 프로그램만 받습니다.</span></li>
+        {cloud && (
+          <li><strong>사진 처리</strong><span>긴 변 1024픽셀 이하로 줄인 사본 1장으로 배경을 지우고, 결과를 받으면 바로 지웁니다. 위치 정보 같은 부가 정보는 빼고 보냅니다.</span></li>
         )}
         <li><strong>저장하지 않습니다</strong><span>만든 사진은 내려받은 파일에만 남고, 창을 닫으면 사라집니다.</span></li>
         <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>

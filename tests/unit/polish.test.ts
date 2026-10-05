@@ -500,7 +500,7 @@ describe('share previews (Polish Q, src/data/og.json)', () => {
     expect(sharePreview('/pdf-merge/', 'https://docttak.com')).toEqual({
       image: 'https://docttak.com/brand/og-pdf-merge.png',
       description: (og.pages as Record<string, { description: string }>)['/pdf-merge/']!.description,
-      alt: '문서딱: PDF 합치기. 여러 PDF를 한 파일로 — 무료, 내 폰·PC 안에서만',
+      alt: '문서딱: PDF 합치기. 여러 PDF를 한 파일로 — 무료, 가입 없이',
     });
     expect(sharePreview('/404.html', 'https://docttak.com').image).toBe('https://docttak.com/brand/og-default.png');
     // The home preview no longer lists the tools (Sprint C: seven names alone pass 80 characters); it never names a

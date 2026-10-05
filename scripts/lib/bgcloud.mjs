@@ -36,11 +36,12 @@ export function privacyGate(env) {
 }
 
 /**
- * Wording that states the 배경 지우기 exception (brief §7.2). With the cloud path on it may appear only on the four
- * pages below; with it off, nowhere.
+ * Wording that states the 배경 지우기 exception (brief §7.2). With the cloud path on it may appear only on the three
+ * pages below, which must carry it; with it off, nowhere. The home page left the list (owner 2026-10-05): it makes no
+ * "files never leave" claim, so it names no exception either.
  */
 export const EXCEPTION_RE = /배경 지우기(만|는)? ?(예외|제외)|Cloudflare\(미국 회사\)|사진을 보내지 않고 기기에서 처리/;
-export const EXCEPTION_PAGES = ['index.html', 'privacy/index.html', 'terms/index.html', 'remove-background/index.html'];
+export const EXCEPTION_PAGES = ['privacy/index.html', 'terms/index.html', 'remove-background/index.html'];
 
 /**
  * Site-wide "files never leave" claims (C2-cloud round 2, owner 2026-10-05). With the cloud path on, every claim

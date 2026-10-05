@@ -421,28 +421,24 @@ describe('site-wide "files never leave" claims with the cloud path on (round 2, 
     for (const p of ['pdf-merge/index.html', 'hwp-viewer/index.html', 'guide/passport-photo/index.html', 'guide/photo-sizes/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(true);
     for (const p of ['index.html', '404.html', 'offline/index.html', 'privacy/index.html', 'terms/index.html', 'guide/index.html', 'llms.txt', 'sitemap.xml', 'remove-background/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(false);
   });
-  it('og.json: every site-wide share text and image line, as the cloud build uses it, names the exception', () => {
-    const pages = og.pages as Record<string, { image: string; description: string; cloud?: { description: string } }>;
-    const images = og.images as Record<string, { line: string; cloudLine?: string }>;
+  it('og.json: share texts and image lines make no "files never leave" claim, so none needs the exception (owner 2026-10-05)', () => {
+    const pages = og.pages as Record<string, { image: string; description: string }>;
+    const images = og.images as Record<string, { line: string }>;
     for (const [path, p] of Object.entries(pages)) {
-      if (LOCAL_SCOPE_RE.test(`${path.slice(1)}index.html`)) continue;
-      expect(unqualifiedClaims(p.cloud?.description ?? p.description), path).toEqual([]);
-      const img = images[p.image]!;
-      expect(unqualifiedClaims(img.cloudLine ?? img.line), `${path} image ${p.image}`).toEqual([]);
-      if (p.cloud) expect([...p.cloud.description].length, path).toBeLessThanOrEqual(80);
+      expect(unqualifiedClaims(p.description), path).toEqual([]);
+      expect(QUALIFIER_RE.test(p.description), path).toBe(false);
+      expect(unqualifiedClaims(images[p.image]!.line), `${path} image ${p.image}`).toEqual([]);
     }
   });
-  it('home description: the cloud variant names the exception within 80–120 characters; flag off unchanged', () => {
+  it('home description: no claim and no exception, within 80–120 characters with or without 배경 지우기', () => {
     const eight = [...LIVE_TOOLS, BG_REMOVE_TOOL];
     for (const tools of [LIVE_TOOLS, eight]) {
-      const d = defaultDescription(tools, true);
+      const d = defaultDescription(tools);
       expect(unqualifiedClaims(d), d).toEqual([]);
+      expect(QUALIFIER_RE.test(d), d).toBe(false);
       expect([...d].length).toBeGreaterThanOrEqual(80);
       expect([...d].length).toBeLessThanOrEqual(120);
     }
-    expect(defaultDescription(eight, false)).toBe(`${eight.map((t) => t.name).join('·')}. 파일은 밖으로 안 나가요. 무료.`);
-    expect(defaultDescription(LIVE_TOOLS, false)).toBe(defaultDescription(LIVE_TOOLS));
-    expect(QUALIFIER_RE.test(defaultDescription(eight, false))).toBe(false);
   });
 });
 

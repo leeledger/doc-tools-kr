@@ -17,17 +17,15 @@ export const liveNames = (tools: readonly Tool[] = LIVE_TOOLS): string => tools.
  * Meta description of the home page and the default for other pages: derived from the live tools only, so
  * nothing promises a tool that is not live (UX-AUDIT-1 P0-4). No particle follows the variable part.
  */
-export function defaultDescription(tools: readonly Tool[] = LIVE_TOOLS, cloud: boolean = __BG_CLOUD__): string {
+export function defaultDescription(tools: readonly Tool[] = LIVE_TOOLS): string {
   // Sprint C (C1): with seven tools the names alone are 85 characters, so the tagline sentence left the template
   // (it is the page title's); the text stays within 80–120.
   // Sprint C (C2): with the eighth tool the names are 100 characters, so the shorter sentence keeps it at 120.
-  // C2-cloud round 2 (owner 2026-10-05): with the 배경 지우기 cloud path on, the claim names that one exception.
-  // Round 4 (Arch, Richard's note): the short cloud form makes no claim at all rather than a clipped one.
+  // Owner 2026-10-05: the description says what the site does, not where the file goes (no privacy claim, so
+  // the 배경 지우기 cloud path needs no exception here).
   const names = liveNames(tools);
-  const [long, short] = cloud
-    ? [`${names}. 배경 지우기를 빼면 파일은 밖으로 안 나가요. 무료.`, `${names}. 무료, 가입 없이.`]
-    : [`${names}. 파일은 내 폰·컴퓨터 밖으로 나가지 않아요. 무료.`, `${names}. 파일은 밖으로 안 나가요. 무료.`];
-  return [...long].length <= 120 ? long : short;
+  const long = `${names}. 내야 하는 문서·사진을 규격에 맞춰요. 가입 없이 무료.`;
+  return [...long].length <= 120 ? long : `${names}. 가입 없이 무료.`;
 }
 
 /** Ads stay off in this phase. AdSlot renders nothing while this is false. */
@@ -40,7 +38,7 @@ export const VERIFICATION = {
 };
 
 /** Every tool title ends with this (tools.ts writes it out; a unit test checks they match). */
-export const TITLE_SUFFIX = '파일을 보내지 않고 무료로 | 문서딱';
+export const TITLE_SUFFIX = '가입 없이 무료로 | 문서딱';
 
 const env = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
 
@@ -86,15 +84,12 @@ export interface SharePreview {
 
 /** The share preview of a page path (src/data/og.json; unlisted paths take "*"). */
 export function sharePreview(path: string, site: URL | string): SharePreview {
-  const pages = og.pages as Record<string, { image: string; description: string; cloud?: { description: string } }>;
+  const pages = og.pages as Record<string, { image: string; description: string }>;
   const entry = pages[path] ?? pages['*']!;
-  const img = (og.images as Record<string, { title: string; line: string; cloudLine?: string }>)[entry.image]!;
-  // C2-cloud: with the 배경 지우기 cloud path on, its preview no longer says the photo stays on the device.
-  const description = (__BG_CLOUD__ && entry.cloud ? entry.cloud.description : entry.description).replace('{tools}', liveNames());
-  const line = __BG_CLOUD__ && img.cloudLine ? img.cloudLine : img.line;
+  const img = (og.images as Record<string, { title: string; line: string }>)[entry.image]!;
   return {
     image: new URL(`/brand/og-${entry.image}.png`, site).href,
-    description,
-    alt: `${SITE.name}: ${img.title}. ${line}`,
+    description: entry.description.replace('{tools}', liveNames()),
+    alt: `${SITE.name}: ${img.title}. ${img.line}`,
   };
 }

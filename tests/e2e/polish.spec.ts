@@ -160,7 +160,7 @@ test('terms: 200, canonical, the full text with 10 sections and no contact claus
 test('privacy: a short plain statement (owner, Polish Q): no sign-up, no personal data, files stay on the device; the access-log note; no officer or contact', async ({ page }) => {
   await gotoReady(page, '/privacy/');
   const main = page.locator('main');
-  await expect(page.locator('.prose h2')).toHaveText(['1. 받는 개인정보가 없어요', '2. 파일은 어디로도 보내지 않아요', '3. 사이트를 여는 기록', '4. 광고', '5. 변경 이력']);
+  await expect(page.locator('.prose h2')).toHaveText(['1. 받는 개인정보가 없어요', '2. 고른 파일은 내 폰·컴퓨터 안에서 처리해요', '3. 사이트를 여는 기록', '4. 광고', '5. 변경 이력']);
   await expect(main).toContainText('문서딱은 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요.');
   await expect(main).toContainText('고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요.');
   await expect(main).toContainText('사이트를 여는 기록(접속 기록: IP 주소, 쓰는 기기와 앱의 종류 등)은 Cloudflare가 보안과 운영을 위해 잠시 보관할 수 있어요.');
@@ -234,7 +234,7 @@ test('home, meta and JSON-LD name every live tool and no soon tool (og: no soon 
   await expect(page.locator('.soon a')).toHaveCount(0);
   const logo = JSON.parse((await page.locator('script[type="application/ld+json"]').first().textContent())!).find((d: { '@type': string }) => d['@type'] === 'Organization').logo;
   expect(logo).toMatch(/\/brand\/icon-512\.png$/);
-  await expect(page.getByText('파일은 지금 쓰는 PC나 휴대폰 안에서만 처리되고, 창을 닫으면 사라집니다.')).toBeAttached();
+  await expect(page.getByText('작업한 파일은 저장하지 않고, 창을 닫으면 사라집니다.')).toBeAttached();
   await expect(page.locator('#faq')).not.toContainText(/광고|품질 검증|언제 사용/);
 });
 
@@ -271,7 +271,7 @@ test('icons, manifest and OG image are served; the head links them', async ({ pa
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/brand/apple-touch-icon.png');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /^https:\/\/.+\/brand\/og-pdf-merge\.png$/);
-  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', '문서딱: PDF 합치기. 여러 PDF를 한 파일로 — 무료, 내 폰·PC 안에서만');
+  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', '문서딱: PDF 합치기. 여러 PDF를 한 파일로 — 무료, 가입 없이');
   await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', /^https:\/\/.+\/brand\/og-pdf-merge\.png$/);
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
 });
@@ -583,7 +583,7 @@ test.describe('header tools menu (P.9)', () => {
     for (const name of LIVE) await expect(panel.getByRole('link', { name })).toBeVisible();
     await expect(panel.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('aria-current', 'page');
     await expect(panel.getByRole('link', { name: 'PDF 합치기' })).not.toHaveAttribute('aria-current', 'page');
-    await expect(panel.getByRole('link', { name: '보안' })).toHaveAttribute('href', '/#privacy');
+    await expect(panel.getByRole('link', { name: '자주 묻는 질문' })).toHaveAttribute('href', '/#faq');
     expect(await serious(page)).toEqual([]);
 
     await page.keyboard.press('Escape');

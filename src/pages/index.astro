@@ -2,7 +2,6 @@
 import Base from '../layouts/Base.astro';
 import JsonLd from '../components/JsonLd.astro';
 import { SITE, defaultDescription, liveNames } from '../data/site';
-import { josa } from '../lib/ui/josa';
 import { HOME_TITLE, LIVE_TOOLS, TOOLS } from '../data/tools';
 import { guidePath, guidesBySlug } from '../data/guides';
 import { toolListJsonLd } from '../data/jsonld';
@@ -38,14 +37,12 @@ const jsonLd = [
   <JsonLd slot="head" data={jsonLd} />
   <section class="hero">
     <div class="wrap">
-      <p class="eyebrow">{__BG_CLOUD__ ? '배경 지우기를 빼면 파일이 밖으로 안 나가요' : '파일이 밖으로 안 나가요'} · 가입 없음 · 무료</p>
+      <p class="eyebrow">가입 없음 · 설치 없음 · 무료</p>
       <h1>내야 하는 문서·사진, <br>용량과 규격에 딱 맞춰 드려요</h1>
-      <p class="lead">지금 쓸 수 있는 도구: {liveNames()}.
-        사진과 서류는 내 폰·컴퓨터 안에서만 고쳐요. 어디로도 보내지 않아요.{__BG_CLOUD__ && '*'}</p>
-      {__BG_CLOUD__ && <p class="hero-note">* 배경 지우기만 예외예요. 사진을 잠깐 보내 처리하고 바로 지워요. 원하면 보내지 않고 처리할 수도 있어요.</p>}
+      <p class="lead">지금 쓸 수 있는 도구: {liveNames()}.</p>
       <div class="hero-cta">
         <a class="btn primary" href="#tools">도구 둘러보기</a>
-        <a class="btn ghost" href="#privacy">어떻게 안전한가요?</a>
+        <a class="btn ghost" href="/guide/">규격·용량 안내 보기</a>
       </div>
     </div>
   </section>
@@ -94,30 +91,16 @@ const jsonLd = [
     </section>
   )}
 
-  <section id="privacy" class="privacy" aria-labelledby="privacy-title">
-    <div class="wrap two-col">
-      <div>
-        <h2 id="privacy-title">{__BG_CLOUD__ ? '배경 지우기를 빼면 파일이 기기 밖으로 나가지 않습니다' : '파일이 기기 밖으로 나가지 않습니다'}</h2>
-        <p>다른 변환 사이트는 내 파일을 그 회사 컴퓨터로 보낸 뒤 처리합니다.{" "}
-          {josa(SITE.name, '은/는')} 처리 프로그램을 이 페이지에 받아 와서 <strong>내 폰·컴퓨터 안에서 바로 처리</strong>합니다.
-          주민등록번호가 담긴 서류, 계약서{__BG_CLOUD__ ? '' : ', 증명사진'}도 다른 곳을 거치지 않습니다.</p>
-      </div>
-      <ul class="points">
-        <li><strong>밖으로 보내지 않음</strong><span>파일은 인터넷으로 어디에도 보내지지 않습니다.{__BG_CLOUD__ && ' (배경 지우기는 예외: 사진을 잠깐 보내 처리하고 바로 지워요)'}</span></li>
-        <li><strong>저장 없음</strong><span>작업한 파일은 창을 닫으면 사라집니다.</span></li>
-        <li><strong>설치·가입 없음</strong><span>PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있습니다. {__BG_CLOUD__ ? '배경 지우기를 빼면, 한 번 쓴 도구는 인터넷을 끊어도 동작합니다.' : '한 번 쓴 도구는 인터넷을 끊어도 동작합니다.'} 비행기 모드에서 직접 확인해 보세요.</span></li>
-      </ul>
-    </div>
-  </section>
-
   <section id="faq" class="faq" aria-labelledby="faq-title">
     <div class="wrap narrow">
       <h2 id="faq-title">자주 묻는 질문</h2>
       <details>
         <summary>제 파일이 다른 곳에 저장되나요?</summary>
-        <p>{__BG_CLOUD__
-          ? '아니요. 배경 지우기를 빼면 파일은 지금 쓰는 PC나 휴대폰 안에서만 처리되고, 창을 닫으면 사라집니다. 배경 지우기는 사진을 잠깐 보내 처리하고 바로 지워요.'
-          : '아니요. 파일은 지금 쓰는 PC나 휴대폰 안에서만 처리되고, 창을 닫으면 사라집니다.'}</p>
+        <p>아니요. 작업한 파일은 저장하지 않고, 창을 닫으면 사라집니다.{__BG_CLOUD__ && <> 배경 지우기의 사진 처리는 <a href="/privacy/#bg">개인정보 처리방침</a>에 적어 두었습니다.</>}</p>
+      </details>
+      <details>
+        <summary>설치나 가입이 필요한가요?</summary>
+        <p>아니요. PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있고, 모두 무료입니다.</p>
       </details>
       <details>
         <summary>휴대폰에서도 되나요?</summary>
