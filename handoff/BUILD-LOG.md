@@ -1893,3 +1893,80 @@ Status: **DONE_WITH_CONCERNS**. Everything in brief §3–§11 step 4 is built a
 
 **Known Gaps**
 - The Function also deploys to production. With `PUBLIC_BG_CLOUD=0` the page never calls it. Production has no `BG` binding, so a direct call gets 503 `engine`, but it still counts as a Function request.
+
+## C2-cloud round 2 (Bob, 2026-10-05; worktree `C:\dev\doc-tools\c2`, branch `c2-cloud` from 8b203f8)
+Status: **DONE**. Gates are green locally (numbers below). Committed, not pushed (Arch pushes).
+
+**Owner decisions, 2026-10-05 (relayed by Arch)**
+- 약 110 MB accepted.
+- Bob's extra copy accepted as written: the ready line, the remembered "기기에서 처리" line with its undo, the terms §2 sentence, the share preview, and the `이용 목적` line.
+- With `PUBLIC_BG_CLOUD` on, every site-wide "files never leave" claim names the one exception. Arch's template: "배경 지우기를 빼면 파일은 내 폰·PC 밖으로 안 나가요". With the flag off, all text stays byte-identical.
+
+**What changed (cloud build only, unless noted)**
+- `src/data/og.json`:
+  - `cloud.description` for `/`, `*` (404, offline and any unlisted page) and `/privacy/`: "… 배경 지우기를 빼면 파일은 내 폰·PC 밖으로 안 나가요 / 안에서만 처리해요". 67 / 67 / 58 characters (limit 80).
+  - `cloudLine` for the `home` and `default` share images: "… — 무료, 가입 없이", like the 배경 지우기 image. The cloud build's og-home / og-default PNGs are regenerated; I checked og-home by eye.
+- `src/data/site.ts` `defaultDescription(tools, cloud = __BG_CLOUD__)`: this is the home search description and JSON-LD, and the default for other pages.
+  - The long form is "… 배경 지우기를 빼면 파일은 밖으로 안 나가요. 무료.".
+  - With eight tools the names alone are 100 characters, so the 120 cap takes the short form "… 배경 지우기 외엔 기기 안에서만." (exactly 120).
+- `src/pages/index.astro`:
+  - eyebrow: "배경 지우기를 빼면 파일이 밖으로 안 나가요 · 가입 없음 · 무료";
+  - section title: "배경 지우기를 빼면 파일이 기기 밖으로 나가지 않습니다";
+  - FAQ "제 파일이 다른 곳에 저장되나요?": the answer names the exception and reuses the approved footnote wording "사진을 잠깐 보내 처리하고 바로 지워요";
+  - safety bullet (Richard's Should Fix): "(배경 지우기는 예외, 아래 설명)" becomes "(배경 지우기는 예외: 사진을 잠깐 보내 처리하고 바로 지워요)". The explanation sits above the bullet (the hero footnote), so the pointer was wrong; the bullet now explains itself.
+- `src/pages/llms.txt.ts`: "배경 지우기를 빼면 파일은 내 폰·컴퓨터 안에서만 처리되고 밖으로 보내지 않아요. 배경 지우기는 줄인 사진 1장을 잠깐 보내 처리하고 바로 지워요."
+- 404 and offline: their only claim was the default share text (`*`), now covered.
+- Not changed, on purpose:
+  - each other tool's page and every guide/hub page: each is about a tool that sends nothing, so its claim stays true;
+  - the home paragraph "주민등록번호가 담긴 서류, 계약서, 증명사진도 다른 곳을 거치지 않습니다": those files never go through 배경 지우기.
+- `CLAUDE.md` line 14 (the no-contact rule): it now says the cloud build shows the 개인정보 보호책임자 and contact on /privacy/, as the law requires (제30조, build gate), and that site-wide claims name the exception.
+- `docs/COPY.md`: the new template, where it is used, and the bullet change.
+- **Richard's Should Fix items**
+  - `tests/e2e/upload-guard.ts`: the header now points to `tests/unit/bgcloud.test.ts` "no-upload allowlist".
+  - Quota notice: **it did linger.** With the engine already live (or cached), quota → `onDevice` → `start` → `done`, and `#bg-error` kept showing "이번 달 무료 처리량이 다 찼어요…" next to the result.
+    - Fix: `finish()` calls `hideError()` before `setPhase('done')` (bg.ts:421-423).
+    - Regression e2e: `503 quota with the engine ready…` (cloud-chromium only; it runs the stand-in engine).
+    - Without the fix it fails at `#bg-error toBeHidden` (Received: visible). I checked this with a temporary build that had the one line commented out, then rebuilt with the fix.
+  - EXCEPTION_RE scope: widened as Richard asked (next item).
+
+**Checks added**
+- `scripts/lib/bgcloud.mjs`:
+  - `CLAIM_RE`: the "never leaves" phrasings: 밖으로/어디로도/어디에도/다른 곳으로/다른 곳의 컴퓨터로/인터넷으로 followed by 안 나가/나가지 않/보내지 않/보내지지 않/전송되지 않, and "안에서만".
+  - `QUALIFIER_RE`: EXCEPTION_RE, plus "배경 지우기(를) 빼면/빼고/외엔/외에는".
+  - `claimText`: the page's text, meta content and alt text included, JSON-LD kept, other scripts dropped, entities decoded.
+  - `unqualifiedClaims`: a claim with no qualifier within 150 characters before it or 80 after.
+  - `LOCAL_SCOPE_RE`: the seven other tool directories and `guide/<id>/` pages. A new tool page is not in the list, so it gets checked until someone adds it (fails safe).
+- `scripts/check-dist.mjs`:
+  - cloud on: every `.html/.txt/.xml/.json/.webmanifest` file outside the local scope has no unqualified claim;
+  - cloud off: no file of those types carries any cloud wording.
+- `tests/unit/bgcloud.test.ts`: 5 tests (the detector, page text, scope, og.json texts as the cloud build uses them, defaultDescription in both states).
+- `tests/unit/postbuild.test.ts`:
+  - a new built-output test: cloud dist has no unqualified claims (html + txt/xml/json); off dist has no cloud wording.
+  - The cross-state check-dist test now also expects the claim errors for index/404/offline/llms.txt (off dist run as cloud) and the llms.txt wording error (cloud dist run as off).
+
+**Decisions (builder)**
+1. "Site-wide" means every text file except the other tools' own pages and the guide pages. The exception is named within the same sentence or next to it: a footnote within 80 characters after, or a heading within 150 before.
+2. The home search description's 120-character cap forces the short form "배경 지우기 외엔 기기 안에서만." The full template does not fit after 100 characters of tool names.
+3. The default share image line in the cloud build is "PDF·사진·여권사진·HWP — 무료, 가입 없이". The four tools it names are local, but the image stands for the whole site.
+
+**Gates (2026-10-05, this machine)**
+- `npm run check`: 0 errors, 0 warnings. The 1 hint is old: `hwp-shared/fonts.ts`, also there at 8b203f8.
+- `npx vitest run`: 45 files, 847 passed (was 841: +5 bgcloud, +1 postbuild).
+  - postbuild against dist-bgcloud swapped in as dist: 46/46.
+  - postbuild against dist-bg swapped in: 46/46.
+- Builds, all with `PUBLIC_SITE_URL=https://docttak.com`, each with check-dist OK:
+  - flag off → `dist`: 2,372 files, precache 431.0 / 450 KB.
+  - BG on → `dist-bg`: 2,390 files, controller 13.1 / 14 KB, precache 434.8 KB.
+  - BG and cloud on (이종림 / robotncoding@kakao.com) → `dist-bgcloud`: 2,391 files, controller 13.8 / 14 KB, cloud client 1.3 / 3 KB, precache 436.1 / 450 KB.
+- **Flag-off copy byte-identical:** I diffed against baseline builds of 8b203f8 made before any edit.
+  - `dist` vs baseline: the only differing file is `deploy-manifest.json` (its timestamp).
+  - `dist-bg` vs baseline: `deploy-manifest.json`, plus `remove-background/index.html` differs only in the entry chunk hash. That comes from the bg.ts fix; the text is the same.
+- Claim grep of `dist-bgcloud` (every text file outside the local scope): 0 unqualified. Before this round it found 30 (index, 404, offline, privacy, terms, licenses, guide/, llms.txt).
+- e2e:
+  - chromium site + polish: 88 passed, 1 skipped.
+  - bg-chromium: 6/6.
+  - cloud-* in all five browsers: 46 passed, 4 skipped (the new quota test runs on cloud-chromium only), no retries.
+
+**Known Gaps (not fixed, out of scope)**
+- Home bullet "한 번 쓴 도구는 인터넷을 끊어도 동작합니다" and offline page "한 번 사용한 도구는 인터넷 없이도 열립니다". In the cloud build, 배경 지우기 needs the internet by default. It still works offline on the device path once its engine is stored. This is not a "files leave" claim, so I left it; it is Arch's call.
+- `tests/e2e/remove-background.cloud.spec.ts` has its own small `stubModel` (one part), separate from the device spec's. Deduplicating needs an edit to the device spec, which the auto-mode classifier blocked when I tried to move the helper. I left the device spec untouched.
