@@ -68,8 +68,12 @@ export function pageProblems(html, pageUrl) {
 
 const INJECTED = /\/cdn-cgi\/|cloudflareinsights|rocket-loader|email-decode/i;
 
+/** Our own Web Analytics tag (Base.astro, PUBLIC_CF_ANALYTICS_TOKEN): marked, so an injected beacon still shows. */
+const OWN_BEACON = /<script\b(?=[^>]*\bdata-site-analytics\b)(?=[^>]*\bsrc="https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js")[^>]*><\/script>/gi;
+
 /** <script src> that is off-site or injected by Cloudflare (absolute URLs). */
-export function offSiteScripts(html, pageUrl) {
+export function offSiteScripts(page, pageUrl) {
+  const html = page.replace(OWN_BEACON, '');
   const origin = new URL(pageUrl).origin;
   const out = [];
   for (const m of html.matchAll(/<script\b[^>]*>/gi)) {

@@ -370,7 +370,8 @@ describe('page states with the cloud path (model.ts)', () => {
     expect(CLOUD.failed).toBe('지금은 처리할 수 없어요. 다시 시도하거나 기기에서 처리해 보세요.');
     expect([CLOUD.sending, CLOUD.working, CLOUD.refining]).toEqual(['사진을 보내는 중…', '배경을 지우는 중… (보통 5초쯤)', '가장자리를 다듬는 중…']);
     expect(CLOUD.device('약 110 MB')).toBe('사진을 보내지 않고 기기에서 처리 (처음 한 번 약 110 MB 받기)');
-    expect(EXCEPTION_RE.test(CLOUD.notice)).toBe(true);
+    expect(CLOUD.notice).not.toContain('Cloudflare'); // owner 2026-10-05: the company is named in the privacy policy only
+    expect(EXCEPTION_RE.test(CLOUD.noticeDevice('약 110 MB').join(''))).toBe(true);
     for (const line of Object.values(CLOUD)) if (typeof line === 'string') expect(line).not.toMatch(/업로드|서버|브라우저|네트워크|EXIF/);
   });
 });

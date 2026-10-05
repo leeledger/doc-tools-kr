@@ -61,7 +61,7 @@ export const COPY = {
  * first download (aboutMB), where the brief says "약 100 MB".
  */
 export const CLOUD = {
-  notice: '배경 지우기를 누르면 사진을 작게 줄인 사본 1장을 Cloudflare(미국 회사)로 보내 배경을 지우고, 결과를 받으면 바로 지워요. 문서딱은 사진을 저장하지 않아요.',
+  notice: '배경 지우기를 누르면 사진을 작게 줄인 사본 1장을 보내 배경을 지우고, 결과를 받으면 바로 지워요. 문서딱은 사진을 저장하지 않아요.',
   noticeMore: '자세히',
   noticeDevice: (deviceMB: string) => ['보내고 싶지 않으면 ', '사진을 보내지 않고 기기에서 처리', `를 고르세요 (처음 한 번 ${deviceMB}).`] as const,
   send: '배경 지우기',

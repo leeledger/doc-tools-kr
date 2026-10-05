@@ -98,6 +98,10 @@ describe('page checks (A-4)', () => {
     const page = GOOD(url, '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{}\'></script><script src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>');
     expect(offSiteScripts(page, url)).toEqual(['https://static.cloudflareinsights.com/beacon.min.js', 'https://docttak.com/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js']);
     expect(offSiteScripts(GOOD(url), url)).toEqual([]);
+    // Our own marked beacon (PUBLIC_CF_ANALYTICS_TOKEN) passes; an injected one next to it still shows.
+    const own = '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;:&quot;0123456789abcdef0123456789abcdef&quot;}" data-site-analytics></script>';
+    expect(offSiteScripts(GOOD(url, own), url)).toEqual([]);
+    expect(offSiteScripts(GOOD(url, `${own}<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{}'></script>`), url)).toEqual(['https://static.cloudflareinsights.com/beacon.min.js']);
   });
   it('lists internal links without fragments, mailto or other hosts', () => {
     expect(internalLinks(GOOD(url), url)).toEqual(['https://docttak.com/pdf-merge/', 'https://docttak.com/guide/x/']);

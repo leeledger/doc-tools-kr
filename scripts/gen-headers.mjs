@@ -3,9 +3,10 @@
 // - HSTS on that host, max-age one year. No includeSubDomains and no preload yet: preload is hard to
 //   undo, so it is a later owner decision (docs/DOMAIN-RUNBOOK.md step 10).
 // - noindex on the pages.dev production host, which then only redirects to the domain.
-import { appendFileSync, existsSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { analyticsToken, withAnalyticsCsp } from './lib/analytics.mjs';
 import { BG_PATH, bgRemoveOn } from './lib/bgremove.mjs';
 import { distDir, publicEnv } from './lib/dist.mjs';
 
@@ -44,6 +45,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const env = publicEnv();
   const site = env.PUBLIC_SITE_URL;
   const coep = bgRemoveHeaders(bgRemoveOn(env.PUBLIC_BG_REMOVE));
+  // Visitor counts (owner 2026-10-05): the site-wide CSP lets the Cloudflare Web Analytics beacon load and report.
+  if (analyticsToken(env.PUBLIC_CF_ANALYTICS_TOKEN)) {
+    writeFileSync(file, withAnalyticsCsp(readFileSync(file, 'utf8')));
+    console.log('gen-headers: CSP allows the Cloudflare Web Analytics beacon');
+  }
   // Path rules before the host rules: the COEP block applies on every host.
   if (coep) appendFileSync(file, coep);
   const block = domainHeaders(site);

@@ -3,6 +3,7 @@ import '../generated/anolim-ui.css';
 import '../styles/global.css';
 import '../styles/app.css';
 import { SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } from '../data/site';
+import { ANALYTICS_ON, BEACON_SRC, CF_ANALYTICS_TOKEN } from '../data/analytics';
 import { BUILD_ID } from '../data/build';
 import { LIVE_TOOLS } from '../data/tools';
 import JsonLd from '../components/JsonLd.astro';
@@ -92,6 +93,7 @@ const favicon =
 <link rel="preload" href={uiFont800} as="font" type="font/woff2" crossorigin>
 {jsonLd && <JsonLd data={jsonLd} />}
 <slot name="head" />
+{ANALYTICS_ON && <script is:inline defer src={BEACON_SRC} data-cf-beacon={JSON.stringify({ token: CF_ANALYTICS_TOKEN })} data-site-analytics></script>}
 </head>
 <body>
 <a class="skip" href={`#${skipTarget}`}>본문으로 건너뛰기</a>

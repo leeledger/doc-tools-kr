@@ -2,7 +2,8 @@
 import Base from '../../layouts/Base.astro';
 import { CONTACT_EMAIL, PRIVACY_OFFICER, SITE } from '../../data/site';
 import { josa } from '../../lib/ui/josa';
-import { PRIVACY_CLOUD, PRIVACY_REVISED, PRIVACY_V1 } from '../../data/legal';
+import { PRIVACY_ANALYTICS, PRIVACY_CLOUD, PRIVACY_REVISED, PRIVACY_V1 } from '../../data/legal';
+import { ANALYTICS_ON } from '../../data/analytics';
 import { BEACON_ENABLED } from '../../lib/ui/beacon';
 import { downloadBytes } from '../../lib/bgremove/assets';
 import { aboutMB } from '../../tools/remove-background/copy';
@@ -29,7 +30,7 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
       <p class="meta-line">시행일: {PRIVACY_REVISED}</p>
 
       <h2>1. 받는 개인정보가 없어요</h2>
-      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. 쿠키와 방문 분석 도구도 쓰지 않아요.</p>
+      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. {ANALYTICS_ON ? '쿠키도 쓰지 않아요.' : '쿠키와 방문 분석 도구도 쓰지 않아요.'}</p>
 
       <h2>2. 고른 파일은 내 폰·컴퓨터 안에서 처리해요</h2>
       <p>고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요{cloud && ' (사진 배경 지우기는 제외: 3항)'}. 운영자나 다른 곳으로 보내지 않고, 저장하지도 않아요. PDF 비밀번호도 처리하는 동안에만 쓰고 저장하거나 보내지 않아요. 창을 닫으면 모두 사라져요.</p>
@@ -59,6 +60,9 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
 
       <h2>{n(3)}. 사이트를 여는 기록</h2>
       <p>이 사이트는 호스팅 업체 Cloudflare를 통해 제공돼요. 사이트를 여는 기록(접속 기록: IP 주소, 쓰는 기기와 앱의 종류 등)은 Cloudflare가 보안과 운영을 위해 잠시 보관할 수 있어요. 자세한 내용은 <a href="https://www.cloudflare.com/ko-kr/privacypolicy/" rel="noopener">Cloudflare 개인정보 처리방침</a>을 참고해 주세요.</p>
+      {ANALYTICS_ON && (
+        <p id="analytics">방문자 수와 많이 보는 페이지를 알기 위해 Cloudflare Web Analytics를 써요. 쿠키를 쓰지 않고, 연 페이지 주소, 들어온 곳, 쓰는 기기와 앱의 종류, 나라 같은 정보만 모아 합계로만 봐요. 고른 파일과 그 내용은 담기지 않아요.</p>
+      )}
 
       <h2>{n(4)}. 광고</h2>
       <p>지금은 광고가 없어요. 광고(Google AdSense 등)를 싣게 되면, 그 전에 이 방침을 고치고 필요한 동의 절차를 먼저 마련할게요.</p>
@@ -79,6 +83,7 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
 
       <h2>{n(5) + (cloud ? 1 : 0)}. 변경 이력</h2>
       <ul>
+        {ANALYTICS_ON && <li>{PRIVACY_ANALYTICS}: 방문자 수 집계(Cloudflare Web Analytics)를 더함</li>}
         {cloud && <li>{PRIVACY_CLOUD}: 배경 지우기에서 사진을 보내는 경우(3항)와 개인정보 보호책임자를 더함</li>}
         <li>{PRIVACY_V1}: 쉬운 말로 다시 쓰고 서비스 이름을 {josa(SITE.name, '으로/로')} 바꿈, 이용약관 신설</li>
         <li>2026년 9월 29일: 처음 제정</li>
