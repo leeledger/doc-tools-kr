@@ -83,7 +83,7 @@ const PNG_BYTES = Uint8Array.from(
 /**
  * Writes the never-committed edge-case fixtures into `dir` and returns their paths.
  * @param {string} dir
- * @returns {Promise<Record<'encrypted_userpw_1234' | 'damaged_badxref' | 'truncated' | 'not_a_pdf' | 'owner_restricted' | 'signed_fake' | 'jpx_only' | 'cmyk_jpeg' | 'junk_content', string>>}
+ * @returns {Promise<Record<'encrypted_userpw_1234' | 'damaged_badxref' | 'truncated' | 'not_a_pdf' | 'owner_restricted' | 'owner_no_copy' | 'signed_fake' | 'jpx_only' | 'cmyk_jpeg' | 'junk_content', string>>}
  */
 export async function makeRuntimeFixtures(dir) {
   mkdirSync(dir, { recursive: true });
@@ -111,6 +111,8 @@ export async function makeRuntimeFixtures(dir) {
     not_a_pdf: PNG_BYTES,
     // Owner password only (empty user password), AES-256: opens without a password, edit-restricted.
     owner_restricted: await qpdfNode(['--encrypt', '', 'owner', '256', '--', 'in.pdf', 'out.pdf'], plain),
+    // Owner password only, AES-256, printing / changing / copying not allowed: opens without a password (TOOLS4 T3 notice, T4 lock refusal).
+    owner_no_copy: await qpdfNode(['--encrypt', '', 'owner', '256', '--print=none', '--modify=none', '--extract=n', '--', 'in.pdf', 'out.pdf'], plain),
     signed_fake: await buildSignedFake(law),
     jpx_only: await imagePdf({ Filter: 'JPXDecode', ColorSpace: 'DeviceRGB', BitsPerComponent: 8 }, seededBytes(64 * 1024, 7), 200, 200),
     cmyk_jpeg: await imagePdf({ Filter: 'DCTDecode', ColorSpace: 'DeviceCMYK', BitsPerComponent: 8 }, await noisyJpeg(900, 900), 900, 900),

@@ -1,0 +1,161 @@
+---
+// /pdf-password/ (TOOLS4 T4): 암호 풀기 (with the password the person knows) and 암호 걸기 (AES-256 open password).
+// The controller loads on the first interaction (entry.ts); pdf.js when a file is chosen; qpdf (a worker) on the button.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { PASSWORD_MAX, PASSWORD_MIN } from '../../tools/pdf-password/limits';
+
+const tool = getTool('pdf-password');
+const jsonLd = toolJsonLd(tool, Astro.site);
+const EYE = '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">비밀번호를 아는 PDF는 암호를 풀어 저장하고, 내 PDF에는 열 때 필요한 비밀번호를 겁니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="pp-tool" class="compress" data-state="empty" data-action="unlock">
+        <fieldset class="levels pp-action">
+          <legend>할 일</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="pp-action" value="unlock" checked><span>암호 풀기</span></label>
+            <label class="chip"><input type="radio" name="pp-action" value="lock"><span>암호 걸기</span></label>
+          </div>
+          <p class="hint" id="pp-rule">열 때 쓰는 비밀번호를 아는 파일만 풀 수 있습니다.</p>
+        </fieldset>
+
+        <div class="drop" id="pp-drop">
+          <input id="pp-input" class="file-input" type="file" accept="application/pdf,.pdf">
+          <label class="btn primary" for="pp-input" id="pp-pick">PDF 파일 선택</label>
+          <p class="drop-hint">또는 여기에 PDF 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱에서 PDF를 고를 수 있습니다.</p>
+          <p class="privacy-note">파일과 비밀번호는 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="notice" id="pp-notice" hidden></p>
+        <EngineError />
+
+        <div class="file-item file-card" id="pp-file" hidden>
+          <div class="meta">
+            <p class="name" id="pp-name"></p>
+            <p class="info" id="pp-info"></p>
+          </div>
+          <div class="pw pp-stop" id="pp-stop" hidden>
+            <p class="pw-state" id="pp-stop-text"></p>
+            <div class="row"><button type="button" class="btn small ghost" id="pp-switch" hidden>암호 풀기로 바꾸기</button></div>
+          </div>
+          <form class="pw" id="pp-unlock" novalidate hidden>
+            <p class="pw-state" id="pp-unlock-state">이 파일은 비밀번호로 보호되어 있습니다. 열 때 쓰는 비밀번호를 입력해 주세요.</p>
+            <label class="pw-label" for="pp-pw">비밀번호</label>
+            <div class="row pw-row">
+              <input class="pw-input" id="pp-pw" type="password" autocomplete="off" aria-describedby="pp-unlock-state pp-unlock-error">
+              <button type="button" class="btn small ghost icon-btn pw-toggle" id="pp-pw-toggle" aria-label="비밀번호 보기" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" set:html={EYE} /></button>
+            </div>
+            <p class="pw-error" id="pp-unlock-error"></p>
+            <div class="row"><button type="submit" class="btn primary" id="pp-unlock-run">암호 풀기</button></div>
+          </form>
+          <form class="pw" id="pp-lock" novalidate hidden>
+            <p class="pw-state" id="pp-lock-state">파일을 열 때 쓸 비밀번호를 정해 주세요. {PASSWORD_MIN}자에서 {PASSWORD_MAX}자까지, 한글도 쓸 수 있습니다.</p>
+            <label class="pw-label" for="pp-new">새 비밀번호</label>
+            <div class="row pw-row">
+              <input class="pw-input" id="pp-new" type="password" autocomplete="new-password" aria-describedby="pp-lock-state pp-lock-error">
+              <button type="button" class="btn small ghost icon-btn pw-toggle" id="pp-new-toggle" aria-label="새 비밀번호 보기" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" set:html={EYE} /></button>
+            </div>
+            <label class="pw-label" for="pp-again">비밀번호 확인</label>
+            <div class="row pw-row">
+              <input class="pw-input" id="pp-again" type="password" autocomplete="new-password" aria-describedby="pp-lock-error">
+              <button type="button" class="btn small ghost icon-btn pw-toggle" id="pp-again-toggle" aria-label="비밀번호 확인 보기" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" set:html={EYE} /></button>
+            </div>
+            <p class="pw-error" id="pp-lock-error"></p>
+            <div class="row"><button type="submit" class="btn primary" id="pp-lock-run">암호 걸기</button></div>
+          </form>
+        </div>
+
+        <div class="row merge-actions" id="pp-actions" hidden>
+          <button type="button" class="btn ghost" id="pp-change">다른 파일 고르기</button>
+        </div>
+
+        <div class="progress-box" id="pp-progress" hidden>
+          <p id="pp-progress-text">처리하는 중…</p>
+          <progress id="pp-progress-bar" aria-labelledby="pp-progress-text"></progress>
+          <button type="button" class="btn ghost" id="pp-cancel">취소</button>
+        </div>
+
+        <div class="result" id="pp-result" hidden>
+          <p class="result-title" id="pp-headline" tabindex="-1">준비되었습니다</p>
+          <p class="result-summary" id="pp-summary"></p>
+          <ul class="result-notes" id="pp-notes" hidden></ul>
+          <div class="row">
+            <a class="btn primary" id="pp-download" download tabindex="0">내려받기</a>
+            <button type="button" class="btn ghost" id="pp-reset">다른 파일 처리하기</button>
+          </div>
+          <p class="save-name" id="pp-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/pdf-password/', Astro.site!).description} id="pp-share" />
+          <p class="related-line">용량을 줄이려면 <a href="/pdf-compress/">PDF 용량 줄이기</a>를, 여러 파일을 하나로 묶으려면 <a href="/pdf-merge/">PDF 합치기</a>를 쓰세요.</p>
+        </div>
+
+        <p class="error-box" id="pp-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="pp-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="pdf-password-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>할 일 고르기</strong><span>비밀번호를 없애려면 암호 풀기를, 새로 걸려면 암호 걸기를 고릅니다.</span></li>
+        <li><strong>PDF 파일 선택</strong><span>파일을 고르거나 끌어다 놓습니다.</span></li>
+        <li><strong>비밀번호 입력하고 내려받기</strong><span>암호를 풀 때는 열 때 쓰는 비밀번호를, 걸 때는 새 비밀번호를 두 번 입력한 뒤 내려받기로 저장합니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>비밀번호를 모르면 풀 수 없습니다</strong><span>비밀번호를 맞혀 보거나 우회하지 않습니다. 파일을 보낸 곳에서 안내한 비밀번호를 확인해 주세요.</span></li>
+        <li><strong>건 비밀번호는 따로 적어 두세요</strong><span>잊어버리면 문서딱으로도 열 수 없습니다.</span></li>
+        <li><strong>설치·가입하지 않습니다</strong><span>PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['pdf-merge', 'pdf-compress', 'pdf-to-jpg']} />
+  <div class="wrap narrow"><AdSlot id="pdf-password-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import '../../tools/pdf-password/entry';
+</script>

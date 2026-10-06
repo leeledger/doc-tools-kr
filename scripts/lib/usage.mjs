@@ -34,7 +34,7 @@ export const PERIODS = [1, 7, 30, 90];
 export const DEFAULT_DAYS = 7;
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -49,8 +49,10 @@ export const MODES = ['cloud', 'device'];
 export const PAGE_MODES = ['fit', 'a4'];
 /** PDF JPG 변환 선명도 (TOOLS4 T3): 작게 (약 96 ppi) | 보통 (약 150 ppi) | 선명 (약 300 ppi). */
 export const PPI_LEVELS = ['p96', 'p150', 'p300'];
+/** PDF 암호 해제·설정 할 일 (TOOLS4 T4): 암호 걸기 | 암호 풀기. The password itself never has a field. */
+export const PASSWORD_ACTIONS = ['lock', 'unlock'];
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -225,9 +227,10 @@ export const TOOL_LABELS = {
   'remove-background': '배경 지우기',
   'jpg-to-pdf': '사진 PDF 변환',
   'pdf-to-jpg': 'PDF JPG 변환',
+  'pdf-password': 'PDF 암호 해제·설정',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일' };
 const VALUE_LABELS = {
   le100: '100KB 이하',
   le200: '200KB 이하',
@@ -253,6 +256,8 @@ const VALUE_LABELS = {
   p96: '작게(약 96 ppi)',
   p150: '보통(약 150 ppi)',
   p300: '선명(약 300 ppi)',
+  lock: '암호 걸기',
+  unlock: '암호 풀기',
 };
 const label = (map, x) => (Object.hasOwn(map, x) ? map[x] : String(x ?? ''));
 const num = (x) => {

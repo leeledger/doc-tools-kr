@@ -447,10 +447,10 @@ describe('live-only description (P.6)', () => {
     expect(n).toBeLessThanOrEqual(120);
   });
 
-  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password: TOOLS4 T4, not registered yet), no duplicates, every tool listed', () => {
+  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4), no duplicates, every tool listed', () => {
     const slugs = new Set([...TOOLS, BG_REMOVE_TOOL].map((t) => t.slug));
-    const pending = HOME_DESC_ORDER.filter((s) => !slugs.has(s));
-    expect(pending).toEqual(['pdf-password']);
+    expect(slugs.has('pdf-password')).toBe(true);
+    expect(HOME_DESC_ORDER.filter((s) => !slugs.has(s))).toEqual([]);
     expect(new Set(HOME_DESC_ORDER).size).toBe(HOME_DESC_ORDER.length);
     for (const s of slugs) expect(HOME_DESC_ORDER, s).toContain(s);
   });

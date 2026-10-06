@@ -16,7 +16,6 @@ export const liveNames = (tools: readonly Tool[] = LIVE_TOOLS): string => tools.
 /**
  * Order in which the home description names tools once they no longer all fit (E-T2-a, decided for TOOLS4 T3; the
  * market report's order). Slugs that are not live are skipped; a live tool missing here would go last.
- * `pdf-password` is TOOLS4 T4 and not in tools.ts yet (a unit test pins that exception).
  */
 export const HOME_DESC_ORDER: readonly string[] = [
   'id-photo',

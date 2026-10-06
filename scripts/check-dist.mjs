@@ -147,6 +147,23 @@ budget('images.worker*.js (jpg-to-pdf)', match(/^_astro\/images\.worker[^/]*\.js
     budget('pdf-to-jpg controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 14.5 * KB);
   }
 }
+// PDF 암호 해제·설정 (TOOLS4 T4): the worker carries qpdf's loader and pdf-lib (signature check); qpdf.wasm itself is a
+// vendored asset (240.7 KB gzip measured, budget + 20 %). The controller (the controller*.js chunk that owns #pp-lock-error, and what only it imports) loads on the
+// first interaction, never with the page, and no initial script of the page names pdf.js, qpdf or the worker
+// (controller 5.0 KB gzip measured, budget + 20 %).
+budget('password.worker*.js (pdf-password)', match(/^_astro\/password\.worker[^/]*\.js$/), 289 * KB);
+{
+  const html = pageHtml.get('pdf-password/index.html');
+  if (!html) errors.push('pdf-password/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('pp-lock-error'));
+    if (controller.length !== 1) errors.push(`pdf-password controller: ${controller.length} chunk(s) name #pp-lock-error, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /pdf-password/ controller loads with the page');
+    for (const f of initial) if (/pdfjs|pdf\.worker|getDocument|password\.worker|qpdf|PDFDocument/.test(read(f).toString('utf8'))) errors.push(`${f}: pdf.js, qpdf or the password worker in the /pdf-password/ initial JS`);
+    budget('pdf-password controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 6 * KB);
+  }
+}
 if (!autoframe) {
   for (const f of files) if (/mediapipe|vision_bundle|vision_wasm|face_landmarker/i.test(f.path)) errors.push(`${f.path}: MediaPipe file in a build without auto-framing`);
   for (const js of match(/\.m?js$/)) if (/FaceLandmarker|odml\.pa\.googleapis/.test(read(js).toString('latin1'))) errors.push(`${js} contains MediaPipe code in a build without auto-framing`);

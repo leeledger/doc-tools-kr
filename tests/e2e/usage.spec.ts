@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import type { Page, Request } from '@playwright/test';
 import { validate } from '../../scripts/lib/usage.mjs';
 import { expect, gotoReady, test } from './no-upload';
-import { photoFixture, runtimePath } from './paths';
+import { fixturePath, photoFixture, runtimePath } from './paths';
 
 test.use({ allowUpload: [{ method: 'POST', path: '/api/usage' }] });
 test.describe.configure({ timeout: 120_000 });
@@ -100,7 +100,11 @@ test('PDF JPG 변환 (TOOLS4 T3): pick, start (o=ppi, v=p150), success, download
   await gotoReady(page, '/pdf-to-jpg/');
   await page.setInputFiles('#pj-input', runtimePath('encrypted_userpw_1234'));
   await page.locator('#pj-pw-input').fill('0000');
-  await page.locator('#pj-pw-input').press('Enter');
+  // Two submits at once (double Enter) are one attempt: exactly one fail(wrong-password) below (T3 review Should Fix 1).
+  await page.locator('#pj-pw').evaluate((f: HTMLFormElement) => {
+    f.requestSubmit();
+    f.requestSubmit();
+  });
   await expect(page.locator('#pj-pw-error')).not.toHaveText('');
   await page.locator('#pj-pw-input').fill('1234');
   await page.locator('#pj-pw-input').press('Enter');
@@ -119,6 +123,43 @@ test('PDF JPG 변환 (TOOLS4 T3): pick, start (o=ppi, v=p150), success, download
     expect(b.body).not.toMatch(/쪽|장|encrypted/);
     // The typed passwords and the file size appear in no value (the build id b is a hash, left out of this check).
     for (const [k, v] of Object.entries(b.ev)) if (k !== 'b') expect(String(v), k).not.toMatch(new RegExp(`1234|0000|${size}`));
+  }
+});
+
+test('PDF 암호 해제·설정 (TOOLS4 T4): lock = pick, start (o=action, v=lock), success, download; wrong password = fail; no password, file name or page count in any body', async ({ page }) => {
+  const beacons = await record(page);
+  const password = '문서딱암호12';
+  await gotoReady(page, '/pdf-password/');
+  await page.locator('label.chip', { hasText: '암호 걸기' }).click();
+  await page.setInputFiles('#pp-input', fixturePath('gen_links_outline.pdf'));
+  await page.locator('#pp-new').fill(password);
+  await page.locator('#pp-again').fill(password);
+  await page.locator('#pp-again').press('Enter');
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#pp-download').click()]);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'start', 'success', 'download']);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'start', t: 'pdf-password', o: 'action', v: 'lock' });
+
+  // 암호 풀기 with a wrong password, then the right one.
+  await page.locator('#pp-reset').click();
+  await page.locator('label.chip', { hasText: '암호 풀기' }).click();
+  await page.setInputFiles('#pp-input', runtimePath('encrypted_userpw_1234'));
+  await page.locator('#pp-pw').fill('0000');
+  await page.locator('#pp-pw').press('Enter');
+  await expect(page.locator('#pp-unlock-error')).not.toHaveText('');
+  await page.locator('#pp-pw').fill('1234');
+  await page.locator('#pp-pw').press('Enter');
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'start', 'success', 'download', 'pick', 'start', 'fail', 'start', 'success']);
+  expect(beacons[5]!.ev).toMatchObject({ e: 'start', t: 'pdf-password', o: 'action', v: 'unlock' });
+  expect(beacons[6]!.ev).toMatchObject({ e: 'fail', t: 'pdf-password', c: 'wrong-password', p: 'process' });
+  expectClean(beacons);
+  for (const b of beacons) {
+    expect(b.ev).toMatchObject({ t: 'pdf-password', via: 'direct', w: 1 });
+    expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
+    expect(b.body).not.toContain(password);
+    expect(b.body).not.toMatch(/gen_links_outline|encrypted|쪽/);
+    for (const [k, v] of Object.entries(b.ev)) if (k !== 'b') expect(String(v), k).not.toMatch(/1234|0000|문서딱/);
   }
 });
 

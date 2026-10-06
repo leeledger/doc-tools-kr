@@ -12,11 +12,12 @@ export function jpgName(fileName: string, page: number, pageCount: number): stri
 export const zipName = (fileName: string): string => safeFileName(baseName(fileName), '_jpg.zip');
 
 /**
- * A streaming stored ZIP (the JPEGs are already compressed): entries go in one at a time and their bytes are kept as
- * Blob parts, never as one growing array. fflate flags non-ASCII names as UTF-8.
+ * A streaming stored ZIP (the JPEGs are already compressed): entries go in one at a time and every chunk becomes its
+ * own Blob at once, so the browser may keep the bytes off the JS heap and the final Blob (made of Blobs) does not copy
+ * them a second time. fflate flags non-ASCII names as UTF-8.
  */
 export class JpegZip {
-  private readonly parts: BlobPart[] = [];
+  private readonly parts: Blob[] = [];
   private readonly zip: Zip;
   private readonly done: Promise<Blob>;
 
@@ -31,7 +32,7 @@ export class JpegZip {
     this.done.catch(() => undefined);
     this.zip = new Zip((err, chunk, final) => {
       if (err) return reject(err);
-      this.parts.push(chunk as Uint8Array<ArrayBuffer>);
+      this.parts.push(new Blob([chunk as Uint8Array<ArrayBuffer>]));
       if (final) resolve(new Blob(this.parts, { type: 'application/zip' }));
     });
   }

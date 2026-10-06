@@ -10,7 +10,7 @@ category: PDF
 topic: 세금·민원
 tools: [pdf-merge, pdf-compress]
 cta: { href: '/pdf-merge/', label: 'PDF 합치기' }
-related: [pdf-merge, pdf-compress, email-attachment-limit]
+related: [pdf-merge, pdf-compress, email-attachment-limit, pdf-password]
 sources:
   - url: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2305&cntntsId=7706
     title: 국세청 — 편리한 연말정산 이용방법

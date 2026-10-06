@@ -621,3 +621,41 @@ describe('PDF JPG 변환 (TOOLS4 T3)', () => {
     ]);
   });
 });
+
+describe('PDF 암호 해제·설정 (TOOLS4 T4)', () => {
+  it('tool and 할 일 setting are whitelisted (lock / unlock only); unknown values and a password-like value are refused', () => {
+    expect(TOOLS).toContain('pdf-password');
+    for (const v of ['lock', 'unlock']) expect(validate(body({ ...BASE, t: 'pdf-password', e: 'start', o: 'action', v })), v).not.toBeNull();
+    for (const v of ['remove', '문서딱암호12', '1234', 'LOCK']) expect(validate(body({ ...BASE, t: 'pdf-password', e: 'start', o: 'action', v })), v).toBeNull();
+    for (const c of ['not-pdf', 'too-big', 'not-encrypted', 'already-encrypted', 'wrong-password', 'corrupt', 'oom', 'engine', 'unknown']) {
+      expect(validate(body({ ...BASE, t: 'pdf-password', e: 'fail', c, p: 'process' })), c).not.toBeNull();
+    }
+    // A Korean or digit "code" (what a password would look like) is refused by CODE_RE.
+    for (const c of ['문서딱암호12', 'pw1234']) expect(validate(body({ ...BASE, t: 'pdf-password', e: 'fail', c, p: 'process' })), c).toBeNull();
+  });
+
+  it('admin labels are Korean: tool name as in tools.ts, 할 일, 암호 걸기 / 암호 풀기', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'pdf-password', event: 'success', via: 'direct', n: 2 }],
+      settings: [
+        { tool: 'pdf-password', setting: 'action', value: 'unlock', n: 3 },
+        { tool: 'pdf-password', setting: 'action', value: 'lock', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('PDF 암호 해제·설정');
+    expect(settings!.rows).toEqual([
+      ['PDF 암호 해제·설정', '할 일', '암호 풀기', '3'],
+      ['PDF 암호 해제·설정', '할 일', '암호 걸기', '1'],
+    ]);
+  });
+});
+
+describe('PDF 암호 해제·설정: the password never reaches a payload (TOOLS4 T4 decision 12)', () => {
+  it('buildPayload drops any password, file name or page count passed alongside a start event', () => {
+    const ctx = { via: 'direct' as const, ua: '', device: 'desktop' as const, build: 'dev', w: 1 };
+    const p = buildPayload({ e: 'start', t: 'pdf-password', o: 'action', v: 'lock', password: '문서딱암호12', pw: '1234', name: '등본.pdf', pages: 7 } as never, ctx);
+    expect(p).toEqual({ e: 'start', t: 'pdf-password', o: 'action', v: 'lock', via: 'direct', d: 'desktop', b: 'dev', w: 1 });
+    expect(JSON.stringify(p)).not.toMatch(/문서딱암호12|1234|등본|7/);
+  });
+});

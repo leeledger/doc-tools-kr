@@ -5,6 +5,7 @@
 import type { PdfErrorCode } from '../../lib/pdf/errors';
 import type { OpenedPdf } from '../../lib/pdf/inspect';
 import { isOutOfMemory } from '../../lib/pdf/errors';
+import { setJfifDpi } from '../../lib/image/jfif';
 import { parseRange, type PageRangeError } from '../../lib/pdf/page-range';
 import { announce, clearAlert } from '../../lib/ui/announce';
 import { detectDevice, type Device } from '../../lib/ui/device';
@@ -15,12 +16,12 @@ import { formatPages, formatSize } from '../../lib/ui/format';
 import { bindPasswordToggle } from '../../lib/ui/password';
 import { isPdfFile } from '../../lib/ui/pdf-pick';
 import { track, type UsagePhase } from '../../lib/ui/usage';
+import { CanvasError, TaskSlot, restrictionNote, runErrorCode } from './guards';
 import { DEFAULT_PPI, LIMITS, PPI, fileLimitMessage, runLimitMessage, type PpiLevel } from './limits';
 import { JpegZip, jpgName, zipName } from './output';
 import { pageScale } from './scale';
 
 type State = 'empty' | 'opening' | 'locked' | 'ready' | 'working' | 'done';
-type RunError = 'canvas' | 'oom' | 'corrupt' | 'unknown';
 
 const JPEG_QUALITY = 0.92;
 
@@ -39,9 +40,6 @@ const RANGE_MESSAGES: Record<Exclude<PageRangeError, 'empty'>, (pages: number) =
   reversed: () => '쪽 범위는 작은 번호부터 「3-5」처럼 입력해 주세요.',
   junk: () => '쪽 번호는 「1-3, 5」처럼 숫자, 「-」, 쉼표로 입력해 주세요.',
 };
-
-/** A canvas that could not be drawn or encoded (iOS leaves an oversized one unusable). */
-class CanvasError extends Error {}
 
 function must<T extends HTMLElement>(id: string): T {
   const e = document.getElementById(id);
@@ -102,7 +100,11 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
   let pageCount = 0;
   // Incremented by every open, run, cancel and reset; work that finds a newer id stops.
   let runId = 0;
-  let renderTask: { cancel(): void } | null = null;
+  const renderTask = new TaskSlot();
+  // True while a typed password is being tried, so a second Enter does not start a second attempt.
+  let unlocking = false;
+  // The copy/print-limits line for the open file (null when it has none).
+  let restricted: string | null = null;
   let blobUrl: string | null = null;
 
   const status = (msg: string): void => announce('status', msg, root);
@@ -168,6 +170,7 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
     file = null;
     bytes = null;
     pageCount = 0;
+    restricted = null;
     pwInput.value = '';
     pwInput.type = 'password';
     pwError.textContent = '';
@@ -245,8 +248,12 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
         status(`${file.name}: ${MESSAGES.password}`);
         return;
       }
+      await closeDoc();
       opened = o;
       pageCount = o.doc.numPages;
+      restricted = restrictionNote(await o.doc.getPermissions().catch(() => null));
+      if (id !== runId) return;
+      if (restricted) showNotice(notice.hidden ? restricted : `${notice.textContent} ${restricted}`);
       pwInput.value = '';
       pwError.textContent = '';
       infoEl.textContent = `${formatPages(pageCount)} · ${formatSize(file.size)}`;
@@ -278,7 +285,7 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
   }
 
   function unlock(): void {
-    if (state !== 'locked') return;
+    if (state !== 'locked' || unlocking) return;
     const pw = pwInput.value;
     if (!pw) {
       pwError.textContent = '비밀번호를 입력해 주세요.';
@@ -286,7 +293,10 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
       return;
     }
     pwError.textContent = '';
-    void openWith(runId, pw);
+    unlocking = true;
+    void openWith(runId, pw).finally(() => {
+      unlocking = false;
+    });
   }
 
   // ---------- converting ----------
@@ -315,7 +325,7 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
     }
     setRangeError('');
     clearAlert(root);
-    showNotice(null);
+    showNotice(restricted);
     const id = ++runId;
     const doc = opened.doc;
     const source = file;
@@ -328,47 +338,53 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
     cancelBtn.focus();
 
     const zip = pages.length > 1 ? new JpegZip() : null;
-    let single: Blob | null = null;
+    let single: Uint8Array | null = null;
     const clamped: { page: number; width: number; height: number }[] = [];
     try {
       for (const [k, p] of pages.entries()) {
         const page = await doc.getPage(p);
+        if (id !== runId) {
+          page.cleanup();
+          return;
+        }
         const unit = page.getViewport({ scale: 1 });
         const s = pageScale(unit.width, unit.height, PPI[level], LIMITS[device].caps);
         const canvas = document.createElement('canvas');
         canvas.width = s.width;
         canvas.height = s.height;
         let jpeg: Blob;
+        let task: { cancel(): void; promise: Promise<void> } | null = null;
         try {
-          if (id !== runId) return;
           const ctx = canvas.getContext('2d');
           if (!ctx) throw new CanvasError('2d context unavailable');
           ctx.fillStyle = '#fff';
           ctx.fillRect(0, 0, s.width, s.height);
-          const task = page.render({ canvas, canvasContext: ctx, viewport: page.getViewport({ scale: s.scale }) });
-          renderTask = task;
+          task = page.render({ canvas, canvasContext: ctx, viewport: page.getViewport({ scale: s.scale }) });
+          renderTask.set(task);
           await task.promise;
           jpeg = await toJpeg(canvas);
         } finally {
-          renderTask = null;
+          if (task) renderTask.release(task);
           page.cleanup();
           canvas.width = 0;
           canvas.height = 0;
         }
+        // The JFIF header carries the pixels per inch actually drawn, so Word/HWP insert the page at its paper size.
+        const stamped = setJfifDpi(new Uint8Array(await jpeg.arrayBuffer()), Math.round(s.scale * 72));
         if (id !== runId) return;
-        if (zip) zip.add(jpgName(source.name, p, pageCount), new Uint8Array(await jpeg.arrayBuffer()));
-        else single = jpeg;
+        if (zip) zip.add(jpgName(source.name, p, pageCount), stamped);
+        else single = stamped;
         if (s.clamped) clamped.push({ page: p, width: s.width, height: s.height });
         progressBar.value = k + 1;
         progressText.textContent = `JPG로 바꾸는 중… (${k + 1}/${pages.length})`;
         await nextTask();
       }
-      const out = zip ? await zip.finish() : single!;
+      const out = zip ? await zip.finish() : new Blob([single as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' });
       if (id !== runId) return;
       finish(out, pages, clamped, source);
     } catch (err) {
       if (id !== runId || isCancelled(err)) return;
-      const code: RunError = err instanceof CanvasError ? 'canvas' : isOutOfMemory(err) ? 'oom' : (err as { code?: string }).code === 'corrupt' ? 'corrupt' : 'unknown';
+      const code = runErrorCode(err, isOutOfMemory);
       usageFail(code, 'process');
       setState('ready');
       announce('alert', MESSAGES[code], root);
@@ -379,8 +395,7 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
   function cancel(): void {
     if (state !== 'working') return;
     runId++;
-    renderTask?.cancel();
-    renderTask = null;
+    renderTask.cancel();
     setState('ready');
     runBtn.focus();
     status('변환을 취소했습니다. 파일은 그대로 있습니다.');
@@ -421,8 +436,7 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
 
   function resetAll(focus = true): void {
     runId++;
-    renderTask?.cancel();
-    renderTask = null;
+    renderTask.cancel();
     revokeBlob();
     clearFile();
     input.value = '';
@@ -481,7 +495,7 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
   resetBtn.addEventListener('click', () => resetAll());
   window.addEventListener('pagehide', () => {
     runId++;
-    renderTask?.cancel();
+    renderTask.cancel();
     revokeBlob();
   });
   window.addEventListener('pageshow', (ev) => {

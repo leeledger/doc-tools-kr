@@ -4,6 +4,7 @@ import { MB } from '../lib/ui/device';
 import { LIMITS as JPG_PDF_LIMITS } from '../tools/jpg-to-pdf/limits';
 import { LIMITS as PDF_JPG_LIMITS, PPI } from '../tools/pdf-to-jpg/limits';
 import { pageScale } from '../tools/pdf-to-jpg/scale';
+import { LIMITS as PDF_PW_LIMITS, PASSWORD_MAX, PASSWORD_MIN } from '../tools/pdf-password/limits';
 
 /** HWP numbers in the /hwp-viewer/ FAQ, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -41,6 +42,14 @@ const PDF_JPG_FAQ = {
   a4Small: a4At(PPI.p96),
   a4Normal: a4At(PPI.p150),
   a4Sharp: a4At(PPI.p300),
+} as const;
+
+/** PDF 암호 해제·설정 numbers in its FAQ, read from its limits (MB = 1,048,576 bytes). */
+const PDF_PW_FAQ = {
+  filePc: `${n(PDF_PW_LIMITS.desktop.maxFileBytes / MB)} MB`,
+  filePhone: `${n(PDF_PW_LIMITS.mobile.maxFileBytes / MB)} MB`,
+  min: `${PASSWORD_MIN}자`,
+  max: `${PASSWORD_MAX}자`,
 } as const;
 
 export type ToolStatus = 'live' | 'soon';
@@ -284,6 +293,47 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['pdf jpg 변환', 'pdf 이미지 변환', 'pdf 사진으로 저장', 'pdf jpg 무료'],
+  },
+  {
+    // TOOLS4 T4. name = h1 (COPY.md). No release flag (brief decision 1). Policy: decision 13 (no guessing, no
+    // restriction removal); signed documents: decision 14.
+    slug: 'pdf-password',
+    name: 'PDF 암호 해제·설정',
+    title: 'PDF 암호 해제·설정 — 비밀번호 풀기·걸기 무료 | 문서딱',
+    description:
+      'PDF 암호 해제와 암호 설정을 무료로. 비밀번호를 아는 PDF는 암호를 풀어 저장하고, 내 PDF에는 열 때 필요한 비밀번호를 겁니다. 가입 없이 바로 씁니다.',
+    h1: 'PDF 암호 해제·설정',
+    summary: '비밀번호를 아는 PDF의 암호를 풀고, 내 PDF에는 열 때 필요한 비밀번호를 겁니다.',
+    icon: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/>',
+    status: 'live',
+    updated: '2026-10-06',
+    faq: [
+      {
+        q: 'PDF 비밀번호를 잊어버렸어요. 풀 수 있나요?',
+        a: '문서딱으로는 풀 수 없습니다. 파일을 보낸 곳에서 안내한 비밀번호를 확인하거나 파일을 다시 받으세요. 문서딱은 비밀번호를 맞혀 보거나 우회하지 않고, 입력한 비밀번호로만 엽니다.',
+      },
+      {
+        q: '정부24·홈택스에서 받은 PDF의 암호도 풀 수 있나요?',
+        a: '파일을 받을 때 안내받은 비밀번호를 알면 풀 수 있습니다. 암호 풀기를 고르고 파일을 연 뒤 그 비밀번호를 입력하세요. 비밀번호가 무엇인지는 파일을 보낸 곳의 안내를 확인해 주세요.',
+      },
+      {
+        q: '암호는 어떤 방식으로 걸리나요?',
+        a: `AES-256 방식으로 겁니다. PDF를 여는 대부분의 프로그램과 휴대폰 앱에서 비밀번호를 넣으면 열립니다. 비밀번호는 ${PDF_PW_FAQ.min}에서 ${PDF_PW_FAQ.max}까지 정할 수 있고 한글도 쓸 수 있습니다. 내려받기 전에 비밀번호 없이는 열리지 않는지 확인합니다.`,
+      },
+      {
+        q: '전자서명이 들어간 증명서도 되나요?',
+        a: '암호를 풀거나 걸어 새로 저장하면 전자서명이 더 이상 유효하지 않습니다. 전자서명이 들어 있는 문서면 내려받기 전에 알려 드립니다. 발급받은 증명서를 제출할 때는 원본을 내세요.',
+      },
+      {
+        q: '휴대폰에서도 되나요? 크기 제한이 있나요?',
+        a: `네. 휴대폰에서도 같은 방법으로 쓸 수 있습니다. PDF 파일은 PC에서 ${PDF_PW_FAQ.filePc}, 휴대폰에서 ${PDF_PW_FAQ.filePhone}까지 처리할 수 있습니다.`,
+      },
+      {
+        q: '제 파일과 비밀번호가 어디로 보내지나요?',
+        a: '어디로도 보내지 않습니다. 파일과 비밀번호는 이 기기 안에서만 쓰이고, 이 화면을 닫으면 남지 않습니다.',
+      },
+    ],
+    keywords: ['pdf 암호 해제', 'pdf 비밀번호 해제', 'pdf 암호 설정', '정부24 pdf 암호 해제', '홈택스 pdf 비밀번호'],
   },
   {
     slug: 'photo-compress',

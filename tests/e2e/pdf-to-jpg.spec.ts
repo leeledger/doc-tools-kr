@@ -2,14 +2,17 @@
 // sizes points / 72 × ppi; one page -> one JPEG; a /Rotate 90 page comes out turned; the encrypted fixture asks for its
 // password; a range past the last page and a non-PDF get messages. The downloads are parsed here.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { Download, Page } from '@playwright/test';
 import { PDFDocument, rgb } from '@cantoo/pdf-lib';
 import { unzipSync } from 'fflate';
+import { readJfif } from '../../src/lib/image/jfif';
+import { RESTRICTED_NOTE } from '../../src/tools/pdf-to-jpg/guards';
 import { expect, gotoReady, test } from './no-upload';
 import { RUNTIME_DIR, fixturePath, runtimePath } from './paths';
 
-const THREE = join(RUNTIME_DIR, 'pdf_to_jpg_3p.pdf');
+// One copy per worker process: a shared path was rewritten by another worker's beforeAll while this one read it.
+const THREE = join(RUNTIME_DIR, `pj-${process.pid}`, 'pdf_to_jpg_3p.pdf');
 const SIZES: [number, number][] = [
   [595.28, 841.89],
   [612, 792],
@@ -23,7 +26,7 @@ test.beforeAll(async () => {
     const p = doc.addPage([w, h]);
     p.drawRectangle({ x: 40, y: 40, width: w / 2, height: h / 3, color: rgb(i === 0 ? 1 : 0, i === 1 ? 0.6 : 0, i === 2 ? 1 : 0) });
   }
-  mkdirSync(RUNTIME_DIR, { recursive: true });
+  mkdirSync(dirname(THREE), { recursive: true });
   writeFileSync(THREE, await doc.save());
 });
 
@@ -74,6 +77,8 @@ test('all pages at 보통: one ZIP with three JPEGs, each points / 72 × 150 pix
     const s = jpegSize(f);
     expect(Math.abs(s.w - px(SIZES[i]![0], 150)), `page ${i + 1} width`).toBeLessThanOrEqual(1);
     expect(Math.abs(s.h - px(SIZES[i]![1], 150)), `page ${i + 1} height`).toBeLessThanOrEqual(1);
+    // The JFIF header says 150 pixels per inch, so Word/HWP insert the page at paper size (T3 review Should Fix 5).
+    expect(readJfif(f), `page ${i + 1} density`).toEqual({ units: 1, x: 150, y: 150 });
   });
 });
 
@@ -94,6 +99,7 @@ test('range "2": one JPEG of the Letter page; 선명 draws page 1 at 300 ppi; �
   await expect(page.locator('#pj-hint')).toContainText('2,480×3,508픽셀');
   out = await convert(page);
   expect(jpegSize(out.bytes)).toEqual({ w: 2480, h: 3508 });
+  expect(readJfif(out.bytes)).toEqual({ units: 1, x: 300, y: 300 });
 });
 
 test('a page with /Rotate 90 comes out turned (landscape)', async ({ page }) => {
@@ -121,6 +127,35 @@ test('encrypted PDF: password prompt, a wrong one gets a retry message, the righ
   const { name, bytes } = await convert(page);
   expect(name).toBe('encrypted_userpw_1234_p001.jpg');
   expect(jpegSize(bytes).w).toBeGreaterThan(500);
+});
+
+test('password submitted twice at once (double Enter): one attempt, the file opens and converts (T3 review Should Fix 1)', async ({ page }) => {
+  await open(page, runtimePath('encrypted_userpw_1234'));
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'locked');
+  await page.locator('#pj-pw-input').fill('1234');
+  await page.locator('#pj-pw').evaluate((f: HTMLFormElement) => {
+    f.requestSubmit();
+    f.requestSubmit();
+  });
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#pj-info')).toHaveText(/^7쪽 · /);
+  await page.locator('#pj-range').fill('2');
+  const { name } = await convert(page);
+  expect(name).toBe('encrypted_userpw_1234_p002.jpg');
+});
+
+test('copy/print-limited PDF (no open password): converts with a one-line notice; an unrestricted one shows none', async ({ page }) => {
+  await open(page, runtimePath('owner_no_copy'));
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#pj-notice')).toHaveText(RESTRICTED_NOTE);
+  await page.locator('#pj-range').fill('1');
+  const { name } = await convert(page);
+  expect(name).toBe('owner_no_copy_p001.jpg');
+  await expect(page.locator('#pj-notice')).toHaveText(RESTRICTED_NOTE);
+
+  await open(page, runtimePath('owner_restricted'));
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#pj-notice')).toBeHidden();
 });
 
 test('range "9" on three pages and a reversed range get messages and start nothing', async ({ page }) => {
@@ -152,6 +187,21 @@ test('취소 during a run: back to ready with the file kept, nothing offered', a
   await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('#pj-status')).toHaveText('변환을 취소했습니다. 파일은 그대로 있습니다.');
   await expect(page.locator('#pj-info')).toHaveText(/^40쪽 · /);
+  await page.waitForTimeout(1000);
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#pj-download')).not.toHaveAttribute('href', /.+/);
+});
+
+test('취소, run again, 취소 again: the second cancel still stops the run (T3 review Should Fix 2)', async ({ page }) => {
+  await open(page, runtimePath('scan_multi_40'));
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await page.locator('label.chip', { hasText: '선명' }).click();
+  for (let round = 0; round < 2; round++) {
+    await page.locator('#pj-run').click();
+    await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'working');
+    await page.getByRole('button', { name: '취소' }).click();
+    await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  }
   await page.waitForTimeout(1000);
   await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('#pj-download')).not.toHaveAttribute('href', /.+/);

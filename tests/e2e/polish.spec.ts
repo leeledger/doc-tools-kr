@@ -13,7 +13,7 @@ const SCAN = fixturePath('gen_scan_a6.pdf');
 const SMALL = fixturePath('gen_already_small.pdf');
 const NOTES = join(RUNTIME_DIR, 'notes.txt');
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-const LIVE = ['PDF 합치기', 'PDF 용량 줄이기', '사진 PDF 변환', 'PDF JPG 변환', '사진 용량 줄이기', '여권·증명사진 규격 맞추기', '전자서명·도장 이미지 만들기', 'HWP PDF 변환', 'HWP·HWPX 파일 보기'];
+const LIVE = ['PDF 합치기', 'PDF 용량 줄이기', '사진 PDF 변환', 'PDF JPG 변환', 'PDF 암호 해제·설정', '사진 용량 줄이기', '여권·증명사진 규격 맞추기', '전자서명·도장 이미지 만들기', 'HWP PDF 변환', 'HWP·HWPX 파일 보기'];
 const SOON: string[] = [];
 
 const serious = async (page: Page): Promise<string[]> =>
@@ -122,7 +122,7 @@ test.describe('engine load failure (P.1)', () => {
 
 // ---------- P.4 operator, contact, 이용약관 ----------
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwp-to-pdf/', '/hwp-viewer/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwp-to-pdf/', '/hwp-viewer/', '/privacy/', '/terms/', '/licenses/', '/does-not-exist/']) {
   test(`footer on ${path}: no operator or contact line (owner, Polish Q), 이용약관·개인정보·라이선스 links`, async ({ page }) => {
     await gotoReady(page, path);
     const foot = page.locator('footer');
@@ -224,7 +224,10 @@ test('home, meta and JSON-LD name every live tool and no soon tool (og: no soon 
   const ld = (await page.locator('script[type="application/ld+json"]').allTextContents()).join('');
   for (const text of [lead, desc, og, ld]) {
     // Sprint C: the share preview no longer lists the tools (seven names alone pass its 80 characters).
-    if (text !== og) for (const name of LIVE) expect(text).toContain(name);
+    // TOOLS4 T4: ten tools no longer fit the 120-character description, which names the first ones and the count
+    // (E-T2-a; the order and the cut are unit-tested in polish.test.ts).
+    if (text === desc && desc.includes('가지 도구')) expect(desc).toMatch(new RegExp(` 등 ${LIVE.length}가지 도구\\. 가입 없이 무료\\.$`));
+    else if (text !== og) for (const name of LIVE) expect(text).toContain(name);
     for (const name of SOON) expect(text).not.toContain(name);
     expect(text).not.toMatch(/한글 파일/);
   }
@@ -255,7 +258,7 @@ test('icons, manifest and OG image are served; the head links them', async ({ pa
   expect(ico.status()).toBe(200);
   expect(ico.headers()['content-type']).toMatch(/^image\//);
   // Polish Q: one share image per tool, home and a default, all served as PNG.
-  for (const name of ['home', 'default', 'pdf-merge', 'pdf-compress', 'jpg-to-pdf', 'pdf-to-jpg', 'photo-compress', 'id-photo', 'stamp-signature', 'hwp-to-pdf', 'hwp-viewer']) {
+  for (const name of ['home', 'default', 'pdf-merge', 'pdf-compress', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'photo-compress', 'id-photo', 'stamp-signature', 'hwp-to-pdf', 'hwp-viewer']) {
     const og = await request.get(`/brand/og-${name}.png`);
     expect(og.status(), name).toBe(200);
     expect(og.headers()['content-type'], name).toBe('image/png');

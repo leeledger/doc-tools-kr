@@ -1,10 +1,11 @@
 // PDF JPG 변환 (TOOLS4 T3): canvas size per page (iOS caps), run limits, output names, the streaming ZIP, page copy.
 import { unzipSync } from 'fflate';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getTool } from '../../src/data/tools';
 import { TOOL_FACTS } from '../../src/data/tool-facts';
 import { MB } from '../../src/lib/ui/device';
 import { LIMITS, PPI, fileLimitMessage, pageCap, runLimitMessage } from '../../src/tools/pdf-to-jpg/limits';
+import { CanvasError, RESTRICTED_NOTE, TaskSlot, restrictionNote, runErrorCode } from '../../src/tools/pdf-to-jpg/guards';
 import { JpegZip, jpgName, zipName } from '../../src/tools/pdf-to-jpg/output';
 import { pageScale } from '../../src/tools/pdf-to-jpg/scale';
 
@@ -108,6 +109,78 @@ describe('output', () => {
     expect(files['보고서_p002.jpg']).toEqual(b);
     // Local header compression method 0 (stored) at offset 8.
     expect(bytes[8] | (bytes[9]! << 8)).toBe(0);
+  });
+
+  describe('JpegZip memory (T3 review Should Fix 3)', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('wraps every chunk in its own Blob; the final Blob is made of Blobs only, never raw byte arrays', async () => {
+      const Real = globalThis.Blob;
+      const made: BlobPart[][] = [];
+      class Spy extends Real {
+        constructor(parts?: BlobPart[], opts?: BlobPropertyBag) {
+          super(parts, opts);
+          made.push(parts ?? []);
+        }
+      }
+      vi.stubGlobal('Blob', Spy);
+      const zip = new JpegZip();
+      zip.add('a.jpg', new Uint8Array(1000).fill(7));
+      zip.add('b.jpg', new Uint8Array(500).fill(9));
+      const blob = await zip.finish();
+      const final = made.at(-1)!;
+      expect(final.length).toBeGreaterThan(2);
+      expect(final.every((p) => p instanceof Real)).toBe(true);
+      // Every other Blob holds exactly one chunk.
+      expect(made.slice(0, -1).every((parts) => parts.length === 1 && parts[0] instanceof Uint8Array)).toBe(true);
+      expect(Object.keys(unzipSync(new Uint8Array(await blob.arrayBuffer())))).toEqual(['a.jpg', 'b.jpg']);
+    });
+  });
+});
+
+describe('guards (T3 review fixes)', () => {
+  const oom = (e: unknown): boolean => e instanceof RangeError;
+
+  it('runErrorCode: pdf.js page errors on a damaged page are 손상 (corrupt), not unknown', () => {
+    for (const name of ['InvalidPDFException', 'UnknownErrorException', 'FormatError', 'MissingPDFException']) {
+      const e = new Error('x');
+      e.name = name;
+      expect(runErrorCode(e, oom)).toBe('corrupt');
+    }
+    expect(runErrorCode({ code: 'corrupt' }, oom)).toBe('corrupt');
+    expect(runErrorCode(new CanvasError('toBlob'), oom)).toBe('canvas');
+    expect(runErrorCode(new RangeError('Array buffer allocation failed'), oom)).toBe('oom');
+    expect(runErrorCode(new TypeError('x'), oom)).toBe('unknown');
+    expect(runErrorCode(null, oom)).toBe('unknown');
+  });
+
+  it('restrictionNote: one plain line when print, change or copy is not allowed; nothing for unrestricted files', () => {
+    // pdf.js PermissionFlag: PRINT 4, MODIFY_CONTENTS 8, COPY 16, MODIFY_ANNOTATIONS 32, FILL 256, ACCESSIBILITY 512, ASSEMBLE 1024, PRINT_HQ 2048.
+    const all = [4, 8, 16, 32, 256, 512, 1024, 2048];
+    expect(restrictionNote(null)).toBeNull();
+    expect(restrictionNote(all)).toBeNull();
+    expect(restrictionNote(all.filter((f) => f !== 4))).toBe(RESTRICTED_NOTE);
+    expect(restrictionNote(all.filter((f) => f !== 8))).toBe(RESTRICTED_NOTE);
+    expect(restrictionNote(all.filter((f) => f !== 16))).toBe(RESTRICTED_NOTE);
+    expect(restrictionNote([])).toBe(RESTRICTED_NOTE);
+    expect(RESTRICTED_NOTE).not.toMatch(/해제|제거|풀/);
+  });
+
+  it('TaskSlot: a stale run releasing its own task does not drop the newer run task, so cancel still reaches it', () => {
+    const slot = new TaskSlot();
+    const old = { cancel: vi.fn() };
+    const fresh = { cancel: vi.fn() };
+    slot.set(old);
+    slot.cancel();
+    expect(old.cancel).toHaveBeenCalledTimes(1);
+    slot.set(fresh);
+    slot.release(old);
+    slot.cancel();
+    expect(fresh.cancel).toHaveBeenCalledTimes(1);
+    slot.set(fresh);
+    slot.release(fresh);
+    slot.cancel();
+    expect(fresh.cancel).toHaveBeenCalledTimes(1);
   });
 });
 
