@@ -660,8 +660,9 @@ test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedToo
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute('href'))!).pathname).toBe('/id-photo/');
   const data = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap((j) => JSON.parse(j));
   expect(data.find((d: { '@type': string }) => d['@type'] === 'WebApplication')).toMatchObject({ applicationCategory: 'UtilitiesApplication', inLanguage: 'ko' });
-  // The other live tools (PDF 합치기, PDF 용량 줄이기, 사진 용량 줄이기, 전자서명·도장 이미지 만들기, HWP PDF 변환, HWP·HWPX 파일 보기).
-  await expect(page.locator('.related a')).toHaveCount(6);
+  // RelatedTools on /id-photo/ has no `only` list: every other live tool, so the set is read from the home cards
+  // below instead of a hard-coded count (site.spec owns the per-page mapping).
+  const related = await page.locator('.related a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
   await expect(page.locator('.faq details')).toHaveCount(6);
   // Round 2: the copy matches the build — a manual-only page never promises auto-framing.
   const body = (await page.locator('main').textContent()) ?? '';
@@ -676,6 +677,8 @@ test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedToo
   }
   await gotoReady(page, '/');
   await expect(page.locator('.card.live').getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
+  const live = await page.locator('.card.live .card-link').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
+  expect([...related].sort()).toEqual(live.filter((h) => h !== '/id-photo/').sort());
   await gotoReady(page, '/photo-compress/');
   await page.getByText('증명사진 용량 줄이기에도 쓸 수 있나요?').click();
   await expect(page.locator('.faq').getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');

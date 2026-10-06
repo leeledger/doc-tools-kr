@@ -15,7 +15,9 @@ test('no worker or wasm before an interaction; after a mouse move plus idle the 
   await page.waitForTimeout(2500);
   expect(ownServer.log.filter((p) => ENGINE.test(p))).toEqual([]);
 
-  await page.mouse.move(200, 300);
+  // Two steps: a pointermove that did not move is not a signal (Chromium sends one under a resting cursor), and the
+  // first move of a fresh page has no previous position, so a one-step move reports movementX/Y 0.
+  await page.mouse.move(200, 300, { steps: 2 });
   await expect.poll(() => ownServer.log.filter((p) => /compress\.worker/.test(p)).length, { timeout: 15_000 }).toBe(1);
   await expect.poll(() => ownServer.log.filter((p) => /qpdf\.wasm$/.test(p)).length, { timeout: 30_000 }).toBe(1);
   await expect.poll(() => ownServer.log.filter((p) => /mozjpeg_enc[^/]*\.wasm$/.test(p)).length, { timeout: 30_000 }).toBe(1);
@@ -40,7 +42,7 @@ test('Save-Data skips the preload', async ({ page, ownServer, browserName, isMob
   });
   await page.goto('/pdf-merge/');
   await page.waitForFunction(() => document.readyState === 'complete');
-  await page.mouse.move(200, 300);
+  await page.mouse.move(200, 300, { steps: 2 });
   await page.waitForTimeout(3000);
   expect(ownServer.log.filter((p) => /merge\.worker|inspect|pdf\.worker/.test(p))).toEqual([]);
 });

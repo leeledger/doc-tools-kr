@@ -32,6 +32,17 @@ export interface PreloadEnv {
 export const SIGNALS = ['pointerdown', 'pointermove', 'touchstart', 'keydown', 'scroll'] as const;
 export const IDLE_FALLBACK_MS = 1000;
 
+/**
+ * A pointermove that did not move: Chromium sends one under a resting cursor when the page first lays out (Linux
+ * headless: at 0,0 on every load, so the engine preloaded with no interaction; CI fix after TOOLS4). Not a user
+ * signal; the next real move is.
+ */
+export function isRestingMove(ev: Event | undefined): boolean {
+  if (ev?.type !== 'pointermove') return false;
+  const m = ev as PointerEvent;
+  return m.movementX === 0 && m.movementY === 0;
+}
+
 export function preloadSkipped(c: Connection | undefined): boolean {
   return Boolean(c?.saveData) || c?.effectiveType === 'slow-2g' || c?.effectiveType === '2g';
 }
@@ -67,7 +78,8 @@ export function schedulePreload(
       if (win.requestIdleCallback) win.requestIdleCallback(() => void start(), { timeout: 3000 });
       else win.setTimeout(() => void start(), IDLE_FALLBACK_MS);
     };
-    const onSignal = (): void => {
+    const onSignal = (ev?: Event): void => {
+      if (isRestingMove(ev)) return;
       for (const s of SIGNALS) win.removeEventListener(s, onSignal, true);
       opts.root.removeEventListener('focusin', onSignal);
       idle();

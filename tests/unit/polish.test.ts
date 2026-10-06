@@ -183,16 +183,16 @@ describe('announce', () => {
 
 describe('schedulePreload', () => {
   class FakeTarget {
-    listeners = new Map<string, Set<() => void>>();
-    addEventListener(t: string, fn: () => void) {
+    listeners = new Map<string, Set<(ev: Event) => void>>();
+    addEventListener(t: string, fn: (ev: Event) => void) {
       if (!this.listeners.has(t)) this.listeners.set(t, new Set());
       this.listeners.get(t)!.add(fn);
     }
-    removeEventListener(t: string, fn: () => void) {
+    removeEventListener(t: string, fn: (ev: Event) => void) {
       this.listeners.get(t)?.delete(fn);
     }
-    fire(t: string) {
-      for (const fn of [...(this.listeners.get(t) ?? [])]) fn();
+    fire(t: string, init: Record<string, unknown> = { movementX: 3, movementY: 1 }) {
+      for (const fn of [...(this.listeners.get(t) ?? [])]) fn({ type: t, ...init } as unknown as Event);
     }
   }
   const setup = (connection?: { saveData?: boolean; effectiveType?: string }) => {
@@ -221,6 +221,16 @@ describe('schedulePreload', () => {
     await vi.advanceTimersByTimeAsync(999);
     expect(fn).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('a pointermove that did not move (Chromium, resting cursor at first layout) is not a signal; the next real move is', async () => {
+    const { win, fn } = setup();
+    win.fire('pointermove', { movementX: 0, movementY: 0 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(fn).not.toHaveBeenCalled();
+    win.fire('pointermove', { movementX: 0, movementY: 2 });
+    await vi.advanceTimersByTimeAsync(1000);
     expect(fn).toHaveBeenCalledTimes(1);
   });
 

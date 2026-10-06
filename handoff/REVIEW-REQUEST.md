@@ -1,70 +1,35 @@
-# Review Request — TOOLS4 T4 (/pdf-password/ PDF 암호 해제·설정) + T3 carry-overs
+# Review Request — CI fix (main red since TOOLS4 T2)
 Date: 2026-10-06
-Ready for Review: YES. Status **DONE**. Not committed. Notes, decisions, sizes, gates: BUILD-LOG "TOOLS4 T4 build notes".
+Ready for Review: YES. Status **DONE_WITH_CONCERNS** (the Lighthouse LCP on /photo-compress/ is only confirmable on the CI runner; see Concerns). Not committed. Details: BUILD-LOG "CI fix after TOOLS4".
 
-## Probe first (brief Unverified a, b, c), passed
-The vendored qpdf-wasm 12.2.0 (Node, the same wasm copy-vendor ships) with `--encrypt --user-password=문서딱암호12 --owner-password=<32 hex> --bits=256 --`: exit 0, output `/V 5 /R 6 AESV3`; pdf.js: no password -> PasswordException code 1, wrong -> code 2, right -> 7 pages; two locks differ; `--decrypt --password=…` -> opens without a password (getPermissions null); wrong -> exit 2 "invalid password". No fallback library used. Kept as unit tests (tests/unit/pdf-password.test.ts "vendored qpdf-wasm round trip").
-
-## Files Changed — T3 carry-overs (/pdf-to-jpg/)
-- src/tools/pdf-to-jpg/guards.ts (new) — `runErrorCode` (pdf.js InvalidPDFException / UnknownErrorException / FormatError / MissingPDFException -> corrupt; SF4), `restrictionNote` (one-line copy/print notice when PRINT, MODIFY or COPY is missing; orchestrator decision), `TaskSlot` (release only its own task; SF2), `CanvasError` moved here.
-- src/tools/pdf-to-jpg/controller.ts:103-107 — TaskSlot, `unlocking` guard, `restricted` state.
-- src/tools/pdf-to-jpg/controller.ts:248-256 — close any previous document before `opened = o` (SF1); read `getPermissions()` and show the notice (kept beside the multi-file note).
-- src/tools/pdf-to-jpg/controller.ts:286-300 — `unlock()` ignores a second submit while an attempt runs (SF1).
-- src/tools/pdf-to-jpg/controller.ts:328-390 — notice kept through runs; stale-run check after `getPage`; finally releases only its own task (SF2); JFIF density = round(scale × 72) via the existing `setJfifDpi` (SF5; clamped pages get their real ppi); single-page Blob from the stamped bytes; `runErrorCode`.
-- src/tools/pdf-to-jpg/output.ts:14-36 — each ZIP chunk becomes its own Blob at once; the final Blob is made of Blobs (SF3).
-- tests/fixtures/build.mjs:113-115 — new runtime fixture `owner_no_copy` (owner password only; print/modify/extract denied).
-- tests/unit/pdf-to-jpg.test.ts — JpegZip Blob-parts spy test; runErrorCode, restrictionNote, TaskSlot tests.
-- tests/e2e/pdf-to-jpg.spec.ts — JFIF density 150/300 asserted; double requestSubmit opens once; owner_no_copy notice / owner_restricted none; cancel-run-cancel; per-worker fixture path (fixes a beforeAll race that showed up as a flaky "손상" on chromium).
-- tests/e2e/usage.spec.ts:98-123 — the wrong password is submitted twice at once; still exactly one fail(wrong-password).
-
-## Files Changed — T4 /pdf-password/
-- src/lib/pdf/password.ts (new) — `randomOwnerPassword` (16 bytes crypto.getRandomValues -> 32 hex), `lockArgs` (named AES-256 form), `unlockArgs`, `qpdfDone`, `passwordFailure` (code only; log text never leaves).
-- src/lib/pdf/password.worker.ts (new) — one qpdf run + `hasSignature` (pdf-lib) on the plain side (input for lock, output for unlock); posts bytes + `signed` or a code; never posts or logs the password.
-- src/tools/pdf-password/limits.ts (new) — PC 200 MB / phone 50 MB; lock password 4–64 code points, typed twice; messages.
-- src/tools/pdf-password/flow.ts (new) — `decide(action, kind)` (decision 13 matrix), stop messages, signature/keep notes, `outputName` (`_암호.pdf` / `_암호해제.pdf`, like 합침/압축).
-- src/tools/pdf-password/controller.ts (new) — states empty/opening/ask/stop/working/done; kind from pdf.js (open returns null = user, getPermissions non-null = owner, else none); one press = one attempt (state leaves 'ask' at once); worker + cancel (terminate); lock output verified with pdf.js (no password -> must ask; with it -> same page count); unlock output must open without a password and carry no encryption; failure -> engine panel, no file; passwords cleared on done/pagehide.
-- src/tools/pdf-password/entry.ts (new) — first-interaction loader (pdf-to-jpg pattern), startUsage.
-- src/pages/pdf-password/index.astro (new) — 할 일 chips (암호 풀기 default), the always-visible line "열 때 쓰는 비밀번호를 아는 파일만 풀 수 있습니다.", password inputs without `name`, related tools pdf-merge/pdf-compress/pdf-to-jpg.
-- src/data/tools.ts:31-37, 298-345 — entry (brief title/description; 6 FAQ with numbers from limits.ts; decision 13 sentence verbatim).
-- src/data/site.ts:16-19 — comment only. tests/unit/polish.test.ts:450-455 — HOME_DESC_ORDER test now expects every id to be a tool.
-- scripts/lib/usage.mjs, src/lib/ui/usage.ts — TOOLS += pdf-password; SETTINGS.action = lock|unlock; labels 할 일 / 암호 걸기 / 암호 풀기.
-- src/data/og.json, src/data/tool-facts.ts (4 facts), src/data/guides.ts (NEXT_GUIDES), src/content/guides/pdf-password.md (new how-to; qpdf manual quote, check:quotes OK), src/content/guides/yearend-tax-pdf.md (related += pdf-password, for the orphan rule).
-- scripts/gen-sw.mjs:41-50 — NOT_PRECACHED += /pdf-password/ and /hwp-viewer/ (see Open Questions).
-- scripts/check-dist.mjs:150-166 — password.worker budget 289 KB (240.7 measured + 20 %), controller 6 KB (5.0 + 20 %), no pdf.js/qpdf/worker in the initial JS.
-- scripts/lib/bgcloud.mjs, lighthouserc.json, scripts/qa/visual.mjs, CLAUDE.md line 3 — registration.
-- tests: tests/unit/pdf-password.test.ts (new), usage.test.ts (+3), postbuild.test.ts (OG list, precache), bgcloud.test.ts; tests/e2e/pdf-password.spec.ts (new, 9 tests), usage.spec.ts (+1), site.spec.ts / polish.spec.ts lists, 10 cards, home description in the "등 10가지 도구" form.
-
-## Open Questions
-- **Precache (please check the reasoning).** Even with /pdf-password/ excluded, the cloud build measured 452.1 KB (default 446.2). Measured savings per page (cloud): / 19.3, /hwp-viewer/ 22.4, /stamp-signature/ 24.5, /pdf-merge/ 33.1, /hwp-to-pdf/ 35.2, /pdf-compress/ 39.8, /photo-compress/ 46.2, /id-photo/ 63.9 KB. I dropped **/hwp-viewer/**: the smallest change that fits with home kept, and it cannot open a file offline on a first visit anyway because its 9.7 MB rhwp wasm is never precached. Applied to all builds (one list): now 424.1 default / 429.7 cloud / 426.1 auto-frame. The 450 KB budget is unchanged.
-- An owner-limited PDF in 암호 걸기 stops with "이 파일에는 만든 곳에서 건 사용 제한이 있어 새 비밀번호를 걸 수 없습니다." (re-encrypting would replace its permissions, which is restriction removal). Not in the brief; my call.
-- The T3 notice triggers when PRINT, MODIFY_CONTENTS or COPY is missing (the copy says 복사·인쇄 제한). A file with only annotation/form limits gets no notice.
-- The default build's home description moved from the short form to the 등 form (10 tools, by rule). The polish e2e test now accepts it.
-- The signature check runs pdf-lib in the worker (brief: reuse `hasSignature`), so the worker is 240.7 KB gzip. A pdf.js-based check would be lighter but would be a new detector.
-
-## Out of Scope (logged in BUILD-LOG)
-- No Unicode normalization (NFC/SASLprep) of passwords; a Mac NFD password typed elsewhere could differ.
-- Lighthouse, qa:visual, firefox/webkit/mobile-safari not run locally.
-
----
-
-# T4 round 2 — deploy-gate decisions + Richard's Should Fix
-Date: 2026-10-06. Ready for Review: YES. Status **DONE**. Not committed.
+## Failures found (runs 37446989595 T2, 37450675542 T3, 37458486170 T4 r2; T4 37456799735 was cancelled)
+| # | Failure | Where | Real or flake | Root cause | Fix |
+|---|---|---|---|---|---|
+| 1 | id-photo.spec.ts:654 `.related a` 6 → 7 (T2) / 8 (T3) / 9 (T4) | every e2e job, all retries | real (stale test) | /id-photo/ uses `<RelatedTools>` without `only` = every other live tool (site.spec already checks that rule); the TOOLS4 brief (decision 9) maps related lists only for the 3 new tools. The test hard-coded 6. | Test reads the live home cards and expects related = live − /id-photo/ (no count). Code unchanged. No other stale hard-coded tool count found (site.spec cards = 10 already updated). |
+| 2 | pdf-compress.spec.ts:41 lazy load: worker, mozjpeg/resize wasm, qpdf before the button | mobile-chrome (T3), chromium (T4 r2); also 2026-10-02 and the TOOLS4 brief commit (pre-TOOLS4) | real bug, intermittent | Not T0–T4. Chromium on Linux sends a trusted `pointermove` at 0,0 with movementX/Y 0 on every page load (resting cursor at first layout). The Polish P.7 preload counts any pointermove as the "first user signal", so after idle it warmed the whole engine with no interaction. Traces: inspect.js/pdf.js requested before setInputFiles. Reproduced deterministically on Linux (WSL Ubuntu, headless shell 1243): no interaction + 4 s idle → 7 engine requests on chromium and mobile-chrome. The test fails only when the idle callback beats the 1쪽 check (first test of a fresh worker under load). | `src/lib/ui/preload.ts`: `isRestingMove` — a pointermove that did not move is not a signal; the next real move is. After the fix: 0 engine requests on Linux (6/6). Test unchanged. |
+| 3 | Lighthouse LCP > 2,000 ms: /photo-compress/ 2,108 (T2), /photo-compress/ 2,115 + /pdf-merge/ 2,113 (T4 r2) | checks | real | (a) TOOLS4 T2 moved `canDrawOffscreen` into `lib/image/raster.ts` and T2 shared `lib/ui/reorder.ts` with the lazy /jpg-to-pdf/ controller; Rollup split both into their own chunks, so /photo-compress/ (raster) and /pdf-merge/ (reorder) gained one request before first paint — exactly the two failing pages. (b) The UI font subset grew 622 → 634 characters (12 new syllables from the TOOLS4 copy), +0.8–1 KB per preloaded face. | `astro.config.mjs` manualChunks: raster.ts and reorder.ts join `ui-shared` (the Growth G / Step 4 precedent). Pre-TOOLS4 request structure restored on both pages. (b) not changed: escalated (see Concerns). |
+| 4 | pdf-to-jpg.spec.ts:58 (webkit, T3): state stayed `empty`, alert "손상" | webkit, passed on retry | flake, already fixed | Shared runtime fixture path rewritten by another worker's beforeAll. | Already fixed in T4 (per-process fixture path). Passed on webkit/mobile-safari locally; not seen in T4 r2. |
+| 5 | Firefox: site.spec SEO smoke /jpg-to-pdf/, axe /terms/, /pdf-merge/ with files, ~10 others | firefox, all passed on retry | flake | Every one is `page.goto: Timeout 20000ms` (the known Playwright-Firefox navigation-event drop, 2 retries on CI). No assertion failures. Same pattern in pre-TOOLS4 green runs. | None. |
 
 ## Files Changed
-- src/lib/pdf/permissions.ts (new) — `isRestricted(perms)` (print, change or copy missing), shared by the T3 notice and T4.
-- src/tools/pdf-to-jpg/guards.ts:1-30 — `restrictionNote` now uses `isRestricted` (same behaviour).
-- src/lib/pdf/password.ts:17-21 — `normalizePassword` = NFC (item 3).
-- src/tools/pdf-password/flow.ts — FileKind `encrypted` (opens without a password, encrypted, everything allowed) with its own stop message "이 파일은 비밀번호 없이 열리지만 이미 암호 설정이 들어 있어 새 비밀번호를 걸 수 없습니다." (item 4); `LIMITS_NOTE` "원래 파일에 있던 복사·인쇄 제한은 저장한 파일에 남지 않습니다. 파일을 만든 곳에서 허락한 경우에만 쓰세요." (item 1).
-- src/tools/pdf-password/controller.ts — kind = user / none / owner (restricted) / encrypted; lock and unlock passwords NFC before validation, the worker and the pdf.js check; check(): try/finally around every pdf.js read so each opened doc closes (item 6); unlock reads the original's permissions with the typed password and adds LIMITS_NOTE to the result notes when it was restricted (item 1).
-- src/sw/sw.ts:25-32 — RUNTIME_PAGES += /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/, /hwp-viewer/ (item 2; /remove-background/ deliberately not). scripts/gen-sw.mjs comment corrected. Precache unchanged in content: 424.2 / 430.3 / 426.4 KB.
-- tests/fixtures/build.mjs — runtime fixture `userpw_no_copy` (open password 1234 + print/modify/extract denied).
-- tests/unit/pdf-password.test.ts — NFD paste locks as NFC, NFC unlock works (and a raw NFD lock does NOT open with NFC, proving the need); real-qpdf round trip for 8 hostile passwords (`-x --decrypt`, `a b "c"`, `it's`, `=--owner-password=1`, `@in.pdf`, leading/trailing spaces, `--`, a backslash): lock refuses pdf.js without, opens with, refuses with one extra char, unlock works (item 5); `decide('lock','encrypted')`; `isRestricted`.
-- tests/unit/polish.test.ts:639-660 — the four tool pages are stored when visited and served offline; /remove-background/ never stored.
-- tests/e2e/pdf-password.spec.ts — userpw_no_copy unlock shows LIMITS_NOTE; our own locked file shows none; owner_restricted (all allowed) in 암호 걸기 gets the `encrypted` message; NFD-pasted lock password opens with the NFC spelling.
+- astro.config.mjs:63-66 — raster.ts and reorder.ts go into the `ui-shared` chunk (one request fewer on /photo-compress/ and /pdf-merge/).
+- src/lib/ui/preload.ts:35-45 — `isRestingMove(ev)`: pointermove with movementX = movementY = 0 is not a signal.
+- src/lib/ui/preload.ts:81-82 — `onSignal` ignores such a move and keeps listening.
+- tests/unit/polish.test.ts:186-196 — fake target passes an event (default movement 3,1).
+- tests/unit/polish.test.ts:227-236 — regression: resting move does not start the preload, a real move does (fails without the fix, verified).
+- tests/e2e/preload.spec.ts:18-20, 45 — `mouse.move(200, 300, { steps: 2 })`: the first move on a fresh page has no previous position, so a one-step move reports movement 0 (Windows); two steps is a real move. Save-Data test likewise, so it still proves the skip.
+- tests/e2e/id-photo.spec.ts:663-665, 680-681 — related links = live home cards minus /id-photo/.
 
-## Open Questions
-- LIMITS_NOTE triggers on the same rule as T3 (print, change or copy missing). A file limiting only annotations/forms gets no note.
-- The original is opened a second time with pdf.js (with the password) only to read its permissions after a successful unlock; if that open fails the note is skipped (the unlocked file itself was already verified).
+## Verified locally
+- Builds as CI (dist-noauto, dist auto-frame, dist-bg, dist-bgcloud): check-dist OK in all; astro check 0 errors; unit (on the PUBLIC_BG_REMOVE=1 build) 51 files, 1,086 passed.
+- Windows: chromium + manual-chromium + mobile-chrome (id-photo:654, pdf-compress, photo-compress, pdf-merge, jpg-to-pdf, pdf-to-jpg, preload, polish, site) 324 passed / 15 skipped. firefox + manual-firefox + webkit + mobile-safari (id-photo:654, pdf-to-jpg, jpg-to-pdf, site, pdf-compress:41, photo-compress:119, pdf-merge) 237 passed, 2 flaky (firefox goto timeout; webkit pdf-merge happy path — pre-existing, 4/12 fail on the unmodified build too). bg-chromium + cloud-chromium + cloud-mobile-chrome 39 passed.
+- Linux (WSL Ubuntu 24.04, Playwright chromium headless shell): id-photo:654, pdf-compress, photo-compress, preload, polish on chromium + mobile-chrome + manual-chromium 160 passed / 13 skipped; idle probe 0 engine requests (was 7).
+- Lighthouse (local, 5 runs): /pdf-merge/ 2,121–2,126 before → 1,969–1,985 (one 2,120) after. /photo-compress/ 2,123–2,138 before → 2,115–2,142 after (unchanged locally). Same build with the pre-TOOLS4 UI font files swapped in: /photo-compress/ 1,976–1,983 (one 2,140).
 
-## Out of Scope
-- Offline return-visit e2e for the four pages not added (the SW routing is unit-tested; sw.spec covers the mechanism on /pdf-merge/).
+## Concerns / Escalate to Architect
+- **/photo-compress/ LCP may still fail on the CI runner.** On CI it was bimodal (1,956–1,974 vs 2,108–2,118, 2–3 of 5 over); locally it stays ~2,120 after the chunk fix and drops to ~1,980 only with the pre-TOOLS4 font files. All tool pages sit at ~1,955–1,970 on CI, one lantern step (~150 ms) under 2,000, so every byte added to the preloaded faces tips the next page. Options (none taken; thresholds untouched): (a) reword the 12 new syllables (엇 낼 겁 잊 렸 엽 애 씨 푸 푼 던 쉼; tools.ts FAQ, pdf-password/pdf-to-jpg pages, controllers) — copy change, owner; (b) keep controller-only status strings out of the UI subset (they render after `loadDynamicFont()`), a gen-ui-font scope change; (c) make the /photo-compress/ controller lazy like /jpg-to-pdf/ (initial JS 20.8 KB → ~9 KB). Tried and rejected: sniff/messages into ui-shared (photo-compress 3/5 under, other pages got worse), a `pdf-pick` manual chunk (pulled modules onto unrelated pages, every page 2,120).
+- preload.ts behaviour change: the first real mouse move on a fresh page (movement 0 in Chromium on Windows) no longer counts; the second does. Lighthouse runs headless Chrome on Linux, so before this fix the preload could also start during a Lighthouse run.
+
+## Out of Scope (logged in BUILD-LOG)
+- WebKit (Windows) pdf-merge happy path: first list row reads "" right after 위로 이동, 4/12 locally on the unmodified build; on CI it shows as a download timeout, passes on retry.
+- Firefox goto timeouts (known, 2 retries).
