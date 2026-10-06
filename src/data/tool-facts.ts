@@ -9,6 +9,7 @@ import { LEVEL_COPY } from '../tools/pdf-compress/level-copy';
 import { TARGET_MB } from '../tools/pdf-compress/target';
 import { LIMITS as MERGE_LIMITS, MAX_FILES } from '../tools/pdf-merge/limits';
 import { LIMITS as JPG_PDF_LIMITS } from '../tools/jpg-to-pdf/limits';
+import { LIMITS as PDF_JPG_LIMITS } from '../tools/pdf-to-jpg/limits';
 import { LIMITS as PHOTO_LIMITS } from '../tools/photo-compress/limits';
 import { KB_BYTES, RANGES } from '../tools/photo-compress/options';
 
@@ -44,6 +45,11 @@ export const TOOL_FACTS = {
   'jpg-to-pdf.maxFileMb.mobile': { value: JPG_PDF_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
   'jpg-to-pdf.maxTotalMb.desktop': { value: JPG_PDF_LIMITS.desktop.maxTotalBytes / MB, unit: 'MB' },
   'jpg-to-pdf.maxTotalMb.mobile': { value: JPG_PDF_LIMITS.mobile.maxTotalBytes / MB, unit: 'MB' },
+  'pdf-to-jpg.maxFileMb.desktop': { value: PDF_JPG_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
+  'pdf-to-jpg.maxFileMb.mobile': { value: PDF_JPG_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
+  'pdf-to-jpg.maxPages.desktop': { value: PDF_JPG_LIMITS.desktop.maxPages },
+  'pdf-to-jpg.maxPages.mobile': { value: PDF_JPG_LIMITS.mobile.maxPages },
+  'pdf-to-jpg.maxPagesSharp.mobile': { value: PDF_JPG_LIMITS.mobile.maxPagesSharp },
   // HWP (1 MB = 1,000,000 bytes there): the largest file a device opens, the PDF caps on phones, the search span.
   'hwp.maxMb.desktop': { value: HWP_LIMITS.desktop.hardBytes / MB_DEC, unit: 'MB' },
   'hwp.maxMb.mobile': { value: HWP_LIMITS.mobile.hardBytes / MB_DEC, unit: 'MB' },

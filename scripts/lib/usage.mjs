@@ -34,7 +34,7 @@ export const PERIODS = [1, 7, 30, 90];
 export const DEFAULT_DAYS = 7;
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -47,8 +47,10 @@ export const LEVEL_IDS = ['high', 'recommended', 'strong'];
 export const MODES = ['cloud', 'device'];
 /** 사진 PDF 변환 용지 (TOOLS4 T2): 사진 크기에 맞춤 | A4. */
 export const PAGE_MODES = ['fit', 'a4'];
+/** PDF JPG 변환 선명도 (TOOLS4 T3): 작게 (약 96 ppi) | 보통 (약 150 ppi) | 선명 (약 300 ppi). */
+export const PPI_LEVELS = ['p96', 'p150', 'p300'];
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -222,9 +224,10 @@ export const TOOL_LABELS = {
   'stamp-signature': '서명·도장 만들기',
   'remove-background': '배경 지우기',
   'jpg-to-pdf': '사진 PDF 변환',
+  'pdf-to-jpg': 'PDF JPG 변환',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도' };
 const VALUE_LABELS = {
   le100: '100KB 이하',
   le200: '200KB 이하',
@@ -247,6 +250,9 @@ const VALUE_LABELS = {
   custom: '직접 입력',
   fit: '사진 크기에 맞춤',
   a4: 'A4',
+  p96: '작게(약 96 ppi)',
+  p150: '보통(약 150 ppi)',
+  p300: '선명(약 300 ppi)',
 };
 const label = (map, x) => (Object.hasOwn(map, x) ? map[x] : String(x ?? ''));
 const num = (x) => {

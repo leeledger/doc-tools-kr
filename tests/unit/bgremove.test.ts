@@ -804,11 +804,12 @@ describe('copy and limits (brief: honest limits up front, plain words)', () => {
     expect(t.description).toContain('누끼 따기');
     expect(t.faq.map((f) => f.a).join()).toContain('4,096픽셀');
     expect(t.faq.flatMap((f) => f.links ?? []).map((l) => l.href)).toContain('/stamp-signature/');
-    // With the flag on (eight tools) the home description still fits 80–120 characters.
+    // With the flag on (every tool) the home description still fits 80–120 characters.
     const d = defaultDescription([...TOOLS, t]);
     expect([...d].length).toBeLessThanOrEqual(120);
     expect([...d].length).toBeGreaterThanOrEqual(80);
-    expect(d).toContain(t.name);
+    // E-T2-a: with ten tools the names no longer all fit; 배경 지우기 is last in HOME_DESC_ORDER, so it is counted.
+    expect(d).toContain(`${TOOLS.length + 1}가지 도구`);
   });
 });
 

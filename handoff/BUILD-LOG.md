@@ -2201,3 +2201,29 @@ Rule applied: a preset ships only if `npm run check:quotes` (bot-UA Node fetch, 
 - Richard: clear, 0 Must Fix. Orchestrator applied Should Fix 1 (120 s timeout on the 8× check-dist usage test) and 5 (check-dist comment). Carried to T3: cancel e2e for /jpg-to-pdf/ (Should Fix 2) and row-wise transparency scan (Should Fix 4). Known gap: pass-through JPEGs keep no ICC handling (Display-P3 may look slightly flat; Should Fix 3).
 - E-T2-b approved (remove-background controller budget 14.5 KB). E-T2-a decided by the orchestrator for T3: Richard's HOME_DESC_ORDER rule; order follows the market report (id-photo, pdf-merge, photo-compress, pdf-compress, jpg-to-pdf, pdf-to-jpg, hwp-to-pdf, hwp-viewer, pdf-password, stamp-signature, remove-background).
 - Pushed to main under the owner's standing go-ahead for T2–T4 (2026-10-06: push when review is clear).
+
+## TOOLS4 T3 build notes (Bob, 2026-10-06) — /pdf-to-jpg/ PDF JPG 변환 + T2 carry-overs — status DONE
+**Files (new)**: `src/tools/pdf-to-jpg/{scale,limits,output,controller,entry}.ts`, `src/pages/pdf-to-jpg/index.astro`, `tests/unit/pdf-to-jpg.test.ts`, `tests/e2e/pdf-to-jpg.spec.ts`.
+- scale.ts: `pageScale` = ppi/72 rounded; over a cap, min(edge, sqrt(area)) and floor; `clamped`. Caps phone 16,000,000 px / 4,096, PC 36,000,000 / 8,192.
+- limits.ts: phone 50 MB / 100 pages (50 at 300 ppi), PC 200 MB / 500 pages; messages with numbers asking for a range (no truncation).
+- output.ts: `{base}_p001.jpg` (pad 3, 4 from 1,000 pages), `{base}_jpg.zip` (safeFileName, Korean tags like merge/compress); `JpegZip` = fflate `Zip` + `ZipPassThrough` (stored), Blob parts.
+- controller: pdf.js through inspect.ts `openPdf` (main thread, its own worker); password prompt / wrong → retry; range via `parseRange` (empty = all); per page white fill → render → toBlob jpeg 0.92 → canvas zeroed; cancel via runId + renderTask.cancel(); clamped pages listed.
+**Files (changed)**: tools.ts (entry + PDF_JPG_FAQ from limits/scale), og.json, guides.ts NEXT_GUIDES (photo-kb, pdf-compress, email-attachment-limit), tool-facts.ts (5), usage.mjs/usage.ts (TOOLS += pdf-to-jpg; SETTINGS.ppi = p96|p150|p300; labels), bgcloud.mjs LOCAL_SCOPE_RE, gen-sw NOT_PRECACHED, check-dist (controller budget/assertions), lighthouserc, qa:visual, CLAUDE.md, COPY.md, app.css `.range-input`, e2e site/polish/usage lists, unit postbuild/bgcloud/usage.
+**T2 carry-overs**
+- E-T2-a: `HOME_DESC_ORDER` in site.ts; long → short → "{names in order while ≤120} 등 N가지 도구. 가입 없이 무료."; T2's "{names}. 무료." removed. Default build (9 tools) = short form, 117 chars; cloud (10) = 등 form, 111 chars. Tests: 80–120, deterministic, one more name would not fit, every listed id is a tool except `pdf-password` (T4; pinned so T4 must update it), every tool listed. No "files never leave" or exception wording (bgcloud test passes).
+- Cancel e2e for /jpg-to-pdf/ (40 photos, 줄이기): back to listing, photos kept, no href, run button focused, still listing 1.5 s later, then a 2-photo run completes.
+- Transparency scan in 256-row bands (`bandsHaveTransparency` pure + unit tests; `canvasHasTransparency` in images.worker).
+**Decisions taken under "never stop"**
+- Run button "N쪽을 JPG로 변환" (counted-button rule); 선명도 chips "작게/보통/선명 (약 N ppi)" (COPY.md ppi rule); hint shows A4 pixel size at the chosen level.
+- Owner-restricted PDFs (open without a password) are converted without a note (pdf.js renders them; no restriction removal involved). Flagged for Arch.
+- JPEG density stays the canvas default (no ppi stamp). Known gap.
+- No usage code for range typos (user input, not a failure); `too-many` when over the run cap; `too-big`, `not-pdf`, `wrong-password`, `corrupt`, `canvas`, `oom`, `engine`, `unknown`.
+- Usage e2e added for pdf-to-jpg (wrong password then right one): events pick, fail(wrong-password), start(o=ppi, v=p150), success, download; no name, size, page count or password in any value.
+**Precache / budgets**: with /pdf-to-jpg/ precached 483.7 KB > 450 → NOT_PRECACHED. Now 441.7 (default) / 444.1 (auto-frame) / 448.1 KB (cloud; 1.9 KB headroom, T4 must start in NOT_PRECACHED). Controller lazy 12.1 KB → budget 14.5 KB. Initial JS /pdf-to-jpg/ 8.2 KB / 30.
+**Known Gaps**: JPEG density not stamped; Lighthouse + qa:visual not run locally; firefox/webkit/mobile-safari not run locally.
+**Gates (2026-10-06, local)**: astro check 0/0; unit 50 files 1054 passed; builds default (dist-noauto, 2,385 files), cloud (dist-bgcloud, 2,402), auto-frame (dist, 2,390) all check-dist OK; e2e chromium + mobile-chrome pdf-to-jpg + jpg-to-pdf 30 passed, site + polish + growth 215 passed / 5 skipped; usage.spec cloud-chromium + cloud-mobile-chrome 12 passed.
+
+**TOOLS4 T3 — deploy gate (2026-10-06)**
+- Richard: clear, 0 Must Fix. Should Fix 1–4 (double Enter on the password prompt leaks a doc; stale finally clears the new renderTask; ZIP chunks held twice; render errors on a damaged page classed unknown) carried to the start of T4. Should Fix 5 (JFIF density) carried to T4 as optional.
+- Orchestrator decisions: edit-restricted PDFs (no open password) convert with a one-line plain notice that the file has copy/print limits and to use it only if allowed — no refusal, no restriction removal. Precache headroom (cloud 448.1/450 KB): T4 must not raise the 450 KB budget; Bob measures and proposes which page(s) leave the precache list, logs it, and the reviewer checks it.
+- Pushed to main under the owner's standing go-ahead for T2–T4.

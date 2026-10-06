@@ -90,6 +90,7 @@ describe('whitelist (scripts/lib/usage.mjs)', () => {
       ['level', ['high', 'recommended', 'strong']],
       ['mode', ['cloud', 'device']],
       ['page', ['fit', 'a4']],
+      ['ppi', ['p96', 'p150', 'p300']],
     ];
     for (const [o, vs] of settings) for (const v of vs) expect(validate(body({ ...BASE, e: 'start', o, v })), `${o}=${v}`).not.toBeNull();
     expect(validate(body({ ...BASE, e: 'start' }))).not.toBeNull();
@@ -588,6 +589,35 @@ describe('사진 PDF 변환 (TOOLS4 T2)', () => {
     expect(settings!.rows).toEqual([
       ['사진 PDF 변환', '용지', 'A4', '3'],
       ['사진 PDF 변환', '용지', '사진 크기에 맞춤', '1'],
+    ]);
+  });
+});
+
+describe('PDF JPG 변환 (TOOLS4 T3)', () => {
+  it('tool and 선명도 setting are whitelisted; an unknown 선명도 value is refused', () => {
+    expect(TOOLS).toContain('pdf-to-jpg');
+    for (const v of ['p96', 'p150', 'p300']) expect(validate(body({ ...BASE, t: 'pdf-to-jpg', e: 'start', o: 'ppi', v })), v).not.toBeNull();
+    for (const v of ['p200', '150', 'a4']) expect(validate(body({ ...BASE, t: 'pdf-to-jpg', e: 'start', o: 'ppi', v })), v).toBeNull();
+    for (const c of ['not-pdf', 'too-big', 'too-many', 'wrong-password', 'corrupt', 'canvas', 'oom', 'engine']) {
+      expect(validate(body({ ...BASE, t: 'pdf-to-jpg', e: 'fail', c, p: 'parse' })), c).not.toBeNull();
+    }
+  });
+
+  it('admin labels are Korean: tool name as in tools.ts, 선명도, 작게 / 보통 / 선명 with the ppi', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'pdf-to-jpg', event: 'success', via: 'direct', n: 2 }],
+      settings: [
+        { tool: 'pdf-to-jpg', setting: 'ppi', value: 'p150', n: 3 },
+        { tool: 'pdf-to-jpg', setting: 'ppi', value: 'p300', n: 2 },
+        { tool: 'pdf-to-jpg', setting: 'ppi', value: 'p96', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('PDF JPG 변환');
+    expect(settings!.rows).toEqual([
+      ['PDF JPG 변환', '선명도', '보통(약 150 ppi)', '3'],
+      ['PDF JPG 변환', '선명도', '선명(약 300 ppi)', '2'],
+      ['PDF JPG 변환', '선명도', '작게(약 96 ppi)', '1'],
     ]);
   });
 });

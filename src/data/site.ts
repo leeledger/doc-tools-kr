@@ -14,22 +14,50 @@ export const SITE = {
 export const liveNames = (tools: readonly Tool[] = LIVE_TOOLS): string => tools.map((t) => t.name).join('·');
 
 /**
+ * Order in which the home description names tools once they no longer all fit (E-T2-a, decided for TOOLS4 T3; the
+ * market report's order). Slugs that are not live are skipped; a live tool missing here would go last.
+ * `pdf-password` is TOOLS4 T4 and not in tools.ts yet (a unit test pins that exception).
+ */
+export const HOME_DESC_ORDER: readonly string[] = [
+  'id-photo',
+  'pdf-merge',
+  'photo-compress',
+  'pdf-compress',
+  'jpg-to-pdf',
+  'pdf-to-jpg',
+  'hwp-to-pdf',
+  'hwp-viewer',
+  'pdf-password',
+  'stamp-signature',
+  'remove-background',
+];
+
+const DESC_MAX = 120;
+const fits = (s: string): boolean => [...s].length <= DESC_MAX;
+
+/**
  * Meta description of the home page and the default for other pages: derived from the live tools only, so
  * nothing promises a tool that is not live (UX-AUDIT-1 P0-4). No particle follows the variable part.
  */
 export function defaultDescription(tools: readonly Tool[] = LIVE_TOOLS): string {
-  // Sprint C (C1): with seven tools the names alone are 85 characters, so the tagline sentence left the template
-  // (it is the page title's); the text stays within 80–120.
-  // Sprint C (C2): with the eighth tool the names are 100 characters, so the shorter sentence keeps it at 120.
+  // Sprint C (C1/C2): the tagline sentence left the template once the names grew; the shorter form names every tool.
   // Owner 2026-10-05: the description says what the site does, not where the file goes (no privacy claim, so
   // the 배경 지우기 cloud path needs no exception here).
-  // TOOLS4 T2: with the photo-to-PDF tool and 배경 지우기 both live the names are 110 characters, so the shortest form drops
-  // "가입 없이" rather than a tool name.
   const names = liveNames(tools);
-  const fits = (s: string): boolean => [...s].length <= 120;
   const long = `${names}. 내야 하는 문서·사진을 규격에 맞춰요. 가입 없이 무료.`;
+  if (fits(long)) return long;
   const short = `${names}. 가입 없이 무료.`;
-  return fits(long) ? long : fits(short) ? short : `${names}. 무료.`;
+  if (fits(short)) return short;
+  // E-T2-a (TOOLS4 T3): too many names for 120 characters. Name as many as fit in HOME_DESC_ORDER, then the count.
+  const rank = (t: Tool): number => {
+    const i = HOME_DESC_ORDER.indexOf(t.slug);
+    return i < 0 ? HOME_DESC_ORDER.length : i;
+  };
+  const ordered = tools.map((t, i) => ({ t, i })).sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i).map((x) => x.t.name);
+  const tail = ` 등 ${tools.length}가지 도구. 가입 없이 무료.`;
+  let k = ordered.length - 1;
+  while (k > 1 && !fits(`${ordered.slice(0, k).join('·')}${tail}`)) k--;
+  return `${ordered.slice(0, k).join('·')}${tail}`;
 }
 
 /** Ads stay off in this phase. AdSlot renders nothing while this is false. */

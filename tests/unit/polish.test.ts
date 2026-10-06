@@ -13,9 +13,9 @@ import { EngineLoadError, ENGINE_COPY, engineErrorCopy, isEngineLoadFailure, wit
 import { formatSize } from '../../src/lib/ui/format';
 import { nonPdfMessage } from '../../src/lib/ui/pdf-pick';
 import { SIGNALS, schedulePreload, warmWorker } from '../../src/lib/ui/preload';
-import { contactLine, defaultDescription, EMAIL_RE, footerContact, liveNames, sharePreview, SITE, TITLE_SUFFIX } from '../../src/data/site';
+import { contactLine, defaultDescription, EMAIL_RE, footerContact, HOME_DESC_ORDER, liveNames, sharePreview, SITE, TITLE_SUFFIX } from '../../src/data/site';
 import og from '../../src/data/og.json';
-import { LIVE_TOOLS, TOOLS, type Tool } from '../../src/data/tools';
+import { BG_REMOVE_TOOL, LIVE_TOOLS, TOOLS, type Tool } from '../../src/data/tools';
 import { handleFetch, route, staleCaches, type SwEnv } from '../../src/sw/sw';
 import { parseTargetMb, TARGET_COPY, targetBytes, targetLabel } from '../../src/tools/pdf-compress/target';
 
@@ -432,14 +432,51 @@ it('nonPdfMessage: one name, several names, and more than three', () => {
 describe('live-only description (P.6)', () => {
   const soon = TOOLS.filter((t) => t.status !== 'live');
 
-  it('names every live tool and no soon tool; 80–120 characters', () => {
-    for (const text of [defaultDescription()]) {
-      for (const t of LIVE_TOOLS) expect(text).toContain(t.name);
-      for (const t of soon) expect(text).not.toContain(t.name);
+  it('names live tools only, in HOME_DESC_ORDER when they do not all fit, with the count; 80–120 characters', () => {
+    const text = defaultDescription();
+    for (const t of soon) expect(text).not.toContain(t.name);
+    const named = LIVE_TOOLS.filter((t) => text.includes(t.name));
+    if (named.length < LIVE_TOOLS.length) {
+      expect(text).toContain(` 등 ${LIVE_TOOLS.length}가지 도구. 가입 없이 무료.`);
+      // The named ones are the first ones in HOME_DESC_ORDER (live tools only), in that order.
+      const ordered = HOME_DESC_ORDER.map((slug) => LIVE_TOOLS.find((t) => t.slug === slug)).filter((t): t is Tool => !!t);
+      expect(text.startsWith(ordered.slice(0, named.length).map((t) => t.name).join('·'))).toBe(true);
     }
-    const n = [...defaultDescription()].length;
+    const n = [...text].length;
     expect(n).toBeGreaterThanOrEqual(80);
     expect(n).toBeLessThanOrEqual(120);
+  });
+
+  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password: TOOLS4 T4, not registered yet), no duplicates, every tool listed', () => {
+    const slugs = new Set([...TOOLS, BG_REMOVE_TOOL].map((t) => t.slug));
+    const pending = HOME_DESC_ORDER.filter((s) => !slugs.has(s));
+    expect(pending).toEqual(['pdf-password']);
+    expect(new Set(HOME_DESC_ORDER).size).toBe(HOME_DESC_ORDER.length);
+    for (const s of slugs) expect(HOME_DESC_ORDER, s).toContain(s);
+  });
+
+  it('the rule: every name in the current form while they fit; then names in order + "등 N가지 도구"; deterministic', () => {
+    const fake = (slug: string, name: string): Tool => ({ ...TOOLS[0]!, slug, name, status: 'live' });
+    // Few tools: the long form, every name.
+    const two = [fake('pdf-merge', '가나'), fake('id-photo', '다라')];
+    expect(defaultDescription(two)).toBe('가나·다라. 내야 하는 문서·사진을 규격에 맞춰요. 가입 없이 무료.');
+    // Every input set from the real tools (default, cloud, all of them): 80–120, deterministic; the 등 form starts in order.
+    for (const tools of [LIVE_TOOLS, [...LIVE_TOOLS, BG_REMOVE_TOOL], [...TOOLS, BG_REMOVE_TOOL].reverse()]) {
+      const d = defaultDescription(tools);
+      expect(defaultDescription([...tools])).toBe(d);
+      expect([...d].length, d).toBeGreaterThanOrEqual(80);
+      expect([...d].length, d).toBeLessThanOrEqual(120);
+      const ranked = HOME_DESC_ORDER.map((s) => tools.find((t) => t.slug === s)).filter((t): t is Tool => !!t);
+      if (d.includes('가지 도구')) {
+        expect(d.startsWith(ranked[0]!.name), d).toBe(true);
+        expect(d).toMatch(new RegExp(` 등 ${tools.length}가지 도구\. 가입 없이 무료\.$`));
+        // One more name would not fit.
+        const k = ranked.filter((t) => d.includes(t.name)).length;
+        expect([...`${ranked.slice(0, k + 1).map((t) => t.name).join('·')} 등 ${tools.length}가지 도구. 가입 없이 무료.`].length).toBeGreaterThan(120);
+      } else {
+        for (const t of tools) expect(d).toContain(t.name);
+      }
+    }
   });
 
   it('follows tools.ts status: a flipped fixture changes the text with it', () => {

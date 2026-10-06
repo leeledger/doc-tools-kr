@@ -28,6 +28,25 @@ export function hasTransparency(img: { data: Uint8ClampedArray | Uint8Array }): 
   return false;
 }
 
+/** Rows read per pixel read when looking for transparency: width × 256 × 4 bytes at a time, not the whole image. */
+export const SCAN_ROWS = 256;
+
+/**
+ * True when any pixel is not fully opaque, reading `height` rows in bands of `rows` through `read(y, h)` and stopping
+ * at the first band that has one (Review T2 Should Fix 4: a 4,096-pixel photo is 64 MB as one ImageData). Pure.
+ */
+export function bandsHaveTransparency(height: number, read: (y: number, h: number) => { data: Uint8ClampedArray | Uint8Array }, rows: number = SCAN_ROWS): boolean {
+  for (let y = 0; y < height; y += rows) if (hasTransparency(read(y, Math.min(rows, height - y)))) return true;
+  return false;
+}
+
+/** bandsHaveTransparency over a canvas. */
+export function canvasHasTransparency(c: OffscreenCanvas): boolean {
+  const g = c.getContext('2d', { colorSpace: 'srgb', willReadFrequently: true });
+  if (!g) throw new Error('2d context unavailable');
+  return bandsHaveTransparency(c.height, (y, h) => g.getImageData(0, y, c.width, h));
+}
+
 /** Frees the canvas backing store now instead of at garbage collection. */
 export function releaseCanvas(c: OffscreenCanvas): void {
   c.width = 0;

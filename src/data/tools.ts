@@ -2,6 +2,8 @@ import { PASSPORT_CHECK_URL, PASSPORT_RULE_URL, RETRIEVED, presetSummary } from 
 import { LIMITS as HWP_LIMITS, MB_DEC } from '../lib/hwp/limits';
 import { MB } from '../lib/ui/device';
 import { LIMITS as JPG_PDF_LIMITS } from '../tools/jpg-to-pdf/limits';
+import { LIMITS as PDF_JPG_LIMITS, PPI } from '../tools/pdf-to-jpg/limits';
+import { pageScale } from '../tools/pdf-to-jpg/scale';
 
 /** HWP numbers in the /hwp-viewer/ FAQ, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -22,6 +24,23 @@ const JPG_PDF_FAQ = {
   totalPc: `${n(JPG_PDF_LIMITS.desktop.maxTotalBytes / MB)} MB`,
   totalPhone: `${n(JPG_PDF_LIMITS.mobile.maxTotalBytes / MB)} MB`,
   edgePhone: `${n(JPG_PDF_LIMITS.mobile.maxEdge)}픽셀`,
+} as const;
+
+/** PDF JPG 변환 numbers in its FAQ, read from the limits and the scale the tool uses (MB = 1,048,576 bytes). */
+const a4At = (ppi: number): string => {
+  const s = pageScale(595.28, 841.89, ppi, PDF_JPG_LIMITS.desktop.caps);
+  return `${n(s.width)}×${n(s.height)}픽셀`;
+};
+const PDF_JPG_FAQ = {
+  filePc: `${n(PDF_JPG_LIMITS.desktop.maxFileBytes / MB)} MB`,
+  filePhone: `${n(PDF_JPG_LIMITS.mobile.maxFileBytes / MB)} MB`,
+  pagesPc: `${n(PDF_JPG_LIMITS.desktop.maxPages)}쪽`,
+  pagesPhone: `${n(PDF_JPG_LIMITS.mobile.maxPages)}쪽`,
+  pagesPhoneSharp: `${n(PDF_JPG_LIMITS.mobile.maxPagesSharp)}쪽`,
+  edgePhone: `${n(PDF_JPG_LIMITS.mobile.caps.maxEdge)}픽셀`,
+  a4Small: a4At(PPI.p96),
+  a4Normal: a4At(PPI.p150),
+  a4Sharp: a4At(PPI.p300),
 } as const;
 
 export type ToolStatus = 'live' | 'soon';
@@ -225,6 +244,46 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['사진 pdf 변환', 'jpg pdf 변환', '아이폰 사진 pdf 변환', '사진 pdf로 묶기', 'png pdf 변환'],
+  },
+  {
+    // TOOLS4 T3. name = h1 (COPY.md). No release flag (brief decision 1): static, sends nothing, one revert rolls it back.
+    slug: 'pdf-to-jpg',
+    name: 'PDF JPG 변환',
+    title: 'PDF JPG 변환 — 쪽마다 사진으로 저장 무료 | 문서딱',
+    description:
+      'PDF JPG 변환을 폰·컴퓨터에서 바로. PDF의 쪽마다 JPG 사진으로 저장하고, 여러 쪽은 ZIP 파일 하나로 받습니다. 선명도도 고를 수 있고 가입 없이 무료.',
+    h1: 'PDF JPG 변환',
+    summary: 'PDF의 쪽마다 JPG 사진으로 저장합니다. 여러 쪽은 ZIP 파일 하나로 받습니다.',
+    icon: '<path d="M4 3h8l4 4v6"/><path d="M12 3v4h4"/><rect x="9" y="12" width="12" height="9" rx="1.5"/><path d="M9 19l3-3 3 3 2-2 4 4"/>',
+    status: 'live',
+    updated: '2026-10-06',
+    faq: [
+      {
+        q: 'PDF를 JPG로 바꾸면 쪽마다 사진이 되나요?',
+        a: '네. PDF 한 쪽이 JPG 사진 한 장이 됩니다. 한 쪽만 바꾸면 JPG 파일 하나를, 여러 쪽을 바꾸면 JPG 사진들을 담은 ZIP 파일 하나를 받습니다. 휴대폰에서는 「파일」 앱에서 ZIP 파일을 누르면 풀립니다.',
+      },
+      {
+        q: '원하는 쪽만 JPG로 바꿀 수 있나요?',
+        a: '네. 변환할 쪽에 「1-3, 5」처럼 쪽 번호를 입력하면 그 쪽만 바꿉니다. 비워 두면 모든 쪽을 바꿉니다.',
+      },
+      {
+        q: '선명도는 무엇을 고르면 되나요?',
+        a: `제출하거나 메신저로 보낼 때는 보통 (약 150 ppi)이면 충분합니다. A4 한 쪽이 작게는 ${PDF_JPG_FAQ.a4Small}, 보통은 ${PDF_JPG_FAQ.a4Normal}, 선명은 ${PDF_JPG_FAQ.a4Sharp} 사진이 됩니다. 휴대폰에서는 긴 변이 ${PDF_JPG_FAQ.edgePhone}을 넘는 쪽을 그 크기로 줄여 저장하고, 결과 화면에 알려 드립니다.`,
+      },
+      {
+        q: '비밀번호가 걸린 PDF도 되나요?',
+        a: '열 때 쓰는 비밀번호를 알면 됩니다. 파일을 고른 뒤 비밀번호를 입력하면 바꿀 수 있습니다. 비밀번호를 모르면 바꿀 수 없으니 파일을 보낸 곳에서 안내한 비밀번호를 확인해 주세요.',
+      },
+      {
+        q: '휴대폰에서도 되나요? 크기 제한이 있나요?',
+        a: `네. 휴대폰에서도 같은 방법으로 바꿀 수 있습니다. PDF 파일은 PC에서 ${PDF_JPG_FAQ.filePc}, 휴대폰에서 ${PDF_JPG_FAQ.filePhone}까지 열 수 있고, 한 번에 PC에서 ${PDF_JPG_FAQ.pagesPc}, 휴대폰에서 ${PDF_JPG_FAQ.pagesPhone}(선명은 ${PDF_JPG_FAQ.pagesPhoneSharp})까지 바꿉니다. 더 많으면 쪽을 나눠 여러 번 바꿔 주세요.`,
+      },
+      {
+        q: '제 파일이 어디로 보내지나요?',
+        a: '어디로도 보내지 않습니다. PDF는 이 기기 안에서 JPG 사진으로 바뀌고, 파일과 비밀번호는 이 화면을 닫으면 남지 않습니다.',
+      },
+    ],
+    keywords: ['pdf jpg 변환', 'pdf 이미지 변환', 'pdf 사진으로 저장', 'pdf jpg 무료'],
   },
   {
     slug: 'photo-compress',

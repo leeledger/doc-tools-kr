@@ -95,6 +95,33 @@ test('사진 PDF 변환 (TOOLS4 T2): pick, start (o=page, v=a4), success, downlo
   }
 });
 
+test('PDF JPG 변환 (TOOLS4 T3): pick, start (o=ppi, v=p150), success, download, in order; wrong password = fail; no name, size, page count or password', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/pdf-to-jpg/');
+  await page.setInputFiles('#pj-input', runtimePath('encrypted_userpw_1234'));
+  await page.locator('#pj-pw-input').fill('0000');
+  await page.locator('#pj-pw-input').press('Enter');
+  await expect(page.locator('#pj-pw-error')).not.toHaveText('');
+  await page.locator('#pj-pw-input').fill('1234');
+  await page.locator('#pj-pw-input').press('Enter');
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await page.locator('#pj-run').click();
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#pj-download').click()]);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'fail', 'start', 'success', 'download']);
+  expectClean(beacons);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'fail', t: 'pdf-to-jpg', c: 'wrong-password', p: 'parse' });
+  expect(beacons[2]!.ev).toMatchObject({ e: 'start', t: 'pdf-to-jpg', o: 'ppi', v: 'p150' });
+  const size = String(readFileSync(runtimePath('encrypted_userpw_1234')).length);
+  for (const b of beacons) {
+    expect(b.ev).toMatchObject({ t: 'pdf-to-jpg', via: 'direct', w: 1 });
+    expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
+    expect(b.body).not.toMatch(/쪽|장|encrypted/);
+    // The typed passwords and the file size appear in no value (the build id b is a hash, left out of this check).
+    for (const [k, v] of Object.entries(b.ev)) if (k !== 'b') expect(String(v), k).not.toMatch(new RegExp(`1234|0000|${size}`));
+  }
+});
+
 test('PDF 용량 줄이기 with a file that is not a PDF: fail with code not-pdf', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

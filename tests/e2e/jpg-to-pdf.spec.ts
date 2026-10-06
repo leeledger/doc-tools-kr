@@ -140,3 +140,33 @@ test('the controller and pdf-lib load only after the first interaction, not with
   await page.waitForTimeout(500);
   expect(scripts.filter((s) => /images\.worker|controller/.test(s))).toEqual([]);
 });
+
+test('취소 while the PDF is being made: back to the list with every photo kept, no file offered; a new run still works (Review T2 Should Fix 2)', async ({ page }) => {
+  await open(page);
+  // 40 photos re-drawn (줄이기) keep the worker busy long enough to cancel.
+  const buffer = readFileSync(PORTRAIT);
+  const files = Array.from({ length: 40 }, (_, i) => ({ name: `p${String(i + 1).padStart(2, '0')}.jpg`, mimeType: 'image/jpeg', buffer }));
+  await page.setInputFiles('#jp-input', files);
+  await expect(items(page)).toHaveCount(40);
+  await expect(page.locator('#jp-list .thumb-ph', { hasText: '확인 중' })).toHaveCount(0, { timeout: 30_000 });
+  await page.locator('label.chip', { hasText: '줄이기' }).click();
+  await page.locator('#jp-run').click();
+  await expect(page.locator('#jp-tool')).toHaveAttribute('data-state', 'building');
+  await page.getByRole('button', { name: '취소' }).click();
+  await expect(page.locator('#jp-tool')).toHaveAttribute('data-state', 'listing');
+  await expect(page.locator('#jp-status')).toHaveText('PDF 만들기를 취소했습니다. 사진 목록은 그대로 있습니다.');
+  await expect(items(page)).toHaveCount(40);
+  await expect(items(page).first()).toContainText('p01.jpg');
+  await expect(page.locator('#jp-progress')).toBeHidden();
+  await expect(page.locator('#jp-result')).toBeHidden();
+  await expect(page.locator('#jp-download')).not.toHaveAttribute('href', /.+/);
+  await expect(page.locator('#jp-run')).toBeFocused();
+  // A late message from the stopped worker never shows a result: stay in the list for a moment.
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#jp-tool')).toHaveAttribute('data-state', 'listing');
+  // Down to two photos, the run completes.
+  for (let i = 0; i < 38; i++) await page.getByRole('button', { name: /삭제$/ }).first().click();
+  await expect(items(page)).toHaveCount(2);
+  const doc = await build(page);
+  expect(doc.getPageCount()).toBe(2);
+});

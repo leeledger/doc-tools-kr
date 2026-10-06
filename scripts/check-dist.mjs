@@ -132,6 +132,21 @@ budget('images.worker*.js (jpg-to-pdf)', match(/^_astro\/images\.worker[^/]*\.js
     budget('jpg-to-pdf controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 13.1 * KB);
   }
 }
+// PDF JPG 변환 (TOOLS4 T3): no worker of its own (pdf.js renders through its vendored worker). The controller (the
+// controller*.js chunk that owns #pj-range-error, and what only it imports, fflate's Zip included) loads on the first
+// interaction, never with the page, and no initial script of the page names pdf.js (controller 12.1 KB gzip measured, budget + 20 %).
+{
+  const html = pageHtml.get('pdf-to-jpg/index.html');
+  if (!html) errors.push('pdf-to-jpg/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('pj-range-error'));
+    if (controller.length !== 1) errors.push(`pdf-to-jpg controller: ${controller.length} chunk(s) name #pj-range-error, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /pdf-to-jpg/ controller loads with the page');
+    for (const f of initial) if (/pdfjs|pdf\.worker|getDocument|ZipPassThrough/.test(read(f).toString('utf8'))) errors.push(`${f}: pdf.js or the ZIP code in the /pdf-to-jpg/ initial JS`);
+    budget('pdf-to-jpg controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 14.5 * KB);
+  }
+}
 if (!autoframe) {
   for (const f of files) if (/mediapipe|vision_bundle|vision_wasm|face_landmarker/i.test(f.path)) errors.push(`${f.path}: MediaPipe file in a build without auto-framing`);
   for (const js of match(/\.m?js$/)) if (/FaceLandmarker|odml\.pa\.googleapis/.test(read(js).toString('latin1'))) errors.push(`${js} contains MediaPipe code in a build without auto-framing`);

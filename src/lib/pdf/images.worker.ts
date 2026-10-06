@@ -6,7 +6,7 @@ import { PDFDocument, type PDFImage } from '@cantoo/pdf-lib';
 import { decodeImage } from '../image/decode';
 import { stripJpegMetadata } from '../image/jpeg-strip';
 import { PhotoError, photoErrorCode, type PhotoErrorCode } from '../image/messages';
-import { canvasPixels, hasTransparency, releaseCanvas } from '../image/raster';
+import { canvasHasTransparency, releaseCanvas } from '../image/raster';
 import { sniffImage } from '../image/sniff';
 import { ACCEPTED_FORMATS, canEmbedRaw, type SizeOption } from '../../tools/jpg-to-pdf/embed';
 import { layout, rotatedSize, type LayoutOptions, type Rotation } from '../../tools/jpg-to-pdf/layout';
@@ -56,7 +56,7 @@ async function redraw(doc: PDFDocument, file: Blob, rotation: Rotation, maxEdge:
     g.drawImage(decoded.src, -decoded.width / 2, -decoded.height / 2);
     decoded.close();
     g.setTransform(1, 0, 0, 1, 0, 0);
-    if (sniff.alphaPossible && hasTransparency(canvasPixels(c))) {
+    if (sniff.alphaPossible && canvasHasTransparency(c)) {
       return await doc.embedPng(new Uint8Array(await (await c.convertToBlob({ type: 'image/png' })).arrayBuffer()));
     }
     // Opaque: white underneath (a fully opaque photo is unchanged by it), then JPEG.

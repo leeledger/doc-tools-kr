@@ -38,8 +38,9 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * C2 round 2 (Arch): /terms/ and /privacy/ too: useless offline; the SW stores them when visited (sw.ts RUNTIME_PAGES).
  * TOOLS4 T2 (brief decision 10): /jpg-to-pdf/ too. With its page and controller the precache measured 466.9 KB, over the
  * 450 KB limit (432.8 KB without it); the limit is never raised, so the page loads from the network like /remove-background/.
+ * TOOLS4 T3: /pdf-to-jpg/ too (483.7 KB with its page and controller precached, 441.7 KB without).
  */
-export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
+export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

@@ -1,0 +1,154 @@
+---
+// /pdf-to-jpg/ (TOOLS4 T3): each page of a PDF -> a JPG; several pages -> one ZIP. Page range and 선명도.
+// The controller loads on the first interaction (entry.ts); pdf.js only when a file is chosen.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { DEFAULT_PPI, LIMITS, PPI, type PpiLevel } from '../../tools/pdf-to-jpg/limits';
+import { pageScale } from '../../tools/pdf-to-jpg/scale';
+
+const tool = getTool('pdf-to-jpg');
+const jsonLd = toolJsonLd(tool, Astro.site);
+const PPI_LABEL: Record<PpiLevel, string> = { p96: '작게', p150: '보통', p300: '선명' };
+const a4Normal = pageScale(595.28, 841.89, PPI.p150, LIMITS.desktop.caps).width.toLocaleString('ko-KR');
+const levels = (Object.keys(PPI) as PpiLevel[]).map((v) => ({ value: v, label: `${PPI_LABEL[v]} (약 ${PPI[v]} ppi)` }));
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">PDF의 쪽마다 JPG 사진으로 저장합니다. 여러 쪽은 ZIP 파일 하나로 받고, 원하는 쪽만 고를 수도 있습니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="pj-tool" class="compress" data-state="empty">
+        <div class="drop" id="pj-drop">
+          <input id="pj-input" class="file-input" type="file" accept="application/pdf,.pdf">
+          <label class="btn primary" for="pj-input" id="pj-pick">PDF 파일 선택</label>
+          <p class="drop-hint">또는 여기에 PDF 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱에서 PDF를 고를 수 있습니다.</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="notice" id="pj-notice" hidden></p>
+        <EngineError />
+
+        <div class="file-item file-card" id="pj-file" hidden>
+          <div class="meta">
+            <p class="name" id="pj-name"></p>
+            <p class="info" id="pj-info"></p>
+          </div>
+          <form class="pw" id="pj-pw" novalidate hidden>
+            <p class="pw-state" id="pj-pw-state">이 파일은 비밀번호로 보호되어 있습니다.</p>
+            <label class="pw-label" for="pj-pw-input">비밀번호</label>
+            <div class="row pw-row">
+              <input class="pw-input" id="pj-pw-input" type="password" autocomplete="off" aria-describedby="pj-pw-state pj-pw-error">
+              <button type="button" class="btn small ghost icon-btn pw-toggle" id="pj-pw-toggle" aria-label="비밀번호 보기" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button type="submit" class="btn small primary">확인</button>
+            </div>
+            <p class="pw-error" id="pj-pw-error"></p>
+          </form>
+        </div>
+
+        <div class="cmp-controls" id="pj-controls" hidden>
+          <div class="ph-custom">
+            <label class="target-label" for="pj-range">변환할 쪽</label>
+            <input class="num-input range-input" id="pj-range" type="text" autocomplete="off" placeholder="예: 1-3, 5" aria-describedby="pj-range-hint pj-range-error">
+            <p class="field-error" id="pj-range-error"></p>
+          </div>
+          <p class="hint" id="pj-range-hint"></p>
+          <fieldset class="levels">
+            <legend>선명도</legend>
+            <div class="chips">
+              {levels.map((o) => (
+                <label class="chip"><input type="radio" name="pj-ppi" value={o.value} checked={o.value === DEFAULT_PPI}><span>{o.label}</span></label>
+              ))}
+            </div>
+          </fieldset>
+          <p class="hint" id="pj-hint"></p>
+        </div>
+
+        <div class="row merge-actions" id="pj-actions" hidden>
+          <button type="button" class="btn primary" id="pj-run" disabled>JPG로 변환</button>
+          <button type="button" class="btn ghost" id="pj-change">다른 파일 고르기</button>
+        </div>
+
+        <div class="progress-box" id="pj-progress" hidden>
+          <p id="pj-progress-text">JPG로 바꾸는 중…</p>
+          <progress id="pj-progress-bar" max="1" value="0" aria-labelledby="pj-progress-text"></progress>
+          <button type="button" class="btn ghost" id="pj-cancel">취소</button>
+        </div>
+
+        <div class="result" id="pj-result" hidden>
+          <p class="result-title" id="pj-headline" tabindex="-1">JPG 사진이 준비되었습니다</p>
+          <p class="result-summary" id="pj-summary"></p>
+          <ul class="result-notes" id="pj-notes" hidden></ul>
+          <div class="row">
+            <a class="btn primary" id="pj-download" download tabindex="0">내려받기</a>
+            <button type="button" class="btn ghost" id="pj-again">쪽·선명도 바꿔 다시 변환</button>
+            <button type="button" class="btn ghost" id="pj-reset">다른 파일 처리하기</button>
+          </div>
+          <p class="save-name" id="pj-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/pdf-to-jpg/', Astro.site!).description} id="pj-share" />
+          <p class="related-line">사진 용량을 줄이려면 <a href="/photo-compress/">사진 용량 줄이기</a>를, 사진을 다시 PDF로 묶으려면 <a href="/jpg-to-pdf/">사진 PDF 변환</a>을 쓰세요.</p>
+        </div>
+
+        <p class="error-box" id="pj-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="pj-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="pdf-to-jpg-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>PDF 파일 선택</strong><span>JPG로 바꿀 PDF를 고르거나 끌어다 놓습니다. 비밀번호가 걸린 파일은 비밀번호를 입력합니다.</span></li>
+        <li><strong>쪽과 선명도 정하기</strong><span>비워 두면 모든 쪽을 바꿉니다. 일부만 바꾸려면 「1-3, 5」처럼 입력하고, 선명도를 고릅니다.</span></li>
+        <li><strong>변환하고 내려받기</strong><span>JPG로 변환을 누른 뒤 내려받기로 저장합니다. 한 쪽은 JPG 파일, 여러 쪽은 ZIP 파일 하나입니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>제출용은 보통이면 충분합니다</strong><span>보통은 A4 한 쪽이 가로 {a4Normal}픽셀 정도의 사진이 됩니다. 작은 글씨까지 크게 보려면 선명을 고르세요.</span></li>
+        <li><strong>설치·가입하지 않습니다</strong><span>PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['jpg-to-pdf', 'pdf-compress', 'photo-compress']} />
+  <div class="wrap narrow"><AdSlot id="pdf-to-jpg-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import '../../tools/pdf-to-jpg/entry';
+</script>

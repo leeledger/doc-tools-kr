@@ -6,6 +6,7 @@ import { MB } from '../../src/lib/ui/device';
 import { canEmbedRaw } from '../../src/tools/jpg-to-pdf/embed';
 import { A4_H, A4_W, PT_PER_MM, layout, rotatedSize, type LayoutOptions, type Rotation } from '../../src/tools/jpg-to-pdf/layout';
 import { LIMITS, REDUCE_EDGE, planAdd } from '../../src/tools/jpg-to-pdf/limits';
+import { SCAN_ROWS, bandsHaveTransparency } from '../../src/lib/image/raster';
 
 const A4 = (orient: LayoutOptions['orient'], marginMm: LayoutOptions['marginMm']): LayoutOptions => ({ page: 'a4', orient, marginMm });
 const FIT: LayoutOptions = { page: 'fit', orient: 'auto', marginMm: 0 };
@@ -133,5 +134,42 @@ describe('page copy (tools.ts)', () => {
     expect(TOOL_FACTS['jpg-to-pdf.maxImages.mobile'].value).toBe(50);
     expect(TOOL_FACTS['jpg-to-pdf.maxFileMb.mobile']).toEqual({ value: 50, unit: 'MB' });
     expect(TOOL_FACTS['jpg-to-pdf.maxTotalMb.desktop']).toEqual({ value: 500, unit: 'MB' });
+  });
+});
+
+describe('transparency scan in row bands (Review T2 Should Fix 4)', () => {
+  /** An RGBA image `width` wide, opaque except the pixel at (tx, ty) when given; reads are recorded. */
+  const image = (width: number, t?: [number, number]) => {
+    const reads: [number, number][] = [];
+    const read = (y: number, h: number) => {
+      reads.push([y, h]);
+      const data = new Uint8ClampedArray(width * h * 4).fill(255);
+      if (t && t[1] >= y && t[1] < y + h) data[((t[1] - y) * width + t[0]) * 4 + 3] = 0;
+      return { data };
+    };
+    return { reads, read };
+  };
+
+  it('an opaque image is read in bands of 256 rows covering every row once', () => {
+    const img = image(10);
+    expect(bandsHaveTransparency(1000, img.read)).toBe(false);
+    expect(SCAN_ROWS).toBe(256);
+    expect(img.reads).toEqual([[0, 256], [256, 256], [512, 256], [768, 232]]);
+  });
+
+  it('stops at the first band holding a transparent pixel, including one on the last row', () => {
+    const early = image(10, [3, 300]);
+    expect(bandsHaveTransparency(1000, early.read)).toBe(true);
+    expect(early.reads).toEqual([[0, 256], [256, 256]]);
+    const last = image(10, [9, 999]);
+    expect(bandsHaveTransparency(1000, last.read)).toBe(true);
+    expect(last.reads).toHaveLength(4);
+  });
+
+  it('a one-row image and a custom band height', () => {
+    expect(bandsHaveTransparency(1, image(5, [0, 0]).read)).toBe(true);
+    const img = image(4);
+    bandsHaveTransparency(10, img.read, 4);
+    expect(img.reads).toEqual([[0, 4], [4, 4], [8, 2]]);
   });
 });

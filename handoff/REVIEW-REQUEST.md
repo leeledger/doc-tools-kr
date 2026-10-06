@@ -1,33 +1,39 @@
-# Review Request — Step TOOLS4 T2 (/jpg-to-pdf/ 사진 PDF 변환)
+# Review Request — TOOLS4 T3 (/pdf-to-jpg/ PDF JPG 변환) + T2 carry-overs
 Date: 2026-10-06
-Ready for Review: YES. Status **DONE**. Not committed. Notes, decisions, sizes, gates: BUILD-LOG "TOOLS4 T2 build notes".
+Ready for Review: YES. Status **DONE**. Not committed. Notes, decisions, sizes, gates: BUILD-LOG "TOOLS4 T3 build notes".
 
 ## Files Changed
-- src/tools/jpg-to-pdf/limits.ts:1-70 — device limits (brief numbers) and pure `planAdd` with numbered messages and usage codes.
-- src/tools/jpg-to-pdf/layout.ts:1-51 — pure page size + draw rect (A4 자동/세로, 0/10 mm margin, 사진 크기에 맞춤).
-- src/tools/jpg-to-pdf/embed.ts:1-15 — `canEmbedRaw` (JPEG, not CMYK, orientation 1/absent, no rotation, 원본 그대로).
-- src/lib/pdf/images.worker.ts:1-118 — pdf-lib worker: raw JPEG (metadata stripped) or re-draw (orientation, rotation, cap; PNG only with alpha), layout, verify, producer/creator 문서딱.
-- src/tools/jpg-to-pdf/controller.ts:1-598 — list/thumbnails/reorder/rotate/remove, options, run/cancel/result, usage events, unsupported-browser notice.
-- src/tools/jpg-to-pdf/entry.ts:1-48 — startUsage; lazy controller on first interaction.
-- src/pages/jpg-to-pdf/index.astro:1-139 — the page (privacy line beside the picker only; related tools pdf-merge/pdf-compress/photo-compress).
-- src/data/tools.ts:3-27,~170-228 — `JPG_PDF_FAQ` read from limits.ts; the tool entry (brief title/description, 6 FAQ).
-- src/data/og.json:8,21; src/data/guides.ts:48-56; src/data/tool-facts.ts:11,41-46 — share image/line, next-step guides, tool facts.
-- src/lib/ui/usage.ts:13,20-21; scripts/lib/usage.mjs:37,48-51,224-227,248-249 — jpg-to-pdf tool, `page` setting, Korean admin labels.
-- scripts/check-dist.mjs:119-134,207-217 — worker/controller budgets, lazy + no-pdf-lib-in-initial assertions; bg controller budget 14 → 14.5.
-- scripts/gen-sw.mjs:39-42 — /jpg-to-pdf/ not precached (466.9 KB with it).
-- scripts/lib/bgcloud.mjs:62 — jpg-to-pdf in LOCAL_SCOPE_RE (its picker line is about a tool that sends nothing).
-- src/data/site.ts:26-31 — third home-description tier "{names}. 무료." (the bg-on build was 121 characters).
-- src/lib/image/raster.ts:36-51; src/tools/photo-compress/controller.ts:6,137 — `canDrawOffscreen` moved from the photo-compress controller (now shared).
-- lighthouserc.json:11, scripts/qa/visual.mjs:32, CLAUDE.md:3, docs/COPY.md (description tiers) — registration.
-- tests/unit/jpg-to-pdf.test.ts (new), tests/e2e/jpg-to-pdf.spec.ts (new), tests/unit/usage.test.ts:92,566-593, tests/unit/postbuild.test.ts:343,675, tests/unit/bgcloud.test.ts:423, tests/e2e/site.spec.ts (page lists, related, sitemap, 8 cards), tests/e2e/polish.spec.ts:16,125,258, tests/e2e/usage.spec.ts:78-97, tests/e2e/photo-compress.spec.ts:26 — lists and new tests.
+New
+- src/tools/pdf-to-jpg/scale.ts:1-32 — pure `pageScale(wPt, hPt, ppi, caps)`: ppi / 72, rounded; over a cap, scale = min(edge, sqrt(area)) and floor, `clamped` flag.
+- src/tools/pdf-to-jpg/limits.ts:1-44 — PPI p96/p150/p300 (default p150); phone 50 MB / 100 pages (50 at 300 ppi) / 16,000,000 px / 4,096; PC 200 MB / 500 / 36,000,000 / 8,192; file and run-limit messages with the numbers.
+- src/tools/pdf-to-jpg/output.ts:1-49 — `{base}_p001.jpg` (4 digits from 1,000 pages), `{base}_jpg.zip` via safeFileName; `JpegZip` = fflate streaming `Zip` + `ZipPassThrough` (stored), chunks kept as Blob parts.
+- src/tools/pdf-to-jpg/controller.ts:1-499 — empty → opening → locked → ready → working → done. pdf.js via inspect.ts `openPdf` on pick; password form (wrong → message, field selected, retry; one attempt per submit); range via `parseRange` (empty = all; errors under the field); run cap checked before start; per page: getPage → pageScale → canvas white fill → render → toBlob jpeg 0.92 → zip or single → canvas zeroed + page.cleanup; cancel = runId++ and renderTask.cancel(); clamped pages listed "N쪽은 W×H픽셀로 줄여 저장했습니다." (5 shown, then a count).
+- src/tools/pdf-to-jpg/entry.ts:1-48 — startUsage + controller on first interaction (the /jpg-to-pdf/ pattern).
+- src/pages/pdf-to-jpg/index.astro:1-154 — hero, picker ("밖으로 전송되지 않습니다" only beside it and in FAQ 6), file card + password form, 변환할 쪽, 선명도 chips 작게/보통/선명 (약 N ppi), progress + 취소, result (내려받기, 쪽·선명도 바꿔 다시 변환, 다른 파일 처리하기, Share), howto, 알아 두면 좋아요 (A4 width computed), FAQ, related jpg-to-pdf / pdf-compress / photo-compress, QuickLinks.
+- tests/unit/pdf-to-jpg.test.ts — pageScale exact A4 96/150/300, landscape, phone edge clamp (A3 at 300), area clamps, never-over-cap sweep; limits + messages; names; JpegZip round trip (unzipSync, stored); page copy, FAQ numbers, tool facts.
+- tests/e2e/pdf-to-jpg.spec.ts — generated 3-page PDF (A4 / Letter / A4 landscape) → ZIP of 3 JPEGs (SOI, SOF size = round(pt/72×150) ±1, names); range "2" → one JPEG; 선명 → 2480×3508; /Rotate 90 page → landscape; encrypted fixture → prompt → wrong message → 1234 works; range "9" and "3-1" messages; non-PDF; cancel during a 40-page 300 ppi run; controller and pdf.js not loaded with the page.
+
+Changed
+- src/data/tools.ts:3-5, 27-46, 248-287 — PDF_JPG_FAQ (numbers from limits.ts and pageScale), tool entry after jpg-to-pdf (brief title and description, 6 FAQ).
+- src/data/site.ts:15-62 — E-T2-a: `HOME_DESC_ORDER`; long form → short form → "{names in order, as many as fit} 등 N가지 도구. 가입 없이 무료."; T2's "{names}. 무료." form removed.
+- src/lib/image/raster.ts:25-48 — `SCAN_ROWS` 256, pure `bandsHaveTransparency`, `canvasHasTransparency` (getImageData per band, stops at the first hit).
+- src/lib/pdf/images.worker.ts:9, 59 — uses `canvasHasTransparency` instead of one full-image `getImageData`.
+- scripts/lib/usage.mjs — TOOLS += pdf-to-jpg; `PPI_LEVELS`; SETTINGS.ppi; labels PDF JPG 변환 / 선명도 / 작게(약 96 ppi) / 보통(약 150 ppi) / 선명(약 300 ppi). src/lib/ui/usage.ts — types.
+- scripts/check-dist.mjs:134-149 — /pdf-to-jpg/ controller lazy (exactly one chunk owns #pj-range-error, not initial, budget 14.5 KB = 12.1 + 20 %); no pdf.js or ZipPassThrough in its initial JS.
+- scripts/gen-sw.mjs:39-43 — /pdf-to-jpg/ in NOT_PRECACHED (483.7 KB with it).
+- src/data/og.json, src/data/guides.ts (NEXT_GUIDES pdf-to-jpg: photo-kb, pdf-compress, email-attachment-limit), src/data/tool-facts.ts (5 facts), scripts/lib/bgcloud.mjs LOCAL_SCOPE_RE, lighthouserc.json, scripts/qa/visual.mjs, CLAUDE.md line 3, docs/COPY.md (description rule), src/styles/app.css:331 (`.range-input`).
+- tests: jpg-to-pdf.spec.ts:144-174 (cancel e2e, 40 photos with 줄이기), jpg-to-pdf.test.ts (band scan), polish.test.ts P.6 (HOME_DESC_ORDER rule), bgremove.test.ts, bgcloud.test.ts, postbuild.test.ts, usage.test.ts, site / polish / usage e2e lists.
+
+## Gates (local, 2026-10-06)
+- astro check 0 errors / 0 warnings. Unit 50 files, 1054 passed (auto-frame dist).
+- Builds + check-dist: default → dist-noauto 2,385 files; cloud → dist-bgcloud 2,402; auto-frame → dist 2,390. Precache 441.7 / 448.1 / 444.1 KB of 450.
+- e2e chromium + mobile-chrome: pdf-to-jpg + jpg-to-pdf 30 passed; site + polish + growth 215 passed / 5 skipped; usage.spec cloud-chromium + cloud-mobile-chrome 12 passed (incl. the new pdf-to-jpg events test).
 
 ## Open Questions
-- E-T2-a home description: the third tier keeps every name within 120 now, but T3/T4 names cannot fit; Arch should decide the form before T3.
-- E-T2-b remove-background controller budget 14 → 14.5 KB: 14.0 before T2, 14.1 after sniff/decode became shared chunks. OK, or another fix?
-- Raw JPEG path: please check the strip-then-embed fallback and the alpha decision (PNG only when a pixel is transparent) in images.worker.ts.
-- Privacy text unchanged ("고른 설정 … 정해진 값" covers 용지) — the brief asks Richard to confirm.
+- Home description: default (9 tools) keeps every name (short form, 117 characters); cloud (10) = "여권·증명사진 규격 맞추기·…·HWP·HWPX 파일 보기 등 10가지 도구. 가입 없이 무료." (111). HOME_DESC_ORDER lists `pdf-password` before it exists; a unit test pins it as the only non-tool id, so T4 must update that test.
+- Owner-restricted PDFs (no open password) convert without any note. Fine, or do you want one?
+- JPEGs carry the canvas default JFIF density (no 150/300 ppi stamp). Logged as a gap.
+- Cloud precache 448.1 / 450 KB: T4 should put its page in NOT_PRECACHED from the start.
 
 ## Out of Scope (logged in BUILD-LOG)
-- postbuild "usage statistics … fail check-dist" times out (60 s) on the auto-frame dist only (8 check-dist spawns, ~7.7 s each before T2); passes on the default dist.
-- Sticky-actions scroll padding in app.css names #merge-tool only.
-- Lighthouse / qa:visual not run locally.
+- Lighthouse and qa:visual not run locally (URL added; CI is the source of truth). firefox / webkit / mobile-safari not run locally.
