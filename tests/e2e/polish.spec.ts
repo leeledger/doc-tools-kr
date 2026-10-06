@@ -166,7 +166,8 @@ test('privacy: a short plain statement (owner, Polish Q): no sign-up, no persona
   await expect(main).toContainText('사이트를 여는 기록(접속 기록: IP 주소, 쓰는 기기와 앱의 종류 등)은 Cloudflare가 보안과 운영을 위해 잠시 보관할 수 있어요.');
   await expect(main).toContainText('시행일:');
   for (const gone of ['보호책임자', '문의', '준비 중', '사이티드', '운영자:']) await expect(main).not.toContainText(gone);
-  // The beacon is off: no 익명 오류 통계 section.
+  // Usage statistics are off (brief USAGE; they replaced the error beacon): no 익명 사용 통계 section, the plain cookie line.
+  await expect(main).not.toContainText('익명 사용 통계');
   await expect(main).not.toContainText('익명 오류 통계');
 });
 

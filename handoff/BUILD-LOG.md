@@ -2006,3 +2006,55 @@ Status: **DONE**. Committed, not pushed.
 - Home privacy paragraph, cloud build: "증명사진" dropped from "…서류, 계약서, 증명사진도 다른 곳을 거치지 않습니다" (ID photos are the likeliest 배경 지우기 input). Flag-off text unchanged.
 - Gates: unit 848/848 (one run had 1 flaky failure, the rerun passed clean); BG+cloud build check-dist OK (precache 436.1 / 450 KB); BG-only build check-dist OK, 2,390 files, description and 증명사진 line identical to before.
 - After deploy: re-fetch / and the default share image in the Kakao and Facebook share debuggers (Richard: images keep their URLs, 1-day cache).
+
+## USAGE — brief (Arch, 2026-10-06; `handoff/ARCHITECT-BRIEF-USAGE.md`)
+- Owner task: anonymous tool-behaviour stats to `/api/usage`, stored in Workers Analytics Engine; `/admin/` (Basic auth) tables; same tables in the weekly report; privacy/COPY/runbook updates.
+- Locked: error beacon retired into the usage beacon (`PUBLIC_ERROR_BEACON_PATH` set means build fails); flag `PUBLIC_USAGE_STATS=1`, constant endpoint, optional `PUBLIC_USAGE_SAMPLE`; whitelist single-sourced in `scripts/lib/usage.mjs`; settings bucketed and sent once per run on `start`; guide-to-tool via same-origin referrer `/guide/<slug>/` (`arrive` + `via` tag, no session ids); admin is a server-rendered Pages Function, 404 unless `ADMIN_PASSWORD` has 16+ chars, Cloudflare Access optional; new read-only token `AE_API_TOKEN` + `CF_ACCOUNT_ID` (Pages + GH); contact-email rule carried over from the error beacon; ships flag off.
+- Known risk: Functions requests share the Workers Free 100k/day with `/api/remove-bg` (sample knob + runbook).
+
+## USAGE build notes (Bob, 2026-10-06) — status DONE_WITH_CONCERNS (CLAUDE.md not edited, see Escalations)
+**Files**
+- New: `scripts/lib/usage.mjs` (whitelist, validate, buckets, AE row schema, SQL builders, fetchUsage, shapeUsage, renderTables md/html), `src/lib/ui/usage.ts` (tracker; browserFamily moved here), `functions/api/usage.ts`, `functions/admin/[[path]].ts`, `tests/unit/usage.test.ts`, `tests/e2e/usage.spec.ts`.
+- Deleted: `src/lib/ui/beacon.ts`, `scripts/lib/beacon-path.mjs` (and their P.18 tests in polish.test.ts).
+- Wired: the 8 tools (photo-compress, pdf-compress, pdf-merge, id-photo controller+entry, hwp-shared session+boot, hwp-to-pdf, hwp-viewer, stamp-signature photo+pad+entry, remove-background bg+entry); `astro.config.mjs` (`__USAGE_STATS__`, `__USAGE_SAMPLE__`, usage.ts + usage.mjs join ui-shared), `src/env.d.ts`, `vitest.config.ts`, `scripts/regress/idphoto.mjs`, `scripts/check-dist.mjs`, `public/_routes.json`, `src/sw/sw.ts`, `src/pages/privacy/index.astro`, `src/data/legal.ts`, `src/data/site.ts` (comment), `scripts/ops/growth.mjs`, `scripts/ops/lib/report.mjs`, `.github/workflows/ops-weekly.yml`, `.github/workflows/ci.yml`, `playwright.config.ts`, `tests/e2e/remove-background.cloud.spec.ts`, `tests/e2e/polish.spec.ts`, unit tests (postbuild, polish, network-guard, ops, bgcloud), `docs/COPY.md`, `docs/OPS-RUNBOOK.md` (§2 rows, new §8), `handoff/CLOUD-HANDOFF.md` §4.
+
+**Probe results**
+- (a) Pages Functions bundling a relative import from outside `functions/`: works. `npx wrangler@4.147.0 pages functions build functions --outdir=<scratch>` → "Compiled Worker successfully"; a probe string from `scripts/lib/` landed in index.js. Final build of functions/: routes `/admin/:path*`, `/api/remove-bg`, `/api/usage`, 34.9 KB. usage.mjs stays in `scripts/lib/`.
+- (b) WebKit sendBeacon: usage.spec.ts captured beacons in cloud-webkit and cloud-mobile-safari (Playwright WebKit, Windows); the Origin fallback covers browsers without Sec-Fetch-Site anyway.
+
+**Decisions taken under "never stop"**
+- Event semantics per tool (one `start` per run, settings on `start` only):
+  - photo-compress: `pick` per added batch; `success` / `fail` per photo (item done or kept = success); pick-time refusals are `fail` phase parse with codes too-large/empty/not-image/unsupported/animated/truncated/corrupt; `download` per row link and for the ZIP.
+  - pdf-compress: `start` carries `level` or `target-mb` (raster: no setting); `success` = done or kept; wrong password, not-pdf, too-large are `fail` (parse).
+  - pdf-merge: one `pick` per batch; not-pdf / too-many / too-large once per batch; inspect errors per file.
+  - id-photo: `start` = 저장 with `preset` (custom included); `success` = saved; `arrive` from entry.ts (the controller loads lazily); entry load failure = fail engine/load.
+  - hwp-to-pdf: the job is the PDF export (`start` = 저장 press, `success` = export done; the auto-save + 다시 내려받기 = `download`). hwp-viewer: the job is opening (`start` when parsing begins, `success` = document shown); its optional PDF export is the `download`. Export failures are `fail` phase save for both. `bootHwpTool` gained an optional `tool` (startUsage + a controller that cannot load).
+  - stamp-signature: photo tab: `start` per worker start (also 다시 시도); the first outcome per photo is `success` or `fail` (noink/allpaper); later re-runs from the controls send nothing. Draw tab has no pick/start/success: only `download` and encode `fail`.
+  - remove-background: `start` with `mode` cloud or device (a 503 quota falls through to device = a second start); `nosubject`, `cloud-busy|quota|failed`, `crash`, `network`, `model-corrupt`, `mask` are fail codes.
+- Skipped slots: stamp-signature draw tab pick/start/success (no natural event). None other.
+- `__USAGE_SAMPLE__` define added next to `__USAGE_STATS__` (the brief names only the flag; the sample must reach the page). An invalid sample falls back to 1 in astro.config and fails check-dist.
+- `dl` is computed in usage.ts from the tool's deep-link param (`deeplink.parse`), so controllers do not pass it.
+- Admin: the period links are plain `?days=` anchors; failure notices name the missing variable or `HTTP <status>`, never a value. Dataset name invalid → notice. Admin request methods are not restricted (GET/POST render the same page; nothing is written).
+- Growth data line gains `usage: {success, fail, rate} | null` (totals only, not the tables).
+- PRIVACY_USAGE = '2026년 10월 6일' (owner confirms the real ship date at the deploy gate); PRIVACY_TERMS_UPDATED → 2026-10-06 (sitemap lastmod; /privacy/ itself is unchanged with the flag off).
+- e2e: the cloud spec's `allowUpload` now has two entries and must use Playwright's tuple form (`[[a, b], { scope: 'test' }]`): an array whose 2nd item is an object is read as `[value, options]`. Its "only one POST" assertion now excludes `/api/usage`.
+
+**Escalations**
+- CLAUDE.md lines 13-14 (brief Build Order 8, decision 3) were NOT edited: my operating rules forbid changing CLAUDE.md on another agent's instruction. Proposed text for the owner/orchestrator: line 13 append "The second allowed POST is the anonymous usage beacon to `/api/usage` (same origin, `navigator.sendBeacon`, whitelisted fields only, never file data; behind `PUBLIC_USAGE_STATS=1`; scripts/lib/usage.mjs; only the cloud e2e specs allow it)."; line 14 "error beacon" → "usage statistics (`PUBLIC_USAGE_STATS=1`; the old error beacon is retired)".
+
+**Known Gaps**
+- `/admin` has no e2e (static e2e server runs no Functions): unit tests + the live checks below.
+- Live after deploy (flag off): `curl -i -X POST https://docttak.com/api/usage` → 403; `/admin/` → 404. After owner setup: 401 without credentials, 200 with.
+- Flag-on initial JS grows ~0.8 KB gzip per tool page (photo-compress 19.9 → 20.7 / 30 KB); flag-off builds are unaffected.
+
+**Gates (2026-10-06, local, Windows)**
+- `astro check`: 0 errors, 0 warnings, 1 old hint (hwp-shared/fonts.ts).
+- Unit: 47 files, 946 passed (dist = flag-off build). postbuild with the flag-on cloud build swapped in as dist: 49/49.
+- Builds, each check-dist OK: flag off (shipping) 2,372 files, precache 429.9 / 450 KB, no sendBeacon or `/api/usage` in any script; auto-frame on (e2e dist) 2,379 files; BG 2,390 files; cloud + `PUBLIC_USAGE_STATS=1` 2,391 files, precache 436.3 / 450 KB, tracker in `ui-shared`.
+- wrangler 4.147.0 `pages functions build functions`: compiled (routes /admin/:path*, /api/remove-bg, /api/usage).
+- e2e (Chromium): cloud-chromium 14/14 (usage.spec 4 + remove-background.cloud 10). chromium + bg-chromium on the flag-off dist: 226 passed, 14 skipped; the 13 id-photo failures there were the missing MediaPipe of a flag-off dist (CI builds dist with `PUBLIC_ID_PHOTO_AUTOFRAME=1`): rebuilt that way, id-photo on chromium + manual-chromium (dist-noauto) 59 passed, 15 skipped. Extra: usage.spec on cloud-firefox, cloud-mobile-chrome, cloud-webkit, cloud-mobile-safari: 12 passed, 4 skipped (WebKit on Windows has no OffscreenCanvas).
+
+**USAGE — deploy gate (2026-10-06)**
+- Richard: clear, 0 Must Fix. Should Fix 1 (no Content-Length over HTTP/2·3 → 413) fixed: the body is measured when the header is absent (functions/api/usage.ts, unit tests added). Should Fix 2: set `PRIVACY_USAGE` and `PRIVACY_TERMS_UPDATED` to the day the flag goes on (owner step).
+- Owner decisions: CLAUDE.md lines 3/12–14 updated by the orchestrator on the owner's go-ahead (usage beacon, Web Analytics exception, copy rule). TOOLS4 E1 (white background on /id-photo/): no. E2 (libheif for HEIC): decide after usage stats show HEIC failures.
+- Committed and pushed to main on the owner's go-ahead. Next: TOOLS4 (handoff/ARCHITECT-BRIEF-TOOLS4.md) T0 → T4.

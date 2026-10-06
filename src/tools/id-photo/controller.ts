@@ -15,7 +15,7 @@ import { drawCrop, renderOutput, renderPreview } from '../../lib/idphoto/render'
 import { checklist, headReading, limitLabel, type Checklist } from '../../lib/idphoto/warnings';
 import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { renderSource } from './source';
-import { reportError } from '../../lib/ui/beacon';
+import { track } from '../../lib/ui/usage';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { formatSize } from '../../lib/ui/format';
@@ -426,30 +426,32 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     hideEngineError();
     const my = run;
     const device = detectDevice();
-    const fail = (msg: string): void => {
+    track({ e: 'pick', t: 'id-photo' });
+    const fail = (code: string, msg: string): void => {
       if (my !== run) return;
+      track({ e: 'fail', t: 'id-photo', c: code, p: 'parse' });
       setPhase('error');
       showError(msg);
     };
     const bytesErr = checkFileBytes(file.size, device);
-    if (bytesErr) return fail(bytesErr);
-    if (file.size === 0) return fail(ERRORS.empty);
+    if (bytesErr) return fail('too-large', bytesErr);
+    if (file.size === 0) return fail('empty', ERRORS.empty);
     let sniff;
     try {
       const head = new Uint8Array(await file.slice(0, HEAD_BYTES).arrayBuffer());
       const tail = new Uint8Array(await file.slice(Math.max(0, file.size - TAIL_BYTES)).arrayBuffer());
       sniff = sniffImage(head, { tail, size: file.size });
     } catch {
-      return fail(ERRORS.corrupt);
+      return fail('corrupt', ERRORS.corrupt);
     }
-    if (sniff.format === 'unknown') return fail(ERRORS['not-image']);
-    if (sniff.format === 'tiff') return fail(unsupportedMessage(sniff.format));
-    if (sniff.animated) return fail(COPY.animated);
-    if (sniff.truncated) return fail(ERRORS.truncated);
+    if (sniff.format === 'unknown') return fail('not-image', ERRORS['not-image']);
+    if (sniff.format === 'tiff') return fail('unsupported', unsupportedMessage(sniff.format));
+    if (sniff.animated) return fail('animated', COPY.animated);
+    if (sniff.truncated) return fail('truncated', ERRORS.truncated);
     const dims = orientedSize(sniff);
     if (dims) {
       const d = checkDims(dims.width, dims.height, device);
-      if (d) return fail(d);
+      if (d) return fail('dims', d);
     }
 
     setPhase('loading');
@@ -492,7 +494,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     } catch (err) {
       autoRun?.skip();
       const code = err instanceof PhotoError ? err.code : 'corrupt';
-      return fail(code === 'heic' ? ERRORS.heic : code === 'oom' ? ERRORS.oom : ERRORS.corrupt);
+      const known = code === 'heic' || code === 'oom' ? code : 'corrupt';
+      return fail(known, ERRORS[known]);
     }
     if (my !== run) {
       d.close();
@@ -502,7 +505,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     if (d2) {
       d.close();
       autoRun?.skip();
-      return fail(d2);
+      return fail('dims', d2);
     }
     const bitmap = d.src;
     let preview = bitmap;
@@ -563,13 +566,14 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     const my = run;
     const p = preset;
     const st = { ...state };
+    track({ e: 'start', t: 'id-photo', o: 'preset', v: p.id });
     setPhase('exporting');
     say('저장하는 중입니다');
     let pixels: ImageData;
     try {
       pixels = await renderOutput(photo.bitmap, st, p.outW, p.outH);
     } catch {
-      if (my === run) backToAdjust(COPY.verify);
+      if (my === run) backToAdjust('verify', COPY.verify);
       return;
     }
     let w: Worker;
@@ -590,12 +594,9 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
       worker = null;
       const m = ev.data;
       if (m.type === 'done') showDone(p, m.bytes, m.fallback);
-      else if (m.code === 'unreachable') backToAdjust(COPY.unreachable((p.limitBytes ?? 0) / 1000, p.outW, p.outH));
+      else if (m.code === 'unreachable') backToAdjust('unreachable', COPY.unreachable((p.limitBytes ?? 0) / 1000, p.outW, p.outH));
       else if (m.code === 'engine') void engineFailed();
-      else {
-        reportError({ tool: 'id-photo', phase: 'save', code: 'verify' });
-        backToAdjust(COPY.verify);
-      }
+      else backToAdjust('verify', COPY.verify);
     };
     const req: EncodeRequest = { type: 'encode', pixels, spec: { outW: p.outW, outH: p.outH, ...(p.limitBytes !== undefined ? { limitBytes: p.limitBytes } : {}), dpi: p.dpi } };
     w.postMessage(req, [pixels.data.buffer]);
@@ -604,13 +605,14 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
   async function engineFailed(): Promise<void> {
     worker?.terminate();
     worker = null;
-    reportError({ tool: 'id-photo', phase: 'save', code: 'engine' });
+    track({ e: 'fail', t: 'id-photo', c: 'engine', p: 'save' });
     setPhase(lowres ? 'blocked' : 'adjust');
     update(true);
     await showEngineError();
   }
 
-  function backToAdjust(msg: string): void {
+  function backToAdjust(code: string, msg: string): void {
+    track({ e: 'fail', t: 'id-photo', c: code, p: 'save' });
     setPhase(lowres ? 'blocked' : 'adjust');
     update(true);
     showError(msg);
@@ -620,6 +622,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     resultUrl = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }));
     const name = outputName(p);
+    track({ e: 'success', t: 'id-photo' });
     download.href = resultUrl;
     download.download = name;
     saveName.textContent = `저장될 이름: ${name}`;
@@ -675,6 +678,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     resultUrl = null;
   });
+  download.addEventListener('click', () => track({ e: 'download', t: 'id-photo' }));
 
   // Initial state: whatever the preset controls show now (they work before this module loads).
   choosePreset();

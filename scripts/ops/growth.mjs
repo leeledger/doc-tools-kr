@@ -1,7 +1,8 @@
 // A-5: weekly growth report (docs/OPS-RUNBOOK.md).
 //   node scripts/ops/growth.mjs [--reports reports/growth] [--out-json .ops-state/growth.json] [--dry-run]
 // Env: GSC_SERVICE_ACCOUNT_JSON (Search Console, property sc-domain:docttak.com), CF_API_TOKEN (+ optional
-// CF_ZONE_ID). A missing secret skips that part with a note in the report; an API error is noted too and puts
+// CF_ZONE_ID), AE_API_TOKEN + CF_ACCOUNT_ID (anonymous usage statistics, Analytics Engine SQL API; optional
+// USAGE_DATASET). A missing secret skips that part with a note in the report; an API error is noted too and puts
 // "(오류 있음)" in the summary issue title. Writes reports/growth/YYYY-WW.md (ISO week of the run; the workflow
 // commits it), the full data for A-6 to --out-json, and a summary issue labelled ops:growth (last week's is
 // closed). --dry-run prints the report and the issue, commits no report and sends nothing (--out-json is still
@@ -14,6 +15,7 @@ import { createGitHub } from './lib/github.mjs';
 import { PROPERTY, accessToken, fetchGrowth, gscClient, parseServiceAccount } from './lib/gsc.mjs';
 import { sitemapEntries } from './lib/html.mjs';
 import { isoWeek, parseReportData, r1Status, renderReport } from './lib/report.mjs';
+import { datasetName, fetchUsage, shapeUsage } from '../lib/usage.mjs';
 
 export const LABEL = 'ops:growth';
 /** Search Console data is final about three days later. */
@@ -62,6 +64,18 @@ export async function collect({ env, now, fetchImpl = fetch, wait }) {
       notes.push(`Cloudflare 오류: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+  let usage = null;
+  if (!env.AE_API_TOKEN || !env.CF_ACCOUNT_ID) notes.push('AE_API_TOKEN 또는 CF_ACCOUNT_ID 비밀값이 없어 도구 사용 부분을 건너뛰었습니다 (docs/OPS-RUNBOOK.md §비밀값).');
+  else {
+    try {
+      const dataset = datasetName(env.USAGE_DATASET);
+      if (!dataset) throw new Error('USAGE_DATASET 이름이 올바르지 않습니다');
+      usage = shapeUsage(await fetchUsage({ accountId: env.CF_ACCOUNT_ID, token: env.AE_API_TOKEN, dataset, days: 7, fetch: fetchImpl }));
+    } catch (err) {
+      failed = true;
+      notes.push(`도구 사용 통계 오류: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   let sitemapCount = 0;
   try {
     sitemapCount = await liveSitemapCount(fetchImpl, wait);
@@ -69,14 +83,15 @@ export async function collect({ env, now, fetchImpl = fetch, wait }) {
     failed = true;
     notes.push(`sitemap 오류: ${err instanceof Error ? err.message : String(err)}`);
   }
-  return { gsc, cf, notes, failed, sitemapCount };
+  return { gsc, cf, usage, notes, failed, sitemapCount };
 }
 
 export function summaryBody(data, file, failed) {
-  const { gsc, cf, r1, notes } = data;
+  const { gsc, cf, usage, r1, notes } = data;
   const lines = [`${data.week} 성장 리포트: \`${file}\``, ''];
   if (gsc) lines.push(`- 서치콘솔 7일: 클릭 ${gsc.last7.clicks}, 노출 ${gsc.last7.impressions}, CTR ${(gsc.last7.ctr * 100).toFixed(1)}%, 평균 순위 ${gsc.last7.position.toFixed(1)}`, `- 서치콘솔 28일: 클릭 ${gsc.last28.clicks}, 노출 ${gsc.last28.impressions}`);
   if (cf) lines.push(`- Cloudflare 7일: 요청 ${cf.last7.requests.toLocaleString('en-US')}, 페이지뷰 ${cf.last7.pageViews.toLocaleString('en-US')}, 대역폭 ${(cf.last7.bytes / 1e6).toFixed(1)} MB`);
+  if (usage) lines.push(`- 도구 사용 7일: 성공 ${Math.round(usage.totals.success).toLocaleString('en-US')}회, 성공률 ${usage.totals.rate}`);
   lines.push(`- R1: 페이지 ${r1.sitemapCount}개(${r1.pagesOk ? '충족' : '미충족'}), 주 100클릭 연속 ${r1.streak}주(${r1.clicksOk ? '충족' : '미충족'})`);
   if (notes.length) lines.push('', ...notes.map((x) => `> ${x}`));
   if (failed) lines.push('', '오류가 있었습니다. 비밀값과 권한을 docs/OPS-RUNBOOK.md대로 확인해 주세요.');
@@ -92,7 +107,7 @@ export async function run(argv, io = {}) {
   const week = isoWeek(now).label;
   const c = await collect({ env, now, fetchImpl: io.fetchImpl, wait: io.wait });
   const previous = readReports(dir).filter((d) => d.week !== week);
-  const current = { week, generated: isoDate(now), sitemapCount: c.sitemapCount, gsc: c.gsc, cf: c.cf };
+  const current = { week, generated: isoDate(now), sitemapCount: c.sitemapCount, gsc: c.gsc, cf: c.cf, usage: c.usage };
   const r1 = r1Status(c.sitemapCount, [...previous, current]);
   const data = { ...current, notes: c.notes, r1 };
   const md = renderReport(data);

@@ -7,6 +7,7 @@
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { bindQuickLinks, readUrl, writeUrl } from '../../lib/ui/quicklinks';
+import { startUsage, track } from '../../lib/ui/usage';
 import { getPreset } from '../../data/id-photo-presets';
 import { renderSource } from './source';
 
@@ -15,6 +16,7 @@ type Api = { open(file: File): void } | null;
 const root = document.getElementById('idp-tool');
 const drop = document.getElementById('idp-drop');
 if (root && drop) {
+  startUsage('id-photo');
   let loading: Promise<Api> | null = null;
   const load = (pending?: File): Promise<Api> =>
     (loading ??= withEngineRetry(() => import('./controller').then((c) => ({ initIdPhotoTool: c.initIdPhotoTool }))).then(
@@ -27,6 +29,7 @@ if (root && drop) {
       },
       () => {
         loading = null;
+        track({ e: 'fail', t: 'id-photo', c: 'engine', p: 'load' });
         void showEngineError();
         return null;
       },

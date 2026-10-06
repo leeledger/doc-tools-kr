@@ -8,7 +8,6 @@ import { TARGET_SEARCH, type LevelName } from '../../lib/pdf/compress/levels';
 import type { CompressReport, Phase } from '../../lib/pdf/compress/report';
 import type { OpenedPdf, PdfJsDoc } from '../../lib/pdf/inspect';
 import { announce, clearAlert } from '../../lib/ui/announce';
-import { reportError } from '../../lib/ui/beacon';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
@@ -17,6 +16,8 @@ import { formatPages, formatSize } from '../../lib/ui/format';
 import { bindPasswordToggle } from '../../lib/ui/password';
 import { nonPdfMessage, splitPdfFiles } from '../../lib/ui/pdf-pick';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
+import { startUsage, track, type UsagePhase } from '../../lib/ui/usage';
+import { bucketMB } from '../../../scripts/lib/usage.mjs';
 import { checkResult, type TextDoc } from './check';
 import { compressedFileName, reductionPercent, sizeChange } from './format';
 import { checkFileBytes, checkPages, checkRun } from './limits';
@@ -296,19 +297,27 @@ export function initCompressTool(): void {
 
   /** The engine did not load: nothing is marked; the page-level panel offers 새로고침. */
   function engineFailure(phase: 'load' | 'process'): void {
-    reportError({ tool: 'pdf-compress', phase, code: 'engine' });
+    usageFail('engine', phase);
     void showEngineError();
+  }
+
+  /** One failure for the usage statistics (user-caused ones included). */
+  function usageFail(c: string, p: UsagePhase): void {
+    track({ e: 'fail', t: 'pdf-compress', c, p });
   }
 
   async function pickFile(f: File): Promise<void> {
     if (state === 'working') return;
     clearAlert(root);
+    track({ e: 'pick', t: 'pdf-compress' });
     if (!(await splitPdfFiles([f])).pdfs.length) {
+      usageFail('not-pdf', 'parse');
       announce('alert', nonPdfMessage([f.name]), root);
       return;
     }
     const size = checkFileBytes(f.size, detectDevice());
     if (size.level !== 'ok') {
+      usageFail('too-large', 'parse');
       showNotice(size.message);
       status(size.message);
       return;
@@ -357,7 +366,7 @@ export function initCompressTool(): void {
       }
       const code = (err as { code?: PdfErrorCode }).code;
       clearFile();
-      showError(code === 'not-pdf' ? 'not-pdf' : code === 'oom' ? 'oom' : 'corrupt');
+      showError(code === 'not-pdf' ? 'not-pdf' : code === 'oom' ? 'oom' : 'corrupt', 'parse');
       input.focus();
     }
   }
@@ -391,6 +400,7 @@ export function initCompressTool(): void {
       inspecting = false;
       const code = (err as { code?: PdfErrorCode }).code;
       if (code === 'wrong-password') {
+        usageFail('wrong-password', 'parse');
         pwError.textContent = MESSAGES['wrong-password'];
         status(MESSAGES['wrong-password']);
         pwInput.value = '';
@@ -401,7 +411,7 @@ export function initCompressTool(): void {
         engineFailure('load');
       } else {
         clearFile();
-        showError(code === 'oom' ? 'oom' : 'corrupt');
+        showError(code === 'oom' ? 'oom' : 'corrupt', 'parse');
       }
     }
   }
@@ -476,6 +486,9 @@ export function initCompressTool(): void {
     if (!file || !bytes || pageCount === null) return;
     const run = ++runId;
     const level = choice();
+    if (searching()) track({ e: 'start', t: 'pdf-compress', o: 'target-mb', v: bucketMB(targetMb()!) });
+    else if (level !== 'raster') track({ e: 'start', t: 'pdf-compress', o: 'level', v: level });
+    else track({ e: 'start', t: 'pdf-compress' });
     revokeBlob();
     showNotice(null);
     clearAlert(root);
@@ -639,6 +652,7 @@ export function initCompressTool(): void {
     revokeBlob();
     const blob = new Blob([out as Uint8Array<ArrayBuffer>], { type: 'application/pdf' });
     blobUrl = URL.createObjectURL(blob);
+    track({ e: 'success', t: 'pdf-compress' });
     download.href = blobUrl;
     download.download = compressedFileName(file!.name, report.level === 'raster');
     headline.textContent = sizeChange(report.inBytes, blob.size);
@@ -681,6 +695,7 @@ export function initCompressTool(): void {
   }
 
   function showKept(report: CompressReport): void {
+    track({ e: 'success', t: 'pdf-compress' });
     const lines: string[] = [];
     if (report.level === 'raster') {
       lines.push('이미지로 바꾸면 오히려 커져서 원본을 그대로 둡니다. 이 파일에는 이 방법이 맞지 않습니다.');
@@ -713,8 +728,8 @@ export function initCompressTool(): void {
     target.focus({ preventScroll: true });
   }
 
-  function showError(code: PdfErrorCode): void {
-    if (code === 'oom' || code === 'unknown' || code === 'verify') reportError({ tool: 'pdf-compress', phase: code === 'verify' ? 'save' : 'process', code });
+  function showError(code: PdfErrorCode, phase: UsagePhase): void {
+    usageFail(code, phase);
     setState('error');
     announce('alert', MESSAGES[code], root);
   }
@@ -729,11 +744,12 @@ export function initCompressTool(): void {
       setState('ready');
       renderCard(null);
       // `password`: qpdf needs one though none was given; `wrong-password`: the one given was refused.
+      usageFail(code, 'process');
       pwError.textContent = code === 'password' ? MESSAGES.password : MESSAGES['wrong-password'];
       pwInput.focus();
       return;
     }
-    showError(code);
+    showError(code, code === 'verify' ? 'save' : 'process');
     (runBtn.disabled ? input : runBtn).focus();
   }
 
@@ -846,6 +862,8 @@ export function initCompressTool(): void {
     if (ev.persisted && (state === 'done' || state === 'working')) backToReady();
   });
 
+  download.addEventListener('click', () => track({ e: 'download', t: 'pdf-compress' }));
+  startUsage('pdf-compress');
   // A deep link applies before the first render of the form (the options are hidden until a file is picked).
   const deep = readUrl('pdf-compress');
   if (deep) applyDeep(deep);

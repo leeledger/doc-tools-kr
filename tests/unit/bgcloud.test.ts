@@ -201,10 +201,11 @@ describe('Worker docttak-bg', () => {
 describe('privacy greps (brief §6.1): no storage and no logging in functions/api/ and workers/bg/', () => {
   const files = (dir: string): string[] =>
     readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? files(join(dir, d.name)) : /\.(ts|js|mjs)$/.test(d.name) ? [join(dir, d.name)] : []));
-  const all = [...files(join(ROOT, 'functions')), ...files(join(ROOT, 'workers', 'bg', 'src'))];
+  // Usage statistics (brief USAGE): the two new Functions and the whitelist module they bundle are held to the same rule.
+  const all = [...files(join(ROOT, 'functions')), ...files(join(ROOT, 'workers', 'bg', 'src')), join(ROOT, 'scripts', 'lib', 'usage.mjs')];
 
   it('scans both trees', () => {
-    expect(all.map((f) => f.split(/[\\/]/).slice(-2).join('/')).sort()).toEqual(['api/remove-bg.ts', 'src/index.ts']);
+    expect(all.map((f) => f.split(/[\\/]/).slice(-2).join('/')).sort()).toEqual(['admin/[[path]].ts', 'api/remove-bg.ts', 'api/usage.ts', 'lib/usage.mjs', 'src/index.ts']);
   });
 
   it.each(['caches.', '.put(', 'R2', 'KV', 'console.', 'waitUntil', 'cacheEverything', 'cacheTtl', 'localStorage', 'D1', 'DurableObject'])('never uses %s', (needle) => {

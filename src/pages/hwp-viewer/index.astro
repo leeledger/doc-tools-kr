@@ -186,5 +186,5 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
 
 <script>
   import { bootHwpTool } from '../../tools/hwp-shared/boot';
-  bootHwpTool('hwp-tool', () => import('../../tools/hwp-viewer/app').then((m) => m.initHwpViewer));
+  bootHwpTool('hwp-tool', () => import('../../tools/hwp-viewer/app').then((m) => m.initHwpViewer), 'hwp-viewer');
 </script>

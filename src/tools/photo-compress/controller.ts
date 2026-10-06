@@ -7,13 +7,14 @@ import { HEAD_BYTES, TAIL_BYTES, orientedSize, sniffImage, type Sniff } from '..
 import type { PhotoRequest, PhotoResponse } from '../../lib/image/photo.worker';
 import { detectDevice, type Device } from '../../lib/ui/device';
 import { announce as live, clearStatus } from '../../lib/ui/announce';
-import { reportError } from '../../lib/ui/beacon';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize, safeFileName } from '../../lib/ui/format';
 import { josa } from '../../lib/ui/josa';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
+import { startUsage, track, type UsagePhase } from '../../lib/ui/usage';
+import { bucketKB } from '../../../scripts/lib/usage.mjs';
 import { initCompare } from './compare';
 import { checkCount, checkDims, checkFileBytes, checkRun } from './limits';
 import { DEFAULT_FORM, KB_BYTES, parseOptions, rangeMessage, reductionPercent, type FieldName, type FormState, type Parsed } from './options';
@@ -162,6 +163,8 @@ export function initPhotoTool(): void {
   let device: Device = detectDevice();
 
   const announce = (msg: string): void => live('status', msg, root);
+  const fail = (c: string, p: UsagePhase): void => track({ e: 'fail', t: 'photo-compress', c, p });
+  const downloaded = (): void => track({ e: 'download', t: 'photo-compress' });
   // Preload (Polish P.7): the worker with MozJPEG and resize (no WebP), after the first interaction. Never
   // where the tool cannot run (no OffscreenCanvas): the page shows its notice instead.
   const preload = schedulePreload(
@@ -328,6 +331,7 @@ export function initPhotoTool(): void {
       a.download = res.name;
       a.setAttribute('aria-label', `${res.name} 내려받기`);
       a.dataset.role = 'download';
+      a.addEventListener('click', downloaded);
       const cmp = el('button', 'btn ghost small', '비교');
       cmp.type = 'button';
       cmp.setAttribute('aria-label', `${r.file.name} 원본과 비교`);
@@ -342,6 +346,7 @@ export function initPhotoTool(): void {
       a.download = r.file.name;
       a.setAttribute('aria-label', `${r.file.name} 원본 그대로 내려받기`);
       a.dataset.role = 'download';
+      a.addEventListener('click', downloaded);
       actions.append(a);
     }
     const del = el('button', 'btn ghost small danger', '삭제');
@@ -393,30 +398,31 @@ export function initPhotoTool(): void {
 
   async function check(r: Row): Promise<void> {
     const f = r.file;
-    const invalid = (msg: string): void => {
+    const invalid = (code: string, msg: string): void => {
       r.state = 'invalid';
       r.error = msg;
+      fail(code, 'parse');
     };
     try {
       const bytesError = checkFileBytes(f.size, device);
-      if (bytesError) return invalid(bytesError);
-      if (f.size === 0) return invalid(ERRORS.empty);
+      if (bytesError) return invalid('too-large', bytesError);
+      if (f.size === 0) return invalid('empty', ERRORS.empty);
       const head = new Uint8Array(await f.slice(0, HEAD_BYTES).arrayBuffer());
       const tail = new Uint8Array(await f.slice(Math.max(0, f.size - TAIL_BYTES)).arrayBuffer());
       const s = sniffImage(head, { tail, size: f.size });
       r.sniff = s;
       r.dims = orientedSize(s);
-      if (s.format === 'unknown') return invalid(ERRORS['not-image']);
-      if (s.format === 'tiff') return invalid(unsupportedMessage(s.format));
-      if (s.animated) return invalid(ERRORS.animated);
-      if (s.truncated) return invalid(ERRORS.truncated);
+      if (s.format === 'unknown') return invalid('not-image', ERRORS['not-image']);
+      if (s.format === 'tiff') return invalid('unsupported', unsupportedMessage(s.format));
+      if (s.animated) return invalid('animated', ERRORS.animated);
+      if (s.truncated) return invalid('truncated', ERRORS.truncated);
       if (r.dims) {
         const d = checkDims(r.dims.width, r.dims.height, device);
-        if (d.level === 'hard') return invalid(d.message);
+        if (d.level === 'hard') return invalid('too-large', d.message);
         r.softPixels = d.level === 'soft';
       }
     } catch {
-      invalid(ERRORS.corrupt);
+      invalid('corrupt', ERRORS.corrupt);
     }
   }
 
@@ -430,6 +436,7 @@ export function initPhotoTool(): void {
       return;
     }
     loadDynamicFont();
+    track({ e: 'pick', t: 'photo-compress' });
     const added = files.slice(0, accept).map((file): Row => {
       const li = el('li', 'photo-row');
       list.append(li);
@@ -543,6 +550,7 @@ export function initPhotoTool(): void {
     compareId = null;
     runIds = startRun(rows);
     runTarget = { kb: parsed.targetKb, parsed };
+    track(parsed.targetKb === null ? { e: 'start', t: 'photo-compress' } : { e: 'start', t: 'photo-compress', o: 'target-kb', v: bucketKB(parsed.targetKb) });
     showNotice(null);
     hideEngineError();
     clearStatus(root);
@@ -581,7 +589,7 @@ export function initPhotoTool(): void {
       const { failed, rest } = crash(rows, runIds);
       const row = rows.find((r) => r.id === failed);
       if (row) row.error = ERRORS.oom;
-      reportError({ tool: 'photo-compress', phase: 'process', code: 'oom' });
+      fail('oom', 'process');
       if (rest.length) void spawn(run, rest);
       else finish();
       setProgress();
@@ -649,6 +657,7 @@ export function initPhotoTool(): void {
         r.keptSmall = runTarget?.parsed.options.mode === 'target';
         r.state = 'kept';
       }
+      track({ e: 'success', t: 'photo-compress' });
     } else if (msg.type === 'item-error') {
       if (msg.code === 'engine') {
         engineFailure();
@@ -656,7 +665,7 @@ export function initPhotoTool(): void {
       }
       r.state = 'error';
       r.error = rowError(r, msg.code, msg);
-      if (msg.code === 'oom' || msg.code === 'unknown' || msg.code === 'verify') reportError({ tool: 'photo-compress', phase: 'process', code: msg.code });
+      fail(msg.code, 'process');
     }
     if (run === runId) {
       setProgress();
@@ -701,7 +710,7 @@ export function initPhotoTool(): void {
     const { anyFinished } = cancelRun(rows);
     setState(anyFinished ? 'done' : 'ready');
     if (anyFinished) renderHeadline();
-    reportError({ tool: 'photo-compress', phase: 'load', code: 'engine' });
+    fail('engine', 'load');
     void showEngineError();
   }
 
@@ -727,7 +736,7 @@ export function initPhotoTool(): void {
     try {
       ({ buildZip } = await withEngineRetry(() => import('./zip')));
     } catch {
-      reportError({ tool: 'photo-compress', phase: 'save', code: 'engine' });
+      fail('engine', 'save');
       void showEngineError();
       return;
     }
@@ -745,7 +754,9 @@ export function initPhotoTool(): void {
       root.append(a);
       a.click();
       a.remove();
+      downloaded();
     } catch {
+      fail('zip', 'save');
       live('alert', ERRORS.zip, root);
     }
   }
@@ -829,6 +840,7 @@ export function initPhotoTool(): void {
     if (ev.persisted && rows.length) resetAll(false);
   });
 
+  startUsage('photo-compress');
   // A deep link applies before the first render of the form (the options are hidden until a photo is picked).
   const deep = readUrl('photo-compress');
   if (deep) applyDeep(deep);

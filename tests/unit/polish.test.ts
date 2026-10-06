@@ -1,5 +1,6 @@
 // Polish P unit tests (brief "Test map"): engine-load, formatSize, announce, preload, 목표 용량 search,
-// live-only copy, operator contact, error beacon, service worker routing.
+// live-only copy, operator contact, service worker routing. (The P.18 error beacon became the usage statistics:
+// tests/unit/usage.test.ts.)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,12 +9,10 @@ import { TARGET_FLOORS, TARGET_LADDER, TARGET_SEARCH, LEVELS, type RungName } fr
 import type { CompressReport } from '../../src/lib/pdf/compress/report';
 import { searchTarget, type RungOutcome } from '../../src/lib/pdf/compress/target';
 import { announce, clearAlert } from '../../src/lib/ui/announce';
-import { BEACON_ENABLED, browserFamily, buildPayload, createReporter, reportError } from '../../src/lib/ui/beacon';
 import { EngineLoadError, ENGINE_COPY, engineErrorCopy, isEngineLoadFailure, withEngineRetry } from '../../src/lib/ui/engine-load';
 import { formatSize } from '../../src/lib/ui/format';
 import { nonPdfMessage } from '../../src/lib/ui/pdf-pick';
 import { SIGNALS, schedulePreload, warmWorker } from '../../src/lib/ui/preload';
-import { beaconPath } from '../../scripts/lib/beacon-path.mjs';
 import { contactLine, defaultDescription, EMAIL_RE, footerContact, liveNames, sharePreview, SITE, TITLE_SUFFIX } from '../../src/data/site';
 import og from '../../src/data/og.json';
 import { LIVE_TOOLS, TOOLS, type Tool } from '../../src/data/tools';
@@ -522,54 +521,6 @@ describe('operator contact (P.4)', () => {
   it('EMAIL_RE', () => {
     expect(EMAIL_RE.test('help@example.kr')).toBe(true);
     for (const bad of ['help', 'help@', 'help@example', 'a b@c.kr']) expect(EMAIL_RE.test(bad)).toBe(false);
-  });
-});
-
-// ---------- P.18 beacon ----------
-
-describe('error beacon (P.18)', () => {
-  it('is off in this build: reportError is a no-op', () => {
-    expect(BEACON_ENABLED).toBe(false);
-    const send = vi.fn();
-    vi.stubGlobal('navigator', { sendBeacon: send, userAgent: 'x' });
-    reportError({ tool: 'pdf-merge', phase: 'load', code: 'engine' });
-    expect(send).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
-  });
-
-  it('the payload is exactly the whitelist, built field by field', () => {
-    const input = { tool: 'pdf-compress', phase: 'process', code: 'oom', fileName: '주민등록등본.pdf', size: 123 } as never;
-    const p = buildPayload(input, { ua: 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36', device: 'desktop', build: 'abc123' });
-    expect(Object.keys(p).sort()).toEqual(['browser', 'build', 'code', 'device', 'phase', 'tool']);
-    expect(p).toEqual({ tool: 'pdf-compress', phase: 'process', code: 'oom', browser: 'chrome 131', device: 'desktop', build: 'abc123' });
-    expect(buildPayload({ tool: 'pdf-merge', phase: 'load', code: 'x'.repeat(50) }, { ua: '', device: 'mobile', build: 'b' }).code).toBe('unknown');
-  });
-
-  it('the beacon path must be same-origin: one leading "/", never "//" (round 2)', () => {
-    expect(beaconPath('/api/e')).toBe('/api/e');
-    expect(beaconPath(' /api/e ')).toBe('/api/e');
-    for (const bad of ['//evil.example/x', '///x', 'https://evil.example/x', 'api/e', '', undefined, '/\\evil.example']) expect(beaconPath(bad), String(bad)).toBe('');
-  });
-
-  it('browser family and major version only', () => {
-    expect(browserFamily('Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1')).toBe('safari 17');
-    expect(browserFamily('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36 Edg/131.0')).toBe('edge 131');
-    expect(browserFamily('Mozilla/5.0 (Windows NT 10.0; rv:133.0) Gecko/20100101 Firefox/133.0')).toBe('firefox 133');
-    expect(browserFamily('Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Whale/3.28.266.14 Mobile Safari/537.36')).toBe('whale 3');
-    expect(browserFamily('curl/8')).toBe('other');
-  });
-
-  it('samples 1 in 10 and never throws', () => {
-    const send = vi.fn(() => true);
-    const env = { send, device: 'desktop' as const, ua: 'Chrome/131.0', build: 'b' };
-    createReporter('/api/e', { ...env, random: () => 0.5 })({ tool: 'pdf-merge', phase: 'load', code: 'engine' });
-    expect(send).not.toHaveBeenCalled();
-    createReporter('/api/e', { ...env, random: () => 0.05 })({ tool: 'pdf-merge', phase: 'load', code: 'engine' });
-    expect(send).toHaveBeenCalledWith('/api/e', JSON.stringify({ tool: 'pdf-merge', phase: 'load', code: 'engine', browser: 'chrome 131', device: 'desktop', build: 'b' }));
-    const boom = () => {
-      throw new Error('x');
-    };
-    expect(() => createReporter('/api/e', { ...env, random: () => 0, send: boom })({ tool: 'pdf-merge', phase: 'load', code: 'engine' })).not.toThrow();
   });
 });
 

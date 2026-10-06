@@ -45,6 +45,7 @@ import { HEAD_BYTES, TAIL_BYTES, orientedSize, sniffImage } from '../../lib/imag
 import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError } from '../../lib/ui/engine-error';
+import { track, type UsagePhase } from '../../lib/ui/usage';
 import { BG_COLORS, CLOUD, COPY, dims, fileName, saveLabel, type BgChoice, type SaveFormat } from './copy';
 import { checkDims, checkFileBytes, LIMITS, LOW_DEVICE_MEMORY } from './limits';
 import { move, view, type Phase } from './model';
@@ -247,8 +248,10 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     setPhase('empty');
   }
 
-  const fail = (my: number, m: string, retry = false): void => {
+  const usageFail = (c: string, p: UsagePhase): void => track({ e: 'fail', t: 'remove-background', c, p });
+  const fail = (my: number, code: string, phase: UsagePhase, m: string, retry = false): void => {
     if (my !== run) return;
+    usageFail(code, phase);
     clearAttempt(storage);
     setPhase('error');
     showError(m, retry);
@@ -323,7 +326,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
       if (!store) keptModel = model;
     } catch (err) {
       if (signal.aborted || my !== run) return null;
-      fail(my, err instanceof AssetError && err.code === 'corrupt' ? COPY.corrupt : COPY.network, true);
+      const corrupt = err instanceof AssetError && err.code === 'corrupt';
+      fail(my, corrupt ? 'model-corrupt' : 'network', 'load', corrupt ? COPY.corrupt : COPY.network, true);
       return null;
     }
     if (my !== run) return null;
@@ -389,7 +393,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
         say(fallbackLine.textContent);
         return process(my, 'wasm', input);
       }
-      return fail(my, err instanceof EngineError && err.stage === 'crash' ? COPY.crashed : COPY.engine, err instanceof EngineError && err.stage === 'crash');
+      const crash = err instanceof EngineError && err.stage === 'crash';
+      return fail(my, crash ? 'crash' : 'engine', 'process', crash ? COPY.crashed : COPY.engine, crash);
     } finally {
       timers.done();
     }
@@ -401,8 +406,9 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   /** The mask (the model's 512 one, or the cloud answer's alpha) -> the cut-out at work size, or nosubject. */
   async function finish(my: number, m: Mask, refining: string): Promise<void> {
     if (!bitmap) return;
-    if (!validMask(m.mask)) return fail(my, COPY.engine);
+    if (!validMask(m.mask)) return fail(my, 'mask', 'process', COPY.engine);
     if (!hasSubject(m.mask)) {
+      usageFail('nosubject', 'process');
       clearAttempt(storage);
       setPhase('nosubject');
       say(COPY.nosubject);
@@ -414,8 +420,9 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     photoPx = null;
     const out = await cutOut(bitmap, m, read);
     if (my !== run) return;
-    if (!out) return fail(my, COPY.crashed, true);
+    if (!out) return fail(my, 'crash', 'process', COPY.crashed, true);
     clearAttempt(storage);
+    track({ e: 'success', t: 'remove-background' });
     cut = out;
     paintResult();
     // A notice from before the run (the cloud quota line, when the engine was ready and no 받고 시작 cleared it)
@@ -490,25 +497,26 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     note.hidden = true;
     const my = run;
     const device = detectDevice();
+    track({ e: 'pick', t: 'remove-background' });
     const bytesErr = checkFileBytes(file.size, device);
-    if (bytesErr) return fail(my, bytesErr);
-    if (file.size === 0) return fail(my, ERRORS.empty);
+    if (bytesErr) return fail(my, 'too-large', 'parse', bytesErr);
+    if (file.size === 0) return fail(my, 'empty', 'parse', ERRORS.empty);
     let sniff;
     try {
       const head = new Uint8Array(await file.slice(0, HEAD_BYTES).arrayBuffer());
       const tail = new Uint8Array(await file.slice(Math.max(0, file.size - TAIL_BYTES)).arrayBuffer());
       sniff = sniffImage(head, { tail, size: file.size });
     } catch {
-      return fail(my, ERRORS.corrupt);
+      return fail(my, 'corrupt', 'parse', ERRORS.corrupt);
     }
-    if (sniff.format === 'unknown') return fail(my, ERRORS['not-image']);
-    if (sniff.format === 'tiff') return fail(my, unsupportedMessage(sniff.format));
-    if (sniff.animated) return fail(my, COPY.animated);
-    if (sniff.truncated) return fail(my, ERRORS.truncated);
+    if (sniff.format === 'unknown') return fail(my, 'not-image', 'parse', ERRORS['not-image']);
+    if (sniff.format === 'tiff') return fail(my, 'unsupported', 'parse', unsupportedMessage(sniff.format));
+    if (sniff.animated) return fail(my, 'animated', 'parse', COPY.animated);
+    if (sniff.truncated) return fail(my, 'truncated', 'parse', ERRORS.truncated);
     const size = orientedSize(sniff);
     if (size) {
       const d = checkDims(size.width, size.height, device);
-      if (d) return fail(my, d);
+      if (d) return fail(my, 'dims', 'parse', d);
     }
     setPhase('opening');
     busy(COPY.opening);
@@ -517,13 +525,14 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
       d = await decodeImage(file, sniff, { maxLongEdge: workEdge(storage, LIMITS[device].workEdge) });
     } catch (err) {
       const code = err instanceof PhotoError ? err.code : 'corrupt';
-      return fail(my, code === 'heic' ? ERRORS.heic : code === 'oom' ? ERRORS.oom : ERRORS.corrupt);
+      const known = code === 'heic' || code === 'oom' ? code : 'corrupt';
+      return fail(my, known, 'parse', ERRORS[known]);
     }
     if (my !== run) return d.close();
     const d2 = checkDims(d.sourceWidth, d.sourceHeight, device);
     if (d2) {
       d.close();
-      return fail(my, d2);
+      return fail(my, 'dims', 'parse', d2);
     }
     bitmap = d.src;
     if (__BG_CLOUD__ && !deviceChosen()) {
@@ -571,7 +580,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     // fusion worker afterwards (C2 round 2: one 4 × w × h buffer instead of two).
     photoPx = workPixels(bitmap);
     const input = photoPx ? toInput(pilResizeRgba(photoPx.data, photoPx.width, photoPx.height, SIZE, SIZE)) : null;
-    if (!input) return fail(my, COPY.crashed, true);
+    track({ e: 'start', t: 'remove-background', o: 'mode', v: 'device' });
+    if (!input) return fail(my, 'crash', 'process', COPY.crashed, true);
     void process(my, backend, input);
   }
 
@@ -580,6 +590,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     const bm = bitmap;
     if (!bm || my !== run) return;
     via = 'cloud';
+    track({ e: 'start', t: 'remove-background', o: 'mode', v: 'cloud' });
     hideError();
     setPhase('sending');
     busy(CLOUD.sending);
@@ -619,6 +630,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   function cloudFail(my: number, why: 'busy' | 'quota' | 'failed'): void {
     if (my !== run) return;
     abort = null;
+    usageFail(`cloud-${why}`, 'process');
     if (why === 'quota') {
       // Brief §4: the month's free quota is used up -> the on-device path, with a notice (not remembered). The
       // notice goes on 받고 시작 or, when the engine is ready, once the result shows (finish).
@@ -704,9 +716,13 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     // canvas.toBlob can give nothing when the device is short of room: once more at half size, then an error.
     const blob = (await encode(1)) ?? (await encode(0.5));
     downloadBtn.disabled = !cut;
-    if (!blob) return showError(COPY.encode, false);
+    if (!blob) {
+      usageFail('encode', 'save');
+      return showError(COPY.encode, false);
+    }
     const name = fileName(choice(), format());
     saveBlob(blob, name);
+    track({ e: 'download', t: 'remove-background' });
     say(COPY.saved(name));
   });
   for (const b of [newBtn, ...root.querySelectorAll<HTMLButtonElement>('[data-new]')]) {

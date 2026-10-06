@@ -2,6 +2,7 @@
 // reports/growth/YYYY-WW.md (ISO week of the run) and carries its numbers as one machine-readable line,
 // `<!-- growth-data {json} -->`, which M-3 reads back from the committed reports.
 import { cell } from './common.mjs';
+import { renderTables } from '../../lib/usage.mjs';
 
 /** R1 (AdSense) conditions: indexable pages and Search Console clicks per week, for consecutive weeks. */
 export const R1 = { minPages: 15, minWeeklyClicks: 100, weeks: 4 };
@@ -74,7 +75,7 @@ function rowsTable(title, rows, keyName, limit) {
  * notes: string[], r1: r1Status() }.
  */
 export function renderReport(data) {
-  const { week, generated, gsc, cf, notes, r1 } = data;
+  const { week, generated, gsc, cf, usage = null, notes, r1 } = data;
   const lines = [`# 성장 리포트 ${week}`, '', `생성: ${generated} (A-5 자동 작성, docs/OPS-RUNBOOK.md)`, ''];
   if (notes.length) lines.push(...notes.map((x) => `> ${x}`), '');
   lines.push('## 서치콘솔 (구글)');
@@ -97,6 +98,9 @@ export function renderReport(data) {
     lines.push('| 기간 | 요청 | 캐시 요청 | 대역폭 | 페이지뷰 | 일별 순방문자 합 |', '|---|---:|---:|---:|---:|---:|');
     for (const [label, s] of [['최근 7일', cf.last7], ['최근 28일', cf.last28]]) lines.push(`| ${label} (~${cf.until}, ${s.days}일) | ${n(s.requests)} | ${n(s.cachedRequests)} | ${mb(s.bytes)} | ${n(s.pageViews)} | ${n(s.uniques)} |`);
   } else lines.push('건너뜀 (위 메모 참고).');
+  lines.push('', '## 도구 사용 (지난 7일)');
+  if (usage) lines.push(`성공 ${n(usage.totals.success)}회, 실패 ${n(usage.totals.fail)}회, 성공률 ${usage.totals.rate}. 기록은 3개월 동안만 남아요.`, '', renderTables(usage, 'md', 3));
+  else lines.push('건너뜀 (위 메모 참고).');
   lines.push(
     '',
     '## 수익화 R1 조건 (docs/REVENUE-MODEL.md §1)',
@@ -104,7 +108,7 @@ export function renderReport(data) {
     `- 주간 클릭 ${R1.minWeeklyClicks}회 이상 연속: ${r1.streak}주 / 기준 ${R1.weeks}주 — ${r1.clicksOk ? '충족' : '미충족'}${r1.recent.length ? ` (최근: ${r1.recent.map((x) => `${x.week} ${n(x.clicks)}`).join(', ')})` : ''}`,
     '- 개인정보처리방침 v2 공개: 사람이 확인 (M-3 이슈 체크리스트)',
     '',
-    `<!-- growth-data ${JSON.stringify({ week, generated, sitemapCount: r1.sitemapCount, gsc: gsc ? { range7: gsc.range7, range28: gsc.range28, last7: gsc.last7, last28: gsc.last28 } : null, cf })} -->`,
+    `<!-- growth-data ${JSON.stringify({ week, generated, sitemapCount: r1.sitemapCount, gsc: gsc ? { range7: gsc.range7, range28: gsc.range28, last7: gsc.last7, last28: gsc.last28 } : null, cf, usage: usage ? usage.totals : null })} -->`,
     '',
   );
   return lines.join('\n');

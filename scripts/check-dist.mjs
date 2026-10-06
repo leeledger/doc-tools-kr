@@ -9,7 +9,7 @@ import { autoframeOn } from './lib/autoframe.mjs';
 import { BEACON_SRC, analyticsToken } from './lib/analytics.mjs';
 import { API_PATH as CLOUD_API, CLAIM_FILE_RE, EXCEPTION_PAGES, EXCEPTION_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, bgCloudOn, claimText, privacyGate, unqualifiedClaims } from './lib/bgcloud.mjs';
 import { bgRemoveOn } from './lib/bgremove.mjs';
-import { beaconPath } from './lib/beacon-path.mjs';
+import { USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
 import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
@@ -44,11 +44,18 @@ try {
   errors.push(e.message);
 }
 // Arch (Polish P round 2), kept by the owner in Polish Q: while the site processes no personal data it
-// publishes no contact at all, but the error beacon or ads (both collect data) need a published contact
+// publishes no contact at all, but usage statistics or ads (both collect data) need a published contact
 // first (and a full privacy policy with a privacy officer: BUILD-LOG Known Gaps).
-const beaconOn = beaconPath(env.PUBLIC_ERROR_BEACON_PATH) !== '';
+// Usage statistics (brief USAGE) replaced the error beacon: a stale PUBLIC_ERROR_BEACON_PATH would silently do nothing.
+if (env.PUBLIC_ERROR_BEACON_PATH?.trim()) errors.push('PUBLIC_ERROR_BEACON_PATH is retired; use PUBLIC_USAGE_STATS=1');
+const usageStats = usageOn(env.PUBLIC_USAGE_STATS);
+try {
+  usageSample(env.PUBLIC_USAGE_SAMPLE);
+} catch (e) {
+  errors.push(e.message);
+}
 const adsOn = /export const ADS_ENABLED\s*=\s*true/.test(readFileSync(join(import.meta.dirname, '..', 'src', 'data', 'site.ts'), 'utf8'));
-if ((beaconOn || adsOn) && !email) errors.push(`${beaconOn ? 'the error beacon' : 'ads'} is enabled but PUBLIC_CONTACT_EMAIL is not set (the privacy policy must name a contact first)`);
+if ((usageStats || adsOn) && !email) errors.push(`${usageStats ? 'usage statistics are' : 'ads are'} enabled but PUBLIC_CONTACT_EMAIL is not set (the privacy policy must name a contact first)`);
 
 const read = (path) => readFileSync(join(dist, path));
 const gz = (path) => gzipSync(read(path), { level: 9 }).length;
@@ -276,9 +283,16 @@ for (const icon of ['brand/apple-touch-icon.png', 'brand/icon-192.png', 'brand/i
   if (!files.some((f) => f.path === icon)) errors.push(`${icon} is missing`);
 }
 
-// The error beacon is off unless PUBLIC_ERROR_BEACON_PATH is a same-origin path (Polish P.18): no sendBeacon ships.
-if (!beaconOn) {
-  for (const js of match(/\.m?js$/)) if (read(js).includes('sendBeacon')) errors.push(`${js} contains sendBeacon while the error beacon is off`);
+// Usage statistics (brief USAGE): off, no script names sendBeacon or the endpoint; on, the tracker ships.
+const scripts = match(/\.m?js$/);
+if (!usageStats) {
+  for (const js of scripts) {
+    const text = read(js).toString('utf8');
+    if (text.includes('sendBeacon')) errors.push(`${js} contains sendBeacon while PUBLIC_USAGE_STATS is off`);
+    if (text.includes(USAGE_PATH)) errors.push(`${js} names ${USAGE_PATH} while PUBLIC_USAGE_STATS is off`);
+  }
+} else if (!scripts.some((js) => read(js).includes('sendBeacon')) || !scripts.some((js) => read(js).includes(USAGE_PATH))) {
+  errors.push(`no script carries sendBeacon and ${USAGE_PATH} although PUBLIC_USAGE_STATS is on`);
 }
 
 // Both workers share one MozJPEG encoder; each WebP build ships once.

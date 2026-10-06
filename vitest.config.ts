@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  // The error beacon is off in tests, as in every build without PUBLIC_ERROR_BEACON_PATH (Polish P.18).
-  define: { __ERROR_BEACON_PATH__: '""', __ID_PHOTO_AUTOFRAME__: 'true', __BG_REMOVE__: 'false', __BG_CLOUD__: 'false' },
+  // Usage statistics are off in tests, as in every build without PUBLIC_USAGE_STATS=1 (brief USAGE).
+  define: { __USAGE_STATS__: 'false', __USAGE_SAMPLE__: '1', __ID_PHOTO_AUTOFRAME__: 'true', __BG_REMOVE__: 'false', __BG_CLOUD__: 'false' },
   test: {
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',

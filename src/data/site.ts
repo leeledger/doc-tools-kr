@@ -44,7 +44,7 @@ const env = (v: unknown): string | undefined => (typeof v === 'string' && v.trim
 
 /**
  * Contact address. Owner decision (Polish Q): no contact, operator or privacy-officer details are published
- * while the site takes no personal data. When set (before ads or the error beacon: check-dist enforces it),
+ * while the site takes no personal data. When set (before ads or usage statistics: check-dist enforces it),
  * the footer shows it; an invalid value fails the build (scripts/check-dist.mjs).
  */
 export const CONTACT_EMAIL = env(import.meta.env.PUBLIC_CONTACT_EMAIL);

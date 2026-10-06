@@ -324,8 +324,14 @@ describe('weeks and the R1 trigger (M-3)', () => {
     const md = renderReport({ week: '2026-40', generated: '2026-10-01', sitemapCount: 21, gsc, cf: null, notes: ['CF_API_TOKEN 없음'], r1: r1Status(21, []) });
     expect(md).toContain('| a\\|b |');
     expect(md).toContain('> CF_API_TOKEN 없음');
-    expect(parseReportData(md)).toEqual({ week: '2026-40', generated: '2026-10-01', sitemapCount: 21, gsc: { range7: gsc.range7, range28: gsc.range28, last7: gsc.last7, last28: gsc.last28 }, cf: null });
+    expect(parseReportData(md)).toEqual({ week: '2026-40', generated: '2026-10-01', sitemapCount: 21, gsc: { range7: gsc.range7, range28: gsc.range28, last7: gsc.last7, last28: gsc.last28 }, cf: null, usage: null });
     expect(parseReportData('# no data')).toBeNull();
+  });
+  it('a report written before the usage statistics (no usage in its data line) still parses and counts for R1', () => {
+    const old = '# 성장 리포트 2026-39\n\n<!-- growth-data {"week":"2026-39","generated":"2026-09-24","sitemapCount":20,"gsc":{"last7":{"clicks":150}},"cf":null} -->\n';
+    const d = parseReportData(old);
+    expect(d).toEqual({ week: '2026-39', generated: '2026-09-24', sitemapCount: 20, gsc: { last7: { clicks: 150 } }, cf: null });
+    expect(r1Status(20, [d]).streak).toBe(1);
   });
   it('monetize opens one issue when met, never twice', async () => {
     const reports = ['2026-01', '2026-02', '2026-03', '2026-04'].map((w) => rep(w, 150));
@@ -461,6 +467,14 @@ describe('growth report run (A-5)', () => {
         const body = JSON.parse(String(init!.body));
         return new Response(JSON.stringify({ rows: body.dimensions ? [{ keys: ['운전면허 사진 규격'], clicks: 1, impressions: 80, ctr: 0.0125, position: 6 }] : [{ clicks: 130, impressions: 4000, ctr: 0.0325, position: 9.1 }] }));
       }
+      if (url.endsWith('/analytics_engine/sql')) {
+        expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer ae');
+        const sql = String(init!.body);
+        expect(sql).toContain("INTERVAL '7' DAY");
+        expect(sql).toContain('FROM docttak_usage');
+        if (sql.includes('AS event')) return new Response(JSON.stringify({ data: [{ tool: 'photo-compress', event: 'success', via: 'direct', n: 30 }, { tool: 'photo-compress', event: 'fail', via: 'direct', n: 10 }] }));
+        return new Response(JSON.stringify({ data: [] }));
+      }
       if (url.endsWith('/client/v4/graphql')) {
         const days = Array.from({ length: 28 }, (_, i) => ({ dimensions: { date: new Date(Date.UTC(2026, 8, 3 + i)).toISOString().slice(0, 10) }, sum: { requests: 100, cachedRequests: 50, bytes: 1e6, cachedBytes: 5e5, pageViews: 20 }, uniq: { uniques: 10 } }));
         return new Response(JSON.stringify({ data: { viewer: { zones: [{ httpRequests1dGroups: days }] } } }));
@@ -474,7 +488,7 @@ describe('growth report run (A-5)', () => {
     const out = join(dir, 'growth.json');
     const { fetchImpl } = apis();
     const gh = fakeGitHub();
-    const env = { OPS_TODAY: '2026-10-01', GSC_SERVICE_ACCOUNT_JSON: JSON.stringify({ client_email: 'a@b', private_key: privateKey }), CF_API_TOKEN: 'cf', CF_ZONE_ID: 'z' };
+    const env = { OPS_TODAY: '2026-10-01', GSC_SERVICE_ACCOUNT_JSON: JSON.stringify({ client_email: 'a@b', private_key: privateKey }), CF_API_TOKEN: 'cf', CF_ZONE_ID: 'z', AE_API_TOKEN: 'ae', CF_ACCOUNT_ID: 'acc' };
     expect(await growth(['--reports', dir, '--out-json', out], { ...quiet, env, fetchImpl: fetchImpl as unknown as typeof fetch, wait: noWait, github: gh })).toBe(0);
     const md = readFileSync(join(dir, '2026-40.md'), 'utf8');
     expect(md).toContain('| 최근 7일 (2026-09-22~2026-09-28) | 130 | 4,000 | 3.3% | 9.1 |');
@@ -482,6 +496,30 @@ describe('growth report run (A-5)', () => {
     expect(parseReportData(md)).toMatchObject({ week: '2026-40', sitemapCount: 16, gsc: { last7: { clicks: 130 } }, cf: { last28: { requests: 2800 } } });
     expect(JSON.parse(readFileSync(out, 'utf8')).gsc.queries28[0].key).toBe('운전면허 사진 규격');
     expect(gh.create.mock.calls[0]![0]).toMatchObject({ label: 'ops:growth', title: '성장 리포트 2026-40' });
+    // Usage statistics (brief USAGE): the section with tables (a)-(d), the totals in the data line and the summary.
+    expect(md).toContain('## 도구 사용 (지난 7일)');
+    expect(md).toContain('| 사진 용량 줄이기 | 0 | 0 | 30 | 10 | 75% | 0 |');
+    expect(md).toContain('### 실패 이유\n\n기록이 아직 없어요.');
+    expect(parseReportData(md).usage).toEqual({ success: 30, fail: 10, rate: '75%' });
+    expect(gh.create.mock.calls[0]![0].body).toContain('- 도구 사용 7일: 성공 30회, 성공률 75%');
+  });
+  it('usage statistics: skipped with a note without AE_API_TOKEN / CF_ACCOUNT_ID; an SQL API error is a note and marks the run', async () => {
+    const skipDir = mkdtempSync(join(tmpdir(), 'growth-'));
+    const { fetchImpl } = apis();
+    await growth(['--reports', skipDir], { ...quiet, env: { OPS_TODAY: '2026-10-01' }, fetchImpl: fetchImpl as unknown as typeof fetch, wait: noWait, github: fakeGitHub() });
+    const skipped = readFileSync(join(skipDir, '2026-40.md'), 'utf8');
+    expect(skipped).toContain('AE_API_TOKEN 또는 CF_ACCOUNT_ID 비밀값이 없어 도구 사용 부분을 건너뛰었습니다');
+    expect(skipped).toMatch(/## 도구 사용 \(지난 7일\)\n건너뜀/);
+    expect(parseReportData(skipped).usage).toBeNull();
+
+    const errDir = mkdtempSync(join(tmpdir(), 'growth-'));
+    const failing = vi.fn(async (u: string | URL) => (String(u).endsWith('/analytics_engine/sql') ? new Response('no', { status: 403 }) : fetchImpl(u)));
+    const gh = fakeGitHub();
+    await growth(['--reports', errDir], { ...quiet, env: { OPS_TODAY: '2026-10-01', AE_API_TOKEN: 'secret-token', CF_ACCOUNT_ID: 'acc' }, fetchImpl: failing as unknown as typeof fetch, wait: noWait, github: gh });
+    const md = readFileSync(join(errDir, '2026-40.md'), 'utf8');
+    expect(md).toContain('도구 사용 통계 오류: analytics engine SQL API: HTTP 403');
+    expect(md).not.toContain('secret-token');
+    expect(gh.create.mock.calls[0]![0].title).toBe('성장 리포트 2026-40 (오류 있음)');
   });
   it('skips a missing secret with a note and marks an API error', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'growth-'));

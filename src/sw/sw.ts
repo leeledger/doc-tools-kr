@@ -8,6 +8,7 @@
 // request ─► not GET ──────────────────────────────► browser default (no respondWith)
 //         ─► other origin ─────────────────────────► browser default
 //         ─► /sw.js, /deploy-manifest.json, /api/* ─► browser default
+//         ─► /admin, /admin/* ──────────────────────► browser default (Pages Function, never cached; brief USAGE)
 //         ─► /vendor/birefnet-lite-512/, /vendor/onnxruntime-web/ ► browser default (C2: the tool's own Cache Storage
 //            keeps them; a second copy here would double ~120 MB on the device)
 //         ─► navigation ───────────────────────────► network first (3 s), then cache, then /offline/
@@ -46,6 +47,7 @@ export function route(req: RequestLike, origin: string): Route {
   const url = new URL(req.url);
   if (url.origin !== origin) return 'default';
   if (BYPASS.includes(url.pathname) || url.pathname.startsWith('/api/')) return 'default';
+  if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) return 'default';
   if (NETWORK_PREFIXES.some((p) => url.pathname.startsWith(p))) return 'default';
   if (req.mode === 'navigate') return 'navigate';
   if (RUNTIME_PREFIXES.some((p) => url.pathname.startsWith(p))) return 'runtime';

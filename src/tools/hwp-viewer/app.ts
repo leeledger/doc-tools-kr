@@ -33,6 +33,7 @@ export function initHwpViewer(start: BootStart = {}): void {
   };
 
   startHwpSession(start, {
+    tool: 'hwp-viewer',
     warmExport: false,
     viewer: {
       zoomable: true,

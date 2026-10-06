@@ -1,5 +1,7 @@
-/** Build-time constant (astro.config.mjs `define`): the same-origin error-beacon path, or '' when off. */
-declare const __ERROR_BEACON_PATH__: string;
+/** Build-time constant (astro.config.mjs `define`): anonymous usage statistics ship (PUBLIC_USAGE_STATS=1). */
+declare const __USAGE_STATS__: boolean;
+/** Build-time constant (astro.config.mjs `define`): share of page loads that report (PUBLIC_USAGE_SAMPLE, 0.01-1). */
+declare const __USAGE_SAMPLE__: number;
 /** Build-time constant (astro.config.mjs `define`): face auto-framing on /id-photo/ (PUBLIC_ID_PHOTO_AUTOFRAME). */
 declare const __ID_PHOTO_AUTOFRAME__: boolean;
 /** Build-time constant (astro.config.mjs `define`): the /remove-background/ tool ships (PUBLIC_BG_REMOVE). */

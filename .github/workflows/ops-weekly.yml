@@ -3,7 +3,7 @@ name: Ops A-5/A-6/M-3 weekly growth
 # Monday: A-5 growth report (Search Console + Cloudflare) committed to reports/growth/YYYY-WW.md with an
 # ops:growth summary issue; A-6 new-guide candidates (ops:opportunity); M-3 the AdSense trigger (ops:monetize).
 # Secrets (each optional; a missing one is skipped with a note): GSC_SERVICE_ACCOUNT_JSON, CF_API_TOKEN,
-# CF_ZONE_ID. docs/OPS-RUNBOOK.md.
+# CF_ZONE_ID, AE_API_TOKEN + CF_ACCOUNT_ID (anonymous usage statistics). docs/OPS-RUNBOOK.md.
 on:
   schedule:
     - cron: '23 0 * * 1' # Monday 09:23 KST
@@ -39,6 +39,8 @@ jobs:
           GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+          AE_API_TOKEN: ${{ secrets.AE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: node scripts/ops/growth.mjs --out-json .ops-state/growth.json $DRY
       # [skip ci]: a report is not site content, so neither CI nor Cloudflare Pages rebuilds for it. A push
       # with the workflow token never starts other workflows anyway.

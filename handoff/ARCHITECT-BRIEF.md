@@ -1,3 +1,5 @@
+> **Current step (2026-10-06): `handoff/ARCHITECT-BRIEF-USAGE.md`** (익명 사용 통계 + /admin/). This file remains the program plan.
+
 # Architect Brief — 안올림 (doc-tools-kr) — Program plan + Step 2
 
 Author: Arch. Date: 2026-09-29.

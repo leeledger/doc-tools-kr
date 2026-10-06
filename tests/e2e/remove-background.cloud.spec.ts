@@ -1,8 +1,9 @@
 // 사진 배경 지우기, cloud path (C2-cloud, brief handoff/ARCHITECT-BRIEF-C2-CLOUD.md §10). Runs only in the cloud-*
 // projects, against dist-bgcloud/ (PUBLIC_BG_REMOVE=1, PUBLIC_BG_CLOUD=1). /api/remove-bg never reaches Cloudflare:
 // page.route answers it with committed RGBA WebP fixtures (tests/fixtures/build-bgcloud.mjs) or an error status.
-// The no-upload fixture stays on, with exactly one allowed request: POST /api/remove-bg (no query); every other
-// request of every test is held to the strict rule.
+// The no-upload fixture stays on, with two allowed requests: POST /api/remove-bg and the usage beacon POST /api/usage
+// (this build has PUBLIC_USAGE_STATS=1; usage.spec.ts checks its bodies), no query; every other request of every test
+// is held to the strict rule.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,7 +14,8 @@ import { sniffImage } from '../../src/lib/image/sniff';
 import { CLOUD, COPY } from '../../src/tools/remove-background/copy';
 import { expect, gotoReady, test } from './no-upload';
 
-test.use({ allowUpload: [{ method: 'POST', path: '/api/remove-bg' }] });
+// Two entries: Playwright reads an array whose second item is an object as [value, options], hence the tuple form.
+test.use({ allowUpload: [[{ method: 'POST', path: '/api/remove-bg' }, { method: 'POST', path: '/api/usage' }], { scope: 'test' }] });
 test.describe.configure({ timeout: 90_000 });
 
 const PATH = '/remove-background/';
@@ -157,9 +159,10 @@ test('notice above the picker; a pick sends nothing; 배경 지우기 sends one 
   expect(centre[3]).toBe(255);
   expect(Math.abs(centre[0]! - 220) + Math.abs(centre[1]! - 30) + Math.abs(centre[2]! - 30)).toBeLessThan(30);
   expect((await pixel(page, 10, 10))[3]).toBe(0);
-  // Only the page, its scripts and the one POST: never the on-device engine or model.
+  // Only the page, its scripts and the one photo POST: never the on-device engine or model. The usage beacons of this
+  // build (POST /api/usage, no photo in them: usage.spec.ts) are the only other POSTs.
   expect(seen.filter((s) => DEVICE.test(s))).toEqual([]);
-  expect(seen.filter((s) => s.startsWith('POST'))).toHaveLength(1);
+  expect(seen.filter((s) => s.startsWith('POST') && !s.endsWith('/api/usage'))).toEqual([expect.stringMatching(/^POST \S+\/api\/remove-bg$/)]);
 });
 
 test('a large photo is sent as a 1024 px copy; a GPS-tagged, rotated JPEG leaves without EXIF and upright', async ({ page }) => {

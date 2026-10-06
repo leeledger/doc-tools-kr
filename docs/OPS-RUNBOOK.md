@@ -27,6 +27,8 @@
 | `GSC_SERVICE_ACCOUNT_JSON` | A-5, A-6 | 서치콘솔 부분을 건너뛰고 리포트·요약 이슈에 메모. A-6은 할 일이 없고, M-3 클릭 조건은 충족되지 않는다. | 서비스 계정 키 JSON 파일 내용 전체(아래 §3) |
 | `CF_API_TOKEN` | A-5 | Cloudflare 부분을 건너뛰고 메모 | API 토큰, 권한 `Zone → Analytics → Read`, 범위 `docttak.com` 존. `CF_ZONE_ID`를 넣지 않으면 `Zone → Zone → Read`도 함께 준다(존 이름으로 ID를 찾는다). |
 | `CF_ZONE_ID` (선택) | A-5 | 토큰으로 존 ID를 찾는다 | Cloudflare 대시보드 → docttak.com → 개요 오른쪽 아래 “Zone ID” |
+| `AE_API_TOKEN` | A-5 | 도구 사용 부분을 건너뛰고 메모 | 읽기 전용 API 토큰, 권한 `Account → Account Analytics → Read`, 이 계정만(§8). Pages 비밀값 `AE_API_TOKEN`과 같은 값. 기존 `CF_API_TOKEN`은 그대로 둔다. |
+| `CF_ACCOUNT_ID` | A-5 | 도구 사용 부분을 건너뛰고 메모 | Cloudflare 계정 홈 오른쪽의 “Account ID” |
 
 `GITHUB_TOKEN`은 Actions가 자동으로 준다. 워크플로마다 필요한 권한만 적어 두었다(이슈 쓰기, A-5만 `contents: write`).
 
@@ -78,3 +80,22 @@ Actions에서는 각 워크플로의 **Run workflow**에 “Dry run” 체크박
 - A-6 기준: `scripts/ops/opportunities.mjs`의 `LOW_CTR`, `UNCOVERED`.
 - A-4 TTFB: `scripts/ops/health.mjs`의 `TTFB_LIMIT_MS`.
 - A-1 대기 시간: `ops-post-deploy.yml`의 `--timeout 1200`(초).
+
+## 8. 익명 사용 통계와 관리자 페이지 켜기 (한 번, 약 15분)
+도구가 얼마나 쓰이고 어디서 막히는지 합계로 봅니다(쿠키·식별값 없음, 기록은 3개월 뒤 자동 삭제). 켜기 전까지 사이트에는 통계 코드가 없고, `/admin/`은 404입니다.
+
+1. Cloudflare → Workers & Pages → 프로젝트 `doc-tools-kr` → Settings → Bindings → Add → **Analytics engine**: Variable name `USAGE`, Dataset `docttak_usage` (Production). 데이터셋은 첫 기록 때 생깁니다.
+2. 오른쪽 위 내 프로필 → API Tokens → Create Token → Custom token: 권한 `Account → Account Analytics → Read`, Account Resources는 이 계정만. 만든 토큰을 복사해 둡니다.
+3. Pages → Settings → Variables and Secrets (Production)에 넣습니다.
+   - 비밀값(Secret) `AE_API_TOKEN`: 2번의 토큰
+   - 텍스트 `CF_ACCOUNT_ID`: 계정 홈 오른쪽의 Account ID
+   - 비밀값(Secret) `ADMIN_PASSWORD`: 아무렇게나 만든 16자 이상(비밀번호 관리 앱에 보관). 16자보다 짧거나 없으면 `/admin/`은 404입니다.
+   - 텍스트 `PUBLIC_USAGE_STATS` = `1` (선택: `PUBLIC_USAGE_SAMPLE` = 0.01~1, 일부 방문만 보낼 때. 합계는 자동으로 다시 맞춰집니다)
+   - `PUBLIC_CONTACT_EMAIL`이 있어야 합니다(없으면 빌드 실패). `PUBLIC_ERROR_BEACON_PATH`가 있으면 지웁니다(없어진 설정이라 빌드 실패).
+4. GitHub → Settings → Secrets and variables → Actions: `AE_API_TOKEN`, `CF_ACCOUNT_ID` (§2 표). 주간 성장 리포트에 "도구 사용 (지난 7일)" 표가 붙습니다.
+5. Pages → Deployments → 최신 배포 → Retry deployment. 확인: `https://docttak.com/admin/`이 비밀번호를 묻습니다(사용자 이름 `admin`). 도구를 한 번 써 보고 몇 분 뒤 새로고침하면 표에 줄이 생깁니다.
+6. (선택) Security → WAF → Rate limiting rules: `/api/usage`에 IP당 10초 60회 넘으면 차단. (선택) Zero Trust → Access로 `docttak.com/admin*`에 한 겹 더 잠금.
+
+- **끄기:** `PUBLIC_USAGE_STATS`를 지우고 다시 배포합니다(통계 코드가 사이트에서 빠집니다). 쌓인 기록은 3개월 안에 지워집니다.
+- **요청 한도:** `/api/usage`와 배경 지우기(`/api/remove-bg`), `/admin/`은 Workers 무료 한도(하루 10만 요청)를 함께 씁니다. 방문이 늘어 한도에 가까워지면 `PUBLIC_USAGE_SAMPLE`을 낮춥니다(예: 0.2). Analytics Engine은 하루 기록 10만 건·조회 1만 건까지 포함입니다.
+- **표가 비어 있을 때:** 1번 바인딩이 빠지면 `/api/usage`가 503을 돌려주고 아무것도 쌓이지 않습니다. `/admin/`에 "통계를 불러오지 못했어요 (HTTP 403)"이 보이면 토큰 권한이나 Account ID를 확인합니다.

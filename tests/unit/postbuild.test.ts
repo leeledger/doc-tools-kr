@@ -414,7 +414,15 @@ describe('built output', () => {
     ...(cloudBuilt()
       ? { PUBLIC_BG_CLOUD: '1', PUBLIC_PRIVACY_OFFICER: process.env.PUBLIC_PRIVACY_OFFICER || '이종림', PUBLIC_CONTACT_EMAIL: process.env.PUBLIC_CONTACT_EMAIL || 'robotncoding@kakao.com' }
       : { PUBLIC_BG_CLOUD: '0' }),
+    // Usage statistics (brief USAGE): on when /privacy/ has its section; on needs the contact address.
+    ...(usageBuilt() ? { PUBLIC_USAGE_STATS: '1', PUBLIC_CONTACT_EMAIL: process.env.PUBLIC_CONTACT_EMAIL || 'robotncoding@kakao.com' } : { PUBLIC_USAGE_STATS: '0' }),
+    PUBLIC_ERROR_BEACON_PATH: '',
+    PUBLIC_USAGE_SAMPLE: '',
   });
+  /** The build under test has the anonymous usage statistics (PUBLIC_USAGE_STATS=1): /privacy/ has id="usage". */
+  function usageBuilt(): boolean {
+    return existsSync(join(DIST, 'privacy', 'index.html')) && readFileSync(join(DIST, 'privacy', 'index.html'), 'utf8').includes('id="usage"');
+  }
   /** The build under test has the 배경 지우기 cloud path (PUBLIC_BG_CLOUD=1): its privacy page has section id="bg". */
   function cloudBuilt(): boolean {
     return existsSync(join(DIST, 'privacy', 'index.html')) && readFileSync(join(DIST, 'privacy', 'index.html'), 'utf8').includes('id="bg"');
@@ -474,18 +482,51 @@ describe('built output', () => {
     expect(ok.status).toBe(0);
   });
 
-  it('the error beacon without PUBLIC_CONTACT_EMAIL fails the build (Arch, round 2); unset contact alone does not', () => {
+  it('usage statistics (brief USAGE): a stale PUBLIC_ERROR_BEACON_PATH, usage on without a contact, or a bad sample fail check-dist', () => {
     need();
-    const base = buildEnv();
-    delete base.PUBLIC_CONTACT_EMAIL;
-    const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...base, PUBLIC_ERROR_BEACON_PATH: '/api/e' }, encoding: 'utf8' });
+    const check = (env: NodeJS.ProcessEnv) => spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env, encoding: 'utf8' });
+    const stale = check({ ...buildEnv(), PUBLIC_ERROR_BEACON_PATH: '/api/e' });
+    expect(stale.status).toBe(1);
+    expect(stale.stderr).toContain('PUBLIC_ERROR_BEACON_PATH is retired; use PUBLIC_USAGE_STATS=1');
+    const noMail = buildEnv();
+    delete noMail.PUBLIC_CONTACT_EMAIL;
+    const r = check({ ...noMail, PUBLIC_USAGE_STATS: '1' });
     expect(r.status).toBe(1);
-    expect(r.stderr).toContain('the error beacon is enabled but PUBLIC_CONTACT_EMAIL is not set');
-    // "//host" is not a same-origin path, so the beacon stays off and nothing is required.
-    const off = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...base, PUBLIC_ERROR_BEACON_PATH: '//evil.example/e' }, encoding: 'utf8' });
-    // C2-cloud: a build with the cloud path needs the contact anyway (privacy gate).
-    expect(off.status).toBe(cloudBuilt() ? 1 : 0);
-    if (cloudBuilt()) expect(off.stderr).toContain('PUBLIC_BG_CLOUD is on but PUBLIC_CONTACT_EMAIL is not a valid address');
+    expect(r.stderr).toContain('usage statistics are enabled but PUBLIC_CONTACT_EMAIL is not set');
+    for (const bad of ['0', '2', 'abc', '0.001', '-0.5']) {
+      const b = check({ ...buildEnv(), PUBLIC_USAGE_SAMPLE: bad });
+      expect(b.status, bad).toBe(1);
+      expect(b.stderr).toContain(`PUBLIC_USAGE_SAMPLE "${bad}" is not a number between 0.01 and 1`);
+    }
+    // A valid sample alone changes nothing.
+    expect(check({ ...buildEnv(), PUBLIC_USAGE_SAMPLE: '0.5' }).status).toBe(0);
+  });
+
+  it('usage statistics: off, no script names sendBeacon or /api/usage; on, the tracker ships; check-dist refuses the other state', () => {
+    need();
+    const on = usageBuilt();
+    const js = walk(DIST, /\.m?js$/).map((f) => readFileSync(f, 'utf8'));
+    expect(js.some((t) => t.includes('sendBeacon'))).toBe(on);
+    expect(js.some((t) => t.includes('/api/usage'))).toBe(on);
+    const flipped = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], {
+      env: { ...buildEnv(), PUBLIC_USAGE_STATS: on ? '0' : '1', PUBLIC_CONTACT_EMAIL: 'help@example.kr' },
+      encoding: 'utf8',
+    });
+    expect(flipped.status).toBe(1);
+    expect(flipped.stderr).toContain(on ? 'contains sendBeacon while PUBLIC_USAGE_STATS is off' : 'no script carries sendBeacon and /api/usage although PUBLIC_USAGE_STATS is on');
+  });
+
+  it('/admin and /api/ are never pages: not in the sitemap, llms.txt or the precache; _routes.json sends them to Functions', async () => {
+    need();
+    const { precacheList } = await import('../../scripts/gen-sw.mjs');
+    const { urls } = precacheList(DIST);
+    for (const u of urls as string[]) expect(/^\/(admin|api)(\/|$)/.test(u), u).toBe(false);
+    for (const f of ['sitemap.xml', 'llms.txt']) {
+      const text = readFileSync(join(DIST, f), 'utf8');
+      expect(text, f).not.toMatch(/\/admin|\/api\//);
+    }
+    expect(existsSync(join(DIST, 'admin'))).toBe(false);
+    expect(JSON.parse(readFileSync(join(DIST, '_routes.json'), 'utf8'))).toEqual({ version: 1, include: ['/api/*', '/admin', '/admin/*'], exclude: [] });
   });
 
   it('service worker: /offline/ is precached as the fallback, /404.html is not; the kill switch never reloads a tab', async () => {

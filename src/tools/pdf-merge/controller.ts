@@ -5,7 +5,7 @@ import type { PdfErrorCode } from '../../lib/pdf/errors';
 import type { MergeReport } from '../../lib/pdf/mergePlus';
 import type { MergeRequest, MergeResponse, WorkerFile } from '../../lib/pdf/merge.worker';
 import { announce, clearAlert } from '../../lib/ui/announce';
-import { reportError } from '../../lib/ui/beacon';
+import { startUsage, track, type UsagePhase } from '../../lib/ui/usage';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
@@ -387,8 +387,13 @@ export function initMergeTool(): void {
   // ---------- engine ----------
 
   /** The engine did not load: files stay un-marked (대기), the page-level panel offers 새로고침. */
+  /** One failure for the usage statistics (user-caused ones included). */
+  function usageFail(c: string, p: UsagePhase): void {
+    track({ e: 'fail', t: 'pdf-merge', c, p });
+  }
+
   function engineFailure(phase: 'load' | 'process'): void {
-    reportError({ tool: 'pdf-merge', phase, code: 'engine' });
+    usageFail('engine', phase);
     if (engineShown) return;
     engineShown = true;
     void showEngineError();
@@ -401,12 +406,15 @@ export function initMergeTool(): void {
     if (state === 'done') resetAll(false);
     clearAlert(root);
     const { pdfs, rejected } = await splitPdfFiles(picked);
+    track({ e: 'pick', t: 'pdf-merge' });
+    if (rejected.length) usageFail('not-pdf', 'parse');
     let files = pdfs;
     loadDynamicFont();
     const device = detectDevice();
     const messages: string[] = [];
     const count = checkFileCount(entries.length, files.length);
     if (count.level !== 'ok') {
+      usageFail('too-many', 'parse');
       messages.push(count.message);
       files = files.slice(0, Math.max(0, MAX_FILES - entries.length));
     }
@@ -432,6 +440,7 @@ export function initMergeTool(): void {
       });
     }
     if (rejectedForSize) {
+      usageFail('too-large', 'parse');
       const r = checkAddBytes(Number.POSITIVE_INFINITY, device);
       if (r.level !== 'ok') messages.push(r.message);
     }
@@ -477,7 +486,7 @@ export function initMergeTool(): void {
         engineFailure('load');
       } else {
         e.error = code === 'not-pdf' ? 'not-pdf' : code === 'oom' ? 'oom' : 'corrupt';
-        if (e.error === 'oom') reportError({ tool: 'pdf-merge', phase: 'parse', code: 'oom' });
+        usageFail(e.error, 'parse');
       }
     } finally {
       e.inspecting = false;
@@ -502,6 +511,7 @@ export function initMergeTool(): void {
       await inspectEntry(e, pw);
     } catch {
       e.inspecting = false;
+      usageFail('wrong-password', 'parse');
       errEl.textContent = MESSAGES['wrong-password'];
       status(`${e.file.name}: ${MESSAGES['wrong-password']}`);
       field.value = '';
@@ -542,6 +552,7 @@ export function initMergeTool(): void {
     showNotice(null);
     clearAlert(root);
     const snapshot = entries.slice();
+    track({ e: 'start', t: 'pdf-merge' });
     setState('merging');
     progressBar.max = snapshot.length;
     progressBar.value = 0;
@@ -617,6 +628,7 @@ export function initMergeTool(): void {
     revokeBlob();
     const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' });
     blobUrl = URL.createObjectURL(blob);
+    track({ e: 'success', t: 'pdf-merge' });
     download.href = blobUrl;
     download.download = mergedFileName(snapshot[0]!.file.name, snapshot.length);
     summary.textContent = `${formatPages(report.pageCount)} · ${formatSize(blob.size)}`;
@@ -639,7 +651,7 @@ export function initMergeTool(): void {
       entry.locked = true;
       entry.password = undefined;
     }
-    if (code === 'oom' || code === 'unknown' || code === 'verify') reportError({ tool: 'pdf-merge', phase: 'process', code });
+    usageFail(code, code === 'verify' ? 'save' : 'process');
     const msg = entry ? `${entry.file.name}: ${MESSAGES[code]}` : MESSAGES[code];
     setState('error');
     announce('alert', msg, root);
@@ -710,6 +722,8 @@ export function initMergeTool(): void {
     // Coming back from the bfcache: the blob URL was revoked on pagehide.
     if (ev.persisted && state === 'done') resetAll(false);
   });
+  download.addEventListener('click', () => track({ e: 'download', t: 'pdf-merge' }));
 
+  startUsage('pdf-merge');
   setState('empty');
 }

@@ -21,11 +21,12 @@ const BG_SPEC = /remove-background\.spec\.ts$/;
 /**
  * C2-cloud: the cloud path of 배경 지우기 exists only in a build with PUBLIC_BG_REMOVE=1 and PUBLIC_BG_CLOUD=1 (plus the
  * privacy officer and contact), built into dist-bgcloud/. Its spec runs there in all five browsers (cloud-*), and
- * nowhere else. /api/remove-bg is answered by page.route fixtures: no test reaches Cloudflare.
+ * nowhere else. /api/remove-bg is answered by page.route fixtures: no test reaches Cloudflare. The same build has the
+ * anonymous usage statistics on (PUBLIC_USAGE_STATS=1), so usage.spec.ts runs there too; /api/usage is page.route'd.
  */
 const CLOUD_PORT = Number(process.env.E2E_CLOUD_PORT ?? 4183);
 const CLOUD = existsSync('dist-bgcloud/remove-background/index.html');
-const CLOUD_SPEC = /remove-background\.cloud\.spec\.ts$/;
+const CLOUD_SPEC = /(remove-background\.cloud|usage)\.spec\.ts$/;
 const CLOUD_DEVICES = { chromium: 'Desktop Chrome', firefox: 'Desktop Firefox', webkit: 'Desktop Safari', 'mobile-chrome': 'Pixel 7', 'mobile-safari': 'iPhone 14' } as const;
 
 export default defineConfig({

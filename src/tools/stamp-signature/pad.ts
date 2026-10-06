@@ -5,6 +5,7 @@
 import { INK_COLORS, cropAndResize, cropRect, sizeOptions, type InkSize, type Rgba } from '../../lib/ink/key';
 import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { COPY } from './copy';
+import { track } from '../../lib/ui/usage';
 import { encodeWithRetry, saveBlob } from './png';
 
 export type Point = readonly [number, number];
@@ -190,9 +191,13 @@ export function initPad(): void {
     downloadBtn.disabled = true;
     const blob = await encodeWithRetry(out.px, async (s) => exportDrawing(strokes, pen(), s, noPad.checked)?.px ?? null);
     downloadBtn.disabled = strokes.length === 0;
-    if (!blob) return live('alert', COPY.encode, root);
+    if (!blob) {
+      track({ e: 'fail', t: 'stamp-signature', c: 'encode', p: 'save' });
+      return live('alert', COPY.encode, root);
+    }
     clearAlert(root);
     saveBlob(blob, FILE_NAME);
+    track({ e: 'download', t: 'stamp-signature' });
     live('status', COPY.saved(FILE_NAME), root);
   });
 

@@ -2,21 +2,21 @@
 import Base from '../../layouts/Base.astro';
 import { CONTACT_EMAIL, PRIVACY_OFFICER, SITE } from '../../data/site';
 import { josa } from '../../lib/ui/josa';
-import { PRIVACY_ANALYTICS, PRIVACY_CLOUD, PRIVACY_REVISED, PRIVACY_V1 } from '../../data/legal';
+import { PRIVACY_ANALYTICS, PRIVACY_CLOUD, PRIVACY_REVISED, PRIVACY_USAGE, PRIVACY_V1 } from '../../data/legal';
 import { ANALYTICS_ON } from '../../data/analytics';
-import { BEACON_ENABLED } from '../../lib/ui/beacon';
+import { USAGE_ON } from '../../lib/ui/usage';
 import { downloadBytes } from '../../lib/bgremove/assets';
 import { aboutMB } from '../../tools/remove-background/copy';
 
 // Owner decision (Polish Q): a short, plain statement. No contact, operator or privacy-officer details while
-// the site takes no personal data; ads or the error beacon need a full policy first (check-dist enforces a
-// contact address for both). The anonymous error statistics section exists only while the beacon is on, so
-// the policy and the code cannot drift apart (Polish P.18).
+// the site takes no personal data; ads or usage statistics need a full policy first (check-dist enforces a
+// contact address for both). The anonymous usage statistics section exists only while PUBLIC_USAGE_STATS is on,
+// so the policy and the code cannot drift apart (brief USAGE; it replaced the error beacon of Polish P.18).
 // C2-cloud (brief §7.1): with the 배경 지우기 cloud path on, section 3 says what is sent, to whom and how to refuse,
 // and the policy names the 개인정보 보호책임자 (owner-approved 2026-10-02; the build fails without the two values).
 // The items follow 개인정보 보호법 제28조의8 제2항 and 제30조 제1항 (law.go.kr, fetched 2026-10-02; BUILD-LOG C2-cloud).
 const cloud = __BG_CLOUD__;
-const n = (base: number): number => base + (cloud && base >= 3 ? 1 : 0) + (BEACON_ENABLED && base >= 5 ? 1 : 0);
+const n = (base: number): number => base + (cloud && base >= 3 ? 1 : 0) + (USAGE_ON && base >= 5 ? 1 : 0);
 const deviceMB = aboutMB(Math.max(downloadBytes('webgpu'), downloadBytes('wasm')));
 const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
 ---
@@ -30,7 +30,7 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
       <p class="meta-line">시행일: {PRIVACY_REVISED}</p>
 
       <h2>1. 받는 개인정보가 없어요</h2>
-      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. {ANALYTICS_ON ? '쿠키도 쓰지 않아요.' : '쿠키와 방문 분석 도구도 쓰지 않아요.'}</p>
+      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. {ANALYTICS_ON || USAGE_ON ? '쿠키도 쓰지 않아요.' : '쿠키와 방문 분석 도구도 쓰지 않아요.'}</p>
 
       <h2>2. 고른 파일은 내 폰·컴퓨터 안에서 처리해요</h2>
       <p>고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요{cloud && ' (사진 배경 지우기는 제외: 3항)'}. 운영자나 다른 곳으로 보내지 않고, 저장하지도 않아요. PDF 비밀번호도 처리하는 동안에만 쓰고 저장하거나 보내지 않아요. 창을 닫으면 모두 사라져요.</p>
@@ -67,10 +67,12 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
       <h2>{n(4)}. 광고</h2>
       <p>지금은 광고가 없어요. 광고(Google AdSense 등)를 싣게 되면, 그 전에 이 방침을 고치고 필요한 동의 절차를 먼저 마련할게요.</p>
 
-      {BEACON_ENABLED && (
+      {USAGE_ON && (
         <>
-          <h2>{n(5) - 1}. 익명 오류 통계</h2>
-          <p>도구가 처리 도중 실패하면(처리 도구를 불러오지 못했거나 처리할 양이 너무 많은 경우 등) 열 번에 한 번꼴로 익명 오류 기록을 이 사이트로 보내요. 기록에는 도구 이름, 실패한 단계, 오류 종류, 쓰는 앱의 종류와 버전, 기기 종류(휴대폰 또는 PC), 사이트 버전만 담겨요. 파일 이름, 크기, 내용과 IP 주소는 담지 않아요.</p>
+          <h2 id="usage">{n(5) - 1}. 익명 사용 통계</h2>
+          <p>어떤 도구가 많이 쓰이고 어디서 막히는지 알기 위해, 도구를 쓸 때 일어난 일만 이 사이트로 보내 합계로만 봐요.</p>
+          <p>보내는 것: 도구 이름, 한 일(파일 고르기, 처리 시작, 성공, 실패와 오류 종류, 내려받기), 고른 설정(목표 크기 구간, 증명사진 규격, 압축 단계처럼 정해진 값), 안내 글에서 넘어왔는지, 기기 종류(휴대폰, 태블릿, PC), 실패했을 때 쓰는 앱 종류와 버전, 사이트 버전.</p>
+          <p>보내지 않는 것: 파일 이름, 크기, 내용, IP 주소, 쿠키, 나를 알아볼 수 있는 값. 기록은 Cloudflare의 통계 저장소에 3개월 동안 남은 뒤 지워져요.</p>
         </>
       )}
 
@@ -83,6 +85,7 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
 
       <h2>{n(5) + (cloud ? 1 : 0)}. 변경 이력</h2>
       <ul>
+        {USAGE_ON && <li>{PRIVACY_USAGE}: 익명 사용 통계를 더함</li>}
         {ANALYTICS_ON && <li>{PRIVACY_ANALYTICS}: 방문자 수 집계(Cloudflare Web Analytics)를 더함</li>}
         {cloud && <li>{PRIVACY_CLOUD}: 배경 지우기에서 사진을 보내는 경우(3항)와 개인정보 보호책임자를 더함</li>}
         <li>{PRIVACY_V1}: 쉬운 말로 다시 쓰고 서비스 이름을 {josa(SITE.name, '으로/로')} 바꿈, 이용약관 신설</li>

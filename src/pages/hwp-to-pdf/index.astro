@@ -135,5 +135,5 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
 
 <script>
   import { bootHwpTool } from '../../tools/hwp-shared/boot';
-  bootHwpTool('hwp-tool', () => import('../../tools/hwp-to-pdf/controller').then((m) => m.initHwpTool));
+  bootHwpTool('hwp-tool', () => import('../../tools/hwp-to-pdf/controller').then((m) => m.initHwpTool), 'hwp-to-pdf');
 </script>

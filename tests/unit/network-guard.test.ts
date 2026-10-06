@@ -25,8 +25,8 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
 const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts', 'lib/bgremove/cloud.ts'];
-/** sendBeacon only in the error-beacon stub, which is off (and dropped from the bundle) unless configured. */
-const BEACON_ALLOWLIST: string[] = ['lib/ui/beacon.ts'];
+/** sendBeacon only in the usage tracker, which is off (and dropped from the bundle) unless PUBLIC_USAGE_STATS=1. */
+const BEACON_ALLOWLIST: string[] = ['lib/ui/usage.ts'];
 
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
@@ -77,7 +77,7 @@ describe('no network APIs in src/', () => {
     expect(bg).toMatch(/if \(__BG_CLOUD__ && !deviceChosen\(\)\) \{/);
   });
 
-  it('uses sendBeacon only in the beacon stub', () => {
+  it('uses sendBeacon only in the usage tracker', () => {
     const hits = all.filter((f) => readFileSync(f, 'utf8').includes('sendBeacon')).map((f) => relative(SRC, f).split('\\').join('/'));
     expect(hits).toEqual(BEACON_ALLOWLIST);
   });

@@ -5,14 +5,20 @@ import { loadEnv } from 'vite';
 import { autoframeOn } from './scripts/lib/autoframe.mjs';
 import { bgCloudOn, privacyGate } from './scripts/lib/bgcloud.mjs';
 import { BG_PATH, bgRemoveOn } from './scripts/lib/bgremove.mjs';
-import { beaconPath } from './scripts/lib/beacon-path.mjs';
 import { rhwpNoDefaultWasm } from './scripts/lib/vite-rhwp.mjs';
+import { usageOn, usageSample } from './scripts/lib/usage.mjs';
 
 // PUBLIC_* values from the environment or .env files, read the way Astro reads them.
 const env = loadEnv(process.env.NODE_ENV === 'development' ? 'development' : 'production', process.cwd(), 'PUBLIC_');
-// Error beacon (Polish P.18): on only for a same-origin path ("/x", never "//x"); otherwise '' and the call is
-// dropped at build.
-const errorBeaconPath = beaconPath(env.PUBLIC_ERROR_BEACON_PATH);
+// Anonymous usage statistics (brief USAGE): PUBLIC_USAGE_STATS=1 ships the tracker (src/lib/ui/usage.ts); otherwise
+// it is dropped at build. An invalid PUBLIC_USAGE_SAMPLE is a check-dist error; here it falls back to 1.
+const usageStats = usageOn(env.PUBLIC_USAGE_STATS);
+let usageRate = 1;
+try {
+  usageRate = usageSample(env.PUBLIC_USAGE_SAMPLE);
+} catch {
+  // check-dist fails the build with the reason.
+}
 // Step 4 kill switch: false makes the MediaPipe import dead code (no chunk, no vendor files).
 const idPhotoAutoframe = autoframeOn(env.PUBLIC_ID_PHOTO_AUTOFRAME);
 // Sprint C, C2 release flag (scripts/lib/bgremove.mjs): the /remove-background/ page exists only when on. Its source
@@ -53,8 +59,9 @@ export default defineConfig({
           manualChunks(id) {
             // Growth G: the deep-link modules (and josa, which they share with every tool) join the chunk, so a
             // tool page loads no extra request for them (Lighthouse LCP on /photo-compress/ and /pdf-compress/).
-            if (/[\/]src[\/]lib[\/]ui[\/](announce|beacon|device|engine-error|engine-load|font|format|preload|josa|deeplink|quicklinks)\.ts$/.test(id)) return 'ui-shared';
+            if (/[\/]src[\/]lib[\/]ui[\/](announce|usage|device|engine-error|engine-load|font|format|preload|josa|deeplink|quicklinks)\.ts$/.test(id)) return 'ui-shared';
             if (/[\/]src[\/]data[\/]preset-ids\.ts$/.test(id)) return 'ui-shared';
+            if (/[\/]scripts[\/]lib[\/]usage\.mjs$/.test(id)) return 'ui-shared';
             // G2 A0: the HWP page script (shared by /hwp-to-pdf/ and /hwp-viewer/) joins the chunk those pages load
             // anyway; as its own chunk it was one more request before the first paint.
             if (/[\/]src[\/]tools[\/]hwp-shared[\/]boot\.ts$/.test(id)) return 'ui-shared';
@@ -68,6 +75,6 @@ export default defineConfig({
     resolve: { alias: [{ find: /^brotli\/decompress(\.js)?$/, replacement: fileURLToPath(new URL('./src/lib/hwp/pdf/brotli-stub.ts', import.meta.url)) }] },
     // rhwpNoDefaultWasm: one rhwp_bg.wasm in dist/ (Step 5; see scripts/lib/vite-rhwp.mjs).
     worker: { format: 'es', plugins: () => [rhwpNoDefaultWasm()] },
-    define: { __ERROR_BEACON_PATH__: JSON.stringify(errorBeaconPath), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe), __BG_REMOVE__: JSON.stringify(bgRemove), __BG_CLOUD__: JSON.stringify(bgCloud) },
+    define: { __USAGE_STATS__: JSON.stringify(usageStats), __USAGE_SAMPLE__: JSON.stringify(usageRate), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe), __BG_REMOVE__: JSON.stringify(bgRemove), __BG_CLOUD__: JSON.stringify(bgCloud) },
   },
 });

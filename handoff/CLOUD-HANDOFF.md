@@ -37,8 +37,8 @@ Expect conflicts in `src/data/tools.ts`, `scripts/check-dist.mjs` budgets, `lice
 - **Cloudflare Pages:**
   - Build command `npm run build`, output `dist`. Node 22 comes from `.node-version` plus env `NODE_VERSION=22`.
   - Production env: `PUBLIC_SITE_URL=https://docttak.com`, `PUBLIC_NAVER_SITE_VERIFICATION=f3147822a9c0cfda42200344f9e2206b92c91ffd`.
-  - Flags: `PUBLIC_ID_PHOTO_AUTOFRAME` defaults to `0` (manual only). Error beacon and ads are off.
-- **Free-plan limits (verified):** static requests and bandwidth are free and unlimited. 20,000 files per site (we use about 1,250; check-dist fails at 15,000). 25 MiB per file. 500 builds a month. There are no Functions, so the 100k/day Workers quota does not apply.
+  - Flags: `PUBLIC_ID_PHOTO_AUTOFRAME` defaults to `0` (manual only). Ads are off. The error beacon is retired (`PUBLIC_ERROR_BEACON_PATH` set = build error); anonymous usage statistics ship off until the owner sets `PUBLIC_USAGE_STATS=1` (docs/OPS-RUNBOOK.md §8).
+- **Free-plan limits (verified):** static requests and bandwidth are free and unlimited. 20,000 files per site (we use about 1,250; check-dist fails at 15,000). 25 MiB per file. 500 builds a month. Pages Functions (`public/_routes.json`: `/api/*`, `/admin`, `/admin/*` only; static pages never run one): `/api/remove-bg`, `/api/usage` and `/admin/` share the Workers Free 100k requests/day. `PUBLIC_USAGE_SAMPLE` lowers the usage share if that gets close; watch the weekly report.
 - **Domain:**
   - `docttak.com` is registered at hosting.kr, with nameservers on Cloudflare (ada/vicente).
   - Pages custom domains: `docttak.com` and `www.docttak.com`.

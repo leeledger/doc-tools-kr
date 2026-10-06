@@ -4,5 +4,5 @@ import type { BootStart } from '../hwp-shared/boot';
 import { startHwpSession } from '../hwp-shared/session';
 
 export function initHwpTool(start: BootStart = {}): void {
-  startHwpSession(start);
+  startHwpSession(start, { tool: 'hwp-to-pdf' });
 }

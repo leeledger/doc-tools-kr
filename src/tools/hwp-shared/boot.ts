@@ -9,6 +9,7 @@
 // of them would make rolldown build a namespace object with its runtime helper, which lives in the export chunk.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { startUsage, track } from '../../lib/ui/usage';
 
 /** What happened before the controller ran. */
 export interface BootStart {
@@ -57,9 +58,11 @@ function whenIdle(fn: () => void): void {
   else setTimeout(fn, 200);
 }
 
-export function bootHwpTool(rootId: string, load: () => Promise<BootInit>): void {
+/** `tool`: the page, for the usage statistics (the session reports the rest; a controller that cannot load fails here). */
+export function bootHwpTool(rootId: string, load: () => Promise<BootInit>, tool?: 'hwp-to-pdf' | 'hwp-viewer'): void {
   const root = document.getElementById(rootId);
   if (!root) return;
+  if (tool) startUsage(tool);
   const start: BootStart = {};
   let loading: Promise<void> | null = null;
 
@@ -91,6 +94,7 @@ export function bootHwpTool(rootId: string, load: () => Promise<BootInit>): void
       },
       () => {
         detach();
+        if (tool) track({ e: 'fail', t: tool, c: 'engine', p: 'load' });
         void showEngineError();
       },
     );

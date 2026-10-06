@@ -49,7 +49,7 @@ const server = await createServer({
   logLevel: 'warn',
   server: { port: 0, host: '127.0.0.1', fs: { allow: [root, fullDir] } },
   worker: { format: 'es' },
-  define: { __ID_PHOTO_AUTOFRAME__: 'true', __ERROR_BEACON_PATH__: '""' },
+  define: { __ID_PHOTO_AUTOFRAME__: 'true', __USAGE_STATS__: 'false', __USAGE_SAMPLE__: '1' },
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 await server.listen();

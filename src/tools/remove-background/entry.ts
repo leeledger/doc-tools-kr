@@ -6,6 +6,7 @@ import { takeCrash } from '../../lib/bgremove/guard';
 import { sessionStore } from '../../lib/face/guard';
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { startUsage, track } from '../../lib/ui/usage';
 import { COPY } from './copy';
 
 type Api = { open(file: File): void } | null;
@@ -18,6 +19,7 @@ if (crash && takeCrash(sessionStore())) {
   crash.hidden = false;
 }
 if (root && drop) {
+  startUsage('remove-background');
   let loading: Promise<Api> | null = null;
   const EVENTS = ['pointerdown', 'keydown', 'focusin', 'touchstart', 'change'] as const;
   const start = (): void => void load();
@@ -42,6 +44,7 @@ if (root && drop) {
       },
       () => {
         loading = null;
+        track({ e: 'fail', t: 'remove-background', c: 'engine', p: 'load' });
         void showEngineError();
         return null;
       },

@@ -21,6 +21,7 @@ import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize } from '../../lib/ui/format';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
+import { track, type UsagePhase } from '../../lib/ui/usage';
 import type { BootStart } from './boot';
 import { pdfName, triggerDownload } from './download';
 import { LIMITS, overHardLimit, route, type Mode } from './limits';
@@ -53,8 +54,13 @@ export interface OpenDocument {
   alive(): boolean;
 }
 
-/** What a page adds to the shared session. /hwp-to-pdf/ passes none. */
+/** What a page adds to the shared session. /hwp-to-pdf/ passes only its tool. */
 export interface HwpHooks {
+  /**
+   * The page, for the usage statistics. /hwp-to-pdf/ reports the PDF export as its job (start, success);
+   * /hwp-viewer/ reports opening the document as its job and the optional PDF as a download.
+   */
+  tool: 'hwp-to-pdf' | 'hwp-viewer';
   /** Warm the PDF export chunk on idle once a document is shown (default true). */
   warmExport?: boolean;
   /** Passed on to the page window (zoom, per-page callbacks). */
@@ -105,7 +111,7 @@ function whenIdle(fn: () => void): void {
   else setTimeout(fn, 1000);
 }
 
-export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): void {
+export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
   const found = document.getElementById('hwp-tool');
   if (!found) return;
   const root: HTMLElement = found;
@@ -267,6 +273,10 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
     if (focus) pick.focus();
   }
 
+  function usageFail(c: string, p: UsagePhase): void {
+    track({ e: 'fail', t: hooks.tool, c, p });
+  }
+
   function showError(text: string): void {
     docId++;
     stopWorker();
@@ -280,6 +290,7 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
   }
 
   function fail(code: Exclude<HwpErrorCode, 'too-large'>): void {
+    usageFail(code, state === 'exporting' ? 'save' : code === 'engine' ? 'load' : 'parse');
     if (code !== 'engine') {
       showError(ERRORS[code]);
       return;
@@ -362,6 +373,7 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
     if (base !== 'convert') banner.textContent = base === 'viewer-first' ? viewerFirstMessage(routed.reasons) : viewerOnlyMessage(device, routed.reasons);
     setInflight(null);
     setState(base);
+    if (hooks.tool === 'hwp-viewer') track({ e: 'success', t: hooks.tool });
     announce([COPY.ready(msg.pages), base === 'convert' ? '' : banner.textContent, base === 'convert' && equations ? COPY.equations : ''].filter(Boolean).join(' '));
     fileName.focus();
     if (hooks.warmExport !== false && base !== 'viewer-only' && !preload.skipped) whenIdle(() => void loadExportChunk().catch(() => undefined));
@@ -376,7 +388,9 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
     file = f;
     device = detectDevice();
     loadDynamicFont();
+    track({ e: 'pick', t: hooks.tool });
     if (overHardLimit(device, f.size)) {
+      usageFail('too-large', 'parse');
       showError(tooLargeMessage(device, f.size, LIMITS[device].hardBytes));
       return;
     }
@@ -384,6 +398,7 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
     try {
       head = new Uint8Array(await f.slice(0, SNIFF_BYTES).arrayBuffer());
     } catch {
+      usageFail('corrupt', 'parse');
       showError(ERRORS.corrupt);
       return;
     }
@@ -394,6 +409,7 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
       return;
     }
     setState('loading');
+    if (hooks.tool === 'hwp-viewer') track({ e: 'start', t: hooks.tool });
     hooks.onOpening?.();
     lastProgress = 0;
     progress(COPY.opening, null, true);
@@ -404,7 +420,9 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
     try {
       buffer = await f.arrayBuffer();
     } catch {
-      if (id === docId) showError(ERRORS.corrupt);
+      if (id !== docId) return;
+      usageFail('corrupt', 'parse');
+      showError(ERRORS.corrupt);
       return;
     }
     if (id !== docId) return;
@@ -472,6 +490,7 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
     const name = pdfName(file.name);
     // Building the PDF of a heavy file is where a phone may kill the tab: flag it (cleared on every exit).
     setInflight(file.size);
+    if (hooks.tool === 'hwp-to-pdf') track({ e: 'start', t: hooks.tool });
     setState('exporting');
     lastProgress = 0;
     progress(COPY.exporting(0, n), 0, true);
@@ -502,7 +521,9 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
       setInflight(null);
       dropResult();
       resultUrl = URL.createObjectURL(blob);
+      if (hooks.tool === 'hwp-to-pdf') track({ e: 'success', t: hooks.tool });
       triggerDownload(resultUrl, name);
+      track({ e: 'download', t: hooks.tool });
       again.href = resultUrl;
       again.download = name;
       const line = COPY.done(name, n, formatSize(blob.size));
@@ -567,6 +588,7 @@ export function startHwpSession(start: BootStart = {}, hooks: HwpHooks = {}): vo
     if (state !== 'exporting') reset();
   });
   saveBtn.addEventListener('click', () => void exportDocument(saveBtn));
+  again.addEventListener('click', () => track({ e: 'download', t: hooks.tool }));
   forceBtn.addEventListener('click', () => void exportDocument(forceBtn));
   window.addEventListener('pagehide', () => {
     docId++;

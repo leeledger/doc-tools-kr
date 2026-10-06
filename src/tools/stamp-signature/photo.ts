@@ -11,6 +11,7 @@ import { HEAD_BYTES, TAIL_BYTES, orientedSize, sniffImage } from '../../lib/imag
 import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
+import { track, type UsagePhase } from '../../lib/ui/usage';
 import { COPY, areaMessage, dims, strengthLabel } from './copy';
 import { checkDims, checkFileBytes, LIMITS } from './limits';
 import { encodeWithRetry, saveBlob } from './png';
@@ -69,6 +70,15 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
   /** The latest control run: older results are dropped. */
   let runId = 0;
   let current: { px: Rgba; fileName: string } | null = null;
+  /** The usage statistics take the first outcome of each photo (later runs only follow the controls). */
+  let outcomeSent = false;
+  const usageFail = (c: string, p: UsagePhase): void => track({ e: 'fail', t: 'stamp-signature', c, p });
+  const outcome = (ok: boolean, code: string): void => {
+    if (outcomeSent) return;
+    outcomeSent = true;
+    if (ok) track({ e: 'success', t: 'stamp-signature' });
+    else usageFail(code, 'process');
+  };
   let timer: ReturnType<typeof setTimeout> | undefined;
   const waiting = new Map<number, (r: Result | null) => void>();
 
@@ -162,6 +172,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
 
   function startWorker(): void {
     const my = photoRun;
+    track({ e: 'start', t: 'stamp-signature' });
     const data = pixels();
     if (!data) return crashed();
     let w: Worker;
@@ -230,9 +241,11 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
       previews.hidden = true;
       downloadBtn.disabled = true;
       saveName.textContent = '';
+      outcome(false, m.status === 'allpaper' ? 'allpaper' : 'noink');
       showError(msg ?? COPY.noink);
       return;
     }
+    outcome(true, '');
     hideError();
     const px: Rgba = { data: new Uint8ClampedArray(m.out.pixels), width: m.out.width, height: m.out.height };
     current = { px, fileName: m.fileName };
@@ -252,6 +265,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
   }
 
   function crashed(): void {
+    usageFail('crash', 'process');
     stopWorker();
     delete root.dataset.busy;
     if (!bitmap) return toEmpty();
@@ -262,6 +276,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
   }
 
   async function engineFailed(): Promise<void> {
+    usageFail('engine', 'load');
     release();
     setPhase('empty');
     await showEngineError();
@@ -275,30 +290,33 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     hideEngineError();
     const my = photoRun;
     const device = detectDevice();
-    const fail = (msg: string): void => {
+    outcomeSent = false;
+    track({ e: 'pick', t: 'stamp-signature' });
+    const fail = (code: string, msg: string): void => {
       if (my !== photoRun) return;
+      usageFail(code, 'parse');
       setPhase('error');
       showError(msg);
     };
     const bytesErr = checkFileBytes(file.size, device);
-    if (bytesErr) return fail(bytesErr);
-    if (file.size === 0) return fail(ERRORS.empty);
+    if (bytesErr) return fail('too-large', bytesErr);
+    if (file.size === 0) return fail('empty', ERRORS.empty);
     let sniff;
     try {
       const head = new Uint8Array(await file.slice(0, HEAD_BYTES).arrayBuffer());
       const tail = new Uint8Array(await file.slice(Math.max(0, file.size - TAIL_BYTES)).arrayBuffer());
       sniff = sniffImage(head, { tail, size: file.size });
     } catch {
-      return fail(ERRORS.corrupt);
+      return fail('corrupt', ERRORS.corrupt);
     }
-    if (sniff.format === 'unknown') return fail(ERRORS['not-image']);
-    if (sniff.format === 'tiff') return fail(unsupportedMessage(sniff.format));
-    if (sniff.animated) return fail(COPY.animated);
-    if (sniff.truncated) return fail(ERRORS.truncated);
+    if (sniff.format === 'unknown') return fail('not-image', ERRORS['not-image']);
+    if (sniff.format === 'tiff') return fail('unsupported', unsupportedMessage(sniff.format));
+    if (sniff.animated) return fail('animated', COPY.animated);
+    if (sniff.truncated) return fail('truncated', ERRORS.truncated);
     const size = orientedSize(sniff);
     if (size) {
       const d = checkDims(size.width, size.height, device);
-      if (d) return fail(d);
+      if (d) return fail('dims', d);
     }
     setPhase('loading');
     loadingText.textContent = COPY.opening;
@@ -308,13 +326,14 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
       d = await decodeImage(file, sniff, { maxLongEdge: LIMITS[device].workEdge });
     } catch (err) {
       const code = err instanceof PhotoError ? err.code : 'corrupt';
-      return fail(code === 'heic' ? ERRORS.heic : code === 'oom' ? ERRORS.oom : ERRORS.corrupt);
+      const known = code === 'heic' || code === 'oom' ? code : 'corrupt';
+      return fail(known, ERRORS[known]);
     }
     if (my !== photoRun) return d.close();
     const d2 = checkDims(d.sourceWidth, d.sourceHeight, device);
     if (d2) {
       d.close();
-      return fail(d2);
+      return fail('dims', d2);
     }
     bitmap = d.src;
     loadingText.textContent = COPY.keying;
@@ -364,8 +383,12 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
       return r?.out ? { data: new Uint8ClampedArray(r.out.pixels), width: r.out.width, height: r.out.height } : null;
     });
     downloadBtn.disabled = !current;
-    if (!blob) return showError(COPY.encode);
+    if (!blob) {
+      usageFail('encode', 'save');
+      return showError(COPY.encode);
+    }
     saveBlob(blob, fileName);
+    track({ e: 'download', t: 'stamp-signature' });
     say(COPY.saved(fileName));
   });
 

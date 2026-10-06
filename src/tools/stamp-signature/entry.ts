@@ -6,8 +6,12 @@
 // for it (BUILD-LOG C1); after a first use it comes from the runtime cache like every other lazy chunk.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { startUsage, track } from '../../lib/ui/usage';
 
 type Api = { open(file: File): void } | null;
+
+startUsage('stamp-signature');
+const loadFailed = (): void => track({ e: 'fail', t: 'stamp-signature', c: 'engine', p: 'load' });
 
 const tabs = [...document.querySelectorAll<HTMLButtonElement>('#ss-tabs [role="tab"]')];
 
@@ -17,6 +21,7 @@ const loadPad = (): Promise<void> =>
     (m) => m.initPad(),
     () => {
       padLoading = null;
+      loadFailed();
       void showEngineError();
     },
   ));
@@ -72,6 +77,7 @@ if (root && drop) {
       },
       () => {
         loading = null;
+        loadFailed();
         void showEngineError();
         return null;
       },
