@@ -3,6 +3,7 @@
 // The worker, the codecs and their wasm load only when "사진 용량 줄이기" is pressed; fflate only on the ZIP click.
 import { ERRORS, NOTES, unreachableMessage, unsupportedMessage, type PhotoErrorCode } from '../../lib/image/messages';
 import type { PhotoReport } from '../../lib/image/report';
+import { canDrawOffscreen } from '../../lib/image/raster';
 import { HEAD_BYTES, TAIL_BYTES, orientedSize, sniffImage, type Sniff } from '../../lib/image/sniff';
 import type { PhotoRequest, PhotoResponse } from '../../lib/image/photo.worker';
 import { detectDevice, type Device } from '../../lib/ui/device';
@@ -69,21 +70,6 @@ const STATUS: Record<RowState, string> = {
 const PHOTO_ICON =
   '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg>';
 
-/**
- * The photo worker draws and encodes on an OffscreenCanvas (2d + convertToBlob). Browsers without it
- * (Safari before 16.4) get a notice up front instead of a failure per photo; there is no main-thread path.
- * Workers expose OffscreenCanvas wherever the page does, so the page-side check stands for the worker.
- */
-export function canCompressPhotos(): boolean {
-  if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap !== 'function') return false;
-  try {
-    const c = new OffscreenCanvas(1, 1);
-    return c.getContext('2d') !== null && typeof c.convertToBlob === 'function';
-  } catch {
-    return false;
-  }
-}
-
 function must<T extends HTMLElement>(id: string): T {
   const e = document.getElementById(id);
   if (!e) throw new Error(`#${id} missing`);
@@ -148,7 +134,7 @@ export function initPhotoTool(): void {
   const radios = (name: string): HTMLInputElement[] => Array.from(root.querySelectorAll<HTMLInputElement>(`input[name="${name}"]`));
   const checked = (name: string, fallback: string): string => radios(name).find((r) => r.checked)?.value ?? fallback;
   const compare = initCompare(compareRoot);
-  const supported = canCompressPhotos();
+  const supported = canDrawOffscreen();
 
   let state: State = 'empty';
   let rows: Row[] = [];

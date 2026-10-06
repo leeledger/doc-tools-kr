@@ -1,5 +1,7 @@
 import { PASSPORT_CHECK_URL, PASSPORT_RULE_URL, RETRIEVED, presetSummary } from './id-photo-presets';
 import { LIMITS as HWP_LIMITS, MB_DEC } from '../lib/hwp/limits';
+import { MB } from '../lib/ui/device';
+import { LIMITS as JPG_PDF_LIMITS } from '../tools/jpg-to-pdf/limits';
 
 /** HWP numbers in the /hwp-viewer/ FAQ, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -8,6 +10,18 @@ const HWP_FAQ = {
   openPc: hwpMb(HWP_LIMITS.desktop.hardBytes),
   pdfPhone: hwpMb(HWP_LIMITS.mobile.capBytes),
   pdfPhonePages: `${HWP_LIMITS.mobile.capPages.toLocaleString('ko-KR')}쪽`,
+} as const;
+
+/** 사진 PDF 변환 numbers in its FAQ, read from the limits the tool uses (MB = 1,048,576 bytes, as in the tool). */
+const n = (x: number): string => x.toLocaleString('ko-KR');
+const JPG_PDF_FAQ = {
+  imagesPc: `${n(JPG_PDF_LIMITS.desktop.maxImages)}장`,
+  imagesPhone: `${n(JPG_PDF_LIMITS.mobile.maxImages)}장`,
+  filePc: `${n(JPG_PDF_LIMITS.desktop.maxFileBytes / MB)} MB`,
+  filePhone: `${n(JPG_PDF_LIMITS.mobile.maxFileBytes / MB)} MB`,
+  totalPc: `${n(JPG_PDF_LIMITS.desktop.maxTotalBytes / MB)} MB`,
+  totalPhone: `${n(JPG_PDF_LIMITS.mobile.maxTotalBytes / MB)} MB`,
+  edgePhone: `${n(JPG_PDF_LIMITS.mobile.maxEdge)}픽셀`,
 } as const;
 
 export type ToolStatus = 'live' | 'soon';
@@ -170,6 +184,47 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['pdf 용량 줄이기', 'pdf 압축', 'pdf 파일 용량 줄이기'],
+  },
+  {
+    // TOOLS4 T2. name = h1 (COPY.md). No release flag (brief decision 1): static, sends nothing, one revert rolls it back.
+    slug: 'jpg-to-pdf',
+    name: '사진 PDF 변환',
+    title: '사진 PDF 변환 — JPG·PNG·아이폰 사진을 PDF 하나로 무료 | 문서딱',
+    description:
+      '사진 PDF 변환을 폰·컴퓨터에서 바로. JPG·PNG·아이폰 사진 여러 장을 원하는 순서로 PDF 하나로 묶고, A4 용지나 사진 크기에 맞춥니다. 가입 없이 무료.',
+    h1: '사진 PDF 변환',
+    summary: '사진 여러 장을 원하는 순서로 PDF 파일 하나로 묶습니다. A4 용지에 맞출 수도 있습니다.',
+    icon: '<rect x="3" y="4" width="11" height="9" rx="1.5"/><path d="M3 11l3-3 3 3 2-2 3 3"/><path d="M10 13v8h11V9h-4"/>',
+    status: 'live',
+    updated: '2026-10-06',
+    faq: [
+      {
+        q: '사진 여러 장을 PDF 하나로 묶을 수 있나요?',
+        a: `네. 한 번에 PC에서는 ${JPG_PDF_FAQ.imagesPc}, 휴대폰에서는 ${JPG_PDF_FAQ.imagesPhone}까지 넣을 수 있고, 사진 한 장이 PDF 한 쪽이 됩니다. 위로·아래로 버튼이나 왼쪽 손잡이를 끌어 순서를 정하고, 옆으로 누운 사진은 돌리기 버튼으로 세울 수 있습니다.`,
+      },
+      {
+        q: 'A4 크기로 만들 수 있나요?',
+        a: '네. 용지에서 A4를 고르면 사진을 비율 그대로 A4 한 쪽 안에 맞춰 넣습니다. 방향이 「자동」이면 가로로 긴 사진은 가로 A4에, 「세로」를 고르면 모두 세로 A4에 넣습니다. 「사진 크기에 맞춤」을 고르면 쪽 모양이 사진 모양과 같아 여백이 없습니다.',
+      },
+      {
+        q: '아이폰 사진(HEIC)도 되나요?',
+        a: '아이폰 사진 형식(HEIC)은 기기나 앱에 따라 열리지 않을 수 있습니다. 그럴 때는 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 고르거나, 사진을 JPG로 내보낸 뒤 다시 선택해 주세요.',
+      },
+      {
+        q: '화질이 떨어지나요?',
+        a: `JPG 사진은 돌리거나 줄이지 않으면 원본 그대로 넣어 화질이 같습니다. 돌린 사진, 찍을 때 방향 정보가 담긴 사진, PNG·WebP 사진은 높은 화질로 다시 저장해 넣습니다. 휴대폰에서는 긴 변이 ${JPG_PDF_FAQ.edgePhone}보다 큰 사진을 다시 저장할 때 ${JPG_PDF_FAQ.edgePhone}로 줄입니다. PDF 용량을 줄이려면 사진 크기에서 「줄이기」를 고르세요.`,
+        links: [{ href: '/pdf-compress/', text: 'PDF 용량 줄이기' }],
+      },
+      {
+        q: '휴대폰에서도 되나요? 크기 제한이 있나요?',
+        a: `네. 휴대폰에서도 같은 방법으로 만들 수 있습니다. 사진 한 장은 PC에서 ${JPG_PDF_FAQ.filePc}, 휴대폰에서 ${JPG_PDF_FAQ.filePhone}까지, 모두 합쳐 PC에서 ${JPG_PDF_FAQ.totalPc}, 휴대폰에서 ${JPG_PDF_FAQ.totalPhone}까지 넣을 수 있습니다.`,
+      },
+      {
+        q: '제 사진이 어디로 보내지나요?',
+        a: '어디로도 보내지 않습니다. 사진은 이 기기 안에서 PDF로 만들어지고, 촬영 위치나 날짜 같은 사진 정보는 PDF에 넣지 않습니다.',
+      },
+    ],
+    keywords: ['사진 pdf 변환', 'jpg pdf 변환', '아이폰 사진 pdf 변환', '사진 pdf로 묶기', 'png pdf 변환'],
   },
   {
     slug: 'photo-compress',

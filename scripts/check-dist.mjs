@@ -116,6 +116,22 @@ budget('ink.worker*.js (stamp-signature)', match(/^_astro\/ink\.worker[^/]*\.js$
     budget('stamp-signature controls (photo*.js + pad*.js, lazy)', [...new Set(controls.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 13.5 * KB);
   }
 }
+// 사진 PDF 변환 (TOOLS4 T2): the worker carries pdf-lib (243.9 KB gzip measured, budget + 20 %, brief decision 11); the controller
+// (the controller*.js chunk that owns #jp-remove-bad, and what only it imports) loads on the first interaction, never with the page,
+// and no initial script of the page names the worker or pdf-lib (controller 10.9 KB gzip measured, budget + 20 %).
+budget('images.worker*.js (jpg-to-pdf)', match(/^_astro\/images\.worker[^/]*\.js$/), 293 * KB);
+{
+  const html = pageHtml.get('jpg-to-pdf/index.html');
+  if (!html) errors.push('jpg-to-pdf/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('jp-remove-bad'));
+    if (controller.length !== 1) errors.push(`jpg-to-pdf controller: ${controller.length} chunk(s) name #jp-remove-bad, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /jpg-to-pdf/ controller loads with the page');
+    for (const f of initial) if (/images\.worker|PDFDocument/.test(read(f).toString('utf8'))) errors.push(`${f}: pdf-lib or the images worker in the /jpg-to-pdf/ initial JS`);
+    budget('jpg-to-pdf controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 13.1 * KB);
+  }
+}
 if (!autoframe) {
   for (const f of files) if (/mediapipe|vision_bundle|vision_wasm|face_landmarker/i.test(f.path)) errors.push(`${f.path}: MediaPipe file in a build without auto-framing`);
   for (const js of match(/\.m?js$/)) if (/FaceLandmarker|odml\.pa\.googleapis/.test(read(js).toString('latin1'))) errors.push(`${js} contains MediaPipe code in a build without auto-framing`);
@@ -187,7 +203,9 @@ if (!bgOn) {
       if (`${dir.split('/').pop()}` !== manifest.exportId) errors.push(`${dir}: directory is not the manifest exportId ${manifest.exportId}`);
     }
   }
-  // Workers (measured at C2 + 20 %) and the lazy controller (bg*.js and what only it imports; 11.4 KB gzip measured).
+  // Workers (measured at C2 + 20 %) and the lazy controller (bg*.js and what only it imports; 11.4 KB gzip at C2, 14.1 KB after TOOLS4 T2).
+  // 14.5 KB (TOOLS4 T2, flagged for Arch): the controller measured 14.0 / 14 before T2; the /jpg-to-pdf/ controller
+  // shares sniff.ts and decode.ts with it, so they became their own chunks and the import overhead made it 14.1 KB.
   budget('infer.worker*.js (remove-background)', match(/^_astro\/infer\.worker[^/]*\.js$/), 1.3 * KB);
   budget('fusion.worker*.js (remove-background)', match(/^_astro\/fusion\.worker[^/]*\.js$/), 1 * KB);
   const html = pageHtml.get('remove-background/index.html');
@@ -196,7 +214,7 @@ if (!bgOn) {
     const initial = new Set(initialJs(html));
     const controller = match(/^_astro\/bg\.[\w-]{8}\.js$/);
     if (controller.some((f) => initial.has(f))) errors.push('the /remove-background/ controller (bg*.js) loads with the page');
-    budget('remove-background controller (bg*.js, lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 14 * KB);
+    budget('remove-background controller (bg*.js, lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 14.5 * KB);
     if (/rel="(preload|modulepreload|prefetch)"[^>]*(onnxruntime|birefnet)/.test(html)) errors.push('remove-background/index.html preloads the engine or the model');
   }
 }

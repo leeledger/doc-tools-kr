@@ -23,7 +23,7 @@ const tool = (page: Page) => page.locator('#photo-tool');
 const rows = (page: Page) => page.locator('#ph-list > li');
 const row = (page: Page, name: string) => rows(page).filter({ has: page.locator('.name', { hasText: name }) });
 
-/** The page-side check the controller uses (canCompressPhotos): OffscreenCanvas with 2d and convertToBlob. */
+/** The page-side check the controller uses (canDrawOffscreen in src/lib/image/raster.ts): OffscreenCanvas with 2d and convertToBlob. */
 const canCompress = (page: Page): Promise<boolean> =>
   page.evaluate(() => {
     if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap !== 'function') return false;

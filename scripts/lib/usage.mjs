@@ -34,7 +34,7 @@ export const PERIODS = [1, 7, 30, 90];
 export const DEFAULT_DAYS = 7;
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -45,8 +45,10 @@ export const PRESETS = ['passport_online', 'id_card', 'driver_license', 'gosi', 
 /** Equal to the keys of LEVELS in src/lib/pdf/compress/levels.ts (unit test). */
 export const LEVEL_IDS = ['high', 'recommended', 'strong'];
 export const MODES = ['cloud', 'device'];
+/** 사진 PDF 변환 용지 (TOOLS4 T2): 사진 크기에 맞춤 | A4. */
+export const PAGE_MODES = ['fit', 'a4'];
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -219,9 +221,10 @@ export const TOOL_LABELS = {
   'hwp-viewer': 'HWP 파일 보기',
   'stamp-signature': '서명·도장 만들기',
   'remove-background': '배경 지우기',
+  'jpg-to-pdf': '사진 PDF 변환',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지' };
 const VALUE_LABELS = {
   le100: '100KB 이하',
   le200: '200KB 이하',
@@ -242,6 +245,8 @@ const VALUE_LABELS = {
   id_card: '주민등록증 (인화용)',
   driver_license: '운전면허증',
   custom: '직접 입력',
+  fit: '사진 크기에 맞춤',
+  a4: 'A4',
 };
 const label = (map, x) => (Object.hasOwn(map, x) ? map[x] : String(x ?? ''));
 const num = (x) => {

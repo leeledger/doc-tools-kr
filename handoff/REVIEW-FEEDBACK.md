@@ -1,4 +1,4 @@
-# Review Feedback — Step TOOLS4 T0 + T1
+# Review Feedback — Step TOOLS4 T2 (/jpg-to-pdf/)
 Date: 2026-10-06
 Ready for Builder: YES
 
@@ -6,34 +6,21 @@ Ready for Builder: YES
 None.
 
 ## Should Fix
-- src/data/id-photo-presets.ts:3-4 (confidence: 9/10) — header comment still says "Dropped (확인 필요): 주민등록증, 운전면허증, TOEIC, 고용24, 지방공무원 — see FAQ 4". Both now ship as `print`, and FAQ 4 no longer carries that sentence. The next line says T1 added them, so the comment contradicts itself. — Remove 주민등록증 and 운전면허증 from the "Dropped" list and drop the "see FAQ 4" pointer for them.
-- src/data/id-photo-presets.ts:428-430 (confidence: 6/10, verify) — `validatePreset` accepts an official band on any status, as long as the bandQuote sits inside the quote. In practice only `official`/`print` carry a quote, so arithmetic/user fail anyway. Decision 6 scopes it to "official or print". — Optional: add `isSourced(p)` to the official-band branch so the rule reads like the brief.
+- tests/unit/postbuild.test.ts:485 (confidence: 8/10) — "usage statistics … fail check-dist" spawns check-dist 8 times under the global 60 s `testTimeout` (vitest.config.ts:10). **CI is not at risk now:** the `checks` job (.github/workflows/ci.yml:32-39) runs `npm test` against a `PUBLIC_BG_REMOVE=1` build with auto-frame at its default "0" (astro.config.mjs:23, CLOUD-HANDOFF §flags), so the slow auto-frame dist is never under test in CI. Measured on this PC: check-dist on dist-noauto 4.3 s, dist-bgcloud 4.7 s, dist (auto-frame) 5.5 s. 8 × ~4.7 s ≈ 38 s, so there is headroom but it is shrinking with every tool (T3/T4 add pages). Fix: give this one test its own timeout (`it(name, { timeout: 120_000 }, …)`, as the P.19 describe at :1056 already does), so a local unit run after the auto-frame build stops failing. 2-minute change; do it inline.
+- tests/e2e/jpg-to-pdf.spec.ts (confidence: 7/10) — no test for 취소 (controller.ts:491-498): cancel terminates the worker, the list stays, a late worker message is ignored (`id !== runId` guard, :450). Add one e2e: start a run with several photos, press 취소, assert the list and 「PDF 만들기」 are back and no result panel appears. Untested guard clause.
+- src/lib/pdf/images.worker.ts:86-88 (confidence: 6/10, verify) — the raw path keeps the JPEG's ICC profile (jpeg-strip.ts:2 keeps APP2 ICC) but pdf-lib writes the image as DeviceRGB, and PDF readers ignore the ICC profile inside a DCT stream. A Display-P3 JPEG (iPhone exports) embedded raw will look slightly duller than the same photo re-drawn (the re-draw path converts to sRGB on the canvas). No data or privacy issue. Recommendation: log to BUILD-LOG as a known gap; a later fix is to re-draw when the sniff reports a non-sRGB ICC profile, or to embed the profile as an ICCBased colour space.
+- src/lib/pdf/images.worker.ts:59 (confidence: 5/10) — `hasTransparency(canvasPixels(c))` reads the whole canvas in one `getImageData`: at the desktop cap of 8,192 px a square PNG is a 268 MB copy next to the 268 MB canvas. Mobile (4,096 cap) is 67 MB, which is within what the brief accepts. Recommendation: scan in row strips (e.g. 256 rows per `getImageData`) and stop at the first non-opaque pixel. Log it if it is not done now.
+- scripts/check-dist.mjs:205-207 — the comment still says the bg controller was "11.4 KB gzip measured", while the new line says 14.0 before T2. Correct the comment so the next reader knows which number is real.
 
 ## Escalate to Architect
-- REFERENCE_ASPECT_EXEMPT (presets.ts:393: history, korcham, teps, saramin, jobkorea, half_card). Decision 6 and the test map say "non-35:45 aspect with a reference band rejected". Applied literally, that rule would pull six shipped presets. Bob exempted them by id, so shipped behaviour does not change and the rule holds for every new preset. I think this is right at the code level. Arch must confirm that the passport ratio stays acceptable as a reference guide on these 3:4 / 4:5 / 5:7 photos. That is a product decision.
-- T1-a (도로교통공단 digital spec only in `<img alt>`) and T1-b (no visa source readable by check:quotes, so 0 visa presets and the 비자 optgroup is hidden). These are scope and acceptance decisions. T1 acceptance says "only quoted presets shipped", and that is met. Whether T1 counts as done with zero visa presets is Arch's call.
+- **E-T2-a home description once T3/T4 ship.** Names are 110 characters with 9 live tools; "PDF JPG 변환" and "PDF 암호 해제·설정" push the full list past 120 whatever the suffix is, so the current three-tier fallback (src/data/site.ts:26-31) runs out at T3. Proposed rule: (1) Arch keeps an explicit ordered list `HOME_DESC_ORDER` in site.ts (search demand first: 사진 용량 줄이기, PDF 합치기, 증명사진, PDF 용량 줄이기, 사진 PDF 변환, …). (2) `defaultDescription` takes live tools in that order and adds names while `${names} 등 ${N}가지 도구. 가입 없이 무료.` (N = number of live tools) stays within 120; if every name fits, the existing long/short tiers apply as today. (3) Unit tests: 80-120 characters, deterministic, every listed name is live, and each tool left out still appears on the home cards and in llms.txt (so nothing is lost for search). This keeps "가입 없이 무료" in the text and makes adding tools a no-op for the description. Product choice of the order is yours.
+- **E-T2-b remove-background controller budget 14 → 14.5 KB.** I accept the cause: the 0.1 KB is chunk-import overhead from sniff.ts/decode.ts becoming shared chunks, not new remove-background code, and 14.5 is still well under "measured + 20 %" (C1 rule, 14.1 × 1.2 = 16.9). I recommend approving it. The alternative (forcing those modules back into one chunk with manualChunks) would cost the /jpg-to-pdf/ controller more than it saves here. Arch rules, since budgets are an Arch decision.
 
 ## Cleared
-T0: I read the full diff. These are pure moves: reorder.ts (comment only), qpdf-run.ts/load.ts (verbatim, plus the `QpdfRun` type), wasm-browser.ts, deps.ts, worker imports, and path updates in tests and copy-vendor. page-range.ts is new and unused, and its loops are bounded by pageCount. I see no behaviour change.
-T1: id_card and driver_license numbers match the cited quotes word for word. The quotes are identical to the guide sources and the BUILD-LOG Step 0 table. Pixels are 413×531, which `printPx` and `dpiFor` round to 300 ppi. No KB limit was invented. The labels carry "(인화용 3.5×4.5 cm)", which validatePreset enforces. Both presets use the reference band on 35:45. The print rules, the bandQuote-in-quote rule, the measure field and the optgroup select are in: empty 비자 skipped, 직접 입력 in 기타, default passport_online, and controller value lookups do not depend on option order. The result-screen print note, FAQ 4 (FAQ 3 untouched), the PRESET_IDS/usage equality, check:quotes parsing of print presets, and the guide/hub deep links (the hub fit column follows cta.href) all check out. Unit tests (157), tsc and check:quotes (140 verbatim; parsePresets lists id_card 2 URLs, driver_license 1) pass locally. The Korean copy reads correctly.
-
----
-
-# Review Feedback — Step TOOLS4 T0 + T1, Round 2
-Date: 2026-10-06
-Ready for Builder: YES
-
-## Must Fix
-None.
-
-## Should Fix
-- src/content/guides/driver-license-photo.md:65 (confidence: 5/10, verify) — the guide says "온라인 「적성검사 사진 등록」에 쓰는 파일은 500KB 이하…". The popup's own words are "온라인 신청시:파일 크기 500KB 이하의 JPG파일…". The popup never names 「적성검사 사진 등록」, so linking it to that menu is our inference, made because the button sits on the 적성검사 page. — Consider "온라인으로 신청할 때 내는 파일은 …" so the sentence says only what the source says.
-- scripts/ops/lib/html.mjs:118 (confidence: 4/10) — `ALT` takes the first `\salt=` anywhere in the tag. A tag like `<img title="x alt=y" alt="z">` would yield "y". This is contrived for an agency page, and a mis-parse makes a quote fail, not falsely pass. Appendix only.
-
-## Escalate to Architect
-None. The owner decided T1-a, T1-b and the exemption list.
-
-## Cleared
-Alt-text change: `withAltText` runs after scripts, styles, comments and templates are removed, so an `<img>` inside a script string is never read (tested). Only a real `<img>` tag's `alt` attribute is used (`data-alt` is ignored, tested). The text is the page's own accessible text, served in the HTML. The IMG regex alternatives start on disjoint characters, so there is no catastrophic backtracking. An unbalanced quote can only swallow text, so the quote check fails safe. I see no path where a quote "matches" text that is not on the page.
-driver_license: I fetched https://www.safedriving.or.kr/commonManage/selectCommonPhotoRulePop.do (3,582 B, one `<img>`). The alt text contains, character for character, "머리 길이가 정수리(머리 최상부)부터 턱까지 3.2~3.6cm 사이인 사진" and "온라인 신청시:파일 크기 500KB 이하의 JPG파일, 가로 413 픽셀(pixel), 세로 531 픽셀 권장, *가로 395~431, 세로 507~550 필셀 이내만 업로드 가능, 300dpi 해상도 권장". The source's typo "필셀" is kept. The preset matches exactly: outW/outH 413×531, pxRange 395–431 × 507–550, limitBytes(500,'le'), dpi 300, band 32/45–36/45 crown with bandQuote inside quote. The official band's "규격 32–36 mm" overlay label is true for this band.
-SF1: the header comment is fixed. SF2: `isSourced` guard added. The usage label, the hub bullet (주민등록증 only), and the guide `preset: driver_license` source are correct. Unit tests (963), tsc and check:quotes (142 verbatim; both safedriving URLs OK) pass locally.
+I reviewed the image → PDF worker, embed/layout/limits, controller (run/cancel/reset/usage), page copy and FAQ, usage whitelist, gen-sw NOT_PRECACHED and the check-dist budgets against the TOOLS4 T2 brief. They pass. Details:
+- EXIF orientation: raw only when orientation is 1/absent, with no rotation, 원본 size and not CMYK/truncated. Otherwise decoded by decodeImage, which applies orientation.
+- Metadata: the strip runs before the raw embed. Re-drawn photos carry nothing. Producer/creator is 문서딱 and no title is set.
+- Transparency: PNG only when a pixel is transparent. Otherwise the photo is put on white and saved as JPEG.
+- Usage events: tool, phase and code only. No file name, size or content.
+- Copy: the privacy line is identical to the sibling pages. The "정해진 값" wording on /privacy/ covers 용지.
+- NOT_PRECACHED for /jpg-to-pdf/ follows brief decision 10 (466.9 KB over the 450 KB limit). The limit was not raised.

@@ -89,6 +89,7 @@ describe('whitelist (scripts/lib/usage.mjs)', () => {
       ['preset', [...PRESET_IDS, 'custom']],
       ['level', ['high', 'recommended', 'strong']],
       ['mode', ['cloud', 'device']],
+      ['page', ['fit', 'a4']],
     ];
     for (const [o, vs] of settings) for (const v of vs) expect(validate(body({ ...BASE, e: 'start', o, v })), `${o}=${v}`).not.toBeNull();
     expect(validate(body({ ...BASE, e: 'start' }))).not.toBeNull();
@@ -560,5 +561,33 @@ describe('service worker: /admin and /api/ always go to the network untouched', 
   });
   it('an ordinary page still goes network-first', () => {
     expect(route({ method: 'GET', url: `${origin}/administration-guide/`, mode: 'navigate' }, origin)).toBe('navigate');
+  });
+});
+
+describe('사진 PDF 변환 (TOOLS4 T2)', () => {
+  it('tool and 용지 setting are whitelisted; an unknown 용지 value or a setting of another tool is refused', () => {
+    expect(TOOLS).toContain('jpg-to-pdf');
+    expect(validate(body({ ...BASE, t: 'jpg-to-pdf', e: 'start', o: 'page', v: 'a4' }))).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'jpg-to-pdf', e: 'start', o: 'page', v: 'letter' }))).toBeNull();
+    expect(validate(body({ ...BASE, t: 'jpg-to-pdf', e: 'start', o: 'page', v: 'le100' }))).toBeNull();
+    for (const c of ['heic', 'not-image', 'too-many', 'too-big', 'canvas', 'engine']) {
+      expect(validate(body({ ...BASE, t: 'jpg-to-pdf', e: 'fail', c, p: 'parse' })), c).not.toBeNull();
+    }
+  });
+
+  it('admin labels are Korean: tool name as in tools.ts, 용지, 사진 크기에 맞춤 / A4', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'jpg-to-pdf', event: 'success', via: 'direct', n: 2 }],
+      settings: [
+        { tool: 'jpg-to-pdf', setting: 'page', value: 'a4', n: 3 },
+        { tool: 'jpg-to-pdf', setting: 'page', value: 'fit', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('사진 PDF 변환');
+    expect(settings!.rows).toEqual([
+      ['사진 PDF 변환', '용지', 'A4', '3'],
+      ['사진 PDF 변환', '용지', '사진 크기에 맞춤', '1'],
+    ]);
   });
 });

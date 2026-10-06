@@ -75,6 +75,26 @@ test('사진 용량 줄이기: pick, start (target-kb bucket), success, download
   expect(beacons.some((b) => b.ev.e === 'arrive')).toBe(false);
 });
 
+test('사진 PDF 변환 (TOOLS4 T2): pick, start (o=page, v=a4), success, download, in order; no file name, size or page count', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/jpg-to-pdf/');
+  test.skip(!(await canCompress(page)), 'This browser has no OffscreenCanvas (Playwright WebKit on Windows).');
+  await page.setInputFiles('#jp-input', PORTRAIT);
+  await expect(page.locator('#jp-run')).toBeEnabled();
+  await page.locator('#jp-run').click();
+  await expect(page.locator('#jp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#jp-download').click()]);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'start', 'success', 'download']);
+  expectClean(beacons);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'start', t: 'jpg-to-pdf', o: 'page', v: 'a4' });
+  for (const b of beacons) {
+    expect(b.ev).toMatchObject({ t: 'jpg-to-pdf', via: 'direct', w: 1 });
+    // No count of any kind (pages, photos): the weight is the only number, and no value holds 쪽 or 장.
+    expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
+    expect(b.body).not.toMatch(/쪽|장/);
+  }
+});
+
 test('PDF 용량 줄이기 with a file that is not a PDF: fail with code not-pdf', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

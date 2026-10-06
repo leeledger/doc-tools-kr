@@ -23,9 +23,13 @@ export function defaultDescription(tools: readonly Tool[] = LIVE_TOOLS): string 
   // Sprint C (C2): with the eighth tool the names are 100 characters, so the shorter sentence keeps it at 120.
   // Owner 2026-10-05: the description says what the site does, not where the file goes (no privacy claim, so
   // the 배경 지우기 cloud path needs no exception here).
+  // TOOLS4 T2: with the photo-to-PDF tool and 배경 지우기 both live the names are 110 characters, so the shortest form drops
+  // "가입 없이" rather than a tool name.
   const names = liveNames(tools);
+  const fits = (s: string): boolean => [...s].length <= 120;
   const long = `${names}. 내야 하는 문서·사진을 규격에 맞춰요. 가입 없이 무료.`;
-  return [...long].length <= 120 ? long : `${names}. 가입 없이 무료.`;
+  const short = `${names}. 가입 없이 무료.`;
+  return fits(long) ? long : fits(short) ? short : `${names}. 무료.`;
 }
 
 /** Ads stay off in this phase. AdSlot renders nothing while this is false. */

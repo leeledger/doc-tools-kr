@@ -33,3 +33,19 @@ export function releaseCanvas(c: OffscreenCanvas): void {
   c.width = 0;
   c.height = 0;
 }
+
+/**
+ * The photo workers draw and encode on an OffscreenCanvas (2d + convertToBlob). Browsers without it (Safari before
+ * 16.4) get a notice up front instead of a failure per photo; there is no main-thread path. Workers expose
+ * OffscreenCanvas wherever the page does, so the page-side check stands for the worker. (Moved here from the
+ * /photo-compress/ controller in TOOLS4 T2; /jpg-to-pdf/ uses it too.)
+ */
+export function canDrawOffscreen(): boolean {
+  if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap !== 'function') return false;
+  try {
+    const c = new OffscreenCanvas(1, 1);
+    return c.getContext('2d') !== null && typeof c.convertToBlob === 'function';
+  } catch {
+    return false;
+  }
+}

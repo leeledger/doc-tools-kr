@@ -2153,3 +2153,51 @@ Rule applied: a preset ships only if `npm run check:quotes` (bot-UA Node fetch, 
 - Richard: clear (round 1 and round 2, 0 Must Fix). Round-2 Should Fix (guide called the 공단 popup's "온라인 신청시" 「적성검사 사진 등록」) fixed by the orchestrator in driver-license-photo.md line 67.
 - Owner decisions: no visa presets in TOOLS4; check:quotes reads img alt (driver_license official).
 - Committed and pushed to main on the owner's go-ahead. Next: T2 /jpg-to-pdf/.
+
+## TOOLS4 T2 build notes (Bob, 2026-10-06) — /jpg-to-pdf/ 사진 PDF 변환 — status DONE
+**Files (new)**
+- `src/tools/jpg-to-pdf/limits.ts`: brief numbers (phone 50장 / 50 MB each / 150 MB total / decode cap 4,096 px; PC 200장 / 100 MB / 500 MB / cap 8,192 px), `REDUCE_EDGE` 2,000, pure `planAdd` (files over a limit are not added; messages with numbers; usage codes too-many / too-big).
+- `src/tools/jpg-to-pdf/layout.ts` (pure): A4 595.28×841.89 pt, 자동 = the page turns with the (rotated) photo, square = portrait, contain-fit centred inside the margin; 사진 크기에 맞춤 = photo aspect, long side 841.89, no margin.
+- `src/tools/jpg-to-pdf/embed.ts` (pure): `canEmbedRaw` = JPEG, not CMYK/YCCK, not truncated, orientation 1/absent, rotation 0, 원본 그대로.
+- `src/lib/pdf/images.worker.ts`: pdf-lib only here (mirrors merge.worker: progress messages, cancel = terminate, `verifyOutput` page count before posting). Raw path = `stripJpegMetadata` then `embedJpg` (no EXIF/GPS/comment in the PDF; a strip or embed failure falls back to re-draw). Re-draw = `decodeImage` (EXIF orientation applied, long-edge cap) → OffscreenCanvas turned by the rotation → PNG if any pixel is transparent, else white underneath + JPEG q0.92. Producer/creator 문서딱, no title.
+- `src/tools/jpg-to-pdf/controller.ts`: list with thumbnails (decoded at 128 px on the page, one at a time), ↑↓, drag (shared `startRowDrag`), 오른쪽으로 돌리기, 삭제, 문제 사진 모두 빼기; options 용지 [A4 | 사진 크기에 맞춤], A4 방향 [자동 | 세로], 여백 [없음 | 10 mm], 사진 크기 [원본 그대로 | 줄이기 (긴 변 2,000픽셀)] (first of each is the default; the two A4-only groups hide in 맞춤 mode); progress + 취소; result 쪽 수 · 크기, 내려받기, 공유. Browsers without OffscreenCanvas get the photo-compress style notice (usage fail `canvas`).
+- `src/tools/jpg-to-pdf/entry.ts`: startUsage + controller on first interaction (stamp-signature pattern; picked files are read from the input at init, dropped ones handed over).
+- `src/pages/jpg-to-pdf/index.astro`: hero says what it does first; "사진은 이 기기 밖으로 전송되지 않습니다." only beside the picker (and FAQ 6); 3-step 사용 방법; one 알아 두면 좋아요 block; FAQ; related tools pdf-merge / pdf-compress / photo-compress; QuickLinks (관련 안내).
+- Tests: `tests/unit/jpg-to-pdf.test.ts` (layout 3 shapes × 4 rotations × 자동/세로 × 0/10 mm, fit mode, canEmbedRaw, limits, page copy, tool facts), `tests/e2e/jpg-to-pdf.spec.ts` (A4 order/sizes/upright orientation-6/metadata; fit aspects + rotation; non-image row; EXIF/GPS/comment absent from a raw-embedded JPEG; HEIC message on Chromium; controller/worker not loaded with the page).
+
+**Files (changed)**: tools.ts (entry after pdf-compress; FAQ numbers read from limits.ts like HWP_FAQ), og.json (image + page line), guides.ts NEXT_GUIDES (univ-docs-upload, pdf-merge, pdf-compress), tool-facts.ts (6 jpg-to-pdf facts), usage.ts / usage.mjs (TOOLS += jpg-to-pdf; SETTINGS.page = fit|a4; labels 사진 PDF 변환 / 용지 / 사진 크기에 맞춤 / A4), bgcloud.mjs LOCAL_SCOPE_RE (+jpg-to-pdf), gen-sw NOT_PRECACHED (+/jpg-to-pdf/), check-dist (worker + lazy controller budgets and assertions; bg controller budget 14 → 14.5), site.ts (third description tier), raster.ts (`canDrawOffscreen`, moved from the photo-compress controller), lighthouserc, qa:visual, CLAUDE.md, COPY.md, e2e site/polish/usage lists, unit postbuild/bgcloud/usage.
+
+**Decisions taken under "never stop"**
+- Output name `{first photo name without extension}.pdf` via `safeFileName` (the HWP tools' rule; merge/compress already use Korean tags, so non-ASCII names are fine).
+- Desktop decode cap 8,192 px (the brief gives the phone cap only; canvas limits); the FAQ states the phone cap only.
+- PNG without transparency is re-encoded to JPEG (brief); a transparent one stays PNG.
+- HEIC: accept lists `.heic,.heif` (extensions, no MIME); decode is native only (decode.ts `PhotoError('heic')` → existing guidance copy). iPhone behaviour = Unverified (d), owner device check.
+- No worker warm-up: pdf-lib loads only when 「PDF 만들기」 runs.
+- Run button reads "사진 N장으로 PDF 만들기" (merge's counted-button rule) instead of the brief's "PDF 만들기".
+- Usage: only T2's parts added now (TOOLS must equal live tools + bg; ppi/action come with T3/T4). Fail codes used: not-image, heic, corrupt, empty, too-many, too-big, canvas, engine, oom, unknown.
+- Licences: no new dependency (pdf-lib is already listed); nothing to add on /licenses/.
+
+**Precache / budgets (decisions 10, 11)**
+- With the page and its controller precached: 466.9 KB > 450 → `/jpg-to-pdf/` in NOT_PRECACHED (network page, like /remove-background/). Precache now 437.4 KB (default), 439.6 KB (auto-frame), 443.8 KB (cloud); was 432.8 / 435.0 (every page's menu and the home card grew).
+- images.worker 243.9 KB gzip (merge.worker 242 KB, same pdf-lib) → budget 293 KB; controller lazy 10.9 KB → 13.1 KB; initial JS /jpg-to-pdf/ 8.2 KB / 30. Other pages' initial JS +0.1–0.3 KB (shared chunk reshuffle).
+- remove-background controller: 14.0 / 14 KB before T2; sniff.ts/decode.ts are now shared with the new controller and became separate chunks → 14.1 KB. Budget raised to 14.5 KB (flagged).
+
+**Escalations / flags for Arch**
+- E-T2-a: home description. With 사진 PDF 변환 and 배경 지우기 both live the names are 110 characters; "{names}. 가입 없이 무료." is 121. Added a third tier "{names}. 무료." (115). T3 and T4 add two more names (~131 characters of names alone), so the "name every live tool in 80–120 characters" rule (polish.test P.6, bgremove/bgcloud tests) cannot hold after T3: Arch needs a new home-description form before T3.
+- E-T2-b: remove-background controller budget 14 → 14.5 KB (chunk split, no new code).
+
+**Known Gaps**
+- `tests/unit/postbuild.test.ts` "usage statistics … fail check-dist" spawns check-dist 8 times; on the auto-frame dist one run takes ~7.7 s before T2 / ~8.5 s after on this PC, so it stays inside the 60 s test timeout on the default dist only (pre-existing borderline; CI runs units on the default build).
+- The phone sticky-actions scroll-padding rule in app.css names `#merge-tool` only.
+- Lighthouse and qa:visual not run locally (URLs added; CI is the source of truth).
+
+**Gates (2026-10-06, local)**
+- astro check: 0 errors / 0 warnings / 1 old hint.
+- Unit: 49 files, 1034 passed (default build in dist).
+- Builds: default (→ dist-noauto) check-dist OK, 2,379 files; cloud (PUBLIC_BG_REMOVE/BG_CLOUD/USAGE_STATS=1 + officer/contact, → dist-bgcloud) check-dist OK, 2,398 files; auto-frame (dist) check-dist OK, 2,386 files.
+- e2e chromium + mobile-chrome: jpg-to-pdf + site + polish + growth 215 passed / 5 skipped (2 failures in polish "404 lists the live tools": its LIVE list lacked the new tool; fixed, polish rerun 83 passed / 5 skipped); jpg-to-pdf rerun after the last spec edit 12 passed; usage.spec cloud-chromium + cloud-mobile-chrome 10 passed (incl. the new jpg-to-pdf events test).
+
+**TOOLS4 T2 — deploy gate (2026-10-06)**
+- Richard: clear, 0 Must Fix. Orchestrator applied Should Fix 1 (120 s timeout on the 8× check-dist usage test) and 5 (check-dist comment). Carried to T3: cancel e2e for /jpg-to-pdf/ (Should Fix 2) and row-wise transparency scan (Should Fix 4). Known gap: pass-through JPEGs keep no ICC handling (Display-P3 may look slightly flat; Should Fix 3).
+- E-T2-b approved (remove-background controller budget 14.5 KB). E-T2-a decided by the orchestrator for T3: Richard's HOME_DESC_ORDER rule; order follows the market report (id-photo, pdf-merge, photo-compress, pdf-compress, jpg-to-pdf, pdf-to-jpg, hwp-to-pdf, hwp-viewer, pdf-password, stamp-signature, remove-background).
+- Pushed to main under the owner's standing go-ahead for T2–T4 (2026-10-06: push when review is clear).
