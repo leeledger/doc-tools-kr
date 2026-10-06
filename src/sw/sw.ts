@@ -24,10 +24,12 @@ export const CACHE_PREFIX = 'anolim-';
 export const RUNTIME_PREFIXES = ['/_astro/', '/vendor/', '/fonts/', '/brand/'];
 export const BYPASS = ['/sw.js', '/deploy-manifest.json'];
 /**
- * Pages left out of the precache because they are useless offline (C2 round 2, Arch: budget headroom), stored when
- * visited instead, so a page once read is still there offline.
+ * Pages left out of the precache (C2 round 2, Arch: budget headroom; TOOLS4 T2-T4: the tool pages that do not fit the
+ * 450 KB precache), stored when visited instead, so a page once opened is still there offline. The tool pages' scripts
+ * (/_astro/) and engines (/vendor/ qpdf, pdf.js, rhwp) are runtime-cached on first use, so a returning visitor can work
+ * offline. /remove-background/ is not here: it needs the network for its model or cloud path anyway.
  */
-export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/'];
+export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/'];
 /** 배경 지우기 (Sprint C, C2): the model and the runtime go straight to the network (src/lib/bgremove/assets.ts caches them). */
 export const NETWORK_PREFIXES = ['/vendor/birefnet-lite-512/', '/vendor/onnxruntime-web/'];
 export const NAV_TIMEOUT_MS = 3000;

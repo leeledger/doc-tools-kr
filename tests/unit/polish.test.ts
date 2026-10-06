@@ -636,9 +636,9 @@ describe('service worker (P.11)', () => {
     expect(cache.store.has('/_astro/b.js')).toBe(false);
   });
 
-  it('C2 round 2: /terms/, /privacy/, /licenses/ are not precached but stored when visited; offline they come from the cache', async () => {
+  it('C2 round 2 + TOOLS4 T4 round 2: legal pages and the non-precached tool pages are stored when visited; offline they come from the cache', async () => {
     const cache = new FakeCache();
-    for (const path of ['/terms/', '/privacy/', '/licenses/']) {
+    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/']) {
       const ev = event(req(path, 'GET', 'navigate'));
       handleFetch(ev.e, envWith(async () => new Response(`page ${path}`), cache));
       await ev.responded;
@@ -651,6 +651,11 @@ describe('service worker (P.11)', () => {
     handleFetch(guide.e, envWith(async () => new Response('guide'), cache));
     await guide.responded;
     expect(cache.store.has('/guide/x/')).toBe(false);
+    // 배경 지우기 needs the network for its model or cloud path: never stored.
+    const bg = event(req('/remove-background/', 'GET', 'navigate'));
+    handleFetch(bg.e, envWith(async () => new Response('bg'), cache));
+    await bg.responded;
+    expect(cache.store.has('/remove-background/')).toBe(false);
   });
 
   it('navigation: network first (refreshing the precache), then the cache, then the offline page', async () => {

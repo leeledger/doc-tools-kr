@@ -28,3 +28,28 @@ Reviewed password.ts, password.worker.ts, the pdf-password controller/flow/limit
 - T3 SF1–SF5: SF1 closes any previous document and the `unlocking` guard stops a double submit; SF2 TaskSlot.release frees only its own task; SF3 builds the ZIP from Blob parts; SF4 corrupt-name mapping; SF5 JFIF density = round(scale × 72).
 - pdf-lib in the worker: accepted (brief says reuse hasSignature; loaded on press; budgeted).
 - Home "등 10가지 도구" form: accepted (rule-based).
+
+---
+
+# Review Feedback — Step T4 round 2
+Date: 2026-10-06
+Ready for Builder: YES
+
+## Must Fix
+None.
+
+## Should Fix
+- src/tools/pdf-password/controller.ts:330-338 (confidence: 6/10) — `const orig = await openPdf(input, password).catch(() => null)` skips the note when the open fails, as Bob intends. But `isRestricted(await orig.doc.getPermissions())` sits in a try/finally with no catch. If getPermissions throws, the error reaches the outer catch and becomes `failed(act, 'engine')`, so an unlock that was already verified offers no file. This contradicts Bob's own note ("if that open fails the note is skipped"). Fix: `await orig.doc.getPermissions().catch(() => null)`, or wrap the read in its own try/catch. Rare, so it does not block.
+
+## Escalate to Architect
+None.
+
+## Cleared
+All six round-2 items match the T4 deploy-gate decisions and my Should Fix list.
+
+1. **Unlock notice.** The original's permissions are read with the typed password and the shared `isRestricted` rule. The password stays only in the check() closure, never in the DOM, events or messages. The notice is a result note; nothing is refused.
+2. **RUNTIME_PAGES.** It now includes /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/ and /hwp-viewer/. /remove-background/ is excluded. NOT_PRECACHED is unchanged, so the precache does not grow (424.2 / 430.3 / 426.4 KB).
+3. **NFC.** Applied to both lock fields before validation, and that string goes to the worker and the pdf.js check. Also applied to unlock before the empty check. The unit test shows a raw NFD lock would not open with the NFC spelling, which proves the need.
+4. **Encrypted-but-unrestricted files.** The new `encrypted` kind gets its own stop message in 암호 걸기. 암호 풀기 still says no password is needed.
+5. **Hostile passwords.** Eight cases run through the real vendored qpdf (leading dashes, quotes, `=`, `@in.pdf`, spaces, `--`, a backslash).
+6. **try/finally.** Every pdf.js document opened in check() is now closed.

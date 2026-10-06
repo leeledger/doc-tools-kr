@@ -2247,3 +2247,16 @@ Rule applied: a preset ships only if `npm run check:quotes` (bot-UA Node fetch, 
 - Richard: clear, 0 Must Fix. Pushed to main under the owner's standing go-ahead for T2–T4.
 - Orchestrator decisions for the follow-up (T4 round 2): (1) unlocking a file that has an open password AND use limits → (b) show a one-line notice in the result like T3's (the saved file no longer carries those limits; use it only if allowed). (2) Keep /hwp-viewer/ out of the precache list, but add it (and the other non-precached tool pages) to RUNTIME_PAGES so returning visitors work offline again.
 - Follow-up also applies Should Fix: NFC-normalize passwords on lock and unlock (unit test), correct stop message for encrypted-but-unrestricted files, hostile-password qpdf round-trip test, try/finally around the permission read.
+
+## TOOLS4 T4 round 2 (Bob, 2026-10-06) — status DONE
+- (1) Unlock of a file with an open password AND use limits: result note LIMITS_NOTE (original's permissions read with the typed password via pdf.js; rule = shared `isRestricted`, new src/lib/pdf/permissions.ts). No refusal.
+- (2) /hwp-viewer/ stays out of the precache; RUNTIME_PAGES += /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/, /hwp-viewer/ (stored on visit; /_astro/ and /vendor/ engines are runtime-cached), /remove-background/ excluded.
+- (3) Passwords NFC on lock (both fields) and unlock (`normalizePassword`). Probe in the unit test: a raw NFD lock does not open with the NFC spelling (PasswordException 2); normalized, it does.
+- (4) New FileKind `encrypted` (encrypted, everything allowed, no open password): own stop message in 암호 걸기; unlock still says no password needed.
+- (5) Hostile-password real-qpdf round trip, 8 cases, all pass (named `=` argv form).
+- (6) try/finally around every pdf.js document read in check().
+- New runtime fixture `userpw_no_copy`.
+**Gates (local):** astro check 0 errors; unit 51 files 1,085 passed; builds default (dist-noauto 2,393 files, precache 424.2 KB), cloud (dist-bgcloud 2,412, 430.3 KB), auto-frame (dist 2,400, 426.4 KB), check-dist OK (pdf-password controller 5.4 / 6 KB, worker 240.7 / 289 KB); e2e chromium + mobile-chrome pdf-password + pdf-to-jpg + hwp-viewer + polish + sw 179 passed / 11 skipped.
+
+**TOOLS4 T4 round 2 — deploy gate (2026-10-06)**
+- Richard: clear, 0 Must Fix. Orchestrator applied the one Should Fix (a failed permissions read on the original only skips the notice; controller.ts). Pushed under the owner's standing go-ahead. TOOLS4 (T0–T4) complete.

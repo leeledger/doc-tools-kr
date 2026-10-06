@@ -14,6 +14,12 @@ export function randomOwnerPassword(fill: (a: Uint8Array<ArrayBuffer>) => Uint8A
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Passwords go to qpdf and pdf.js as NFC (T4 round 2). IME-typed Hangul is NFC everywhere; pasted text (e.g. a macOS
+ * file name) can be NFD, which could never be typed back. Neither qpdf nor pdf.js normalizes, so lock and unlock both do.
+ */
+export const normalizePassword = (password: string): string => password.normalize('NFC');
+
 /** qpdf: AES-256 encryption with named options, so a password that starts with "-" is still just a value. */
 export function lockArgs(userPassword: string, ownerPassword: string): string[] {
   return ['--encrypt', `--user-password=${userPassword}`, `--owner-password=${ownerPassword}`, '--bits=256', '--', 'in.pdf', 'out.pdf'];

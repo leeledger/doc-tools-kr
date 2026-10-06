@@ -44,3 +44,27 @@ The vendored qpdf-wasm 12.2.0 (Node, the same wasm copy-vendor ships) with `--en
 ## Out of Scope (logged in BUILD-LOG)
 - No Unicode normalization (NFC/SASLprep) of passwords; a Mac NFD password typed elsewhere could differ.
 - Lighthouse, qa:visual, firefox/webkit/mobile-safari not run locally.
+
+---
+
+# T4 round 2 — deploy-gate decisions + Richard's Should Fix
+Date: 2026-10-06. Ready for Review: YES. Status **DONE**. Not committed.
+
+## Files Changed
+- src/lib/pdf/permissions.ts (new) — `isRestricted(perms)` (print, change or copy missing), shared by the T3 notice and T4.
+- src/tools/pdf-to-jpg/guards.ts:1-30 — `restrictionNote` now uses `isRestricted` (same behaviour).
+- src/lib/pdf/password.ts:17-21 — `normalizePassword` = NFC (item 3).
+- src/tools/pdf-password/flow.ts — FileKind `encrypted` (opens without a password, encrypted, everything allowed) with its own stop message "이 파일은 비밀번호 없이 열리지만 이미 암호 설정이 들어 있어 새 비밀번호를 걸 수 없습니다." (item 4); `LIMITS_NOTE` "원래 파일에 있던 복사·인쇄 제한은 저장한 파일에 남지 않습니다. 파일을 만든 곳에서 허락한 경우에만 쓰세요." (item 1).
+- src/tools/pdf-password/controller.ts — kind = user / none / owner (restricted) / encrypted; lock and unlock passwords NFC before validation, the worker and the pdf.js check; check(): try/finally around every pdf.js read so each opened doc closes (item 6); unlock reads the original's permissions with the typed password and adds LIMITS_NOTE to the result notes when it was restricted (item 1).
+- src/sw/sw.ts:25-32 — RUNTIME_PAGES += /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/, /hwp-viewer/ (item 2; /remove-background/ deliberately not). scripts/gen-sw.mjs comment corrected. Precache unchanged in content: 424.2 / 430.3 / 426.4 KB.
+- tests/fixtures/build.mjs — runtime fixture `userpw_no_copy` (open password 1234 + print/modify/extract denied).
+- tests/unit/pdf-password.test.ts — NFD paste locks as NFC, NFC unlock works (and a raw NFD lock does NOT open with NFC, proving the need); real-qpdf round trip for 8 hostile passwords (`-x --decrypt`, `a b "c"`, `it's`, `=--owner-password=1`, `@in.pdf`, leading/trailing spaces, `--`, a backslash): lock refuses pdf.js without, opens with, refuses with one extra char, unlock works (item 5); `decide('lock','encrypted')`; `isRestricted`.
+- tests/unit/polish.test.ts:639-660 — the four tool pages are stored when visited and served offline; /remove-background/ never stored.
+- tests/e2e/pdf-password.spec.ts — userpw_no_copy unlock shows LIMITS_NOTE; our own locked file shows none; owner_restricted (all allowed) in 암호 걸기 gets the `encrypted` message; NFD-pasted lock password opens with the NFC spelling.
+
+## Open Questions
+- LIMITS_NOTE triggers on the same rule as T3 (print, change or copy missing). A file limiting only annotations/forms gets no note.
+- The original is opened a second time with pdf.js (with the password) only to read its permissions after a successful unlock; if that open fails the note is skipped (the unlocked file itself was already verified).
+
+## Out of Scope
+- Offline return-visit e2e for the four pages not added (the SW routing is unit-tested; sw.spec covers the mechanism on /pdf-merge/).

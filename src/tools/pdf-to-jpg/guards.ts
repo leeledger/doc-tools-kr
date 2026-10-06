@@ -1,4 +1,5 @@
 // Small pure pieces of the PDF JPG 변환 controller (T3 review fixes), kept here so they are unit-tested.
+import { isRestricted } from '../../lib/pdf/permissions';
 
 /** A canvas that could not be drawn or encoded (iOS leaves an oversized one unusable). */
 export class CanvasError extends Error {}
@@ -17,11 +18,6 @@ export function runErrorCode(err: unknown, isOom: (e: unknown) => boolean): RunE
   return 'unknown';
 }
 
-/** pdf.js PermissionFlag values for printing, changing and copying. */
-const PRINT = 0x04;
-const MODIFY = 0x08;
-const COPY = 0x10;
-
 export const RESTRICTED_NOTE = '이 파일에는 복사·인쇄 제한이 걸려 있습니다. 파일을 만든 곳에서 허락한 경우에만 쓰세요.';
 
 /**
@@ -30,9 +26,7 @@ export const RESTRICTED_NOTE = '이 파일에는 복사·인쇄 제한이 걸려
  * encrypted.
  */
 export function restrictionNote(perms: Iterable<number> | null): string | null {
-  if (!perms) return null;
-  const allowed = new Set(perms);
-  return [PRINT, MODIFY, COPY].every((f) => allowed.has(f)) ? null : RESTRICTED_NOTE;
+  return isRestricted(perms) ? RESTRICTED_NOTE : null;
 }
 
 /**

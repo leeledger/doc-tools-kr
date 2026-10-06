@@ -4,7 +4,8 @@ import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 import { getTool } from '../../src/data/tools';
 import { TOOL_FACTS } from '../../src/data/tool-facts';
-import { OWNER_HEX_LENGTH, lockArgs, passwordFailure, qpdfDone, randomOwnerPassword, unlockArgs } from '../../src/lib/pdf/password';
+import { OWNER_HEX_LENGTH, lockArgs, normalizePassword, passwordFailure, qpdfDone, randomOwnerPassword, unlockArgs } from '../../src/lib/pdf/password';
+import { COPY, MODIFY, PRINT, isRestricted } from '../../src/lib/pdf/permissions';
 import { runQpdf, type QpdfFactory } from '../../src/lib/pdf/qpdf/qpdf-run';
 import { MB } from '../../src/lib/ui/device';
 import { STOP_MESSAGES, decide, outputName } from '../../src/tools/pdf-password/flow';
@@ -87,6 +88,48 @@ describe('vendored qpdf-wasm round trip (brief Unverified a, b, c)', () => {
   });
 });
 
+describe('T4 round 2: NFC passwords, hostile passwords, use limits', () => {
+  it('an NFD (pasted) Korean password locks as NFC; the same password typed as NFC unlocks it and opens it in pdf.js', async () => {
+    const nfc = KOREAN.normalize('NFC');
+    const nfd = KOREAN.normalize('NFD');
+    expect(nfd).not.toBe(nfc);
+    expect(normalizePassword(nfd)).toBe(nfc);
+    const src = fixture('gen_links_outline.pdf');
+    const locked = await qpdf(lockArgs(normalizePassword(nfd), randomOwnerPassword()), src);
+    expect(qpdfDone(locked)).toBe(true);
+    expect(await open(locked.out!, nfc)).toBe(await open(src));
+    const unlocked = await qpdf(unlockArgs(normalizePassword(nfc)), locked.out!);
+    expect(qpdfDone(unlocked)).toBe(true);
+    expect(await open(unlocked.out!)).toBe(await open(src));
+    // Without normalization the NFD bytes would have been stored: the NFC password would not open that file.
+    const raw = await qpdf(lockArgs(nfd, randomOwnerPassword()), src);
+    expect(await open(raw.out!, nfc)).toBe('PasswordException:2');
+  });
+
+  it.each(['-x --decrypt', 'a b "c"', "it's", '=--owner-password=1', '@in.pdf', ' 앞뒤 공백 ', '--', '\\'])(
+    'hostile password %j: one qpdf value; the lock refuses pdf.js without it and opens with it; unlock with it works',
+    async (pw) => {
+      const src = fixture('gen_links_outline.pdf');
+      const pages = await open(src);
+      const locked = await qpdf(lockArgs(pw, randomOwnerPassword()), src);
+      expect(qpdfDone(locked)).toBe(true);
+      expect(await open(locked.out!)).toBe('PasswordException:1');
+      expect(await open(locked.out!, pw)).toBe(pages);
+      expect(await open(locked.out!, `${pw}x`)).toBe('PasswordException:2');
+      const unlocked = await qpdf(unlockArgs(pw), locked.out!);
+      expect(qpdfDone(unlocked)).toBe(true);
+      expect(await open(unlocked.out!)).toBe(pages);
+    },
+  );
+
+  it('isRestricted: print, change or copy missing; null (no encryption) and all-allowed are not', () => {
+    const all = [PRINT, MODIFY, COPY, 32, 256, 512, 1024, 2048];
+    expect(isRestricted(null)).toBe(false);
+    expect(isRestricted(new Set(all))).toBe(false);
+    for (const f of [PRINT, MODIFY, COPY]) expect(isRestricted(new Set(all.filter((x) => x !== f))), String(f)).toBe(true);
+  });
+});
+
 describe('lock password rule and limits (limits.ts)', () => {
   it(`${PASSWORD_MIN}–${PASSWORD_MAX} characters (code points), typed twice the same; Korean allowed`, () => {
     expect(lockPasswordError('', '')).toBe('empty');
@@ -124,7 +167,11 @@ describe('flow (flow.ts, brief decision 13)', () => {
   it('lock only a file without encryption; a password-protected one is sent to 암호 풀기; an owner-limited one stops', () => {
     expect(decide('lock', 'none')).toEqual({ step: 'ask' });
     expect(decide('lock', 'user')).toEqual({ step: 'stop', code: 'already-encrypted', message: '이미 암호가 걸린 파일입니다. 먼저 암호를 풀어 주세요.', offerUnlock: true });
-    expect(decide('lock', 'owner')).toMatchObject({ step: 'stop', code: 'already-encrypted', offerUnlock: false });
+    expect(decide('lock', 'owner')).toEqual({ step: 'stop', code: 'already-encrypted', message: STOP_MESSAGES.restricted, offerUnlock: false });
+    // T4 round 2: encrypted but everything allowed gets its own reason (no "사용 제한" it does not have).
+    expect(decide('lock', 'encrypted')).toEqual({ step: 'stop', code: 'already-encrypted', message: STOP_MESSAGES.encrypted, offerUnlock: false });
+    expect(STOP_MESSAGES.encrypted).not.toContain('제한');
+    expect(decide('unlock', 'encrypted')).toMatchObject({ step: 'stop', code: 'not-encrypted' });
   });
 
   it('output names: {base}_암호.pdf / {base}_암호해제.pdf, unsafe characters removed', () => {

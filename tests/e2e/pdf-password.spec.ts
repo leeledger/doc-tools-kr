@@ -5,7 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Download, Page } from '@playwright/test';
-import { KEEP_NOTE, SIGNATURE_NOTE, STOP_MESSAGES } from '../../src/tools/pdf-password/flow';
+import { KEEP_NOTE, LIMITS_NOTE, SIGNATURE_NOTE, STOP_MESSAGES } from '../../src/tools/pdf-password/flow';
 import { withPdf } from '../helpers/pdf';
 import { expect, gotoReady, test } from './no-upload';
 import { RUNTIME_DIR, fixturePath, runtimePath } from './paths';
@@ -79,6 +79,8 @@ test('lock with a Korean password, then unlock that file: AES-256 output checked
   const unlocked = await save(page);
   expect(unlocked.name).toBe('pdf_password_locked_암호해제.pdf');
   await expect(page.locator('#pp-headline')).toHaveText('암호를 푼 PDF가 준비되었습니다');
+  // Our own lock allows everything: no limits note.
+  await expect(page.locator('#pp-notes')).toBeHidden();
   expect(await pdfOpen(unlocked.bytes)).toBe(pages);
   await withPdf(unlocked.bytes, async (doc) => expect(await doc.getPermissions()).toBeNull());
 });
@@ -122,6 +124,30 @@ test('an owner-limited PDF in 암호 걸기 stops: no new password over its limi
   await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'stop');
   await expect(page.locator('#pp-stop-text')).toHaveText(STOP_MESSAGES.restricted);
   await expect(page.locator('#pp-switch')).toBeHidden();
+});
+
+test('an encrypted PDF that allows everything (no open password) in 암호 걸기: its own reason, no "사용 제한" (T4 round 2)', async ({ page }) => {
+  await open(page, '암호 걸기', runtimePath('owner_restricted'));
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'stop');
+  await expect(page.locator('#pp-stop-text')).toHaveText(STOP_MESSAGES.encrypted);
+  await expect(page.locator('#pp-switch')).toBeHidden();
+});
+
+test('unlocking a PDF with an open password AND use limits: the result says the limits are not kept (T4 round 2)', async ({ page }) => {
+  await open(page, '암호 풀기', runtimePath('userpw_no_copy'));
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'ask');
+  await page.locator('#pp-pw').fill('1234');
+  await page.locator('#pp-pw').press('Enter');
+  const out = await save(page);
+  expect(out.name).toBe('userpw_no_copy_암호해제.pdf');
+  await expect(page.locator('#pp-notes')).toContainText(LIMITS_NOTE);
+  expect(await pdfOpen(out.bytes)).toBe(7);
+});
+
+test('a password pasted as NFD locks as NFC: the saved file opens with the NFC spelling (T4 round 2)', async ({ page }) => {
+  const nfd = KOREAN.normalize('NFD');
+  const locked = await lock(page, PLAIN, nfd);
+  expect(await pdfOpen(locked.bytes, KOREAN.normalize('NFC'))).toBe(await pdfOpen(new Uint8Array(readFileSync(PLAIN))));
 });
 
 test('a signed PDF: the signature warning is shown before the download', async ({ page }) => {

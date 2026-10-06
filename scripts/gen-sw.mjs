@@ -44,6 +44,8 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * per page (cloud): / 19.3, /hwp-viewer/ 22.4, /stamp-signature/ 24.5, /pdf-merge/ 33.1, /hwp-to-pdf/ 35.2,
  * /pdf-compress/ 39.8, /photo-compress/ 46.2, /id-photo/ 63.9 KB. /hwp-viewer/ leaves (the smallest change that fits,
  * home kept): it cannot open a file offline on a first visit anyway, because its 9.7 MB rhwp wasm is never precached.
+ * T4 round 2 (review): returning visitors keep offline use: /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/ and /hwp-viewer/
+ * are in sw.ts RUNTIME_PAGES (stored when visited; their scripts and /vendor/ engines are runtime-cached on first use).
  */
 export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
 

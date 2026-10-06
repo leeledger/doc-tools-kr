@@ -7,6 +7,8 @@
 import type { OpenedPdf } from '../../lib/pdf/inspect';
 import type { PasswordRequest, PasswordResponse } from '../../lib/pdf/password.worker';
 import { isOutOfMemory } from '../../lib/pdf/errors';
+import { normalizePassword } from '../../lib/pdf/password';
+import { isRestricted } from '../../lib/pdf/permissions';
 import { announce, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
@@ -17,7 +19,7 @@ import { bindPasswordToggle } from '../../lib/ui/password';
 import { isPdfFile } from '../../lib/ui/pdf-pick';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { PASSWORD_MESSAGES, fileLimitMessage, lockPasswordError } from './limits';
-import { KEEP_NOTE, SIGNATURE_NOTE, decide, outputName, type Action, type FileKind } from './flow';
+import { KEEP_NOTE, LIMITS_NOTE, SIGNATURE_NOTE, decide, outputName, type Action, type FileKind } from './flow';
 
 type State = 'empty' | 'opening' | 'ask' | 'stop' | 'working' | 'done';
 
@@ -187,7 +189,8 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
       if (id !== runId) return;
       bytes = b;
       // pdf.js getPermissions() is null for a file without encryption (no /Encrypt with /P).
-      kind = !opened ? 'user' : (await opened.doc.getPermissions()) ? 'owner' : 'none';
+      const perms = opened ? await opened.doc.getPermissions() : null;
+      kind = !opened ? 'user' : !perms ? 'none' : isRestricted(perms) ? 'owner' : 'encrypted';
       pageCount = opened?.doc.numPages ?? 0;
     } catch (err) {
       if (id !== runId) return;
@@ -233,7 +236,7 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
 
   function submitUnlock(): void {
     if (state !== 'ask' || action() !== 'unlock') return;
-    const pw = pwInput.value;
+    const pw = normalizePassword(pwInput.value);
     if (!pw) {
       unlockError.textContent = PASSWORD_MESSAGES.empty;
       pwInput.focus();
@@ -245,7 +248,8 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
 
   function submitLock(): void {
     if (state !== 'ask' || action() !== 'lock') return;
-    const problem = lockPasswordError(newInput.value, againInput.value);
+    const password = normalizePassword(newInput.value);
+    const problem = lockPasswordError(password, normalizePassword(againInput.value));
     if (problem) {
       lockError.textContent = PASSWORD_MESSAGES[problem];
       status(PASSWORD_MESSAGES[problem]);
@@ -253,7 +257,7 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
       return;
     }
     lockError.textContent = '';
-    run('lock', newInput.value);
+    run('lock', password);
   }
 
   /** One qpdf attempt (one press = one attempt: the state leaves 'ask' at once). */
@@ -261,6 +265,7 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
     if (!bytes || !file) return;
     const id = ++runId;
     const source = file;
+    const input = bytes;
     const expectedPages = pageCount;
     track({ e: 'start', t: 'pdf-password', o: 'action', v: act });
     setState('working');
@@ -277,7 +282,7 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
       answered = true;
       const msg = ev.data;
       stopWorker();
-      if (msg.type === 'done') void check(id, act, password, msg.bytes, msg.signed, expectedPages, source);
+      if (msg.type === 'done') void check(id, act, password, input, msg.bytes, msg.signed, expectedPages, source);
       else failed(act, msg.code);
     };
     w.onerror = (ev) => {
@@ -291,10 +296,11 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
   }
 
   /** pdf.js checks the result before anything is offered (brief flow T4; never a falsely "locked" file). */
-  async function check(id: number, act: Action, password: string, out: Uint8Array, signed: boolean, expectedPages: number, source: File): Promise<void> {
+  async function check(id: number, act: Action, password: string, input: Uint8Array, out: Uint8Array, signed: boolean, expectedPages: number, source: File): Promise<void> {
     try {
       const { openPdf } = await loadInspect();
       let pages = expectedPages;
+      let limitsDropped = false;
       if (act === 'lock') {
         const without = await openPdf(out, undefined).catch(() => undefined);
         if (without !== null) {
@@ -303,19 +309,37 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
         }
         const withPw = await openPdf(out, password);
         if (!withPw) throw new VerifyError('the locked file did not open with its password');
-        const n = withPw.doc.numPages;
-        await withPw.close().catch(() => undefined);
+        let n: number;
+        try {
+          n = withPw.doc.numPages;
+        } finally {
+          await withPw.close().catch(() => undefined);
+        }
         if (n !== expectedPages) throw new VerifyError('page count changed');
       } else {
         const o = await openPdf(out, undefined);
         if (!o) throw new VerifyError('the unlocked file still asks for a password');
-        pages = o.doc.numPages;
-        const perms = await o.doc.getPermissions();
-        await o.close().catch(() => undefined);
+        let perms: Set<number> | null;
+        try {
+          pages = o.doc.numPages;
+          perms = await o.doc.getPermissions();
+        } finally {
+          await o.close().catch(() => undefined);
+        }
         if (perms) throw new VerifyError('the unlocked file is still encrypted');
+        // The original's use limits, read with the typed password: the saved file no longer carries them.
+        const orig = await openPdf(input, password).catch(() => null);
+        if (orig) {
+          try {
+            // A failed read only skips the notice; the verified unlock is still offered (Review T4 round 2).
+            limitsDropped = isRestricted(await orig.doc.getPermissions().catch(() => null));
+          } finally {
+            await orig.close().catch(() => undefined);
+          }
+        }
       }
       if (id !== runId) return;
-      finish(act, out, signed, pages, source);
+      finish(act, out, signed, pages, source, limitsDropped);
     } catch (err) {
       if (id !== runId) return;
       if (isOutOfMemory(err)) failed(act, 'oom');
@@ -352,7 +376,7 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
     status('취소했습니다. 파일은 그대로 있습니다.');
   }
 
-  function finish(act: Action, out: Uint8Array, signed: boolean, pages: number, source: File): void {
+  function finish(act: Action, out: Uint8Array, signed: boolean, pages: number, source: File, limitsDropped: boolean): void {
     revokeBlob();
     const blob = new Blob([out as Uint8Array<ArrayBuffer>], { type: 'application/pdf' });
     blobUrl = URL.createObjectURL(blob);
@@ -361,7 +385,7 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
     download.download = outputName(source.name, act);
     headline.textContent = act === 'lock' ? '암호를 건 PDF가 준비되었습니다' : '암호를 푼 PDF가 준비되었습니다';
     summary.textContent = `${formatPages(pages)} · ${formatSize(blob.size)}${act === 'lock' ? ' · 열 때 비밀번호 필요' : ' · 비밀번호 없이 열림'}`;
-    const lines = [...(signed ? [SIGNATURE_NOTE] : []), ...(act === 'lock' ? [KEEP_NOTE] : [])];
+    const lines = [...(signed ? [SIGNATURE_NOTE] : []), ...(limitsDropped ? [LIMITS_NOTE] : []), ...(act === 'lock' ? [KEEP_NOTE] : [])];
     notes.replaceChildren(
       ...lines.map((t) => {
         const li = document.createElement('li');
