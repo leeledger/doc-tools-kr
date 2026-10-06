@@ -14,7 +14,7 @@ import { baseName, formatPages, formatSize } from '../../lib/ui/format';
 import { passwordToggle } from '../../lib/ui/password';
 import { nonPdfMessage, splitPdfFiles } from '../../lib/ui/pdf-pick';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
-import { startRowDrag } from './drag';
+import { startRowDrag } from '../../lib/ui/reorder';
 import { mergedFileName } from './format';
 import { MAX_FILES, checkAddBytes, checkFileCount, checkMerge } from './limits';
 

@@ -2058,3 +2058,98 @@ Status: **DONE**. Committed, not pushed.
 - Richard: clear, 0 Must Fix. Should Fix 1 (no Content-Length over HTTP/2·3 → 413) fixed: the body is measured when the header is absent (functions/api/usage.ts, unit tests added). Should Fix 2: set `PRIVACY_USAGE` and `PRIVACY_TERMS_UPDATED` to the day the flag goes on (owner step).
 - Owner decisions: CLAUDE.md lines 3/12–14 updated by the orchestrator on the owner's go-ahead (usage beacon, Web Analytics exception, copy rule). TOOLS4 E1 (white background on /id-photo/): no. E2 (libheif for HEIC): decide after usage stats show HEIC failures.
 - Committed and pushed to main on the owner's go-ahead. Next: TOOLS4 (handoff/ARCHITECT-BRIEF-TOOLS4.md) T0 → T4.
+
+## TOOLS4 — brief (Arch, 2026-10-06; `handoff/ARCHITECT-BRIEF-TOOLS4.md`; copied here by Bob at T0 start)
+- 2026-10-06 Arch: TOOLS4 brief written (owner task: 시장 조사 1-4위). Order T0, T1, T2, T3, T4.
+- Locked: no flags for T2-T4; no new dependencies; no libheif (licence rule); no background whitening in /id-photo/
+  (외교부 quotes, the no-edit promise, the owner's cloud rule); new preset kind `print`; official head band needs
+  `bandQuote` and carries `measure`; square presets without a head rule are not shipped; qpdf AES-256 lock/unlock with
+  pdf.js verification; unlock only with a typed password, no restriction removal; signature warning in T4.
+- Open escalations: E1 (배경 흰색 option B), E2 (libheif LGPL exception).
+- Owner decisions (2026-10-06, via the orchestrator): E1 = default (no 배경 흰색 on /id-photo/); E2 = default (no libheif).
+
+## TOOLS4 T0 build notes (Bob, 2026-10-06; worktree `C:\dev\doc-tools\c2`, branch `c2-cloud` = origin/main 63c6ac6) — status DONE
+**Files (T0 only; separate commit)**
+- Moved: `src/tools/pdf-merge/drag.ts` → `src/lib/ui/reorder.ts` (header comment only; pdf-merge controller import). No test imported it.
+- Moved: `src/lib/pdf/compress/qpdf-run.ts` → `src/lib/pdf/qpdf/qpdf-run.ts`; it now owns `QpdfResult` and a new `QpdfRun` type (compress/deps.ts re-exports `QpdfResult`; `CompressDeps.qpdf: QpdfRun`). New `src/lib/pdf/qpdf/load.ts` holds `QPDF_VENDOR_DIR`, `loadQpdf`, `warmQpdf` (moved verbatim from compress/wasm-browser.ts, which keeps only `loadCodecs`). Importers: compress.worker.ts, tests/helpers/compress-deps.ts, tests/unit/compress-helpers.test.ts, scripts/copy-vendor.mjs (comment + error text).
+- New: `src/lib/pdf/page-range.ts` `parseRange(text, pageCount)` → `{ ok: true, pages }` (sorted, unique, 1-based) or `{ ok: false, error: 'empty' | 'out-of-range' | 'reversed' | 'junk' }`; accepts `-‐‑–—~～` as the dash, `,` / `，` / spaces as separators, spaces around the dash. `tests/unit/page-range.test.ts` (7 cases).
+
+**Sizes:** every `_astro/*.js` chunk byte-identical to the pre-T0 build (compress.worker 629,474 B raw before and after: 0 %); precache 429.8 / 450 KB (unchanged).
+
+**Gates:** astro check 0 errors / 0 warnings / 1 old hint; unit 48 files, 955 passed; default build check-dist OK; e2e chromium pdf-merge + pdf-compress 17 passed / 2 skipped (polish drag tests ran in the T1 chromium run below).
+
+## TOOLS4 Step 0 — preset sourcing (Bob, 2026-10-06; Node fetch with the source-watch bot UA, which is what `check:quotes` does; curl to diagnose)
+Rule applied: a preset ships only if `npm run check:quotes` (bot-UA Node fetch, `pageTextExact`) reads its quote verbatim. Presets have no `via: browser` path, so a source only a browser can read cannot back a preset; chrome-cdp was therefore not used.
+
+| Candidate | URL | Result | Decision |
+|---|---|---|---|
+| 주민등록증 | https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000013 | 200, 206,087 B: "6개월 이내에 촬영한 3.5㎝×4.5㎝의 모자 등을 쓰지 않은 상반신 사진 1장"; no pixels, KB or head rule | **shipped** `id_card` (print, reference band) |
+| 주민등록증 재발급 | https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000018 | 200, 206,743 B: same sentence | second source of `id_card` |
+| 운전면허 | https://www.safedriving.or.kr/diGuide/selectDiGuide01.do?menuCd=MN-PO-1211 | 200, 122,080 B: "6개월 이내 촬영한 컬러 사진 (규격 3.5cm*4.5cm, 여권용)" | **shipped** `driver_license` (print, reference band) |
+| 운전면허 사진 규격 팝업 | https://www.safedriving.or.kr/commonManage/selectCommonPhotoRulePop.do | 200, 2,618 B. The digital spec (500KB 이하 JPG, 413×531 권장, 395~431 × 507~550, 머리 길이 3.2~3.6cm) is only in an `<img alt>`; `pageTextExact` drops alt text, so check:quotes cannot see it | not used (Escalation T1-a) |
+| 운전면허 사진 등록 | https://www.safedriving.or.kr/drvLicnsPhotoUpdt/selectDrvLicnsPhotoUpdtTerms.do?menuCd=MN-PO-1225 | redirect to a login page (500) | not used |
+| 미국 비자 | https://travel.state.gov/content/travel/en/us-visas/visa-information-resources/photos.html | 403, Cloudflare block page (bot UA; also a desktop Chrome UA from curl) | **left out** |
+| 미국 비자 | https://kr.usembassy.gov/ko/visas-ko/ | Node `UND_ERR_HEADERS_OVERFLOW` (response headers 16,720 B > Node's 16 KB limit); curl 200, 172,296 B, no photo spec; the nonimmigrant pages are 404 | **left out** |
+| 일본 비자 | https://www.kr.emb-japan.go.jp/itpr_ko/visa.html (also /visa/visa_index.html, /itpr_ko/00_000062.html), https://www.mofa.go.jp/j_info/visit/visa/index.html | 403 Akamai "Access Denied" (any UA) | **left out** |
+| 일본 eVISA | https://www.evisa.mofa.go.jp/ | 200, 46,838 B; only for residents of 9 listed countries (not Korea); spec behind script | **left out** |
+| 중국 비자 | https://kr.china-embassy.gov.cn/kor/lsfw/lszj/202303/t20230331_11052404.htm ("4. 중국 비자 신청 사진 규격") | 200, 5,799 B; the spec is one image (W020230331569672791869.png), no text | **left out** |
+| 중국 비자 센터 (named by the embassy notice t20250623_11655011) | https://www.visaforchina.cn/SEL5_KO/qianzhengyewu and …/jichuzhishi/changjianwenti | 200; the FAQ answer on the photo loads by script; no photo numbers in the HTML | **left out** |
+| 베트남 | https://evisa.gov.vn/ | Node `UNABLE_TO_VERIFY_LEAF_SIGNATURE` (incomplete chain); curl 200, 5,830 B script shell | **left out** |
+| 베트남 | https://evisa.xuatnhapcanh.gov.vn/, https://vnembassy-seoul.mofa.gov.vn/ | 200; no photo spec in the HTML | **left out** |
+| 인도 | https://indianvisaonline.gov.in/evisa/tvoa.html | 200, 192,667 B: "Format - JPEG Size Minimum 10 KB Maximum 1 MB The height and width of the Photo must be equal. … Center head within frame and present full head from top of hair to bottom of chin". Square, no pixel size, no numeric head rule | **left out** (decision 6: square without a head rule) |
+| 인도 대사관 | https://www.eoiseoul.gov.in/ | Node fetch failed | not used |
+| Drafts toeic / mma / local-gosi / teacher-exam | exam.toeic.co.kr csFaq p3 (200, 42,267 B), mma.go.kr mma0000386 (200, 152,752 B), local.gosi.go.kr main (200, 1,063 B queue page), edurecruit.go.kr (200, script shell) | no pixels or KB, as on 2026-10-02 | stay drafts |
+
+"No digital alteration" visa lines: none quoted (no visa source readable).
+
+## TOOLS4 T1 build notes (Bob, 2026-10-06) — status DONE (2 presets shipped; 0 visa presets per Step 0)
+**Files**
+- `src/data/id-photo-presets.ts`: `PresetStatus` += `print`; `PRESET_GROUPS` and `group` on every preset; `HeadBand.measure` ('crown' | 'hair') and `bandQuote`; `printPx`, `cmLabel`, `PRINT_PPI`, `isSourced`; new presets `id_card`, `driver_license` (413×531 = 35×45 mm at 300, no KB limit, reference band, group 여권·신분증); the passport band gets its `bandQuote` (a substring of its quote). `validatePreset`: print = mm + 300 ppi on both axes + label ends "(인화용 W×H cm)" + quote + URL; an official band needs a non-empty `bandQuote` inside `quote`; a reference band carries none; measure and group valid; a reference band on an aspect more than 1.5 % from 35:45 is rejected, except the six pre-TOOLS4 presets (explicit `REFERENCE_ASPECT_EXEMPT`: history, korcham, teps, saramin, jobkorea, half_card) and 직접 입력.
+- `src/data/preset-ids.ts`, `scripts/lib/usage.mjs` (`PRESETS`; `VALUE_LABELS` 주민등록증 (인화용) / 운전면허증 (인화용)).
+- `scripts/ops/lib/guides.mjs`: `parsePresets` reads `print` presets too, so check:quotes covers them. `scripts/gen-ui-font.mjs`: `bandQuote` is stripped like `quote`.
+- `src/data/guide-schema.ts`: a `print` preset counts as an official source.
+- `src/pages/id-photo/index.astro`: one `<optgroup>` per non-empty group (비자 is empty, so 4 groups), 직접 입력 inside 기타; result notice `#idp-print`. `src/tools/id-photo/controller.ts`: `COPY.print` "사진관이나 인화 앱에서 3.5×4.5 cm로 인화하세요." for print presets. `src/tools/id-photo/overlay.ts`: the top label follows `measure` (`hair` = "머리 맨 위(머리카락 포함)"; no shipped preset uses it).
+- `src/data/tools.ts` id-photo: the FAQ 4 sentence on 주민등록증·운전면허증 replaced ("「인화용」이라고 적힌 곳은 기관이 종이 사진 크기만 정해 두어, 그 크기로 인화할 수 있는 파일로 맞춥니다. 목록에 없는 곳은 …"); FAQ 3 unchanged word for word; description unchanged (no visa shipped); `updated` 2026-10-06.
+- Guides: `id-card-photo`, `driver-license-photo` (cta → `?preset=id_card` / `?preset=driver_license`, the file section rewritten, `updated`); hub `photo-sizes` (one bullet on print presets, `updated`). No new guide (no visa preset).
+- Tests: idphoto-core (ids, names, dpi, band rules, print rules, groups), guides-schema (print counts as sourced; quick links now passport_online, id_card, history, gosi, qnet, korcham, driver_license, teps), ops (print parse; bandQuote not read as the quote), e2e id-photo (optgroups + `?preset=id_card` end to end with the print note; the keyboard test now lands on id_card; the passport flow asserts no print note).
+
+**Decisions taken under "never stop"**
+- Visa presets: none shipped (Step 0 table). 비자 stays in `PRESET_GROUPS` and renders nothing while empty.
+- `minBytes`: not implemented. The brief makes it conditional on a shipped preset quoting a minimum; none does (India's "Minimum 10 KB" did not ship).
+- The 1.5 %-of-35:45 rule for reference bands would reject six presets shipped in Step 4 / G2 (3:4, 4:5, 5:7). They are grandfathered by id; every new preset gets the rule. Flagged for Richard / Arch.
+- Print presets' pixels are computed (`printPx`), so the guides do not take them as a source (presetFacts would let a guide print 413×531 as if official); both guides keep their URL sources and only link the presets.
+- Copy that prints "32–36 mm" (readout, warnings, overlay "규격 32–36 mm") still assumes the passport band. True for every shipped preset; derive it from the band when the first non-passport band ships (Known Gap).
+
+**Escalations**
+- T1-a: the 도로교통공단 popup states the digital spec (500KB, 413×531, 머리 길이 3.2~3.6cm) only in `<img alt>`. If check:quotes read `alt` text, `driver_license` could become an `official` preset with a 500 KB limit and an official band. Not done (scope: a source-watch change).
+- T1-b: no visa source is readable by check:quotes from this network (Cloudflare / Akamai blocks, Node's header limit, a broken TLS chain, an image-only spec). Options for Arch: a browser-read path for presets (`via: browser` + the manual table, as guides have), or no visa presets in TOOLS4.
+
+**Known Gaps**
+- Readout / warning / overlay "32–36 mm" strings are passport-band literals (above).
+- regress:idphoto 10/11: the known p07 chin −1.11 mm landmark miss (auto-frame only, unchanged since Step 4).
+
+**Gates (2026-10-06, local, Windows)**
+- astro check: 0 errors, 0 warnings, 1 old hint. Unit: 48 files, 961 passed. check:quotes: "140 quotes verbatim" (the watch list includes `preset id_card` and `preset driver_license`).
+- Builds: default (moved to `dist-noauto`) check-dist OK, 2,372 files, precache 432.4 / 450 KB, UI font 621 characters (+2), initial JS /id-photo/ 11.6 / 30 KB (was 11.1); auto-frame (`PUBLIC_ID_PHOTO_AUTOFRAME=1`, `dist`) check-dist OK, 2,379 files, precache 434.5 / 450 KB.
+- regress:idphoto --fixtures-only: exact output 134/134 files (every preset incl. id_card, driver_license); 10/11 checks (p07, known).
+- e2e: id-photo chromium + manual-chromium 61 passed / 15 skipped; full chromium project 235 passed / 13 skipped (includes pdf-merge, pdf-compress, polish, growth, site, hubs).
+
+## TOOLS4 T1 round 2 (Bob, 2026-10-06; owner decisions via the orchestrator + Richard's two Should Fix) — status DONE
+**Owner decisions:** T1-b: no visa presets in TOOLS4 (T1 done with id_card + driver_license). T1-a: yes, check:quotes reads image alt text and `driver_license` becomes official. The six-id `REFERENCE_ASPECT_EXEMPT` list stays.
+
+**Changes**
+- `scripts/ops/lib/html.mjs`: new `withAltText(html)`: each `<img>` becomes its `alt` text between breaks; quoted attribute values may hold `>`; entities are decoded later with the page. `pageText` and `pageTextExact` use it (shared `withoutCode`), so both the weekly source-watch and `check:quotes` (`--exact`) see alt text. Imgs inside script/template are still removed first. Unit test in ops.test.ts.
+- `src/data/id-photo-presets.ts`, `driver_license`: now `official`, label "운전면허증 (적성검사·갱신)", 413×531, `pxRange` 395–431 × 507–550, 500 KB 이하 (`limitBytes(500,'le')`), mm 35×45, dpi 300, official band `measure: 'crown'`, 32–36 mm of 45 (= the passport band), `bandQuote` "머리 길이가 정수리(머리 최상부)부터 턱까지 3.2~3.6cm 사이인 사진". Sources: the guide page MN-PO-1211 (shown link; its 「허용되는 사진 규격」 button opens the popup) + `https://www.safedriving.or.kr/commonManage/selectCommonPhotoRulePop.do`. Quote, verified verbatim by check:quotes: "6개월 이내 촬영한 컬러 사진 (규격 3.5cm*4.5cm, 여권용) / 머리 길이가 정수리(머리 최상부)부터 턱까지 3.2~3.6cm 사이인 사진 … 온라인 신청시:파일 크기 500KB 이하의 JPG파일, 가로 413 픽셀(pixel), 세로 531 픽셀 권장, *가로 395~431, 세로 507~550 필셀 이내만 업로드 가능, 300dpi 해상도 권장" (the "필셀" typo is the agency's). Popup fetch: 200, 2,618 B.
+- The band equals the passport's, so the "32–36 mm" screen copy stays correct; the derive-from-band change was not needed (it remains a Known Gap for a future non-passport band).
+- Richard SF1: header comment no longer lists 주민등록증 / 운전면허증 as dropped and no longer points to FAQ 4 for them. SF2: `validatePreset` rejects an official band on a preset that is not `official`/`print` (`isSourced`).
+- `scripts/lib/usage.mjs`: `VALUE_LABELS.driver_license` = "운전면허증".
+- Guide `driver-license-photo`: `- preset: driver_license` added to sources; the file section and FAQ "사진 파일을 미리 등록할 수 있나요?" now give 500KB 이하 JPG, 413×531 권장, 머리 길이 3.2~3.6cm (all from the preset quote) and say to print at 3.5×4.5 cm if a paper photo is needed. Hub `photo-sizes`: the print-preset bullet names 주민등록증 only.
+- Tests: idphoto-core (print = id_card only; driver_license official test; official bands = passport + driver_license; SF2 case), guides-schema (print-source case uses id_card), ops (alt text).
+- FAQ 4 sentence on 「인화용」 still true (id_card); FAQ 3 untouched.
+
+**Gates (2026-10-06):** astro check 0 errors / 0 warnings; unit 48 files, 963 passed; check:quotes "142 quotes verbatim" (was 140: +2 driver_license fragments from the popup alt text); default build (→ dist-noauto) check-dist OK, precache 432.8 / 450 KB, UI font 621 characters; auto-frame build (dist) check-dist OK, 2,379 files, precache 435.0 / 450 KB, initial JS /id-photo/ 11.7 / 30 KB; regress:idphoto fixtures 134/134 exact (10/11, known p07); e2e id-photo chromium + manual-chromium 61 passed / 15 skipped; growth + hubs + site chromium 63 passed.
+
+**TOOLS4 T0+T1 — deploy gate (2026-10-06)**
+- Richard: clear (round 1 and round 2, 0 Must Fix). Round-2 Should Fix (guide called the 공단 popup's "온라인 신청시" 「적성검사 사진 등록」) fixed by the orchestrator in driver-license-photo.md line 67.
+- Owner decisions: no visa presets in TOOLS4; check:quotes reads img alt (driver_license official).
+- Committed and pushed to main on the owner's go-ahead. Next: T2 /jpg-to-pdf/.

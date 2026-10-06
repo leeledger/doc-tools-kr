@@ -112,12 +112,28 @@ export function internalLinks(html, pageUrl) {
   return [...out];
 }
 
-/** Visible text of a page: scripts, styles and tags removed, entities decoded, whitespace collapsed. */
+/** An <img> tag; quoted attribute values may hold ">" (an agency may write a whole rule into an alt text). */
+const IMG = /<img\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+const ALT = /(?:^|\s)alt\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
+
+/**
+ * Each <img> replaced by its alt text between breaks (TOOLS4 T1-a): alt text is the page's own accessible text,
+ * and some agencies publish a spec only there (도로교통공단's photo rule popup). Entities stay encoded; the
+ * callers decode them with the rest of the page.
+ */
+export const withAltText = (html) =>
+  html.replace(IMG, (tag) => {
+    const m = ALT.exec(tag);
+    const alt = m ? (m[1] ?? m[2] ?? m[3] ?? '') : '';
+    return alt ? ` ${alt} ` : ' ';
+  });
+
+/** Comments and script, style, noscript and template elements removed. */
+const withoutCode = (html) => html.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1\s*>/gi, ' ');
+
+/** Visible text of a page: scripts, styles and tags removed (image alt text kept), entities decoded, whitespace collapsed. */
 export function pageText(html) {
-  const noCode = html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1\s*>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ');
+  const noCode = withAltText(withoutCode(html)).replace(/<[^>]+>/g, ' ');
   return decodeEntities(noCode).replace(/\s+/g, ' ').trim();
 }
 
@@ -126,13 +142,12 @@ const INLINE = /^(?:a|abbr|b|bdi|bdo|cite|code|data|dfn|em|font|i|kbd|label|mark
 
 /**
  * Visible text for the exact (publish-gate) check, G2 A1: an inline tag joins its neighbours with nothing, any
- * other tag is a break; entities decoded; every whitespace run (nbsp included) becomes one space. Unlike
- * `pageText` + `findQuote`, this never invents or drops a space inside a word.
+ * other tag is a break (an <img> becomes its alt text between breaks); entities decoded; every whitespace run
+ * (nbsp included) becomes one space. Unlike `pageText` + `findQuote`, this never invents or drops a space inside
+ * a word.
  */
 export function pageTextExact(html) {
-  const noCode = html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1\s*>/gi, ' ')
+  const noCode = withAltText(withoutCode(html))
     .replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (_, name) => (INLINE.test(name) ? '' : ' '))
     .replace(/<[^>]+>/g, ' ');
   return exactForm(decodeEntities(noCode));

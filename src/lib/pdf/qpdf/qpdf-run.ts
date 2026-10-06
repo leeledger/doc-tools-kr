@@ -1,10 +1,21 @@
 // One qpdf CLI run in a fresh Emscripten module instance (its heap is released afterwards).
-// Shared by the browser worker and the Node deps.
+// Shared by the browser workers (src/lib/pdf/qpdf/load.ts) and the Node deps (tests/helpers/compress-deps.ts).
 // The qpdf-wasm 0.3.0 build binds console.log / console.error for its output when the factory runs
 // (its INCOMING_MODULE_JS_API has no print/printErr), so the run captures them around that call.
 import { EngineLoadError } from '../../ui/engine-load';
 import { isOutOfMemory } from '../errors';
-import type { QpdfResult } from './deps';
+
+export interface QpdfResult {
+  /** Process exit code (0 = ok, 3 = ok with warnings). */
+  code: number;
+  /** Contents of the output file, or null when qpdf wrote none. */
+  out: Uint8Array | null;
+  /** stdout/stderr lines. Only ever mapped to error codes; never returned to the UI or logged. */
+  logs: string[];
+}
+
+/** Runs the qpdf CLI once in a fresh module instance with `input` at `in.pdf`; reads `out.pdf`. */
+export type QpdfRun = (args: string[], input: Uint8Array) => Promise<QpdfResult>;
 
 export interface QpdfModule {
   FS: { writeFile(path: string, data: Uint8Array): void; readFile(path: string): Uint8Array };

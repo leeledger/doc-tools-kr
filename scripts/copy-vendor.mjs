@@ -49,11 +49,11 @@ if (existsSync(nm('pdfjs-dist', 'wasm'))) {
 // The glue is the original dist/qpdf.js followed by `export default Module;` (its UMD tail does
 // nothing when `module` and `define` are undefined). The compress worker imports it at runtime with
 // a /* @vite-ignore */ dynamic import, so Vite never bundles it. The directory name must match
-// QPDF_VENDOR_DIR in src/lib/pdf/compress/wasm-browser.ts (unit-tested).
+// QPDF_VENDOR_DIR in src/lib/pdf/qpdf/load.ts (unit-tested).
 const QPDF_WRAPPER = '0.3.0';
 const QPDF_VENDOR_DIR = '12.2.0-w0.3.0';
 if (version('@neslinesli93/qpdf-wasm') !== QPDF_WRAPPER) {
-  throw new Error(`copy-vendor: @neslinesli93/qpdf-wasm is ${version('@neslinesli93/qpdf-wasm')}, expected ${QPDF_WRAPPER}; update QPDF_VENDOR_DIR here and in wasm-browser.ts`);
+  throw new Error(`copy-vendor: @neslinesli93/qpdf-wasm is ${version('@neslinesli93/qpdf-wasm')}, expected ${QPDF_WRAPPER}; update QPDF_VENDOR_DIR here and in src/lib/pdf/qpdf/load.ts`);
 }
 const qpdfOut = pub('vendor', 'qpdf', QPDF_VENDOR_DIR);
 rmSync(pub('vendor', 'qpdf'), { recursive: true, force: true });

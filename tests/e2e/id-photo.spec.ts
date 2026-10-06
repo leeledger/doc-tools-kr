@@ -198,6 +198,7 @@ test('happy path: passport from portrait_pd — overlay, readout in band, save g
   expectSpec(bytes, 413, 531, 500_000, 300);
   await expect(page.locator('#idp-headline')).toHaveText(/^규격에 맞췄습니다 · [\d.]+ KB$/);
   await expect(page.locator('#idp-chips li')).toHaveText(['여권 (온라인 신청·정부24)', '413×531픽셀', '500 KB 이하', '촬영 위치 등 사진 정보 없음']);
+  await expect(page.locator('#idp-print')).toBeHidden();
 });
 
 // ---------- 3 every preset ----------
@@ -238,6 +239,24 @@ for (const id of ['history', 'korcham', 'teps', 'kuksiwon']) {
     expectSpec(bytes, p.outW, p.outH, p.limitBytes, p.dpi);
   });
 }
+
+// TOOLS4 T1: the select groups its presets (an empty group is left out); a print preset opened from its guide's
+// deep link saves the paper size at 300 and the result says where to print it.
+test('presets in groups; ?preset=id_card: print preset, exact px, the print note', async ({ page }) => {
+  await open(page, '/id-photo/?preset=id_card');
+  const sel = page.locator('#idp-preset');
+  await expect(sel).toHaveValue('id_card');
+  expect(await sel.locator('optgroup').evaluateAll((gs) => gs.map((g) => (g as HTMLOptGroupElement).label))).toEqual(['여권·신분증', '시험·원서', '이력서', '기타']);
+  expect(await sel.locator('optgroup').first().locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value))).toEqual(['passport_online', 'id_card', 'driver_license']);
+  expect(await sel.locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value))).toEqual([...PRESETS.map((p) => p.id), 'custom']);
+  await pick(page, PORTRAIT);
+  await expect(tool(page)).toHaveAttribute('data-state', 'adjust');
+  const { bytes, name } = await save(page);
+  expect(name).toBe('idcard_413x531.jpg');
+  expectSpec(bytes, 413, 531, undefined, 300);
+  await expect(page.locator('#idp-print')).toHaveText('사진관이나 인화 앱에서 3.5×4.5 cm로 인화하세요.');
+  await expect(page.locator('#idp-chips li')).toHaveText(['주민등록증 (인화용 3.5×4.5 cm)', '413×531픽셀', '촬영 위치 등 사진 정보 없음']);
+});
 
 test('custom size: invalid input (49 px, "abc") disables save and shows the message', async ({ page }) => {
   await open(page);
@@ -573,7 +592,7 @@ test('keyboard only: preset, file, adjust, confirm, save, download', async ({ pa
   await open(page);
   await page.locator('#idp-preset').focus();
   await page.keyboard.press('ArrowDown');
-  await expect(page.locator('#idp-preset')).toHaveValue('gosi');
+  await expect(page.locator('#idp-preset')).toHaveValue('id_card');
   await page.setInputFiles('#idp-input', PORTRAIT);
   await expect(tool(page)).toHaveAttribute('data-state', 'adjust', { timeout: 90_000 });
   await expect(page.locator('#idp-stage')).toBeFocused();
@@ -592,8 +611,8 @@ test('keyboard only: preset, file, adjust, confirm, save, download', async ({ pa
   await page.keyboard.press('Tab');
   await expect(page.locator('#idp-download')).toBeFocused();
   const [d] = await Promise.all([page.waitForEvent('download'), page.keyboard.press('Enter')]);
-  expect(d.suggestedFilename()).toBe('gosi_137x177.jpg');
-  expectSpec(new Uint8Array(readFileSync((await d.path())!)), 137, 177, 349_999, 99);
+  expect(d.suggestedFilename()).toBe('idcard_413x531.jpg');
+  expectSpec(new Uint8Array(readFileSync((await d.path())!)), 413, 531, undefined, 300);
 });
 
 // ---------- 14 axe ----------

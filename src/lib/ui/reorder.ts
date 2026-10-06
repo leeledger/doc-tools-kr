@@ -1,7 +1,8 @@
-// Pointer drag reorder for the merge list (brief Polish P.16). Mouse and touch through Pointer Events: the
-// handle captures the pointer (touch-action: none on the handle only), the row follows the pointer, and a
-// placeholder gap marks the drop position. The list's order is never touched here: the drop reports the
-// target index and the controller commits it through the same reorder function as the ↑↓ buttons.
+// Pointer drag reorder for tool lists (brief Polish P.16; moved here from pdf-merge in TOOLS4 T0). Mouse and
+// touch through Pointer Events: the handle captures the pointer (touch-action: none on the handle only), the
+// row follows the pointer, and a placeholder gap marks the drop position. The list's order is never touched
+// here: the drop reports the target index and the controller commits it through the same reorder function as
+// the ↑↓ buttons.
 // Escape cancels and nothing moves. Within 48 px of the viewport edges the page scrolls.
 // The drag always ends: on pointerup (commit), and on pointercancel, a lost pointer capture (for example the
 // row left the DOM) or the page being hidden (cancel), so the auto-scroll loop and listeners never outlive it.

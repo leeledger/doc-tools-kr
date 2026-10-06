@@ -6,7 +6,7 @@ import encode, { init as initEncode } from '@jsquash/jpeg/encode.js';
 import decode, { init as initDecode } from '@jsquash/jpeg/decode.js';
 import initResize, { resize as wasmResize } from '@jsquash/resize/lib/resize/pkg/squoosh_resize.js';
 import { codecDeps, type CompressDeps } from '../../src/lib/pdf/compress/deps';
-import { runQpdf, type QpdfFactory } from '../../src/lib/pdf/compress/qpdf-run';
+import { runQpdf, type QpdfFactory } from '../../src/lib/pdf/qpdf/qpdf-run';
 
 const require = createRequire(import.meta.url);
 

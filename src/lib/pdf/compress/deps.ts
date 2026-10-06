@@ -1,14 +1,9 @@
 // The engine's WASM dependencies, injected so the same engine runs in the browser worker
 // (src/lib/pdf/compress.worker.ts) and in Node (tests/helpers/compress-deps.ts, regress:compress).
 
-export interface QpdfResult {
-  /** Process exit code (0 = ok, 3 = ok with warnings). */
-  code: number;
-  /** Contents of the output file, or null when qpdf wrote none. */
-  out: Uint8Array | null;
-  /** stdout/stderr lines. Only ever mapped to error codes; never returned to the UI or logged. */
-  logs: string[];
-}
+import type { QpdfResult, QpdfRun } from '../qpdf/qpdf-run';
+
+export type { QpdfResult };
 
 export interface JpegOptions {
   quality: number;
@@ -17,8 +12,8 @@ export interface JpegOptions {
 }
 
 export interface CompressDeps {
-  /** Runs the qpdf CLI once in a fresh module instance with `input` at `in.pdf`; reads `out.pdf`. */
-  qpdf(args: string[], input: Uint8Array): Promise<QpdfResult>;
+  /** One qpdf CLI run (src/lib/pdf/qpdf/qpdf-run.ts). */
+  qpdf: QpdfRun;
   /** MozJPEG, progressive, optimized Huffman, 4:2:0 chroma. */
   jpegEncode(img: ImageData, opts: JpegOptions): Promise<Uint8Array>;
   jpegDecode(bytes: Uint8Array): Promise<ImageData>;

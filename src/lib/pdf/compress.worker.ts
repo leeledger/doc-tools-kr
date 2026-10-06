@@ -9,7 +9,8 @@ import { KEEP_ORIGINAL_RATIO, TARGET_SEARCH, type LevelName } from './compress/l
 import { RasterAssembler } from './compress/raster';
 import type { CompressReport, Phase } from './compress/report';
 import { searchTarget } from './compress/target';
-import { loadCodecs, loadQpdf, warmQpdf } from './compress/wasm-browser';
+import { loadCodecs } from './compress/wasm-browser';
+import { loadQpdf, warmQpdf } from './qpdf/load';
 
 export type CompressRequest =
   | { type: 'compress'; bytes: ArrayBuffer; level: LevelName; password?: string; expectedPages: number }

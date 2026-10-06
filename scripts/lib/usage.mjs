@@ -41,7 +41,7 @@ export const DEVICES = ['mobile', 'tablet', 'desktop'];
 export const KB_BUCKETS = ['le100', 'le200', 'le300', 'le500', 'le1000', 'gt1000'];
 export const MB_BUCKETS = ['le1', 'le2', 'le5', 'le10', 'gt10'];
 /** Equal to PRESET_IDS in src/data/preset-ids.ts (a unit test keeps them equal), plus "custom". */
-export const PRESETS = ['passport_online', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea', 'half_card', 'custom'];
+export const PRESETS = ['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea', 'half_card', 'custom'];
 /** Equal to the keys of LEVELS in src/lib/pdf/compress/levels.ts (unit test). */
 export const LEVEL_IDS = ['high', 'recommended', 'strong'];
 export const MODES = ['cloud', 'device'];
@@ -239,6 +239,8 @@ const VALUE_LABELS = {
   strong: '강력',
   cloud: '서버에서',
   device: '이 기기에서',
+  id_card: '주민등록증 (인화용)',
+  driver_license: '운전면허증',
   custom: '직접 입력',
 };
 const label = (map, x) => (Object.hasOwn(map, x) ? map[x] : String(x ?? ''));

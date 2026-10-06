@@ -49,6 +49,13 @@ describe('guides: schema (T4)', () => {
     }
   });
 
+  it('a print preset counts as an official source (TOOLS4 decision 6); an arithmetic one does not', () => {
+    const base = publishedGuideSchema.parse(published.find((g) => g.slug === 'driver-license-photo')!.data);
+    const now = new Date('2026-10-06T12:00:00Z');
+    expect(guideProblems({ ...base, spec: [], sources: [{ preset: 'id_card' }] }, now)).toEqual([]);
+    expect(guideProblems({ ...base, spec: [], sources: [{ preset: 'half_card' }] }, now).join()).toContain('at least one source must link');
+  });
+
   it('every CTA opens a live tool with a valid deep link (or none)', () => {
     for (const g of published) {
       const u = new URL(g.parsed.cta.href, 'https://docttak.com');
@@ -168,8 +175,8 @@ describe('quick links (T5)', () => {
   });
 
   it('id-photo: one link per preset (never custom); pdf-compress: the Gmail limit from its quote', () => {
-    // G2 A2: 10 presets, at most 8 links: the brief's order first (id_card, toeic, admission did not ship), then PRESETS order.
-    expect(quickLinks('id-photo').map((l) => l.href.replace('/id-photo/?preset=', ''))).toEqual(['passport_online', 'history', 'gosi', 'qnet', 'korcham', 'teps', 'kuksiwon', 'saramin']);
+    // TOOLS4 T1: 12 presets, at most 8 links: the brief's order first (toeic, admission did not ship), then PRESETS order.
+    expect(quickLinks('id-photo').map((l) => l.href.replace('/id-photo/?preset=', ''))).toEqual(['passport_online', 'id_card', 'history', 'gosi', 'qnet', 'korcham', 'driver_license', 'teps']);
     for (const l of quickLinks('id-photo')) expect(PRESETS.some((p) => l.href === `/id-photo/?preset=${p.id}`), l.href).toBe(true);
     expect(GMAIL_LIMIT.quote).toContain(`${GMAIL_LIMIT.mb}MB`);
     expect(quickLinks('pdf-compress').map((l) => l.href)).toEqual(['/pdf-compress/?target=25', '/pdf-compress/?target=10', '/pdf-compress/?target=5']);

@@ -1,7 +1,7 @@
 // The guide frontmatter contract (Growth G.1). src/content.config.ts uses it for the `guides` collection, so a
 // violation fails the build; tests/unit/guides-schema.test.ts parses every guide with it too.
 import { z } from 'astro/zod';
-import { getPreset } from './id-photo-presets';
+import { getPreset, isSourced } from './id-photo-presets';
 import { TOOL_FACTS, isToolFactRef } from './tool-facts';
 import { LIVE_TOOLS } from './tools';
 import { parseHref } from '../lib/ui/deeplink';
@@ -139,7 +139,7 @@ export function guideProblems(
     }
     const p = getPreset(s.preset);
     if (!p) e.push(`preset "${s.preset}" does not exist`);
-    else if (p.status === 'official' && p.sourceUrls.length) linked++;
+    else if (isSourced(p) && p.sourceUrls.length) linked++;
     // An arithmetic preset (반명함판) backs its own numbers, which the page must call 계산값/일반 크기; it lists no source.
     else if (p.status !== 'arithmetic') e.push(`preset "${s.preset}" has no official source`);
   }

@@ -1,6 +1,6 @@
 // 여권·증명사진 pure modules (brief Step 4 Test map): jfif, presets, crop, frame, warnings, background, guard.
 import { describe, expect, it } from 'vitest';
-import { CUSTOM_BOUNDS, PRESETS, customPreset, getPreset, limitBytes, outputName, validatePreset, type IdPreset } from '../../src/data/id-photo-presets';
+import { CUSTOM_BOUNDS, PRESETS, PRESET_GROUPS, customPreset, getPreset, limitBytes, outputName, validatePreset, type IdPreset } from '../../src/data/id-photo-presets';
 import { ATTEMPT_KEY, clearAttempt, markAttempt, shouldTryAutoFrame, type GuardStorage } from '../../src/lib/face/guard';
 import type { FaceMeasure } from '../../src/lib/face/types';
 import { JfifError, readJfif, setJfifDpi } from '../../src/lib/image/jfif';
@@ -74,7 +74,7 @@ describe('jfif', () => {
 describe('presets', () => {
   it('every shipped preset passes the schema', () => {
     for (const p of PRESETS) expect(validatePreset(p), p.id).toEqual([]);
-    expect(PRESETS.map((p) => p.id)).toEqual(['passport_online', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea', 'half_card']);
+    expect(PRESETS.map((p) => p.id)).toEqual(['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea', 'half_card']);
   });
 
   it('rejects a secondary status and a missing quote or URL', () => {
@@ -86,7 +86,57 @@ describe('presets', () => {
     expect(validatePreset({ ...passport, retrieved: '29-09-2026' }).join()).toMatch(/ISO date/);
     expect(validatePreset({ ...passport, fileTag: '여권' }).join()).toMatch(/ASCII/);
     expect(validatePreset({ ...passport, outW: 440 }).join()).toMatch(/outside the accepted range/);
-    expect(validatePreset({ ...gosi, headBand: { ...gosi.headBand, kind: 'official' } }).join()).toMatch(/only the passport band/);
+  });
+
+  it('head band rules (TOOLS4 decision 6): official needs a bandQuote inside the quote; reference needs 35:45', () => {
+    expect(validatePreset({ ...gosi, headBand: { ...gosi.headBand, kind: 'official' } }).join()).toMatch(/official head band without bandQuote/);
+    expect(validatePreset({ ...passport, headBand: { ...passport.headBand, bandQuote: ' ' } }).join()).toMatch(/without bandQuote/);
+    expect(validatePreset({ ...passport, headBand: { ...passport.headBand, bandQuote: '머리 길이 2.5~3.5cm' } }).join()).toMatch(/bandQuote is not part of the quote/);
+    expect(validatePreset({ ...gosi, headBand: { ...gosi.headBand, bandQuote: 'x' } }).join()).toMatch(/reference band carries no bandQuote/);
+    expect(validatePreset({ ...passport, headBand: { ...passport.headBand, measure: 'top' as 'crown' } }).join()).toMatch(/measure/);
+    // A square preset with the passport ratio as a reference band (a visa photo without a quoted head rule): rejected.
+    const square: IdPreset = { ...gosi, id: 'visa_sq', outW: 600, outH: 600, mm: undefined };
+    expect(validatePreset(square).join()).toMatch(/reference band on an aspect other than 35:45/);
+    // The same square shape with its own quoted rule, measured from the top of the hair, is valid.
+    const rule = '머리카락 포함 25~35mm';
+    expect(validatePreset({ ...square, quote: `정사각형 ${rule}`, headBand: { kind: 'official', measure: 'hair', minFrac: 0.5, maxFrac: 0.69, bandQuote: rule } })).toEqual([]);
+    // Shipped before TOOLS4 (3:4, 4:5, 5:7 reference bands) stay valid; 직접 입력 has any shape.
+    for (const id of ['history', 'korcham', 'teps', 'saramin', 'jobkorea', 'half_card']) expect(validatePreset(getPreset(id)!), id).toEqual([]);
+    expect(validatePreset(customPreset(600, 600)!)).toEqual([]);
+  });
+
+  it('print presets (TOOLS4 decision 6): quote + URL, a paper size at 300 ppi, the "(인화용 W×H cm)" label', () => {
+    const idCard = getPreset('id_card')!;
+    expect(PRESETS.filter((p) => p.status === 'print').map((p) => p.id)).toEqual(['id_card']);
+    expect(idCard.status).toBe('print');
+    expect([idCard.outW, idCard.outH, idCard.dpi]).toEqual([413, 531, 300]);
+    expect(idCard.mm).toEqual({ w: 35, h: 45 });
+    expect(idCard.limitBytes).toBeUndefined();
+    expect(idCard.headBand.kind).toBe('reference');
+    expect(idCard.group).toBe('여권·신분증');
+    expect(idCard.label).toBe('주민등록증 (인화용 3.5×4.5 cm)');
+    expect(idCard.quote).toContain('3.5㎝×4.5㎝');
+    expect(validatePreset({ ...idCard, quote: undefined }).join()).toMatch(/print preset without a quote/);
+    expect(validatePreset({ ...idCard, sourceUrls: [] }).join()).toMatch(/print preset without a source URL/);
+    expect(validatePreset({ ...idCard, mm: undefined }).join()).toMatch(/without a print size/);
+    expect(validatePreset({ ...idCard, dpi: 96 }).join()).toMatch(/not 300 ppi/);
+    expect(validatePreset({ ...idCard, outW: 354, outH: 455 }).join()).toMatch(/not 300 ppi/);
+    expect(validatePreset({ ...idCard, label: '주민등록증' }).join()).toMatch(/must end "\(인화용 3\.5×4\.5 cm\)"/);
+    expect(validatePreset({ ...idCard, group: '없음' as IdPreset['group'] }).join()).toMatch(/not a select group/);
+    // An official band needs a sourced preset (Richard round 1): never on 반명함판 or 직접 입력.
+    const half = getPreset('half_card')!;
+    expect(validatePreset({ ...half, headBand: { ...passport.headBand } }).join()).toMatch(/official head band on a arithmetic preset/);
+  });
+
+  it('driver_license (TOOLS4 round 2): official, the 도로교통공단 rule read from its image alt text', () => {
+    const lic = getPreset('driver_license')!;
+    expect(lic.status).toBe('official');
+    expect([lic.outW, lic.outH, lic.dpi, lic.limitBytes]).toEqual([413, 531, 300, 500_000]);
+    expect(lic.pxRange).toEqual({ w: [395, 431], h: [507, 550] });
+    expect(lic.quote).toContain('파일 크기 500KB 이하의 JPG파일, 가로 413 픽셀(pixel), 세로 531 픽셀 권장, *가로 395~431, 세로 507~550 필셀');
+    expect(lic.quote).toContain(lic.headBand.bandQuote!);
+    expect(lic.headBand).toMatchObject({ kind: 'official', measure: 'crown', minFrac: passport.headBand.minFrac, maxFrac: passport.headBand.maxFrac });
+    expect(lic.sourceUrls[1]).toBe('https://www.safedriving.or.kr/commonManage/selectCommonPhotoRulePop.do');
   });
 
   it('source URLs are https and dates ISO', () => {
@@ -121,7 +171,7 @@ describe('presets', () => {
   });
 
   it('file names are ASCII preset tags', () => {
-    expect(PRESETS.map(outputName)).toEqual(['passport_413x531.jpg', 'gosi_137x177.jpg', 'qnet_413x531.jpg', 'history_120x160.jpg', 'korcham_400x500.jpg', 'teps_126x165.jpg', 'kuksiwon_276x354.jpg', 'saramin_100x140.jpg', 'jobkorea_150x210.jpg', 'halfcard_354x472.jpg']);
+    expect(PRESETS.map(outputName)).toEqual(['passport_413x531.jpg', 'idcard_413x531.jpg', 'license_413x531.jpg', 'gosi_137x177.jpg', 'qnet_413x531.jpg', 'history_120x160.jpg', 'korcham_400x500.jpg', 'teps_126x165.jpg', 'kuksiwon_276x354.jpg', 'saramin_100x140.jpg', 'jobkorea_150x210.jpg', 'halfcard_354x472.jpg']);
     expect(outputName(customPreset(200, 250, 50)!)).toBe('photo_200x250.jpg');
     for (const p of PRESETS) expect(outputName(p)).toMatch(/^[a-z0-9_]+\.jpg$/);
   });
@@ -141,15 +191,28 @@ describe('presets', () => {
   });
 
   it('dpi values: 300, 99, 200, 96', () => {
-    expect(Object.fromEntries(PRESETS.map((p) => [p.id, p.dpi]))).toEqual({ passport_online: 300, gosi: 99, qnet: 300, history: 96, korcham: 96, teps: 96, kuksiwon: 200, saramin: 96, jobkorea: 96, half_card: 300 });
+    expect(Object.fromEntries(PRESETS.map((p) => [p.id, p.dpi]))).toEqual({ passport_online: 300, id_card: 300, driver_license: 300, gosi: 99, qnet: 300, history: 96, korcham: 96, teps: 96, kuksiwon: 200, saramin: 96, jobkorea: 96, half_card: 300 });
     expect(customPreset(200, 250)!.dpi).toBe(96);
   });
 
-  it('only the passport band is official; qnet has no print size (Flag Q1)', () => {
-    expect(PRESETS.filter((p) => p.headBand.kind === 'official').map((p) => p.id)).toEqual(['passport_online']);
+  it('official bands: passport and driver_license (the shipped sources with a head rule, both 32–36 mm); qnet has no print size (Flag Q1)', () => {
+    expect(PRESETS.filter((p) => p.headBand.kind === 'official').map((p) => p.id)).toEqual(['passport_online', 'driver_license']);
     expect(getPreset('qnet')!.mm).toBeUndefined();
     expect(passport.headBand.minFrac * 45).toBeCloseTo(32, 9);
     expect(passport.headBand.maxFrac * 45).toBeCloseTo(36, 9);
+    expect(passport.quote).toContain(passport.headBand.bandQuote!);
+    for (const p of PRESETS) expect(p.headBand.measure, p.id).toBe('crown');
+  });
+
+  it('select groups: every group in order; 비자 is empty (no visa source passed TOOLS4 Step 0)', () => {
+    expect([...PRESET_GROUPS]).toEqual(['여권·신분증', '비자', '시험·원서', '이력서', '기타']);
+    const of = (g: string) => PRESETS.filter((p) => p.group === g).map((p) => p.id);
+    expect(of('여권·신분증')).toEqual(['passport_online', 'id_card', 'driver_license']);
+    expect(of('비자')).toEqual([]);
+    expect(of('이력서')).toEqual(['saramin', 'jobkorea']);
+    expect(of('기타')).toEqual(['half_card']);
+    // PRESETS is in group order, so the select lists the presets in the same order as PRESET_IDS.
+    expect(PRESETS.map((p) => PRESET_GROUPS.indexOf(p.group))).toEqual([...PRESETS.map((p) => PRESET_GROUPS.indexOf(p.group))].sort((a, b) => a - b));
   });
 });
 

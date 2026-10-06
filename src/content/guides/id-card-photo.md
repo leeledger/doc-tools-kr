@@ -5,11 +5,11 @@ ogDescription: 주민등록증 사진은 6개월 이내에 찍은 3.5×4.5 cm �
 query: 주민등록증 사진 규격
 answer: 주민등록증 신규 발급과 재발급에는 6개월 이내에 찍은 3.5×4.5 cm 크기의, 모자 등을 쓰지 않은 상반신 사진 1장이 필요해요.
 published: '2026-10-02'
-updated: '2026-10-02'
+updated: '2026-10-06'
 category: 사진
 topic: 여권·신분증
 tools: [id-photo]
-cta: { href: '/id-photo/', label: '사진 규격 맞추기' }
+cta: { href: '/id-photo/?preset=id_card', label: '사진 규격 맞추기' }
 related: [passport-photo, driver-license-photo, id-photo-size]
 sources:
   - url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000013
@@ -69,6 +69,6 @@ og: { title: '주민등록증 사진', line: '3.5×4.5 cm · 6개월 이내 상�
 
 ## 사진 파일을 직접 맞춘다면
 
-[여권·증명사진 규격 맞추기](/id-photo/)는 처음에 3.5×4.5 cm 비율인 여권 규격으로 열려요. 정부24 안내는 크기(3.5×4.5 cm)만 정하고 파일의 픽셀 크기나 용량은 적지 않았어요. 문서딱이 맞추는 비율은 같지만, 정부24가 정한 파일 규격은 아니에요.
+[여권·증명사진 규격 맞추기](/id-photo/?preset=id_card)에서 「주민등록증 (인화용 3.5×4.5 cm)」을 고르면 3.5×4.5 cm로 인화할 수 있는 사진 파일로 맞춰요. 정부24 안내는 종이 사진 크기(3.5×4.5 cm)만 정하고 파일의 픽셀 크기나 용량은 적지 않았어요. 그래서 이 파일은 인화해서 내는 용도예요.
 
-얼굴이나 배경은 고치지 않아요. 인화가 필요하면 사진관이나 인화 서비스를 이용하세요.
+얼굴이나 배경은 고치지 않아요. 저장한 파일을 사진관이나 인화 앱에 맡겨 3.5×4.5 cm로 인화하세요.

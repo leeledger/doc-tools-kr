@@ -34,8 +34,8 @@ function stripComments(s) {
     .replace(/^[ \t]*\/\/.*$/gm, '')
     .replace(/[ \t]\/\/ .*$/gm, '')
     // Growth G (UI font budget): data that is never shown either: the official preset quotes (the audit trail)
-    // and the tools' copywriting keywords.
-    .replace(/\bquote:\s*'(?:[^'\\\n]|\\.)*'/g, '')
+    // and the tools' copywriting keywords (TOOLS4: also an official head band's bandQuote, part of its quote).
+    .replace(/\b(?:quote|bandQuote):\s*'(?:[^'\\\n]|\\.)*'/g, '')
     .replace(/\bkeywords:\s*\[[^\]]*\]/g, '')
     // G2 A1: the guide topic names render only on /guide/, in the system font (src/pages/guide/index.astro).
     .replace(/\bTOPICS\s*=\s*\[[^\]]*\]/g, '');

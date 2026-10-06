@@ -84,7 +84,7 @@ const tsString = (s) => {
 const STRING = String.raw`'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"`;
 
 /**
- * The official presets of src/data/id-photo-presets.ts: { id, label, urls, quote }. URLs written as a
+ * The sourced (official and print) presets of src/data/id-photo-presets.ts: { id, label, urls, quote }. URLs written as a
  * constant (PASSPORT_RULE_URL) are resolved from the file's `const NAME = '…'` declarations.
  */
 export function parsePresets(ts) {
@@ -94,7 +94,8 @@ export function parsePresets(ts) {
   for (const b of blocks) {
     const id = /id:\s*'([^']+)'/.exec(b)?.[1];
     const status = /status:\s*'([^']+)'/.exec(b)?.[1];
-    if (!id || status !== 'official') continue;
+    // `print` presets (TOOLS4 T1) quote their paper size from an official page too.
+    if (!id || (status !== 'official' && status !== 'print')) continue;
     const label = /label:\s*'([^']+)'/.exec(b)?.[1] ?? id;
     const urlsSrc = /sourceUrls:\s*\[([\s\S]*?)\]/.exec(b)?.[1] ?? '';
     const urls = [...urlsSrc.matchAll(new RegExp(String.raw`(${STRING})|([A-Z_][A-Z0-9_]*)`, 'g'))]

@@ -4,7 +4,7 @@ import { generateKeyPairSync, createVerify } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { parseArgs } from '../../scripts/ops/lib/common.mjs';
 import { createGitHub } from '../../scripts/ops/lib/github.mjs';
-import { buildIdOf, buildMatches, changedUrls, findQuote, hasExactQuote, internalLinks, offSiteScripts, pageProblems, pageText, pageTextExact, quoteFragments, sitemapEntries } from '../../scripts/ops/lib/html.mjs';
+import { buildIdOf, buildMatches, changedUrls, findQuote, hasExactQuote, internalLinks, offSiteScripts, pageProblems, pageText, pageTextExact, quoteFragments, sitemapEntries, withAltText } from '../../scripts/ops/lib/html.mjs';
 import { parseFrontmatter, parsePresets, readGuides, readPresets, unquote, watchList } from '../../scripts/ops/lib/guides.mjs';
 import { accessToken, fetchGrowth, parseServiceAccount, signJwt } from '../../scripts/ops/lib/gsc.mjs';
 import { sumDays } from '../../scripts/ops/lib/cloudflare.mjs';
@@ -180,6 +180,12 @@ describe('quotes (A-3)', () => {
     expect(pageTextExact('<p>가</p><p>나</p>')).toBe('가 나');
     expect(pageTextExact('가<b>나</b>다')).toBe('가나다');
   });
+  it('TOOLS4 T1-a: an image alt text is page text (entities decoded, a break on both sides, ">" inside quotes)', () => {
+    const html = '<p>규격</p><img src="a.png" alt="표준 사진:3.5cm X 4.5cm\n\t얼굴 &gt; 머리, 파일 크기 500KB 이하"/>안내<img alt=\'x > y\' src=b><img src="c.png"><script>var a = \'<img alt="숨김">\'</script>';
+    expect(pageTextExact(html)).toBe('규격 표준 사진:3.5cm X 4.5cm 얼굴 > 머리, 파일 크기 500KB 이하 안내 x > y');
+    expect(pageText(html)).toContain('파일 크기 500KB 이하 안내');
+    expect(withAltText('<img data-alt="no" src="d">')).toBe(' ');
+  });
   it('G2 A1 publish gate: checkSources({ exact: true }) reports a quote with an added space as changed', async () => {
     const page = { ok: true, status: 200, text: '<p>입은 다물어야 하며(치아 노출 불가)</p>' };
     const entry = { urls: ['https://a.go.kr/p'], quote: '입은 다물어야 하며 (치아 노출 불가)', origin: 'guide p', pages: ['/guide/p/'] };
@@ -228,9 +234,9 @@ describe('guide and preset data', () => {
       for (const s of g.sources) expect(Boolean((s.url && s.quote) || s.preset), `${g.slug} ${JSON.stringify(s)}`).toBe(true);
     }
   });
-  it('reads the official presets with resolved URLs and quotes', () => {
+  it('reads the official and print presets with resolved URLs and quotes', () => {
     const presets = readPresets();
-    expect(presets.map((p) => p.id)).toEqual(['passport_online', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea']);
+    expect(presets.map((p) => p.id)).toEqual(['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea']);
     for (const p of presets) {
       expect(p.urls.length, p.id).toBeGreaterThan(0);
       for (const u of p.urls) expect(u, p.id).toMatch(/^https:\/\//);
@@ -238,6 +244,10 @@ describe('guide and preset data', () => {
     }
     expect(presets[0]!.urls).toContain('https://www.passport.go.kr/home/kor/contents.do?menuPos=32');
     expect(parsePresets("const A_URL = 'https://a';\nexport const PRESETS = [\n  {\n    id: 'x',\n    label: 'X',\n    status: 'official',\n    sourceUrls: [A_URL, 'https://b'],\n    quote: 'it\\'s',\n  },\n];")).toEqual([{ id: 'x', label: 'X', urls: ['https://a', 'https://b'], quote: "it's" }]);
+    // TOOLS4 T1: a print preset is checked too; the passport's bandQuote is not mistaken for its quote.
+    const print = ["export const PRESETS = [", '  {', "    id: 'p',", "    label: 'P',", "    status: 'print',", "    sourceUrls: ['https://p'],", "    quote: 'q',", '  },', '];'].join('\n');
+    expect(parsePresets(print)).toEqual([{ id: 'p', label: 'P', urls: ['https://p'], quote: 'q' }]);
+    expect(presets[0]!.quote).toMatch(/^파일 크기 500KB 이하/);
   });
   it('the watch list dedupes a preset cited by guides and the tool', () => {
     const list = watchList(readGuides(), readPresets());

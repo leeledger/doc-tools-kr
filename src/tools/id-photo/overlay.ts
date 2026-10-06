@@ -9,6 +9,8 @@ import { CROWN_FRAC, HEAD_FRAC } from '../../lib/idphoto/frame';
 
 export const LABELS = {
   crown: '정수리(머리카락 제외)',
+  /** A head rule measured from the top of the hair (headBand.measure 'hair'). */
+  hair: '머리 맨 위(머리카락 포함)',
   chinOfficial: '턱 끝 위치 (규격 32–36 mm)',
   chinReference: '턱 끝 위치 (참고 범위)',
   eye: '눈 높이(참고)',
@@ -131,7 +133,7 @@ export function drawOverlay(canvas: HTMLCanvasElement, preset: IdPreset, st: Cro
   g.stroke();
 
   const pad = fontPx * 0.5;
-  label(g, LABELS.crown, pad, crownY, fontPx, CROWN, true);
+  label(g, preset.headBand.measure === 'hair' ? LABELS.hair : LABELS.crown, pad, crownY, fontPx, CROWN, true);
   label(g, LABELS.eye, pad, eyeY, fontPx, '#0f172a');
   label(g, preset.headBand.kind === 'official' ? LABELS.chinOfficial : LABELS.chinReference, pad, bandBottom, fontPx, BAND_EDGE, true);
 }

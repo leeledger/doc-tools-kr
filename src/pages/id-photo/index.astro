@@ -9,7 +9,7 @@ import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
-import { CUSTOM_BOUNDS, DEFAULT_PRESET, PASSPORT_CHECK_URL, PASSPORT_RULE_URL, PRESETS, RETRIEVED } from '../../data/id-photo-presets';
+import { CUSTOM_BOUNDS, DEFAULT_PRESET, PASSPORT_CHECK_URL, PASSPORT_RULE_URL, PRESETS, PRESET_GROUPS, RETRIEVED } from '../../data/id-photo-presets';
 
 const tool = getTool('id-photo');
 const jsonLd = toolJsonLd(tool, Astro.site);
@@ -48,8 +48,16 @@ const nudges = [
         <div class="ph-field idp-preset">
           <label for="idp-preset">제출처</label>
           <select id="idp-preset" class="select" aria-describedby="idp-source">
-            {PRESETS.map((p) => <option value={p.id} selected={p.id === DEFAULT_PRESET}>{p.label}</option>)}
-            <option value="custom">직접 입력</option>
+            {PRESET_GROUPS.map((group) => {
+              const items = PRESETS.filter((p) => p.group === group);
+              const custom = group === '기타';
+              return items.length || custom ? (
+                <optgroup label={group}>
+                  {items.map((p) => <option value={p.id} selected={p.id === DEFAULT_PRESET}>{p.label}</option>)}
+                  {custom && <option value="custom">직접 입력</option>}
+                </optgroup>
+              ) : null;
+            })}
           </select>
           <div class="idp-custom" id="idp-custom" hidden>
             <div class="ph-custom">
@@ -162,6 +170,7 @@ const nudges = [
             <a class="btn primary" id="idp-download" tabindex="0">내려받기</a>
           </div>
           <p class="save-name" id="idp-save-name"></p>
+          <p class="notice" id="idp-print" hidden></p>
           <Share name={tool.name} text={sharePreview('/id-photo/', Astro.site!).description} id="idp-share" />
           <p class="notice" id="idp-fallback" hidden></p>
           <div class="row">

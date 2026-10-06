@@ -1,7 +1,7 @@
 // 여권·증명사진 규격 맞추기 page controller (brief Step 4 §3). States: empty → loading → adjust (or blocked)
 // → exporting → done, plus error. One photo at a time; it never leaves the page: the pixels are decoded here,
 // measured here (MediaPipe, main thread) and encoded in a module worker created on the save click.
-import { CUSTOM_BOUNDS, DEFAULT_PRESET, customPreset, getPreset, outputName, type IdPreset } from '../../data/id-photo-presets';
+import { CUSTOM_BOUNDS, DEFAULT_PRESET, cmLabel, customPreset, getPreset, outputName, type IdPreset } from '../../data/id-photo-presets';
 import { shouldTryAutoFrame, sessionStore } from '../../lib/face/guard';
 import { hasFace, type FaceMeasure } from '../../lib/face/types';
 import { decodeImage } from '../../lib/image/decode';
@@ -41,6 +41,8 @@ export const COPY = {
   verify: '규격에 맞는 파일을 만들지 못했습니다. 다시 저장해 보고, 계속되면 다른 사진을 써 주세요.',
   unreachable: (kb: number, w: number, h: number) => `${kb.toLocaleString('ko-KR')} KB로는 ${w}×${h}픽셀 사진을 만들 수 없습니다. 용량 한도를 조금 높여 주세요.`,
   fallback: '빠른 방식으로 저장했습니다. 규격과 용량은 같습니다.',
+  /** A print preset (TOOLS4 decision 6): the source wants a paper photo of this size. */
+  print: (cm: string) => `사진관이나 인화 앱에서 ${cm}로 인화하세요.`,
   summary: (c: Checklist) =>
     c.blocks.length
       ? `저장할 수 없습니다. ${c.blocks[0]!.text}`
@@ -127,6 +129,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
   const download = must<HTMLAnchorElement>('idp-download');
   const saveName = must<HTMLElement>('idp-save-name');
   const fallbackNote = must<HTMLElement>('idp-fallback');
+  const printNote = must<HTMLElement>('idp-print');
   const result = must<HTMLImageElement>('idp-result');
   const zoom2 = must<HTMLInputElement>('idp-zoom2');
   const againBtn = must<HTMLButtonElement>('idp-again');
@@ -646,6 +649,9 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     );
     fallbackNote.hidden = !fallback;
     fallbackNote.textContent = fallback ? COPY.fallback : '';
+    const print = p.status === 'print' && p.mm ? COPY.print(cmLabel(p.mm)) : '';
+    printNote.hidden = !print;
+    printNote.textContent = print;
     hideError();
     setPhase('done');
     say(COPY.exported(name));

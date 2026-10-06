@@ -1,35 +1,54 @@
-# Review Request — Step USAGE (익명 사용 통계 + /admin/)
+# Review Request — Step TOOLS4 T0 + T1 (리팩터 + 증명사진 프리셋)
 Date: 2026-10-06
-Ready for Review: YES. Status **DONE_WITH_CONCERNS** (CLAUDE.md lines 13-14 not edited: escalated, text proposed in BUILD-LOG "USAGE build notes"). Not committed. Build notes, decisions, gates: BUILD-LOG "USAGE build notes".
+Ready for Review: YES. Status **DONE** (T0 and T1). Not committed; T0 is meant as its own commit (file split below). Build notes, Step 0 table, decisions, gates: BUILD-LOG "TOOLS4 T0 build notes", "TOOLS4 Step 0", "TOOLS4 T1 build notes".
 
-## Files Changed
-- `scripts/lib/usage.mjs` (new) — single-source whitelist, row schema doc, `validate`, buckets, flag/sample parsing, dataset check, the 4 SQL builders, `fetchUsage`, `shapeUsage`, `renderTables` (md + escaped HTML).
-- `src/lib/ui/usage.ts` (new) — `createTracker` (sampled once, cap 40, field-by-field payload, try/catch sendBeacon), `arrival` (guide -> tool), `browserFamily` (moved); `track`/`startUsage` are no-ops and the tracker is dropped when `__USAGE_STATS__` is false.
-- `functions/api/usage.ts` (new) — decision 9 guards (405/403 with Origin fallback/413/415/bot 204/400/503), one `writeDataPoint`, empty answers.
-- `functions/admin/[[path]].ts` (new) — 404 without a 16+ char password, `/admin` 301, deeper 404, Basic auth with SHA-256 constant-time compare, whitelisted period, notices without secrets, headers/CSP/meta per decision 10.
-- `src/tools/photo-compress/controller.ts`, `src/tools/pdf-compress/controller.ts`, `src/tools/pdf-merge/controller.ts`, `src/tools/id-photo/{controller,entry}.ts`, `src/tools/hwp-shared/{session,boot}.ts`, `src/tools/hwp-to-pdf/controller.ts`, `src/tools/hwp-viewer/app.ts`, `src/pages/hwp-{to-pdf,viewer}/index.astro:138/189`, `src/tools/stamp-signature/{photo,pad,entry}.ts`, `src/tools/remove-background/{bg,entry}.ts` — pick/start/success/fail/download/arrive wiring; every former `reportError` is now a `fail`; error paths carry a code (semantics per tool in BUILD-LOG).
-- `astro.config.mjs:9-21,62-64,78`, `src/env.d.ts:1-4`, `vitest.config.ts:4-5`, `scripts/regress/idphoto.mjs:52` — `__USAGE_STATS__` / `__USAGE_SAMPLE__` replace `__ERROR_BEACON_PATH__`; usage modules join `ui-shared`.
-- `src/lib/ui/beacon.ts`, `scripts/lib/beacon-path.mjs` — deleted.
-- `scripts/check-dist.mjs:12,47-58,286-296` — retired-var error, sample error, contact rule for usage, flag off = no sendBeacon / `/api/usage` in any script, flag on = both present.
-- `public/_routes.json` — include `/api/*`, `/admin`, `/admin/*`.
-- `src/sw/sw.ts:11,50` — `/admin` and `/admin/*` bypass the SW like `/api/*`.
-- `src/pages/privacy/index.astro`, `src/data/legal.ts:10-20`, `src/data/site.ts:47` — 익명 사용 통계 section (only when on), section-1 cookie line, `PRIVACY_USAGE`, `PRIVACY_REVISED` priority, 변경 이력, `PRIVACY_TERMS_UPDATED` 2026-10-06. Terms page had no beacon wording.
-- `scripts/ops/growth.mjs:4-5,18,67-79,86-94,110`, `scripts/ops/lib/report.mjs:5,78,101-104,111`, `.github/workflows/ops-weekly.yml:6,42-43` — usage collect (skip note / error note + failed), report section, data-line totals, summary line, secrets.
-- `.github/workflows/ci.yml:98-107`, `playwright.config.ts:24-29` — `PUBLIC_USAGE_STATS: '1'` on the dist-bgcloud build; usage.spec joins the cloud projects.
-- `tests/unit/usage.test.ts` (new), `tests/e2e/usage.spec.ts` (new); updated `tests/unit/{postbuild,polish,network-guard,ops,bgcloud}.test.ts`, `tests/e2e/{remove-background.cloud,polish}.spec.ts`.
-- `docs/COPY.md` (new section), `docs/OPS-RUNBOOK.md` (§2 rows, new §8 owner steps), `handoff/CLOUD-HANDOFF.md` §4.
+## Files Changed — T0 (refactor, no visible change; every `_astro` chunk byte-identical)
+- src/lib/ui/reorder.ts:1-8 — moved from src/tools/pdf-merge/drag.ts (git rename); only the header comment changed.
+- src/tools/pdf-merge/controller.ts:17 — import from `../../lib/ui/reorder`.
+- src/lib/pdf/qpdf/qpdf-run.ts:2,7-18 — moved from compress/ (git rename); now owns `QpdfResult` and the new `QpdfRun` type.
+- src/lib/pdf/qpdf/load.ts:1-45 — new; `QPDF_VENDOR_DIR`, `loadQpdf`, `warmQpdf` moved verbatim from compress/wasm-browser.ts.
+- src/lib/pdf/compress/wasm-browser.ts:1-16 — keeps only `loadCodecs`.
+- src/lib/pdf/compress/deps.ts:4-6,15-16 — re-exports `QpdfResult`; `qpdf: QpdfRun`.
+- src/lib/pdf/compress.worker.ts:12-13 — imports the qpdf loader from `./qpdf/load`.
+- src/lib/pdf/page-range.ts:1-48 — new pure `parseRange(text, pageCount)` with typed errors.
+- tests/unit/page-range.test.ts:1-68 — new; valid, edge, empty, out-of-range, reversed, junk.
+- tests/helpers/compress-deps.ts:9, tests/unit/compress-helpers.test.ts:8,11, scripts/copy-vendor.mjs:52,56 — new paths.
+- handoff/BUILD-LOG.md — "TOOLS4 — brief" log notes copied from the brief (+ owner E1/E2 = default).
 
-## Verified
-- astro check clean; unit 946/946; postbuild against the flag-on build 49/49; 4 builds check-dist OK; wrangler functions build OK.
-- e2e: cloud-chromium 14/14; chromium + bg-chromium 226 passed (id-photo re-run on an auto-frame dist: 59 passed); usage.spec also green on the other 4 cloud browsers (WebKit skips the photo runs).
+## Files Changed — T1
+- src/data/id-photo-presets.ts:5-8,11-28,54-76,101-110,120-156,348-395 — `print` status, `PRESET_GROUPS`/`group`, `HeadBand.measure`/`bandQuote`, `printPx`/`cmLabel`/`isSourced`; presets `id_card` and `driver_license`; passport `bandQuote`; new `validatePreset` rules (print, official band needs bandQuote inside quote, 35:45 rule for reference bands with the six-id exemption).
+- src/data/preset-ids.ts:4, scripts/lib/usage.mjs:44,242-243 — the two ids added (lists stay equal); admin value labels.
+- scripts/ops/lib/guides.mjs:87,97-98 — check:quotes reads `print` presets too.
+- scripts/gen-ui-font.mjs:37-38 — strips `bandQuote` like `quote` (never rendered).
+- src/data/guide-schema.ts:4,142 — a print preset counts as an official source.
+- src/pages/id-photo/index.astro:12,51-60,173 — optgroups (empty groups skipped; 직접 입력 in 기타) and the `#idp-print` notice.
+- src/tools/id-photo/controller.ts:4,44-45,132,652-654 — print note on the result screen.
+- src/tools/id-photo/overlay.ts:12-13,136 — top label follows `measure`.
+- src/data/tools.ts:224,245 — id-photo `updated`; FAQ 4 sentence replaced (FAQ 3 untouched).
+- src/content/guides/id-card-photo.md:8,12,72-74, src/content/guides/driver-license-photo.md:8,12,66, src/content/hubs/photo-sizes.md:7,30 — deep-link CTAs to the new presets and the print wording.
+- tests/unit/idphoto-core.test.ts:77-130,163-200, tests/unit/guides-schema.test.ts:52-58,178-179, tests/unit/ops.test.ts:231-243, tests/e2e/id-photo.spec.ts:201,243-260,595,614-615 — see BUILD-LOG.
 
 ## Open Questions
-- Event semantics are my call where the brief left room (BUILD-LOG): photo-compress success/fail per photo; hwp-to-pdf job = export, hwp-viewer job = open; stamp-signature first outcome per photo. Please check these read well in the success-rate column.
-- `__USAGE_SAMPLE__` is a second define the brief did not name. Fine?
-- Growth data line keeps only usage totals, not the tables.
-- `PRIVACY_USAGE` = '2026년 10월 6일' is a placeholder for the real ship date.
-- Playwright tuple form for the two-entry `allowUpload` in the cloud spec (comment in file).
+- Only 2 presets shipped, both `print` (주민등록증, 운전면허증, 413×531 at 300, no KB limit). Zero visa presets: no visa source is readable by check:quotes from here (BUILD-LOG Step 0 table). Escalation T1-b goes to Arch.
+- `REFERENCE_ASPECT_EXEMPT` (history, korcham, teps, saramin, jobkorea, half_card): the decision-6 rule "reference band only within 1.5 % of 35:45" would reject these Step 4 / G2 presets, so I exempted them by id instead of changing shipped behaviour. Is an explicit list the right call?
+- Escalation T1-a: 도로교통공단's digital spec is only in an `<img alt>`, which check:quotes does not read; `driver_license` stays `print` with no KB limit.
+- `measure: 'hair'` and its overlay label exist per the brief but no shipped preset uses them; the "32–36 mm" copy in readout/warnings is still passport-only (Known Gap).
+- Copy check please: FAQ 4 new sentence, the print note "사진관이나 인화 앱에서 3.5×4.5 cm로 인화하세요.", the preset notes "… 그 크기로 인화할 수 있게 맞춥니다.", and the guide paragraphs.
 
 ## Out of Scope (logged in BUILD-LOG)
-- CLAUDE.md lines 13-14 (escalated; proposed text logged).
-- No /admin e2e (no Functions in the static server); live curl checks listed in Known Gaps.
+- check:quotes reading `alt` text (T1-a); a browser-read path for preset sources (T1-b).
+- Deriving the head-length copy from the band (needed when a non-passport band ships).
+- regress:idphoto p07 landmark miss (known since Step 4).
+
+## Round 2 (2026-10-06) — owner decisions T1-a yes / T1-b no visa, Richard Should Fix 1–2
+Exactly what changed since round 1 (details and gates: BUILD-LOG "TOOLS4 T1 round 2"):
+- scripts/ops/lib/html.mjs:115-150 — new `withAltText` (an `<img>` becomes its alt text between breaks) and `withoutCode`; `pageText` and `pageTextExact` use them, so source-watch and check:quotes read alt text.
+- src/data/id-photo-presets.ts:1-7 — header comment fixed (SF1).
+- src/data/id-photo-presets.ts:138-164 — `driver_license` is now `official`: 413×531, pxRange 395–431 × 507–550, 500 KB 이하, official crown band 32–36 mm with `bandQuote`, second source = the 도로교통공단 rule popup, quote verbatim from its alt text; label "운전면허증 (적성검사·갱신)".
+- src/data/id-photo-presets.ts:395 — an official band requires an official/print preset (SF2).
+- scripts/lib/usage.mjs:243 — value label "운전면허증".
+- src/content/guides/driver-license-photo.md:39,50,67-69 — preset source added; file spec sentences (500KB, 413×531, 3.2~3.6cm) and FAQ answer; print advice kept.
+- src/content/hubs/photo-sizes.md:31 — print bullet names 주민등록증 only.
+- tests/unit/ops.test.ts (alt-text case), tests/unit/idphoto-core.test.ts (print = id_card only, driver_license official, SF2 case, official bands list), tests/unit/guides-schema.test.ts:55 (print case uses id_card).
+- Not changed: the "32–36 mm" copy (driver_license's band equals the passport's, so no derivation was needed); REFERENCE_ASPECT_EXEMPT (owner: keep); no visa presets (owner).
+Open question: alt text now counts as page text for every watched source; any guide quote that only matched visible text still matches (142/142 verbatim), but a source whose images carry long alt text adds noise to the weekly "changed" context only.
