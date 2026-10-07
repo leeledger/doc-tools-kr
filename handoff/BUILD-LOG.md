@@ -2331,3 +2331,8 @@ CI run 37568179103 (9015e2a): polish.spec.ts:317 failed on chromium (Linux), bot
 **LCP CI follow-up — deploy gate (2026-10-07)**
 - Richard: clear, 0 Must Fix. Should Fix logged for later: the 33-guide e2e should assert the sheet it lets through actually declares the UI @font-face (not rely on the `Base.*` name). Arch item left as is: the guide e2e runs on every project (~40 s); revisit if CI time grows. Trigger of the early style pass on the CI runner still unknown; the next CI chromium run is the confirmation.
 - Pushed to main.
+
+**USAGE + Web Analytics turned on (2026-10-07, orchestrator via the owner's Chrome on the owner's instruction)**
+- Cloudflare (Workers Free plan, $0; all within free limits): Web Analytics site docttak.com set to "Enable with JS Snippet installation"; Analytics Engine enabled; Pages binding USAGE → docttak_usage (production); user API token "docttak-usage-read (admin + A-5)" with Account Analytics:Read on the one account; Pages production vars PUBLIC_CF_ANALYTICS_TOKEN, PUBLIC_USAGE_STATS=1, CF_ACCOUNT_ID, secrets AE_API_TOKEN and ADMIN_PASSWORD (24 random chars, given to the owner).
+- GitHub Actions secrets AE_API_TOKEN, CF_ACCOUNT_ID set (weekly report usage table).
+- legal.ts: PRIVACY_ANALYTICS and PRIVACY_USAGE = 2026년 10월 7일, PRIVACY_TERMS_UPDATED 2026-10-07 (Review USAGE Should Fix 2). Production-equivalent local build: check-dist OK, beacon + CSP + privacy sections present.

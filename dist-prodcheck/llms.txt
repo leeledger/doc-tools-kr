@@ -1,0 +1,52 @@
+# 문서딱
+
+> 문서딱은 PDF와 사진을 제출처의 용량과 규격에 맞추는 무료 웹 도구예요. 가입 없이 바로 써요.
+
+## 도구
+
+- [PDF 합치기](https://docttak.com/pdf-merge/): 여러 PDF를 한 파일로 묶고, 파일 순서를 원하는 대로 바꾸세요.
+- [PDF 용량 줄이기](https://docttak.com/pdf-compress/): 제출 용량 제한에 맞게 PDF를 줄입니다. 글자는 선택·검색 가능한 상태로 유지합니다.
+- [사진 PDF 변환](https://docttak.com/jpg-to-pdf/): 사진 여러 장을 원하는 순서로 PDF 파일 하나로 묶습니다. A4 용지에 맞출 수도 있습니다.
+- [PDF JPG 변환](https://docttak.com/pdf-to-jpg/): PDF의 쪽마다 JPG 사진으로 저장합니다. 여러 쪽은 ZIP 파일 하나로 받습니다.
+- [PDF 암호 해제·설정](https://docttak.com/pdf-password/): 비밀번호를 아는 PDF의 암호를 풀고, 내 PDF에는 열 때 필요한 비밀번호를 겁니다.
+- [사진 용량 줄이기](https://docttak.com/photo-compress/): 원하는 KB에 맞춰 사진을 줄이면서 화질은 최대한 지킵니다.
+- [여권·증명사진 규격 맞추기](https://docttak.com/id-photo/): 여권·시험·이력서 제출 규격에 맞게 사진을 자르고 크기와 용량을 맞춥니다. 보정은 하지 않습니다.
+- [전자서명·도장 이미지 만들기](https://docttak.com/stamp-signature/): 도장·서명 사진의 배경을 지워 투명한 PNG 파일로 저장합니다. 서명은 직접 그려도 됩니다.
+- [사진 배경 지우기 (누끼)](https://docttak.com/remove-background/): 사진 배경을 지워 투명한 PNG나 흰 배경 사진으로 저장합니다.
+- [HWP PDF 변환](https://docttak.com/hwp-to-pdf/): 한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 내려받으세요.
+- [HWP·HWPX 파일 보기](https://docttak.com/hwp-viewer/): 한글 프로그램 없이 HWP·HWPX 문서를 열어 쪽을 넘겨 보고, 글자를 찾아 보세요.
+
+## 안내
+
+- [증명사진 규격 모음, 기관별 크기·용량 한눈에](https://docttak.com/guide/photo-sizes/): 여권·신분증, 공무원·자격시험 원서, 이력서, 대입 원서 사진 규격을 기관 안내에서 확인한 값만 한 표에 모았어요.
+- [서류 제출 용량 모음, 메일·전자소송·원서 사진](https://docttak.com/guide/upload-limits/): 메일 첨부 한도, 전자소송 첨부파일, 한국장학재단 가구원 동의서, 원서·이력서 사진 파일 용량을 기관 안내에서 확인한 값만 한곳에 모았어요.
+- [간호사 국가시험 원서 사진 규격 (국시원)](https://docttak.com/guide/kuksiwon-photo/): 국시원 원서 사진은 6개월 이내에 찍은 상반신 컬러 사진으로, 3.5×4.5 cm 기준 276×354픽셀 이상의 JPG나 PNG 파일이면 돼요.
+- [경찰 채용 원서 사진 규격과 안 되는 사진](https://docttak.com/guide/police-exam-photo/): 경찰청 인터넷 원서접수 사진은 최근 1년 이내에 찍은 3×4 cm 상반신 컬러 사진이고, 원서접수 기간이 끝나면 바꿀 수 없어요.
+- [공무원 시험 원서 사진 규격 (국가직)](https://docttak.com/guide/gosi-photo/): 국가공무원 시험 원서 사진은 3.5×4.5 cm 기준 137×177픽셀, JPG나 PNG 형식, 350 KB 미만 파일이에요.
+- [대입 원서 사진 규격과 올리는 법](https://docttak.com/guide/admission-photo/): 진학사 원서접수 안내에 따르면 대입 원서 사진은 3개월 이내 찍은 반명함판(3×4) 사진을 JPG 파일로 올리면 되고, 학교마다 따로 정한 규정이 있을 수 있어요.
+- [사진 용량 줄이기, 원하는 KB 이하로 맞추는 법](https://docttak.com/guide/photo-kb/): 사진 용량 줄이기에서 목표 용량을 고르면 결과 파일이 그 용량 이하로 줄어들고, 화질은 최대한 지키면서 촬영 위치 같은 정보도 지워져요.
+- [여권사진 규격과 사이즈, 귀·눈썹·옷 기준](https://docttak.com/guide/passport-photo/): 여권사진은 가로 3.5 cm·세로 4.5 cm이고, 온라인 신청용 파일은 413×531픽셀 권장, JPG, 500 KB 이하여야 해요.
+- [운전면허 사진 규격 2026 (갱신·적성검사)](https://docttak.com/guide/driver-license-photo/): 운전면허 적성검사와 갱신에는 6개월 이내에 찍은 3.5×4.5 cm 여권용 컬러 사진을 1종 적성검사는 2장, 2종 갱신은 1장 준비해요.
+- [이력서 사진 규격, 사람인·잡코리아 크기와 용량](https://docttak.com/guide/resume-photo/): 사람인은 100×140픽셀 권장에 JPG·GIF 10 MB까지, 잡코리아는 150×210픽셀 이하에 GIF·JPG·PNG 5 MB 이내 사진을 받아요.
+- [주민등록증 사진 규격 (신규·재발급)](https://docttak.com/guide/id-card-photo/): 주민등록증 신규 발급과 재발급에는 6개월 이내에 찍은 3.5×4.5 cm 크기의, 모자 등을 쓰지 않은 상반신 사진 1장이 필요해요.
+- [증명사진 사이즈 규격 정리 (여권·공무원·큐넷·이력서)](https://docttak.com/guide/id-photo-size/): 증명사진 사이즈는 제출처마다 달라서 여권은 413×531픽셀, 국가공무원 시험은 137×177픽셀처럼 제출처 안내에 적힌 크기에 맞춰야 해요.
+- [증명사진 용량 줄이기 (200KB·350KB·500KB 맞추기)](https://docttak.com/guide/id-photo-kb/): 증명사진은 픽셀 크기까지 정해져 있으면 여권·증명사진 규격 맞추기로, 용량만 정해져 있으면 사진 용량 줄이기로 한도 이하에 맞추면 돼요.
+- [카톡 사진 용량, 한 번에 보낼 수 있는 양](https://docttak.com/guide/kakao-photo/): 카카오톡으로 사진은 한 번에 최대 300MB까지 보낼 수 있고, 20MB 이상인 사진은 묶음에 들어가지 않고 따로 가요.
+- [컴활 원서 사진 규격 (대한상공회의소 자격시험)](https://docttak.com/guide/korcham-photo/): 컴활 같은 대한상공회의소 자격시험 원서 사진은 JPG·JPEG·PNG·GIF 파일을 1 대 1.25 비율로 맞춰 올리면 되고, 등록하면 400×500픽셀로 바뀌어요.
+- [큐넷 사진 등록 규격과 안 될 때 확인할 점](https://docttak.com/guide/qnet-photo/): 큐넷 원서 사진은 JPG 파일에 200 KB 이하면 되고, 정면이 아니거나 배경이 어지럽거나 여백이 모자라면 등록이 안 될 수 있어요.
+- [텝스(TEPS) 사진 규격, 50 KB 이하 JPG](https://docttak.com/guide/teps-photo/): 텝스(TEPS) 접수 사진은 3×4 cm(126×165픽셀) 크기의 50 KB 이하 JPG 파일이고, 6개월 이내에 찍은 반명함판 컬러 사진이어야 해요.
+- [한국사능력검정시험 원서 사진 규격](https://docttak.com/guide/history-exam-photo/): 한국사능력검정시험 원서 사진은 GIF나 JPG 파일이면 되고, 권장 크기는 가로 120픽셀, 세로 160픽셀(약 3×4 cm)이에요.
+- [국가장학금 서류 제출, 대상 확인과 내는 법](https://docttak.com/guide/kosaf-docs/): 국가장학금 서류는 제출 대상일 때만 내면 되고, 대상인지는 신청 뒤 1일~3일(휴일 제외) 후 한국장학재단 홈페이지의 서류제출현황에서 확인해요.
+- [대학 원서 서류 올리기, 용량·파일이 안 될 때](https://docttak.com/guide/univ-docs-upload/): 받는 서류와 형식·용량은 지원하는 대학의 모집요강에서 확인하고, 유웨이는 파일이 너무 크거나 확장자가 맞지 않거나 파일 이름에 특수문자가 있으면 안 올라간다고 안내해요.
+- [도장·서명 이미지 만들기 (배경 없는 PNG)](https://docttak.com/guide/stamp-image/): 흰 종이에 찍은 도장이나 서명을 환한 곳에서 찍어 문서딱 전자서명·도장 이미지 만들기에서 고르면 종이를 지운 투명 배경 PNG로 저장돼요.
+- [전자서명·전자도장, 문서에 써도 되나요?](https://docttak.com/guide/e-signature-law/): 전자서명법 제3조는 전자서명이 전자적 형태라는 이유만으로 서명·기명날인의 효력이 부인되지 않는다고 정하지만, 문서를 받는 곳이 정한 방식이 있으면 그 방식을 따라야 해요.
+- [한글 없이 HWP 파일 여는 법](https://docttak.com/guide/open-hwp-without-hangul/): 한글 프로그램이 없으면 문서딱 HWP·HWPX 파일 보기에서 파일을 골라 바로 열거나, 한컴 다운로드 센터의 뷰어를 PC에 설치해 열면 돼요.
+- [휴대폰·아이폰에서 HWP 열기](https://docttak.com/guide/hwp-on-phone/): 받은 HWP 파일을 휴대폰에 저장한 뒤 문서딱 HWP·HWPX 파일 보기에서 「HWP 파일 열기」로 고르면 앱 설치 없이 바로 열려요.
+- [HWP PDF 변환, 한글 파일을 PDF로 바꾸는 법](https://docttak.com/guide/hwp-to-pdf/): 한글 프로그램이 없으면 문서딱 HWP PDF 변환에서 파일을 골라 바로 PDF로 내려받고, 한글이 있으면 [파일 > PDF로 저장하기]를 쓰면 돼요.
+- [HWPX가 뭔가요? 여는 법](https://docttak.com/guide/what-is-hwpx/): HWPX는 한글 문서를 XML 파일로 저장하는 개방형 문서 형식이고, 문서딱 HWP·HWPX 파일 보기에서 HWP와 같은 방법으로 설치 없이 열 수 있어요.
+- [메일 첨부파일 용량 제한, 지메일·아웃룩 기준](https://docttak.com/guide/email-attachment-limit/): 개인 지메일과 Outlook.com은 첨부파일 한도가 25 MB라서, 이보다 큰 PDF나 사진은 용량을 줄이거나 나눠서 보내야 해요.
+- [연말정산 간소화 PDF, 회사에 내는 법](https://docttak.com/guide/yearend-tax-pdf/): 연말정산 간소화 자료는 회사가 받는 방식에 따라 출력해서 내거나, PDF로 내려받아 내거나, 홈택스 간편제출로 내요.
+- [전자소송 PDF 용량, 파일 하나 20MB까지](https://docttak.com/guide/ecfs-pdf-limit/): 전자소송에 내는 파일은 하나에 20MB를 넘을 수 없고, 넘으면 여러 파일로 나눠 내되 모두 합쳐 100M 이하여야 해요.
+- [PDF 암호 해제·설정, 폰·PC에서 하는 법](https://docttak.com/guide/pdf-password/): PDF 암호 해제·설정에서 암호 풀기나 암호 걸기를 고르고 파일을 연 뒤 비밀번호를 입력하면 새 PDF로 저장돼요.
+- [PDF 용량 줄이기, 폰·맥북·PC에서 무료로 하는 법](https://docttak.com/guide/pdf-compress/): PDF 용량은 PDF 용량 줄이기에서 품질 단계나 목표 용량을 고르면 줄어들고, 글자는 선택·검색할 수 있는 그대로 남아요.
+- [PDF 합치기, 아이폰·갤럭시·PC에서 하는 법](https://docttak.com/guide/pdf-merge/): PDF 합치기에서 파일을 고르고 순서를 정한 뒤 합치기를 누르면 한 파일로 저장되고, 아이폰·갤럭시·PC 모두 같은 방법으로 할 수 있어요.

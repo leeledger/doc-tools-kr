@@ -1,0 +1,32 @@
+{
+ "exportId": "aa62cd87-714d0a62",
+ "hfRevision": "aa62cd87eafb9cc43056d08ef3615a14628b831d",
+ "torch": "2.1.2+cpu",
+ "opset": 17,
+ "deformPath": "gridsample",
+ "simplify": "onnxsim 0.4.36",
+ "bytes": 92302964,
+ "parts": [
+  {
+   "name": "model.part0",
+   "bytes": 24117248,
+   "sha256": "5a1620ee64194767034c36f296b2c9fea7ce628f893322d3eefcf0deb1957165"
+  },
+  {
+   "name": "model.part1",
+   "bytes": 24117248,
+   "sha256": "debfead2761384ca7dd805313bcfb1736602db7ea3480e10255ec336bf68074e"
+  },
+  {
+   "name": "model.part2",
+   "bytes": 24117248,
+   "sha256": "f0d14f14a203cbb572ff219dccd155c2f381930c74aae4295b91c31ea401b61b"
+  },
+  {
+   "name": "model.part3",
+   "bytes": 19951220,
+   "sha256": "b21bbf9566d5b295f265def45a038033e15aeae7d6e96b358554422d7e7bc9eb"
+  }
+ ],
+ "sha256Total": "714d0a62f064d6d972911ba7cef8716d8a77f326e6f714379e3a77364ab92062"
+}
