@@ -24,3 +24,6 @@ scripts/model/birefnet/out/
 scripts/model/birefnet/__pycache__/
 dist-bg/
 dist-bgcloud/
+
+# Any local build copy (dist-*), e.g. production-equivalent checks
+dist-*/

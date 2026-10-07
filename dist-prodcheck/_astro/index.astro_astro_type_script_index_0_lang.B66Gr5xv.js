@@ -1,2 +1,0 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["_astro/app.DiirHkGI.js","_astro/ui-shared.BzUmkI1m.js","_astro/session.mvyIyWGm.js"])))=>i.map(i=>d[i]);
-import{h as e,m as t}from"./ui-shared.BzUmkI1m.js";e(`hwp-tool`,()=>t(()=>import(`./app.DiirHkGI.js`).then(e=>e.initHwpViewer),__vite__mapDeps([0,1,2])),`hwp-viewer`);

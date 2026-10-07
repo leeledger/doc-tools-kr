@@ -1,9 +1,0 @@
-# Cloudflare Pages static redirects (Growth G.3). Every target must exist in dist/ (unit test).
-/hwp/ /hwp-to-pdf/ 301
-/hwp /hwp-to-pdf/ 301
-/hwp-pdf/ /hwp-to-pdf/ 301
-/hwp-pdf /hwp-to-pdf/ 301
-/guides/ /guide/ 301
-/guides /guide/ 301
-/passport/ /guide/passport-photo/ 301
-/passport /guide/passport-photo/ 301

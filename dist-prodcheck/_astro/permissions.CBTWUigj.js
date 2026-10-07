@@ -1,1 +1,0 @@
-function e(e){if(!e)return!1;let t=new Set(e);return![4,8,16].every(e=>t.has(e))}export{e as t};

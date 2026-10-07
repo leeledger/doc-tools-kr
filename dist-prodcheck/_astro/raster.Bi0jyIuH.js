@@ -1,1 +1,0 @@
-function e(){if(typeof OffscreenCanvas>`u`||typeof createImageBitmap!=`function`)return!1;try{let e=new OffscreenCanvas(1,1);return e.getContext(`2d`)!==null&&typeof e.convertToBlob==`function`}catch{return!1}}export{e as t};
