@@ -22,6 +22,8 @@ import { parseHref } from '../../src/lib/ui/deeplink';
 import { HUB_KIND, HUB_SLUGS } from '../../src/data/hubs';
 import { DUP_LIMIT, articleText, duplicatePairs, jaccard, shingles } from '../../scripts/lib/shingles.mjs';
 import { CLAIM_FILE_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, claimText, unqualifiedClaims } from '../../scripts/lib/bgcloud.mjs';
+import { rangeSet, systemFontSelectors, uncovered, visibleText } from '../../scripts/lib/fontcover.mjs';
+import { CORE_PATHS, uiCharSets } from '../../scripts/lib/ui-font-chars.mjs';
 
 const ROOT = join(__dirname, '..', '..');
 const DIST = join(ROOT, 'dist');
@@ -355,7 +357,7 @@ describe('gen-brand (P.10)', () => {
   });
 });
 
-// ---------- P.12 UI font instances ----------
+// ---------- P.12 UI font instances (core + late since the LCP fix after TOOLS4) ----------
 
 describe('UI font static instances (P.12)', () => {
   const gen = join(ROOT, 'src', 'generated');
@@ -365,10 +367,12 @@ describe('UI font static instances (P.12)', () => {
     for (let i = 0; i < n; i++) out[b.toString('latin1', 12 + i * 16, 16 + i * 16)] = b.readUInt32BE(12 + i * 16 + 8);
     return out;
   };
+  const lateFiles = readdirSync(gen).filter((f) => /^anolim-ui-late-\d+\.woff2$/.test(f));
+  const faceFiles = [...[400, 800].map((w) => [`anolim-ui-${w}.woff2`, w, 50] as const), ...lateFiles.map((f) => [f, Number(f.match(/(\d+)\.woff2$/)![1]), 8] as const)];
 
-  it.each([400, 700, 800])('%d: no fvar, usWeightClass = %d, the name guard passes, ≤ 50 KB', async (w) => {
-    const woff2 = readFileSync(join(gen, `anolim-ui-${w}.woff2`));
-    expect(woff2.length).toBeLessThanOrEqual(50 * 1024);
+  it.each(faceFiles)('%s: no fvar, usWeightClass = %d, the name guard passes, ≤ %d KB', async (file, w, kb) => {
+    const woff2 = readFileSync(join(gen, file));
+    expect(woff2.length).toBeLessThanOrEqual(kb * 1024);
     const sfnt = Buffer.from(await fontverter.convert(woff2, 'truetype', 'woff2'));
     const t = tables(sfnt);
     expect(t.fvar).toBeUndefined();
@@ -377,15 +381,92 @@ describe('UI font static instances (P.12)', () => {
     expect(reservedNameProblems(new Uint8Array(sfnt), 'Pretendard')).toEqual([]);
   });
 
-  it('the CSS has three faces (no 600, G2 ci-green), each with a single weight and format("woff2")', () => {
-    const css = readFileSync(join(gen, 'anolim-ui.css'), 'utf8');
-    const faces = css.match(/@font-face \{[^}]+\}/g) ?? [];
-    expect(faces).toHaveLength(3);
-    expect(faces.map((f) => f.match(/font-weight: ([^;]+);/)![1])).toEqual(['400', '700', '800']);
-    for (const f of faces) expect(f).toContain("format('woff2')");
-    const total = [400, 700, 800].reduce((a, w) => a + statSync(join(gen, `anolim-ui-${w}.woff2`)).size, 0);
-    // 190 KB since Step 4 round 2 (Arch; check-dist has the same limit).
+  const css = () => readFileSync(join(gen, 'anolim-ui.css'), 'utf8');
+  const faces = () => (css().match(/@font-face \{[^}]+\}/g) ?? []).map((f) => ({
+    file: f.match(/url\('\.\/([^']+)'\)/)![1],
+    weight: f.match(/font-weight: ([^;]+);/)![1],
+    range: rangeSet(f.match(/unicode-range: ([^;]+);/)![1]),
+    woff2: f.includes("format('woff2')"),
+  }));
+
+  it('two core faces (no 600, G2 ci-green; no 700, LCP round 2) and at most two late faces, one weight each, format("woff2")', () => {
+    const all = faces();
+    const core = all.filter((f) => /^anolim-ui-\d+\.woff2$/.test(f.file));
+    const late = all.filter((f) => /^anolim-ui-late-\d+\.woff2$/.test(f.file));
+    expect(core.length + late.length).toBe(all.length);
+    expect(core.map((f) => f.weight)).toEqual(['400', '800']);
+    expect(late.length).toBeLessThanOrEqual(2);
+    expect(late.map((f) => f.file).sort()).toEqual([...lateFiles].sort());
+    for (const f of late) expect(['400', '800']).toContain(f.weight);
+    expect(readdirSync(gen).filter((f) => /^anolim-ui(-late)?-700\.woff2$/.test(f))).toEqual([]);
+    for (const f of all) expect(f.woff2).toBe(true);
+    const total = faceFiles.reduce((a, [file]) => a + statSync(join(gen, file)).size, 0);
+    // 190 KB since Step 4 round 2 (Arch; check-dist has the same limit), core and late together.
     expect(total).toBeLessThanOrEqual(190 * 1024);
+  });
+
+  it('core and late ranges are disjoint, and their union is the single pre-split set (every source character)', () => {
+    const all = faces();
+    const core = all.find((f) => f.file === 'anolim-ui-400.woff2')!.range;
+    const late = all.find((f) => f.file === 'anolim-ui-late-400.woff2')?.range ?? new Set<number>();
+    for (const f of all) expect([...f.range]).toEqual([...(f.file.startsWith('anolim-ui-late-') ? late : core)]);
+    expect([...late].filter((cp) => core.has(cp))).toEqual([]);
+    const sets = uiCharSets(join(ROOT, 'src'));
+    expect([...core].sort((a, b) => a - b)).toEqual(sets.core);
+    expect([...new Set([...core, ...late])].sort((a, b) => a - b)).toEqual(sets.all);
+  });
+
+  it('core scope: tools and libs are late unless listed in CORE_PATHS; every CORE_PATHS entry exists', () => {
+    for (const p of CORE_PATHS) {
+      expect(p).toMatch(/^(tools|lib)\//);
+      expect(existsSync(join(ROOT, 'src', p))).toBe(true);
+    }
+  });
+});
+
+describe('UI font coverage helpers (scripts/lib/fontcover.mjs)', () => {
+  it('rangeSet reads single code points and runs', () => {
+    expect([...rangeSet('U+41-43, U+ac00')]).toEqual([0x41, 0x42, 0x43, 0xac00]);
+  });
+
+  it('systemFontSelectors reads class chains and Astro-scoped compounds, and rejects other shapes', () => {
+    const css = '.a,.b .c{font-family:-apple-system,sans-serif}.d{font-family:x}section[data-astro-cid-q] h2[data-astro-cid-q]{font-family:-apple-system}';
+    expect(systemFontSelectors(css)).toEqual([
+      [{ tag: undefined, classes: ['a'], attr: undefined }],
+      [{ tag: undefined, classes: ['b'], attr: undefined }, { tag: undefined, classes: ['c'], attr: undefined }],
+      [{ tag: 'section', classes: [], attr: 'data-astro-cid-q' }, { tag: 'h2', classes: [], attr: 'data-astro-cid-q' }],
+    ]);
+    expect(() => systemFontSelectors('#x>p{font-family:-apple-system}')).toThrow(/unsupported/);
+  });
+
+  it('visibleText drops scripts, styles, comments and exempt elements (nested, balanced), keeps attributes', () => {
+    const html = '<html><head><title>머리</title></head><body><p>가<!--숨김--></p><script>"스크립트"</script><style>p{}</style>'
+      + '<div class="sys"><div><p>제외</p></div></div><p>나</p><img alt="대체" src="x"><input placeholder="안내" value="값">'
+      + '<ul class="list"><li>밖목록</li></ul><div class="idx"><ul class="list"><li>안목록</li></ul></div><p>&#xB2E4;&amp;</p></body></html>';
+    const exempt = systemFontSelectors('.sys,.idx .list{font-family:-apple-system}');
+    const text = visibleText(html, exempt);
+    for (const s of ['가', '나', '대체', '안내', '값', '밖목록', '다&']) expect(text).toContain(s);
+    for (const s of ['머리', '숨김', '스크립트', '제외', '안목록']) expect(text).not.toContain(s);
+  });
+
+  it('the /guide/ section h2 exemption (shipped CSS, Astro-scoped) applies on /guide/ only, not on tool pages', () => {
+    if (!readdirSync(ROOT).includes('dist')) throw new Error('Run `npm run build` first: this check reads dist/.');
+    const astroDir = join(DIST, '_astro');
+    const cssText = readdirSync(astroDir).filter((f) => f.endsWith('.css')).map((f) => readFileSync(join(astroDir, f), 'utf8')).join('\n');
+    const exempt = systemFontSelectors(cssText);
+    const scopedH2 = exempt.filter((chain) => chain.at(-1)?.tag === 'h2');
+    expect(scopedH2.length).toBeGreaterThan(0);
+    for (const chain of scopedH2) for (const c of chain) expect(c.attr).toMatch(/^data-astro-cid-/);
+    const h2Texts = (html: string) => [...html.matchAll(/<h2\b[^>]*>([^<]+)<\/h2>/g)].map((m) => m[1].trim());
+    const guide = readFileSync(join(DIST, 'guide', 'index.html'), 'utf8');
+    const topic = h2Texts(guide).find((t) => /[가-힣]/.test(t))!;
+    expect(visibleText(guide, exempt)).not.toContain(topic);
+    const tool = readFileSync(join(DIST, 'pdf-compress', 'index.html'), 'utf8');
+    for (const t of h2Texts(tool)) expect(visibleText(tool, exempt)).toContain(t);
+  });
+
+  it('uncovered lists each missing character once and ignores whitespace', () => {
+    expect(uncovered('가 나\n가다', new Set([0xac00]))).toEqual(['나', '다']);
   });
 });
 

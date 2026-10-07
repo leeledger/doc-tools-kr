@@ -40,7 +40,7 @@ button.menu-toggle[aria-expanded="true"]::after { transform: translateY(2px) rot
   text-decoration: none; color: var(--text); font-size: 15.5px;
 }
 .menu-panel a:hover { background: var(--brand-soft); }
-.menu-panel a[aria-current="page"] { color: var(--brand); font-weight: 700; }
+.menu-panel a[aria-current="page"] { color: var(--brand); font-weight: 800; }
 .menu-panel svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--brand); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .menu-sep { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
 @media (max-width: 640px) {
@@ -112,7 +112,7 @@ button.menu-toggle[aria-expanded="true"]::after { transform: translateY(2px) rot
 
 /* ---------- PDF 합치기 ---------- */
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-button.btn { border: 0; font: inherit; font-weight: 700; cursor: pointer; }
+button.btn { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
 button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn.small { min-height: 44px; min-width: 44px; padding: 0 14px; font-size: 15px; border-radius: 10px; }
@@ -157,7 +157,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .thumb-ph { color: var(--muted); font-size: 14px; }
 .meta { grid-area: meta; min-width: 0; }
 .meta p { margin: 0; }
-.meta .name { font-weight: 700; overflow-wrap: anywhere; }
+.meta .name { font-weight: 800; overflow-wrap: anywhere; }
 .meta .info { color: var(--muted); font-size: 15px; }
 .meta .note { font-size: 14.5px; color: var(--muted); margin-top: 6px; }
 .file-error { color: var(--danger); font-size: 15px; margin-top: 6px !important; }
@@ -165,7 +165,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 
 .pw { grid-area: pw; display: grid; gap: 6px; min-width: 0; }
 .pw-state { margin: 0; font-size: 15px; }
-.pw-label { font-size: 15px; font-weight: 700; }
+.pw-label { font-size: 15px; font-weight: 800; }
 .pw-row { gap: 8px; }
 .pw-row .btn { flex: none; }
 .pw-input {
@@ -221,7 +221,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .hint { margin: 0; color: var(--muted); font-size: 15px; min-height: 1.5em; }
 
 .progress-box { margin-top: 20px; display: grid; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-.progress-box p { margin: 0; font-weight: 700; }
+.progress-box p { margin: 0; font-weight: 800; }
 .progress-box progress { width: 100%; height: 12px; accent-color: var(--brand); }
 .progress-box .btn { justify-self: start; }
 
@@ -233,7 +233,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .meta .name, .ph-meta .name { font-feature-settings: "calt" 0; }
 .target-chip {
   display: inline-block; margin: 0 0 12px; padding: 4px 12px; border-radius: 999px;
-  background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 15px;
+  background: var(--brand); color: var(--brand-ink); font-weight: 800; font-size: 15px;
 }
 .engine-error .engine-title { font-weight: 800; }
 .engine-error p { margin: 0 0 10px; }
@@ -249,7 +249,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .levels { margin: 0; padding: 12px 16px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); min-width: 0; }
 .levels legend { font-weight: 800; padding: 0 6px; }
 .level { display: grid; gap: 0; }
-.radio { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-weight: 700; }
+.radio { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-weight: 800; }
 .radio input { width: 22px; height: 22px; accent-color: var(--brand); flex: none; }
 .level-desc { margin: 0 0 8px 32px; color: var(--muted); font-size: 15px; }
 .levels-common { margin: 6px 0 0; font-size: 15px; }
@@ -279,7 +279,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .related { padding: 48px 0; border-top: 1px solid var(--line); }
 .related-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
 .related-list li { display: grid; gap: 2px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
-.related-list a { font-weight: 700; color: var(--brand); display: inline-block; min-height: 24px; }
+.related-list a { font-weight: 800; color: var(--brand); display: inline-block; min-height: 24px; }
 .related-list span { color: var(--muted); font-size: 15px; }
 
 /* ---------- 사진 용량 줄이기 ---------- */
@@ -295,12 +295,12 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .ph-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .ph-meta { grid-area: meta; min-width: 0; }
 .ph-meta p { margin: 0; }
-.ph-meta .name { font-weight: 700; overflow-wrap: anywhere; }
+.ph-meta .name { font-weight: 800; overflow-wrap: anywhere; }
 .ph-meta .info, .ph-dims, .ph-status { color: var(--muted); font-size: 15px; }
-.ph-size { font-weight: 700; margin-top: 4px !important; }
-.ph-pct { color: var(--brand); font-size: 15px; font-weight: 700; }
+.ph-size { font-weight: 800; margin-top: 4px !important; }
+.ph-pct { color: var(--brand); font-size: 15px; font-weight: 800; }
 .ph-badges { margin-top: 4px !important; }
-.badge { display: inline-block; font-size: 13.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.badge { display: inline-block; font-size: 13.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 .ph-notes { margin: 6px 0 0; padding-left: 18px; font-size: 14.5px; }
 .photo-row .actions { grid-area: actions; justify-content: flex-end; }
 .photo-row[data-state="done"] { border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
@@ -317,7 +317,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .chip span {
   display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: center; padding: 0 14px;
-  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-weight: 700; font-size: 15px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-weight: 800; font-size: 15px;
 }
 .chip input:checked + span { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
 .chip input:focus-visible + span { outline: 3px solid var(--brand); outline-offset: 2px; }
@@ -358,7 +358,7 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .idp-stage:active { cursor: grabbing; }
 .idp-stage:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
 .idp-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.idp-readout { margin: 0; text-align: center; font-weight: 700; }
+.idp-readout { margin: 0; text-align: center; font-weight: 800; }
 .idp-controls { display: grid; gap: 8px; }
 .idp-controls .level-desc { margin: 0; }
 .idp-nudges { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -369,7 +369,7 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .idp-item svg, .idp-chip svg { margin-top: 3px; }
 .idp-item.ok svg, .idp-chip svg { color: #15803d; }
 .idp-item.warn svg { color: #b45309; }
-.idp-item.block { font-weight: 700; }
+.idp-item.block { font-weight: 800; }
 .idp-item.block svg { color: #b91c1c; }
 .idp-notices ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
 .idp-confirm-label { align-items: flex-start; }
@@ -396,17 +396,17 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .pc-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; transform-origin: 0 0; pointer-events: none; }
 .pc-divider { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); pointer-events: none; }
 .pc-tag {
-  position: absolute; top: 8px; padding: 2px 8px; border-radius: 6px; font-size: 13.5px; font-weight: 700;
+  position: absolute; top: 8px; padding: 2px 8px; border-radius: 6px; font-size: 13.5px; font-weight: 800;
   background: rgba(0,0,0,.66); color: #fff; pointer-events: none;
 }
 .pc-tag-left { left: 8px; }
 .pc-tag-right { right: 8px; }
 .pc-caption { color: var(--muted); font-size: 14.5px; overflow-wrap: anywhere; }
 .pc-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-.pc-slider-label { font-weight: 700; }
+.pc-slider-label { font-weight: 800; }
 .pc-slider { flex: 1 1 180px; min-height: 44px; accent-color: var(--brand); }
 .pc-zooms { border: 0; margin: 0; padding: 0; display: flex; gap: 8px; align-items: center; min-width: 0; }
-.pc-zooms legend { float: left; font-weight: 700; margin-right: 8px; }
+.pc-zooms legend { float: left; font-weight: 800; margin-right: 8px; }
 
 
 .ad-slot { margin: 32px auto; display: block; }
@@ -433,7 +433,7 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 /* The copy button comes first and keeps its size, so 링크 보내기 appearing after it (Web Share only) moves nothing. */
 .share-row .share-btn { flex: 0 0 auto; }
 .share-fallback { margin-top: 12px; display: grid; gap: 6px; }
-.share-fallback label { font-weight: 700; font-size: 15px; }
+.share-fallback label { font-weight: 800; font-size: 15px; }
 .share-field { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 15px; background: var(--surface); color: var(--text); }
 .quick { padding: 40px 0 8px; }
 .quick h2 { font-size: 21px; margin: 0 0 12px; }
@@ -448,7 +448,7 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .home-guides { padding: 24px 0 56px; }
 .guide-grid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
 .guide-grid li { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
-.guide-grid a { font-weight: 700; color: var(--brand); display: inline-block; min-height: 24px; }
+.guide-grid a { font-weight: 800; color: var(--brand); display: inline-block; min-height: 24px; }
 .guide-grid span { color: var(--muted); font-size: 15px; }
 /* Guide titles and answers listed outside the guide pages: the system Korean font, like the guides themselves
    (their text is not in the UI font subset; BUILD-LOG Growth G). */

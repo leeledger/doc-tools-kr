@@ -60,10 +60,8 @@ export default defineConfig({
             // Growth G: the deep-link modules (and josa, which they share with every tool) join the chunk, so a
             // tool page loads no extra request for them (Lighthouse LCP on /photo-compress/ and /pdf-compress/).
             if (/[\/]src[\/]lib[\/]ui[\/](announce|usage|device|engine-error|engine-load|font|format|preload|josa|deeplink|quicklinks)\.ts$/.test(id)) return 'ui-shared';
-            // TOOLS4 CI fix: the /jpg-to-pdf/ controller shares raster.ts (canDrawOffscreen) with /photo-compress/ and
-            // reorder.ts with /pdf-merge/; as their own chunks they were one more request before the first paint on
-            // those pages (Lighthouse LCP on /photo-compress/ 2,108 ms median on the CI runner, TOOLS4 T2).
-            if (/[\/]src[\/]lib[\/](image[\/]raster|ui[\/]reorder)\.ts$/.test(id)) return 'ui-shared';
+            // Not here: lib/image/raster.ts and lib/ui/reorder.ts (LCP round 2: in ui-shared they made /photo-compress/
+            // slower, 1,980 -> 2,119 ms local, and moved no other page).
             if (/[\/]src[\/]data[\/]preset-ids\.ts$/.test(id)) return 'ui-shared';
             if (/[\/]scripts[\/]lib[\/]usage\.mjs$/.test(id)) return 'ui-shared';
             // G2 A0: the HWP page script (shared by /hwp-to-pdf/ and /hwp-viewer/) joins the chunk those pages load

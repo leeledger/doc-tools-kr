@@ -16,7 +16,7 @@
 .hv .hv-page input { width: 4.2em; text-align: center; }
 .hv .hv-zoom { min-width: 3.6em; text-align: center; font-variant-numeric: tabular-nums; }
 .hv .hv-find { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.hv .hv-find label { font-weight: 700; }
+.hv .hv-find label { font-weight: 800; }
 .hv .hv-find input { flex: 1 1 12em; min-width: 0; }
 .hv .hv-find-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex-basis: 100%; }
 .hv .hv-find-line p { margin: 0; }
@@ -26,7 +26,7 @@
 .hv .hw-preview .page { position: relative; max-width: none; }
 .hv .hv-mark { position: absolute; border-radius: 2px; background: rgb(250 204 21 / .5); mix-blend-mode: multiply; pointer-events: none; }
 .hv .hv-thumbs { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
-.hv .hv-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 14px; border-bottom: 1px solid var(--line); font-weight: 700; }
+.hv .hv-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 14px; border-bottom: 1px solid var(--line); font-weight: 800; }
 .hv .hv-tiles { position: relative; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
 .hv .hv-spacer { pointer-events: none; }
 .hv .hv-tile {

@@ -139,6 +139,18 @@ test('lazy load: nothing from the worker or the codecs before the button; WebP w
   expect(urls().filter((u) => WEBP_WASM.test(u)).length).toBe(1);
 });
 
+test('UI font: the late face loads only when result text with a late character appears (LCP fix after TOOLS4)', async ({ page, network }) => {
+  const late = () => network.requests.map((r) => r.url()).filter((u) => /\/_astro\/anolim-ui-late-\d+\.[^/]*\.woff2$/.test(u));
+  await open(page);
+  await pick(page, [PORTRAIT]);
+  expect(late()).toEqual([]);
+  await chooseTarget(page, '200 KB');
+  await run(page);
+  // "→" is controller-only text (src/tools/photo-compress), so it lives in the late range.
+  await expect(row(page, 'portrait_pd.jpg').locator('.ph-size')).toHaveText(/→/);
+  await expect.poll(() => late().length).toBeGreaterThan(0);
+});
+
 test('happy path, 200 KB: portrait and scene come out ≤ 200,000 bytes, baseline and clean; compare viewer works', async ({ page }) => {
   await open(page);
   await pick(page, [PORTRAIT, SCENE]);

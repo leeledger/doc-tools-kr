@@ -309,6 +309,63 @@ test('UI font weights: 800 renders bolder than 400 (static instances; the audit 
   expect(r.bold.ink / r.regular.ink).toBeGreaterThanOrEqual(1.3);
 });
 
+// ---------- LCP fix after TOOLS4: late UI faces never load with a page ----------
+
+// The build check proves the static HTML needs only the core faces; this catches first-screen text that scripts
+// render (an entry or controller writing a late character on load would fetch a face before LCP).
+const LATE_FACE = /\/_astro\/anolim-ui-late-\d+\.[^/]*\.woff2$/;
+test('UI font: home, every live tool page and a guide load no late face (networkidle + 1 s each)', async ({ page, network }) => {
+  test.setTimeout(180_000);
+  const settle = async (path: string) => {
+    const from = network.requests.length;
+    await gotoReady(page, path);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    expect.soft(network.requests.slice(from).map((r) => r.url()).filter((u) => LATE_FACE.test(u)), path).toEqual([]);
+  };
+  await settle('/');
+  // The live tools are the home page's live cards (src/data/tools.ts needs the build's defines to import).
+  const tools = await page.locator('.card.live .card-link').evaluateAll((as) => as.map((a) => a.getAttribute('href')!));
+  expect(tools.length).toBeGreaterThanOrEqual(10);
+  for (const path of [...tools, '/guide/passport-photo/']) await settle(path);
+});
+
+// LCP round 2: the 700 face is retired; CSS 700 became 800, and UA bold (strong, h2, summary: 700) matches the
+// preloaded 800 face. No 700 file is requested, and 700 text is the real 800 face (same ink), not a synthesized
+// bold or a fallback family.
+for (const path of ['/', '/photo-compress/']) {
+  test(`UI font: ${path} requests no 700 face; the primary button is 800; UA bold renders with the 800 face`, async ({ page, network }) => {
+    await gotoReady(page, path);
+    await page.waitForLoadState('networkidle');
+    expect(network.requests.map((r) => r.url()).filter((u) => /anolim-ui(-late)?-700\./.test(u))).toEqual([]);
+    await expect(page.locator('.btn.primary').first()).toHaveCSS('font-weight', '800');
+    const r = await page.evaluate(async () => {
+      const loaded = [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Anolim UI Sans' && f.status === 'loaded').map((f) => f.weight);
+      const strong = document.querySelector('main strong, main h2');
+      const text = strong!.textContent!.trim();
+      const probe = (weight: number) => {
+        const c = document.createElement('canvas');
+        c.width = 600;
+        c.height = 60;
+        const ctx = c.getContext('2d')!;
+        ctx.font = `${weight} 32px "Anolim UI Sans"`;
+        ctx.fillText(text, 4, 44);
+        const px = ctx.getImageData(0, 0, c.width, c.height).data;
+        let ink = 0;
+        for (let i = 3; i < px.length; i += 4) ink += px[i]!;
+        return ink;
+      };
+      return { loaded, weight: getComputedStyle(strong!).fontWeight, check: document.fonts.check('700 16px "Anolim UI Sans"', text), ink700: probe(700), ink800: probe(800), ink400: probe(400) };
+    });
+    expect(r.loaded).not.toContain('700');
+    expect(Number(r.weight)).toBeGreaterThanOrEqual(700);
+    expect(r.check).toBe(true);
+    expect(Math.abs(r.ink700 / r.ink800 - 1)).toBeLessThan(0.02);
+    expect(r.ink700 / r.ink400).toBeGreaterThanOrEqual(1.3);
+    expect(network.requests.map((u) => u.url()).filter((u) => /anolim-ui(-late)?-700\./.test(u))).toEqual([]);
+  });
+}
+
 // ---------- P.13 목표 용량 ----------
 
 test.describe('목표 용량 (P.13)', () => {

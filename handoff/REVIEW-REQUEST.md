@@ -1,35 +1,42 @@
-# Review Request — CI fix (main red since TOOLS4 T2)
-Date: 2026-10-06
-Ready for Review: YES. Status **DONE_WITH_CONCERNS** (the Lighthouse LCP on /photo-compress/ is only confirmable on the CI runner; see Concerns). Not committed. Details: BUILD-LOG "CI fix after TOOLS4".
-
-## Failures found (runs 37446989595 T2, 37450675542 T3, 37458486170 T4 r2; T4 37456799735 was cancelled)
-| # | Failure | Where | Real or flake | Root cause | Fix |
-|---|---|---|---|---|---|
-| 1 | id-photo.spec.ts:654 `.related a` 6 → 7 (T2) / 8 (T3) / 9 (T4) | every e2e job, all retries | real (stale test) | /id-photo/ uses `<RelatedTools>` without `only` = every other live tool (site.spec already checks that rule); the TOOLS4 brief (decision 9) maps related lists only for the 3 new tools. The test hard-coded 6. | Test reads the live home cards and expects related = live − /id-photo/ (no count). Code unchanged. No other stale hard-coded tool count found (site.spec cards = 10 already updated). |
-| 2 | pdf-compress.spec.ts:41 lazy load: worker, mozjpeg/resize wasm, qpdf before the button | mobile-chrome (T3), chromium (T4 r2); also 2026-10-02 and the TOOLS4 brief commit (pre-TOOLS4) | real bug, intermittent | Not T0–T4. Chromium on Linux sends a trusted `pointermove` at 0,0 with movementX/Y 0 on every page load (resting cursor at first layout). The Polish P.7 preload counts any pointermove as the "first user signal", so after idle it warmed the whole engine with no interaction. Traces: inspect.js/pdf.js requested before setInputFiles. Reproduced deterministically on Linux (WSL Ubuntu, headless shell 1243): no interaction + 4 s idle → 7 engine requests on chromium and mobile-chrome. The test fails only when the idle callback beats the 1쪽 check (first test of a fresh worker under load). | `src/lib/ui/preload.ts`: `isRestingMove` — a pointermove that did not move is not a signal; the next real move is. After the fix: 0 engine requests on Linux (6/6). Test unchanged. |
-| 3 | Lighthouse LCP > 2,000 ms: /photo-compress/ 2,108 (T2), /photo-compress/ 2,115 + /pdf-merge/ 2,113 (T4 r2) | checks | real | (a) TOOLS4 T2 moved `canDrawOffscreen` into `lib/image/raster.ts` and T2 shared `lib/ui/reorder.ts` with the lazy /jpg-to-pdf/ controller; Rollup split both into their own chunks, so /photo-compress/ (raster) and /pdf-merge/ (reorder) gained one request before first paint — exactly the two failing pages. (b) The UI font subset grew 622 → 634 characters (12 new syllables from the TOOLS4 copy), +0.8–1 KB per preloaded face. | `astro.config.mjs` manualChunks: raster.ts and reorder.ts join `ui-shared` (the Growth G / Step 4 precedent). Pre-TOOLS4 request structure restored on both pages. (b) not changed: escalated (see Concerns). |
-| 4 | pdf-to-jpg.spec.ts:58 (webkit, T3): state stayed `empty`, alert "손상" | webkit, passed on retry | flake, already fixed | Shared runtime fixture path rewritten by another worker's beforeAll. | Already fixed in T4 (per-process fixture path). Passed on webkit/mobile-safari locally; not seen in T4 r2. |
-| 5 | Firefox: site.spec SEO smoke /jpg-to-pdf/, axe /terms/, /pdf-merge/ with files, ~10 others | firefox, all passed on retry | flake | Every one is `page.goto: Timeout 20000ms` (the known Playwright-Firefox navigation-event drop, 2 retries on CI). No assertion failures. Same pattern in pre-TOOLS4 green runs. | None. |
+# Review Request — LCP round 2 (700 retired; on top of round 1's core/late split)
+Date: 2026-10-07
+Ready for Review: YES. Status **DONE** locally. All 23 lhci URLs pass. The CI checks job is the final word and has not run yet (not pushed). Not committed. Details: BUILD-LOG "LCP round 2" (round 1: "LCP fix after TOOLS4").
 
 ## Files Changed
-- astro.config.mjs:63-66 — raster.ts and reorder.ts go into the `ui-shared` chunk (one request fewer on /photo-compress/ and /pdf-merge/).
-- src/lib/ui/preload.ts:35-45 — `isRestingMove(ev)`: pointermove with movementX = movementY = 0 is not a signal.
-- src/lib/ui/preload.ts:81-82 — `onSignal` ignores such a move and keeps listening.
-- tests/unit/polish.test.ts:186-196 — fake target passes an event (default movement 3,1).
-- tests/unit/polish.test.ts:227-236 — regression: resting move does not start the preload, a real move does (fails without the fix, verified).
-- tests/e2e/preload.spec.ts:18-20, 45 — `mouse.move(200, 300, { steps: 2 })`: the first move on a fresh page has no previous position, so a one-step move reports movement 0 (Windows); two steps is a real move. Save-Data test likewise, so it still proves the skip.
-- tests/e2e/id-photo.spec.ts:663-665, 680-681 — related links = live home cards minus /id-photo/.
+Round 2:
+- scripts/gen-ui-font.mjs:37-43 — UI_WEIGHTS = [400, 800], with a comment on why 700 is gone.
+- src/styles/app.css (20 lines), src/styles/global.css (4), src/tools/hwp-viewer/viewer.css (2), src/tools/stamp-signature/stamp.css (2), src/tools/remove-background/bg.css (1) — `font-weight: 700` → `800`. Nothing else changed.
+- scripts/check-dist.mjs:20-21 — UI_WEIGHTS {400, 800}.
+- scripts/check-dist.mjs:308-331 — core exactly 2, late ≤ 2; tripwire 94,884 (no −2,048), comment cites 2909fe3 + JSON.
+- scripts/check-dist.mjs:355-362 — CSS font-weight 700/bold fails with the reason (verified by injection).
+- astro.config.mjs:63-64 — raster.ts / reorder.ts out of ui-shared (CI-fix move reverted), comment says why.
+- scripts/gen-sw.mjs:78-79 — comment only (stale 700 note).
+- tests/unit/postbuild.test.ts:371, 393-402 — 2 core + ≤ 2 late faces, no 700 file; the "core ≤ 600" assertion removed.
+- tests/unit/postbuild.test.ts:452-466 — the /guide/ scoped `section h2` exemption applies on /guide/ only; tool-page h2s stay checked (reads dist/).
+- tests/e2e/polish.spec.ts:334-368 — on / and /photo-compress/: no 700 request, no loaded 700 face, `.btn.primary` is 800, UA bold renders with the 800 face (ink 700 ≈ 800 within 2 %, ≥ 1.3× of 400).
 
-## Verified locally
-- Builds as CI (dist-noauto, dist auto-frame, dist-bg, dist-bgcloud): check-dist OK in all; astro check 0 errors; unit (on the PUBLIC_BG_REMOVE=1 build) 51 files, 1,086 passed.
-- Windows: chromium + manual-chromium + mobile-chrome (id-photo:654, pdf-compress, photo-compress, pdf-merge, jpg-to-pdf, pdf-to-jpg, preload, polish, site) 324 passed / 15 skipped. firefox + manual-firefox + webkit + mobile-safari (id-photo:654, pdf-to-jpg, jpg-to-pdf, site, pdf-compress:41, photo-compress:119, pdf-merge) 237 passed, 2 flaky (firefox goto timeout; webkit pdf-merge happy path — pre-existing, 4/12 fail on the unmodified build too). bg-chromium + cloud-chromium + cloud-mobile-chrome 39 passed.
-- Linux (WSL Ubuntu 24.04, Playwright chromium headless shell): id-photo:654, pdf-compress, photo-compress, preload, polish on chromium + mobile-chrome + manual-chromium 160 passed / 13 skipped; idle probe 0 engine requests (was 7).
-- Lighthouse (local, 5 runs): /pdf-merge/ 2,121–2,126 before → 1,969–1,985 (one 2,120) after. /photo-compress/ 2,123–2,138 before → 2,115–2,142 after (unchanged locally). Same build with the pre-TOOLS4 UI font files swapped in: /photo-compress/ 1,976–1,983 (one 2,140).
+Round 1 (unchanged since the last request): scripts/lib/ui-font-chars.mjs, scripts/lib/fontcover.mjs, the core/late split, the coverage check, and the late-face e2e tests.
 
-## Concerns / Escalate to Architect
-- **/photo-compress/ LCP may still fail on the CI runner.** On CI it was bimodal (1,956–1,974 vs 2,108–2,118, 2–3 of 5 over); locally it stays ~2,120 after the chunk fix and drops to ~1,980 only with the pre-TOOLS4 font files. All tool pages sit at ~1,955–1,970 on CI, one lantern step (~150 ms) under 2,000, so every byte added to the preloaded faces tips the next page. Options (none taken; thresholds untouched): (a) reword the 12 new syllables (엇 낼 겁 잊 렸 엽 애 씨 푸 푼 던 쉼; tools.ts FAQ, pdf-password/pdf-to-jpg pages, controllers) — copy change, owner; (b) keep controller-only status strings out of the UI subset (they render after `loadDynamicFont()`), a gen-ui-font scope change; (c) make the /photo-compress/ controller lazy like /jpg-to-pdf/ (initial JS 20.8 KB → ~9 KB). Tried and rejected: sniff/messages into ui-shared (photo-compress 3/5 under, other pages got worse), a `pdf-pick` manual chunk (pulled modules onto unrelated pages, every page 2,120).
-- preload.ts behaviour change: the first real mouse move on a fresh page (movement 0 in Chromium on Windows) no longer counts; the second does. Lighthouse runs headless Chrome on Linux, so before this fix the preload could also start during a Lighthouse run.
+## Measurements (local lhci, PUBLIC_BG_REMOVE=1, 5 runs, medians in ms)
+| URL | HEAD | round 1 | round 2 |
+|---|---|---|---|
+| / | 1,974 | 1,848 | **1,659** |
+| /photo-compress/ | 2,120 | 2,119 | **1,809** (max 1,816) |
+| /pdf-merge/ | 1,971 | 1,974 | **1,813** |
+| /pdf-compress/ | 1,975 | 1,969 | **1,809** |
+| /id-photo/ | 1,975 | 1,975 | **1,808** |
+Other tool pages 1,658–1,665, guides 1,659–1,665, /terms/ 1,657. CLS 0.000 and perf 0.99–1 on all 23 URLs; lhci exit 0.
+
+Tripwire margins (94,884): dist-noauto 2,516 B, dist (AUTOFRAME=1) 2,112 B, dist-bg 2,468 B, dist-bgcloud 2,468 B.
+
+## Screenshots for the owner (handoff/lcp-shots/)
+`before-*` = with the 700 face (round 1), `after-*` = 800. Pages: home, photo-compress, pdf-merge, id-photo, stamp-signature, guide. Each has `-desktop` (1280), `-mobile` (360) and `-mobile-dark`. Example: handoff/lcp-shots/before-photo-compress-mobile.png vs handoff/lcp-shots/after-photo-compress-mobile.png. An overflow/wrap scan (buttons, tabs, chips, badges, status labels; horizontal scroll at 360 px) found nothing before or after, and the full-page heights are identical.
+
+## Open Questions
+- I took the screenshots with a one-off Playwright script, not the visual-qa skill. They cover the six pages and three modes the brief asked for, but there is no visual-qa health score. Run visual-qa at the deploy gate if you want one.
+- The 36 PNGs are ~19 MB. Arch should decide whether they are committed or kept out (owner review only).
+- WebKit: the existing "800 renders bolder than 400" test was flaky once (passed on retry); 3× repeat without retries gave 24/24.
 
 ## Out of Scope (logged in BUILD-LOG)
-- WebKit (Windows) pdf-merge happy path: first list row reads "" right after 위로 이동, 4/12 locally on the unmodified build; on CI it shows as a download timeout, passes on retry.
-- Firefox goto timeouts (known, 2 retries).
+- The fallback 700 face (Playwright-derived subset) if the owner vetoes the heavier look: not built.
+- WebKit pdf-merge flaky (existing Known Gap).

@@ -13,11 +13,12 @@ import { USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
 import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
+import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fontcover.mjs';
 
 const dist = distDir();
 const KB = 1024;
-/** The UI font weights (Polish P.12): one static instance each; no other weight may appear in the CSS. */
-const UI_WEIGHTS = new Set(['400', '700', '800']);
+/** The UI font weights (Polish P.12; 700 retired in LCP round 2): one static instance each; no other weight may appear in the CSS. */
+const UI_WEIGHTS = new Set(['400', '800']);
 /** Copy that describes auto-framing; none of it may ship when PUBLIC_ID_PHOTO_AUTOFRAME is off. */
 const AUTOFRAME_PHRASES = ['자동으로 잡아', '자동으로 맞춘', '자동 맞춤', '건너뛰고 직접 맞추기', '6 MB의 프로그램'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -304,22 +305,60 @@ else {
   if (age > 180) warnings.push(`id-photo presets were last checked ${retrieved} (${age} days ago): re-verify every source`);
 }
 
-// UI fonts (Polish P.12; 600 dropped in G2 ci-green): three static instances, ≤ 50 KB each and ≤ 190 KB together; exactly two preloads.
+// UI fonts (Polish P.12; 600 dropped in G2 ci-green; core + late split in the LCP fix after TOOLS4; 700 retired in
+// LCP round 2): two static core instances (400, 800), ≤ 50 KB each; up to two late instances (controller-only
+// characters), ≤ 8 KB each; ≤ 190 KB together; exactly two preloads, both core.
 const uiFonts = match(/^_astro\/anolim-ui-\d+[^/]*\.woff2$/);
-if (uiFonts.length !== 3) errors.push(`UI fonts: ${uiFonts.length} file(s), expected 3 (400, 700, 800)`);
+const lateFonts = match(/^_astro\/anolim-ui-late-\d+[^/]*\.woff2$/);
+if (uiFonts.length !== 2) errors.push(`UI fonts: ${uiFonts.length} core file(s), expected 2 (400, 800)`);
+if (lateFonts.length > 2) errors.push(`UI fonts: ${lateFonts.length} late file(s), expected at most 2 (400, 800)`);
 for (const f of uiFonts) budget(`UI font ${f.slice(7)}`, [f], 50 * KB, raw, 'raw');
+for (const f of lateFonts) budget(`UI font ${f.slice(7)}`, [f], 8 * KB, raw, 'raw');
 // 190 KB (Arch, Step 4 round 2; was 180, and 170 before Polish round 2): with the /id-photo/ copy the four
 // faces are 179.1 KB, ~1 KB under 180, so the next tool's copy would have failed the build.
-budget('UI fonts total', uiFonts, 190 * KB, raw, 'raw');
+budget('UI fonts total', [...uiFonts, ...lateFonts], 190 * KB, raw, 'raw');
+// Preloaded-bytes tripwire (LCP fix after TOOLS4, Arch round 2): core 400 + core 800 never exceed what the last
+// green build shipped: 2909fe3 (the last commit before TOOLS4), its src/ run through gen-ui-font with the same
+// prebuild JSON (package.json, lock and the gen-* scripts unchanged since): 45,744 + 49,140 = 94,884 bytes, the
+// bytes every page fetches before LCP. One number for every build variant. Over it, move controller-only text out
+// of the core set; never raise this number.
+const PRELOAD_TRIPWIRE = 94_884;
+const preloadable = uiFonts.filter((f) => /^_astro\/anolim-ui-(400|800)\./.test(f));
+budget('UI fonts preloaded (core 400 + 800)', preloadable, PRELOAD_TRIPWIRE, raw, 'raw');
 for (const [path, html] of pageHtml) {
-  const preloads = [...html.matchAll(/<link rel="preload"[^>]*as="font"[^>]*>/g)].length;
-  if (preloads !== 2) errors.push(`${path}: ${preloads} font preload(s), expected exactly 2 (400 and 800)`);
+  const preloads = [...html.matchAll(/<link rel="preload"[^>]*as="font"[^>]*>/g)].map((m) => m[0]);
+  if (preloads.length !== 2) errors.push(`${path}: ${preloads.length} font preload(s), expected exactly 2 (400 and 800)`);
+  for (const l of preloads) if (!/href="\/_astro\/anolim-ui-(400|800)\.[^"/]*\.woff2"/.test(l)) errors.push(`${path}: preload ${l} is not a core UI face (400 or 800)`);
+}
+// Coverage: every character a built page shows must be in the core range, or LCP text would wait on a face that
+// is not preloaded. Exempt: elements the shipped CSS renders in the system font (guide prose, docs/COPY.md).
+{
+  const cssText = match(/^_astro\/[^/]*\.css$/).map((c) => read(c).toString('utf8')).join('\n');
+  const core = new Set();
+  for (const face of cssText.match(/@font-face\s*\{[^}]*\}/g) ?? []) {
+    if (!/anolim-ui-\d+\.[^)'"]*\.woff2/.test(face)) continue;
+    for (const cp of rangeSet(/unicode-range\s*:\s*([^;}]+)/.exec(face)?.[1] ?? '')) core.add(cp);
+  }
+  if (!core.size) errors.push('UI fonts: no core @font-face with a unicode-range in the built CSS');
+  else {
+    let exempt = [];
+    try {
+      exempt = systemFontSelectors(cssText);
+    } catch (e) {
+      errors.push(e.message);
+    }
+    for (const [path, html] of pageHtml) {
+      const missing = uncovered(visibleText(html, exempt), core);
+      if (missing.length) errors.push(`${path}: ${missing.length} character(s) outside the core UI font: ${missing.join('')} (add the rendering src/lib or src/tools file to CORE_PATHS in scripts/lib/ui-font-chars.mjs)`);
+    }
+  }
 }
 for (const css of match(/^_astro\/[^/]*\.css$/)) {
   for (const m of read(css).toString('utf8').matchAll(/font-weight\s*:\s*([^;}]+)/g)) {
     const v = m[1].trim().replace(/\s*!important$/, '');
     const n = v === 'normal' ? '400' : v === 'bold' ? '700' : v;
-    if (!['inherit', 'initial', 'unset'].includes(n) && !UI_WEIGHTS.has(n)) errors.push(`${css}: font-weight ${v} is not a UI font instance (400, 700, 800)`);
+    if (n === '700') errors.push(`${css}: font-weight ${v}: the 700 face is retired (LCP round 2: it was a non-preloaded request before LCP on every tool page); use 800`);
+    else if (!['inherit', 'initial', 'unset'].includes(n) && !UI_WEIGHTS.has(n)) errors.push(`${css}: font-weight ${v} is not a UI font instance (400, 800)`);
   }
 }
 

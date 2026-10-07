@@ -75,8 +75,8 @@ export function precacheList(dist) {
         for (const m of code.matchAll(/["'`](?:\.\/|\/?_astro\/)(controller\.[\w-]+\.js)["'`]/g)) for (const c of staticClosure(dist, `_astro/${m[1]}`)) assets.add(c);
       }
     }
-    // The UI font files the pages preload (400 and 800). 700 is cached at runtime on first use:
-    // with it the precache would pass its 450 KB budget (the /licenses/ page alone is ~140 KB).
+    // The UI font files the pages preload (core 400 and 800). The late faces (controller-only characters) are
+    // cached at runtime on first use, like every /_astro/ file.
     for (const m of html.matchAll(/<link rel="preload" href="\/(_astro\/[^"]+\.woff2)" as="font"/g)) assets.add(m[1]);
   }
   for (const a of [...assets].sort()) urls.add(`/${a}`);
