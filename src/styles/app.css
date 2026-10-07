@@ -450,6 +450,10 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .guide-grid li { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
 .guide-grid a { font-weight: 800; color: var(--brand); display: inline-block; min-height: 24px; }
 .guide-grid span { color: var(--muted); font-size: 15px; }
-/* Guide titles and answers listed outside the guide pages: the system Korean font, like the guides themselves
-   (their text is not in the UI font subset; BUILD-LOG Growth G). */
+/* Guide text (the guide pages, the /guide/ topics and headings) and guide titles listed elsewhere: the system
+   Korean font (their text is not in the UI font subset; BUILD-LOG Growth G). Every system-font rule lives here,
+   in the stylesheet that also declares the UI font: in a page-only stylesheet there is a moment (that sheet still
+   loading, style already computed) when guide text resolves to the UI font and fetches its late face (LCP CI
+   follow-up). check-dist only honours exemptions from this stylesheet. */
+.guide-page, .guide-index .guide-topics, .guide-index section h2,
 .guide-grid, .guide-index .related-list, .quick-guides, .nf-guides { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }

@@ -449,14 +449,19 @@ describe('UI font coverage helpers (scripts/lib/fontcover.mjs)', () => {
     for (const s of ['머리', '숨김', '스크립트', '제외', '안목록']) expect(text).not.toContain(s);
   });
 
-  it('the /guide/ section h2 exemption (shipped CSS, Astro-scoped) applies on /guide/ only, not on tool pages', () => {
+  it('system-font exemptions come only from the UI font stylesheet; the /guide/ h2 one applies on /guide/ only', () => {
     if (!readdirSync(ROOT).includes('dist')) throw new Error('Run `npm run build` first: this check reads dist/.');
     const astroDir = join(DIST, '_astro');
-    const cssText = readdirSync(astroDir).filter((f) => f.endsWith('.css')).map((f) => readFileSync(join(astroDir, f), 'utf8')).join('\n');
-    const exempt = systemFontSelectors(cssText);
-    const scopedH2 = exempt.filter((chain) => chain.at(-1)?.tag === 'h2');
-    expect(scopedH2.length).toBeGreaterThan(0);
-    for (const chain of scopedH2) for (const c of chain) expect(c.attr).toMatch(/^data-astro-cid-/);
+    const sheets = readdirSync(astroDir).filter((f) => f.endsWith('.css')).map((f) => readFileSync(join(astroDir, f), 'utf8'));
+    // LCP CI follow-up: a system-font rule in a page-only stylesheet lets guide text resolve to the UI font while that
+    // sheet loads (the late face is fetched); every such rule sits with the UI @font-face.
+    const ui = sheets.filter((t) => /@font-face\s*\{[^}]*anolim-ui-\d+\./.test(t));
+    expect(ui).toHaveLength(1);
+    for (const t of sheets) if (!ui.includes(t)) expect(systemFontSelectors(t)).toEqual([]);
+    const exempt = systemFontSelectors(ui[0]!);
+    const h2 = exempt.filter((chain) => chain.at(-1)?.tag === 'h2');
+    expect(h2.length).toBeGreaterThan(0);
+    for (const chain of h2) expect(chain[0]!.classes).toContain('guide-index');
     const h2Texts = (html: string) => [...html.matchAll(/<h2\b[^>]*>([^<]+)<\/h2>/g)].map((m) => m[1].trim());
     const guide = readFileSync(join(DIST, 'guide', 'index.html'), 'utf8');
     const topic = h2Texts(guide).find((t) => /[가-힣]/.test(t))!;

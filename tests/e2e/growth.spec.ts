@@ -145,6 +145,36 @@ test.describe('guides (G.1, G.2)', () => {
     await expect(page.locator('#guides li a')).toHaveCount(6);
     await expect(page.locator('#guides li a').first()).toHaveAttribute('href', '/guide/passport-photo/');
   });
+
+  // LCP CI follow-up: CI chromium fetched the late UI face on /guide/passport-photo/. Root cause: the guide's
+  // system-font rule lived in a page-only stylesheet, so while that sheet was still loading, any style pass gave
+  // guide text the UI font, and its late characters fetched the late face. This replays that moment on every guide
+  // page (sitemap): hold every stylesheet except the shared Base one, force style and layout, then release.
+  test('every guide page: style computed before its own stylesheet loads never fetches a late UI face', async ({ page, network }) => {
+    test.setTimeout(240_000);
+    const sitemap = await (await page.request.get('/sitemap.xml')).text();
+    const paths = [...sitemap.matchAll(/<loc>[^<]*?(\/guide\/[^<]*)<\/loc>/g)].map((m) => m[1]!);
+    expect(paths.length).toBeGreaterThan(20);
+    await gotoReady(page, '/');
+    for (const path of paths) {
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const held = /\/_astro\/(?!Base\.)[^/]*\.css$/;
+      await page.route(held, async (route) => {
+        await gate;
+        await route.continue();
+      });
+      const from = network.requests.length;
+      await page.goto(path, { waitUntil: 'commit' });
+      await page.waitForFunction(() => document.querySelector('footer'), null, { polling: 10 });
+      await page.evaluate(() => void document.body.offsetHeight);
+      await page.waitForTimeout(150);
+      release();
+      await page.waitForFunction(() => document.readyState === 'complete');
+      await page.unroute(held);
+      expect.soft(network.requests.slice(from).map((r) => r.url()).filter((u) => /\/_astro\/anolim-ui-late-/.test(u)), path).toEqual([]);
+    }
+  });
 });
 
 test('404: /hwp/abc suggests /hwp-to-pdf/; an unrelated path suggests nothing', async ({ page }) => {

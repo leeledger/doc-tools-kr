@@ -331,9 +331,24 @@ for (const [path, html] of pageHtml) {
   for (const l of preloads) if (!/href="\/_astro\/anolim-ui-(400|800)\.[^"/]*\.woff2"/.test(l)) errors.push(`${path}: preload ${l} is not a core UI face (400 or 800)`);
 }
 // Coverage: every character a built page shows must be in the core range, or LCP text would wait on a face that
-// is not preloaded. Exempt: elements the shipped CSS renders in the system font (guide prose, docs/COPY.md).
+// is not preloaded. Exempt: elements the shipped CSS renders in the system font (guide prose, docs/COPY.md), but
+// only by rules in the stylesheet that declares the UI font. A system-font rule in a page-only stylesheet leaves a
+// moment (that sheet still loading, style already computed) in which its text resolves to the UI font and fetches
+// the late face (LCP CI follow-up: CI chromium fetched it on /guide/passport-photo/), so such a rule fails here.
 {
-  const cssText = match(/^_astro\/[^/]*\.css$/).map((c) => read(c).toString('utf8')).join('\n');
+  const sheets = match(/^_astro\/[^/]*\.css$/).map((c) => [c, read(c).toString('utf8')]);
+  const cssText = sheets.map(([, t]) => t).join('\n');
+  const uiSheets = sheets.filter(([, t]) => /@font-face\s*\{[^}]*anolim-ui-\d+\./.test(t));
+  for (const [c, t] of sheets) {
+    if (uiSheets.some(([u]) => u === c)) continue;
+    let rules = [];
+    try {
+      rules = systemFontSelectors(t);
+    } catch (e) {
+      errors.push(`${c}: ${e.message}`);
+    }
+    if (rules.length) errors.push(`${c}: ${rules.length} system-font rule(s) outside the UI font stylesheet; move them to src/styles/app.css`);
+  }
   const core = new Set();
   for (const face of cssText.match(/@font-face\s*\{[^}]*\}/g) ?? []) {
     if (!/anolim-ui-\d+\.[^)'"]*\.woff2/.test(face)) continue;
@@ -343,7 +358,7 @@ for (const [path, html] of pageHtml) {
   else {
     let exempt = [];
     try {
-      exempt = systemFontSelectors(cssText);
+      exempt = uiSheets.flatMap(([, t]) => systemFontSelectors(t));
     } catch (e) {
       errors.push(e.message);
     }

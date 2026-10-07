@@ -24,3 +24,27 @@ Reviewed:
 - The 94,884 B tripwire matches Decision 2 and cites 2909fe3 plus the method.
 - The manualChunks revert matches Decision 1.6.
 - No change to lighthouserc.json, thresholds, copy (src/pages, src/data, docs untouched), or the 2-preload rule.
+
+---
+
+# Review Feedback — LCP CI follow-up
+Date: 2026-10-07
+Ready for Builder: YES
+
+## Must Fix
+None.
+
+## Should Fix
+- tests/e2e/growth.spec.ts:162 (confidence: 6/10, verify) — `const held = /\/_astro\/(?!Base\.)[^/]*\.css$/;` assumes the UI @font-face sheet is the chunk named `Base.*`. Today it is: dist/_astro/Base.BL_jaRnJ.css is the only sheet with anolim-ui-400. If Vite ever names or splits that chunk differently, the test would hold the UI sheet too. No UI face would then be declared during the window, and the test would pass without proving anything. — Assert that the unheld sheet set contains the anolim-ui @font-face (fetch it once, or check `document.fonts` has "Anolim UI Sans" faces during the hold). Alternatively, build the held regex from the sheet that does not contain it.
+- tests/e2e/growth.spec.ts (Open Question 2) — ~40 s across 33 guides. The failure mode is the order in which the browser applies styles. Chromium is where CI caught it. Limiting it to chromium is reasonable, but the choice belongs to Arch (CI time vs coverage).
+
+## Escalate to Architect
+- The runner-only trigger is still unexplained (Bob, Open Question 1). The fix removes the window rather than the trigger. The CI chromium run on push is the acceptance.
+
+## Cleared
+Reviewed:
+- **Moved rules match the old scope.** Old `.guide-page` (guide.css) is imported by both Guide.astro and Hub.astro, the only two `.guide-page` users. Old Astro-scoped `.guide-topics, section h2` on /guide/ became `.guide-index .guide-topics, .guide-index section h2`. `.guide-index` exists only in src/pages/guide/index.astro:34, so the h2 rule cannot reach tool pages. The unit test asserts this against dist (pdf-compress h2s stay checked).
+- **Same stack.** The font-family stack is unchanged.
+- **app.css growth.** About 70 bytes of selector text. This is negligible for the initial CSS and the LCP budgets.
+- **check-dist rule.** Exemptions are now taken only from the UI font sheet. Any `-apple-system` rule elsewhere fails with a fix-it message. There are no current false positives, because the build passes. A future tool sheet that legitimately wants a system font would be pushed into app.css, which is the intended policy.
+- **e2e validity.** page.route disables the HTTP cache, so guide.css is really held on every iteration. Bob reports that the test fails on the old build.

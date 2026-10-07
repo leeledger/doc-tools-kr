@@ -40,3 +40,21 @@ Tripwire margins (94,884): dist-noauto 2,516 B, dist (AUTOFRAME=1) 2,112 B, dist
 ## Out of Scope (logged in BUILD-LOG)
 - The fallback 700 face (Playwright-derived subset) if the owner vetoes the heavier look: not built.
 - WebKit pdf-merge flaky (existing Known Gap).
+
+---
+
+# LCP CI follow-up (2026-10-07) — Ready for Review: YES, status DONE_WITH_CONCERNS (CI not re-run; not committed)
+CI chromium (Linux) failed polish.spec.ts:317: /guide/passport-photo/ fetched anolim-ui-late-400.
+- **Root cause:** the guide's system-font rule was in a page-only stylesheet (guide.css; /guide/ scoped CSS), while the UI font is declared in the shared Base CSS. A style pass while that sheet is still loading gives guide prose the UI font, and its late characters (웃 셔 띠) fetch the late face. I reproduced this deterministically: hold the page CSS, force layout, and you get the exact CI request. What triggers that early pass only on the runner was not found (WSL with the runner's fonts never did it by itself).
+
+## Files Changed
+- src/styles/app.css:453-460 — `.guide-page, .guide-index .guide-topics, .guide-index section h2` join the shared system-font rule (comment: why every such rule lives here).
+- src/styles/guide.css:28-29 — the `.guide-page` font rule is removed (comment points to app.css).
+- src/pages/guide/index.astro:69-70, 76 — the scoped `.guide-topics, section h2` font rule is removed.
+- scripts/check-dist.mjs:333-366 — exemptions only from the stylesheet with the UI @font-face; a system-font rule anywhere else fails the build.
+- tests/unit/postbuild.test.ts:452-471 — one UI stylesheet, no system-font rule elsewhere, the h2 exemption is the `.guide-index` chain (on /guide/ only).
+- tests/e2e/growth.spec.ts:149-177 — every guide in the sitemap: style forced before its own stylesheet loads, then no late request (fails on the old build on 15+ guides).
+
+## Open Questions
+- The runner-only trigger of the early style pass is unexplained. The fix removes the window, but CI is the confirmation.
+- The new e2e takes ~40 s on chromium (33 guides). Keep it on every project or limit it to chromium?

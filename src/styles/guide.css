@@ -25,6 +25,5 @@
 .guide-qa p { margin: 0; }
 .guide-sources ul { padding-left: 20px; }
 .guide-note, .guide-dates { color: var(--muted); font-size: 15px; }
-/* Guide text is outside the UI font subset (its budget and the preloaded bytes, BUILD-LOG Growth G): the whole
-   guide page below the header renders in the system Korean font. */
-.guide-page { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+/* The whole guide page below the header renders in the system Korean font: that rule is in app.css (with the UI
+   font's stylesheet, so guide text never resolves to the UI font while this file loads). */
