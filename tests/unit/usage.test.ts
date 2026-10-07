@@ -17,6 +17,7 @@ import {
   toDataPoint,
   usageOn,
   usageSample,
+  usagePrevSql,
   usageSql,
   validate,
 } from '../../scripts/lib/usage.mjs';
@@ -27,6 +28,7 @@ import { LEVELS } from '../../src/lib/pdf/compress/levels';
 import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { USAGE_ON, arrival, browserFamily, buildPayload, createTracker, startUsage, track } from '../../src/lib/ui/usage';
 import { route } from '../../src/sw/sw';
+import { FULL } from '../fixtures/usage-rows.mjs';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -227,6 +229,75 @@ describe('SQL builders and table shaping', () => {
     expect(html).toContain('<h2>도구별</h2>\n<p>기록이 아직 없어요.</p>');
     const md = renderTables(shapeUsage({ fails: [{ tool: 'pdf-merge', code: 'a|b', phase: 'load', n: 2 }] }), 'md', 3);
     expect(md).toContain('### 실패 이유\n\n| 도구 | 오류 코드 | 단계 | 횟수 |\n| --- | --- | --- | --- |\n| PDF 합치기 | a\\|b | 준비 | 2 |');
+  });
+
+  it('the weekly report markdown and totals for the FULL fixture stay byte-identical (brief ADMIN-UI step 0)', () => {
+    const shaped = shapeUsage(FULL);
+    expect(shaped.totals).toMatchInlineSnapshot(`
+      {
+        "fail": 33,
+        "rate": "89%",
+        "success": 280,
+      }
+    `);
+    expect(renderTables(shaped, 'md', 3)).toMatchInlineSnapshot(`
+      "### 도구별
+
+      | 도구 | 파일 고름 | 처리 시작 | 성공 | 실패 | 성공률 | 내려받음 |
+      | --- | --- | --- | --- | --- | --- | --- |
+      | PDF 합치기 | 70 | 60 | 40 | 15 | 73% | 38 |
+      | PDF 용량 줄이기 | 95 | 80 | 70 | 10 | 88% | 66 |
+      | 사진 용량 줄이기 | 150 | 120 | 114 | 4 | 97% | 110 |
+      | 증명사진 규격 맞추기 | 14 | 10 | 8 | 2 | 80% | 7 |
+      | HWP PDF 변환 | 55 | 50 | 48 | 2 | 96% | 47 |
+      | 사진 PDF 변환 | 5 | 0 | 0 | 0 | - | 0 |
+
+      ### 실패 이유
+
+      | 도구 | 오류 코드 | 단계 | 횟수 |
+      | --- | --- | --- | --- |
+      | PDF 합치기 | corrupt | 파일 읽기 | 9 |
+      | PDF 용량 줄이기 | wrong-password | 파일 읽기 | 6 |
+      | PDF 합치기 | oom | 처리 | 4 |
+      | PDF 용량 줄이기 | engine | 준비 | 4 |
+      | 사진 용량 줄이기 | heic | 파일 읽기 | 3 |
+      | PDF 합치기 | mystery-code | 저장 | 2 |
+      | 증명사진 규격 맞추기 | unreachable | 저장 | 2 |
+      | HWP PDF 변환 | timeout | 파일 읽기 | 2 |
+      | 사진 용량 줄이기 | not-image | 파일 읽기 | 1 |
+
+      ### 많이 쓴 설정
+
+      | 도구 | 설정 | 값 | 횟수 |
+      | --- | --- | --- | --- |
+      | PDF 용량 줄이기 | 압축 단계 | 권장 | 50 |
+      | PDF 용량 줄이기 | 압축 단계 | 강력 | 20 |
+      | PDF 용량 줄이기 | 목표 용량 | 5MB 이하 | 10 |
+      | 사진 용량 줄이기 | 목표 용량 | 200KB 이하 | 60 |
+      | 사진 용량 줄이기 | 목표 용량 | 100KB 이하 | 35 |
+      | 사진 용량 줄이기 | 목표 용량 | 500KB 이하 | 25 |
+      | 증명사진 규격 맞추기 | 증명사진 규격 | passport_online | 6 |
+      | 증명사진 규격 맞추기 | 증명사진 규격 | 직접 입력 | 4 |
+
+      ### 안내 글에서 도구로
+
+      | 안내 글 | 도구 | 넘어옴 | 딥링크 비율 |
+      | --- | --- | --- | --- |
+      | photo-200kb | 사진 용량 줄이기 | 20 | 75% |
+      | pdf-under-5mb | PDF 용량 줄이기 | 10 | 100% |
+      | resume-photo | 사진 용량 줄이기 | 5 | 0% |
+
+      ### 도구별 성공률 (안내에서 온 경우와 바로 온 경우)
+
+      | 도구 | 안내에서 옴 | 바로 옴 |
+      | --- | --- | --- |
+      | PDF 합치기 | - | 73% |
+      | PDF 용량 줄이기 | 100% | 86% |
+      | 사진 용량 줄이기 | 98% | 96% |
+      | 증명사진 규격 맞추기 | - | 80% |
+      | HWP PDF 변환 | - | 96% |
+      | 사진 PDF 변환 | - | - |"
+    `);
   });
 
   it('fetchUsage posts each query with the token and maps errors to the status only', async () => {
@@ -455,11 +526,13 @@ describe('Pages Function /admin/', () => {
   const ENV = { ADMIN_PASSWORD: PW, CF_ACCOUNT_ID: 'acc', AE_API_TOKEN: 'super-secret-token' };
   const auth = (user: string, pw: string) => `Basic ${Buffer.from(`${user}:${pw}`).toString('base64')}`;
   const get = (path: string, authorization?: string) => new Request(`https://docttak.com${path}`, { headers: authorization ? { authorization } : {} });
-  const sqlApi = (rows: Record<string, Record<string, unknown>[]> = {}, status = 200) => {
+  const sqlApi = (rows: Record<string, Record<string, unknown>[]> = {}, status = 200, prevStatus = status) => {
     const bodies: string[] = [];
     const f = vi.fn(async (_url: string, init: RequestInit) => {
       const sql = String(init.body);
       bodies.push(sql);
+      // "AS kind" (the previous-period query) is checked before "AS event".
+      if (sql.includes('AS kind')) return prevStatus !== 200 ? new Response('error', { status: prevStatus }) : new Response(JSON.stringify({ data: rows.prev ?? [] }));
       if (status !== 200) return new Response('error', { status });
       const key = sql.includes('AS event') ? 'events' : sql.includes('AS code') ? 'fails' : sql.includes('AS setting') ? 'settings' : 'guides';
       return new Response(JSON.stringify({ data: rows[key] ?? [] }));
@@ -514,7 +587,8 @@ describe('Pages Function /admin/', () => {
     for (const [q, days] of [['', 7], ['?days=abc', 7], ['?days=365', 7], ['?days=30', 30], ['?days=1', 1], ['?days=90', 90], ["?days=7'%20OR%201=1", 7]] as const) {
       const { bodies } = sqlApi();
       await adminFn({ request: get(`/admin/${q}`, auth('admin', PW)), env: ENV });
-      expect(bodies.sort(), q).toEqual(Object.values(usageSql('docttak_usage', days)).sort());
+      const expected = [...Object.values(usageSql('docttak_usage', days)), ...(days === 90 ? [] : [usagePrevSql('docttak_usage', days)])];
+      expect(bodies.sort(), q).toEqual(expected.sort());
     }
     const { bodies } = sqlApi();
     await adminFn({ request: get('/admin/', auth('admin', PW)), env: { ...ENV, USAGE_DATASET: 'other_set' } });
@@ -535,6 +609,32 @@ describe('Pages Function /admin/', () => {
     const html = await res.text();
     expect(html).toContain('통계를 불러오지 못했어요 (HTTP 500)');
     expect(html).not.toContain('super-secret-token');
+  });
+
+  it('the previous-period query failing (500) still renders the page with 200 and "비교 없음"', async () => {
+    const { bodies } = sqlApi({ events: [{ tool: 'pdf-merge', event: 'start', via: 'direct', n: 4 }] }, 200, 500);
+    const res = await adminFn({ request: get('/admin/?days=7', auth('admin', PW)), env: ENV });
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(bodies.some((b) => b.includes('AS kind'))).toBe(true);
+    expect(html).toContain('비교 없음');
+    expect(html).not.toContain('통계를 불러오지 못했어요');
+  });
+
+  it('90 days: no previous-period query, the KPI says the period before is past retention', async () => {
+    const { bodies } = sqlApi({ events: [{ tool: 'pdf-merge', event: 'start', via: 'direct', n: 4 }] });
+    const html = await (await adminFn({ request: get('/admin/?days=90', auth('admin', PW)), env: ENV })).text();
+    expect(bodies.some((b) => b.includes('AS kind'))).toBe(false);
+    expect(html).toContain('비교 없음 (기록은 3개월만 남아요)');
+  });
+
+  it('a bad PUBLIC_USAGE_SAMPLE does not break the page; 0.25 adds the sample sentence', async () => {
+    sqlApi();
+    const bad = await (await adminFn({ request: get('/admin/', auth('admin', PW)), env: { ...ENV, PUBLIC_USAGE_SAMPLE: 'lots' } })).text();
+    expect(bad).toContain('기록은 3개월 동안만 남아요.');
+    expect(bad).not.toContain('만 기록해요');
+    const quarter = await (await adminFn({ request: get('/admin/', auth('admin', PW)), env: { ...ENV, PUBLIC_USAGE_SAMPLE: '0.25' } })).text();
+    expect(quarter).toContain('지금은 방문의 25%만 기록해요.');
   });
 
   it('escapes every value from the rows', async () => {

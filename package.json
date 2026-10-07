@@ -22,6 +22,7 @@
     "smoke:assets": "node scripts/smoke-assets.mjs",
     "ping:indexnow": "node scripts/indexnow.mjs",
     "qa:visual": "node scripts/qa/visual.mjs",
+    "qa:admin": "node --experimental-strip-types scripts/qa/admin-preview.mjs",
     "regress:merge": "node scripts/regress/merge.mjs",
     "regress:compress": "node scripts/regress/compress.mjs",
     "regress:photo": "node scripts/regress/photo.mjs",

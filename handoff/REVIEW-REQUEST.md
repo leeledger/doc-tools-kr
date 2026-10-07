@@ -1,60 +1,35 @@
-# Review Request — LCP round 2 (700 retired; on top of round 1's core/late split)
+# Review Request — ADMIN-UI (readable /admin/ usage page)
 Date: 2026-10-07
-Ready for Review: YES. Status **DONE** locally. All 23 lhci URLs pass. The CI checks job is the final word and has not run yet (not pushed). Not committed. Details: BUILD-LOG "LCP round 2" (round 1: "LCP fix after TOOLS4").
+Ready for Review: YES. Status **DONE** locally (not committed, not pushed). Brief: handoff/ARCHITECT-BRIEF-ADMIN-UI.md.
 
 ## Files Changed
-Round 2:
-- scripts/gen-ui-font.mjs:37-43 — UI_WEIGHTS = [400, 800], with a comment on why 700 is gone.
-- src/styles/app.css (20 lines), src/styles/global.css (4), src/tools/hwp-viewer/viewer.css (2), src/tools/stamp-signature/stamp.css (2), src/tools/remove-background/bg.css (1) — `font-weight: 700` → `800`. Nothing else changed.
-- scripts/check-dist.mjs:20-21 — UI_WEIGHTS {400, 800}.
-- scripts/check-dist.mjs:308-331 — core exactly 2, late ≤ 2; tripwire 94,884 (no −2,048), comment cites 2909fe3 + JSON.
-- scripts/check-dist.mjs:355-362 — CSS font-weight 700/bold fails with the reason (verified by injection).
-- astro.config.mjs:63-64 — raster.ts / reorder.ts out of ui-shared (CI-fix move reverted), comment says why.
-- scripts/gen-sw.mjs:78-79 — comment only (stale 700 note).
-- tests/unit/postbuild.test.ts:371, 393-402 — 2 core + ≤ 2 late faces, no 700 file; the "core ≤ 600" assertion removed.
-- tests/unit/postbuild.test.ts:452-466 — the /guide/ scoped `section h2` exemption applies on /guide/ only; tool-page h2s stay checked (reads dist/).
-- tests/e2e/polish.spec.ts:334-368 — on / and /photo-compress/: no 700 request, no loaded 700 face, `.btn.primary` is 800, UA bold renders with the 800 face (ink 700 ≈ 800 within 2 %, ≥ 1.3× of 400).
+- tests/fixtures/usage-rows.mjs (new) — FULL / PREV / XSS / EMPTY rows (6 tools hitting good/warn/bad/few/none, unknown fail code, string `n`, ignored rows).
+- scripts/qa/admin-preview.mjs (new) + package.json `qa:admin` — renders the real Function offline from fixtures (fetch stub by alias, `AS kind` first) for full-7/full-90/empty/error/xss; `--shots` saves 1280 light / 360 light / 360 dark PNGs and prints 360 px scrollWidth. strip-types loaded the .ts Function without problems.
+- tests/unit/usage.test.ts:233-300 — step-0 inline snapshot of `renderTables(shapeUsage(FULL),'md',3)` and `totals` (written before any usage.mjs change; unchanged at the end).
+- scripts/lib/usage.mjs:36 COMPARE_PERIODS; :185-196 usagePrevSql (same guards as usageSql); :203-232 `runSql` extracted from fetchUsage (behaviour-identical, separate step); :234-245 fetchPrevTotals; :262-305 FAIL_LABELS; shapeUsage :398-407 additive `kpi` / `tools` / `failRows` (`totals`, `tables` untouched).
+- scripts/lib/admin-view.mjs (new) — renderAdminPage + formatKst / sampleShareOf / delta / rateLevel / barPct; inline CSS with light/dark variables.
+- functions/admin/[[path]].ts — page()/html()/notice() replaced by renderAdminPage; Promise.all(fetchUsage, COMPARE_PERIODS ? fetchPrevTotals().catch(() => null) : null); `PUBLIC_USAGE_SAMPLE` added to Env. HEADERS/CSP/REALM/MIN_PASSWORD/301/404/period()/constant-time compare unchanged.
+- tests/unit/admin-view.test.ts (new, 21 tests) + tests/unit/__snapshots__/admin-full-7.html (file snapshot, fixed now).
+- tests/unit/usage.test.ts Function block — sqlApi stub answers `AS kind` before `AS event` (with its own status); period test expects usagePrevSql for 1/7/30 only; new: prev 500 -> 200 + 비교 없음; 90 days -> no kind query + retention note; bad/0.25 PUBLIC_USAGE_SAMPLE.
 
-Round 1 (unchanged since the last request): scripts/lib/ui-font-chars.mjs, scripts/lib/fontcover.mjs, the core/late split, the coverage check, and the late-face e2e tests.
+## Gates
+- `npx vitest run`: 52 files, 1119/1119 passed (a first full run had 1 flaky failure in bgremove.test.ts "licences ..." at 2.5 s under load; passed alone with and without my changes, and the full rerun was clean).
+- `npx astro check`: 0 errors, 0 warnings, 1 hint.
+- Default build: check-dist OK (2392 files), precache 416.8 / 450 KB. Cloud build (CI dist-bgcloud env, USAGE on): check-dist OK (2411 files), 422.6 / 450 KB.
+- `npx wrangler@4.147.0 pages functions build functions`: "Compiled Worker successfully"; renderAdminPage and usagePrevSql present in the bundle.
+- Preview: all 360 px shots scrollWidth = 360 (before: xss 444).
 
-## Measurements (local lhci, PUBLIC_BG_REMOVE=1, 5 runs, medians in ms)
-| URL | HEAD | round 1 | round 2 |
-|---|---|---|---|
-| / | 1,974 | 1,848 | **1,659** |
-| /photo-compress/ | 2,120 | 2,119 | **1,809** (max 1,816) |
-| /pdf-merge/ | 1,971 | 1,974 | **1,813** |
-| /pdf-compress/ | 1,975 | 1,969 | **1,809** |
-| /id-photo/ | 1,975 | 1,975 | **1,808** |
-Other tool pages 1,658–1,665, guides 1,659–1,665, /terms/ 1,657. CLS 0.000 and perf 0.99–1 on all 23 URLs; lhci exit 0.
-
-Tripwire margins (94,884): dist-noauto 2,516 B, dist (AUTOFRAME=1) 2,112 B, dist-bg 2,468 B, dist-bgcloud 2,468 B.
-
-## Screenshots for the owner (handoff/lcp-shots/)
-`before-*` = with the 700 face (round 1), `after-*` = 800. Pages: home, photo-compress, pdf-merge, id-photo, stamp-signature, guide. Each has `-desktop` (1280), `-mobile` (360) and `-mobile-dark`. Example: handoff/lcp-shots/before-photo-compress-mobile.png vs handoff/lcp-shots/after-photo-compress-mobile.png. An overflow/wrap scan (buttons, tabs, chips, badges, status labels; horizontal scroll at 360 px) found nothing before or after, and the full-page heights are identical.
+## Screenshots (before / after)
+C:/Users/force/AppData/Local/Temp/claude/C--dev-doc-tools-kr/c205501f-e2a7-4258-9052-12a611236632/scratchpad/admin-shots/{before,after}/<scenario>-{desktop-light,phone-light,phone-dark}.png, scenarios full-7, full-90, empty, error, xss (HTML next to them).
 
 ## Open Questions
-- I took the screenshots with a one-off Playwright script, not the visual-qa skill. They cover the six pages and three modes the brief asked for, but there is no visual-qa health score. Run visual-qa at the deploy gate if you want one.
-- The 36 PNGs are ~19 MB. Arch should decide whether they are committed or kept out (owner review only).
-- WebKit: the existing "800 renders bolder than 400" test was flaky once (passed on retry); 3× repeat without retries gave 24/24.
+- Screen-reader sentence wording: I used "직전 7일보다 12% 늘었어요" (matches the visible label "직전 N일 대비") instead of the brief's example "지난 7일보다…", which could read as the current period.
+- Rate levels are judged on the rounded % shown (94.6 -> "95% 좋음"), so the pill word never disagrees with its number.
+- Rate delta when the previous period had no attempts: "새로 생김"; current has none: "변화 없음".
+- "직전 N일 대비" is one note under the KPI grid, not repeated in every card.
+- The sample sentence reads `env.PUBLIC_USAGE_SAMPLE` at runtime: it shows only if that variable is also set as a Pages runtime variable (today it is a build variable only, so production shows no sentence — correct while the share is 1).
+- FAIL_LABELS covers 39 codes found at the call sites (incl. not-hwp, password, distribution, heic, canvas, crash, mask, nosubject, unreachable, target-unreachable, network, model-corrupt, allpaper, noink, cloud-busy/quota/failed, too-big, too-many).
 
 ## Out of Scope (logged in BUILD-LOG)
-- The fallback 700 face (Playwright-derived subset) if the owner vetoes the heavier look: not built.
-- WebKit pdf-merge flaky (existing Known Gap).
-
----
-
-# LCP CI follow-up (2026-10-07) — Ready for Review: YES, status DONE_WITH_CONCERNS (CI not re-run; not committed)
-CI chromium (Linux) failed polish.spec.ts:317: /guide/passport-photo/ fetched anolim-ui-late-400.
-- **Root cause:** the guide's system-font rule was in a page-only stylesheet (guide.css; /guide/ scoped CSS), while the UI font is declared in the shared Base CSS. A style pass while that sheet is still loading gives guide prose the UI font, and its late characters (웃 셔 띠) fetch the late face. I reproduced this deterministically: hold the page CSS, force layout, and you get the exact CI request. What triggers that early pass only on the runner was not found (WSL with the runner's fonts never did it by itself).
-
-## Files Changed
-- src/styles/app.css:453-460 — `.guide-page, .guide-index .guide-topics, .guide-index section h2` join the shared system-font rule (comment: why every such rule lives here).
-- src/styles/guide.css:28-29 — the `.guide-page` font rule is removed (comment points to app.css).
-- src/pages/guide/index.astro:69-70, 76 — the scoped `.guide-topics, section h2` font rule is removed.
-- scripts/check-dist.mjs:333-366 — exemptions only from the stylesheet with the UI @font-face; a system-font rule anywhere else fails the build.
-- tests/unit/postbuild.test.ts:452-471 — one UI stylesheet, no system-font rule elsewhere, the h2 exemption is the `.guide-index` chain (on /guide/ only).
-- tests/e2e/growth.spec.ts:149-177 — every guide in the sitemap: style forced before its own stylesheet loads, then no late request (fails on the old build on 15+ guides).
-
-## Open Questions
-- The runner-only trigger of the early style pass is unexplained. The fix removes the window, but CI is the confirmation.
-- The new e2e takes ~40 s on chromium (33 guides). Keep it on every project or limit it to chromium?
+- Korean fail-code labels in the weekly md report; weekly report HTML.
+- renderTables' html branch is now unused by the admin page; kept per Decision 1 (exact output preserved).

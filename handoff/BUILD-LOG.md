@@ -2336,3 +2336,21 @@ CI run 37568179103 (9015e2a): polish.spec.ts:317 failed on chromium (Linux), bot
 - Cloudflare (Workers Free plan, $0; all within free limits): Web Analytics site docttak.com set to "Enable with JS Snippet installation"; Analytics Engine enabled; Pages binding USAGE → docttak_usage (production); user API token "docttak-usage-read (admin + A-5)" with Account Analytics:Read on the one account; Pages production vars PUBLIC_CF_ANALYTICS_TOKEN, PUBLIC_USAGE_STATS=1, CF_ACCOUNT_ID, secrets AE_API_TOKEN and ADMIN_PASSWORD (24 random chars, given to the owner).
 - GitHub Actions secrets AE_API_TOKEN, CF_ACCOUNT_ID set (weekly report usage table).
 - legal.ts: PRIVACY_ANALYTICS and PRIVACY_USAGE = 2026년 10월 7일, PRIVACY_TERMS_UPDATED 2026-10-07 (Review USAGE Should Fix 2). Production-equivalent local build: check-dist OK, beacon + CSP + privacy sections present.
+
+## ADMIN-UI — readable /admin/ usage page (2026-10-07, Bob) — DONE (local, not committed)
+Brief handoff/ARCHITECT-BRIEF-ADMIN-UI.md, followed in order.
+- Step 0: fixture tests/fixtures/usage-rows.mjs; scripts/qa/admin-preview.mjs + `npm run qa:admin`; before-shots taken; md report + totals inline snapshot in usage.test.ts (unchanged at the end).
+- Step 1: `runSql` extracted from fetchUsage (identical output, tests green before step 2).
+- Step 2: COMPARE_PERIODS [1,7,30], usagePrevSql (alias `kind`), fetchPrevTotals, FAIL_LABELS (39 codes from the call sites), shapeUsage `kpi`/`tools`/`failRows` (additive).
+- Step 3: scripts/lib/admin-view.mjs renderAdminPage (KPI cards with deltas + sr sentences, period tabs 44 px, per-tool table with bars and labelled rate pills, fail reasons with Korean label + raw code, empty states, KST 기준 시각, sampling note, dark mode, no script/external URL).
+- Step 4: Function uses the renderer; 5th query only for 1/7/30 days and its failure drops only the comparison.
+- Step 5: after-shots; all 360 px pages scrollWidth 360.
+- Gates: unit 1119/1119 (one flaky bgremove licence test in a first run, clean rerun); astro check 0 errors; default + cloud build check-dist OK; wrangler pages functions build OK.
+- Decisions: sr sentence uses "직전 N일보다"; rate level from the rounded %; first table column sticky with keep-all wrapping.
+### Known Gaps
+- Weekly md report still shows raw fail codes (Korean labels there = later step).
+- renderTables html branch unused by /admin/ (kept, output unchanged).
+- Sample sentence needs PUBLIC_USAGE_SAMPLE as a Pages runtime variable to appear.
+
+**ADMIN-UI — deploy gate (2026-10-07)**
+- Richard: clear, 0 Must Fix. Owner saw the before/after screenshots and said deploy. Follow-ups logged: show guide titles instead of slugs and Korean labels for raw preset ids (e.g. passport_online) in the admin tables; add PUBLIC_USAGE_SAMPLE as a Pages runtime variable to the runbook when the share drops below 1.

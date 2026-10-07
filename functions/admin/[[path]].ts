@@ -3,13 +3,17 @@
 // (404). The tables come from the Analytics Engine SQL API (CF_ACCOUNT_ID, AE_API_TOKEN); every query is built
 // from constants, a whitelisted period and a validated dataset name (scripts/lib/usage.mjs), never from request text.
 // Every value from the rows is HTML-escaped. dist/ has no /admin page: this Function is the only answer there.
-import { DEFAULT_DAYS, PERIODS, UsageApiError, datasetName, escapeHtml, fetchUsage, renderTables, shapeUsage } from '../../scripts/lib/usage.mjs';
+// The page itself is rendered by scripts/lib/admin-view.mjs (brief handoff/ARCHITECT-BRIEF-ADMIN-UI.md); for 1, 7
+// and 30 days one more query reads the period before for the KPI changes (its failure only drops the comparison).
+import { COMPARE_PERIODS, DEFAULT_DAYS, PERIODS, UsageApiError, datasetName, fetchPrevTotals, fetchUsage, shapeUsage } from '../../scripts/lib/usage.mjs';
+import { renderAdminPage, sampleShareOf } from '../../scripts/lib/admin-view.mjs';
 
 export interface Env {
   ADMIN_PASSWORD?: string;
   CF_ACCOUNT_ID?: string;
   AE_API_TOKEN?: string;
   USAGE_DATASET?: string;
+  PUBLIC_USAGE_SAMPLE?: string;
 }
 interface Ctx {
   request: Request;
@@ -63,38 +67,9 @@ export function period(url: URL): number {
   return PERIODS.includes(n) ? n : DEFAULT_DAYS;
 }
 
-function page(days: number, body: string): string {
-  const links = PERIODS.map((d) => (d === days ? `<strong>${d}일</strong>` : `<a href="?days=${d}">${d}일</a>`)).join(' · ');
-  return `<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex,nofollow">
-<title>문서딱 사용 통계</title>
-<style>
-body{font:15px/1.5 system-ui,sans-serif;margin:24px auto;max-width:960px;padding:0 16px;color:#1a1a1a}
-h1{font-size:22px}h2{font-size:17px;margin-top:28px}
-table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 8px;text-align:left}
-th{background:#f3f3f3}td:not(:first-child){font-variant-numeric:tabular-nums}
-.notice{background:#fff4e5;border:1px solid #f0b46a;padding:8px 12px}
-footer{margin-top:28px;color:#555}
-</style>
-</head>
-<body>
-<h1>문서딱 사용 통계 (지난 ${days}일)</h1>
-<p>기간: ${links}</p>
-${body}
-<footer>기록은 3개월 동안만 남아요.</footer>
-</body>
-</html>`;
+function html(page: string): Response {
+  return new Response(page, { status: 200, headers: { ...HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
 }
-
-function html(days: number, body: string): Response {
-  return new Response(page(days, body), { status: 200, headers: { ...HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
-}
-
-const notice = (status: number | string): string => `<p class="notice">통계를 불러오지 못했어요 (${escapeHtml(String(status))}).</p>`;
 
 export async function onRequest({ request, env }: Ctx): Promise<Response> {
   const password = env.ADMIN_PASSWORD ?? '';
@@ -105,13 +80,15 @@ export async function onRequest({ request, env }: Ctx): Promise<Response> {
   if (!(await authorized(request.headers.get('authorization'), password))) return plain(401, { 'WWW-Authenticate': REALM });
 
   const days = period(url);
+  const base = { days, now: new Date(), sampleShare: sampleShareOf(env.PUBLIC_USAGE_SAMPLE) };
   const dataset = datasetName(env.USAGE_DATASET);
-  if (!env.CF_ACCOUNT_ID || !env.AE_API_TOKEN) return html(days, notice('CF_ACCOUNT_ID 또는 AE_API_TOKEN 없음'));
-  if (!dataset) return html(days, notice('USAGE_DATASET 이름이 올바르지 않음'));
+  if (!env.CF_ACCOUNT_ID || !env.AE_API_TOKEN) return html(renderAdminPage({ ...base, notice: 'CF_ACCOUNT_ID 또는 AE_API_TOKEN 없음' }));
+  if (!dataset) return html(renderAdminPage({ ...base, notice: 'USAGE_DATASET 이름이 올바르지 않음' }));
+  const api = { accountId: env.CF_ACCOUNT_ID, token: env.AE_API_TOKEN, dataset, days };
   try {
-    const rows = await fetchUsage({ accountId: env.CF_ACCOUNT_ID, token: env.AE_API_TOKEN, dataset, days });
-    return html(days, renderTables(shapeUsage(rows), 'html'));
+    const [rows, prev] = await Promise.all([fetchUsage(api), COMPARE_PERIODS.includes(days) ? fetchPrevTotals(api).catch(() => null) : null]);
+    return html(renderAdminPage({ ...base, shaped: shapeUsage(rows), prev }));
   } catch (err) {
-    return html(days, notice(err instanceof UsageApiError ? `HTTP ${err.status}` : '알 수 없는 오류'));
+    return html(renderAdminPage({ ...base, notice: err instanceof UsageApiError ? `HTTP ${err.status}` : '알 수 없는 오류' }));
   }
 }

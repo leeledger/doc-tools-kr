@@ -32,6 +32,8 @@ export const MAX_EVENTS = 40;
 export const DEFAULT_DATASET = 'docttak_usage';
 export const PERIODS = [1, 7, 30, 90];
 export const DEFAULT_DAYS = 7;
+/** Periods the admin page compares with the period before (90 days: the one before is past the 3-month retention). */
+export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive'];
 export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password'];
@@ -180,6 +182,16 @@ export function usageSql(dataset, days) {
   };
 }
 
+/**
+ * The admin page's fifth query: event totals of the period before the current one (days 2N..N ago). Alias "kind",
+ * not "event", so the two are told apart. Throws on a period outside COMPARE_PERIODS or a bad dataset name.
+ */
+export function usagePrevSql(dataset, days) {
+  if (!DATASET_RE.test(dataset ?? '')) throw new Error('usage: invalid dataset name');
+  if (!COMPARE_PERIODS.includes(days)) throw new Error('usage: invalid comparison period');
+  return `SELECT blob1 AS kind, ${N} AS n FROM ${dataset} WHERE timestamp > NOW() - INTERVAL '${2 * days}' DAY AND timestamp <= NOW() - INTERVAL '${days}' DAY GROUP BY blob1 FORMAT JSON`;
+}
+
 /** Thrown by fetchUsage when the SQL API answers with an error (status only; the token never appears). */
 export class UsageApiError extends Error {
   constructor(status) {
@@ -189,29 +201,46 @@ export class UsageApiError extends Error {
 }
 
 /**
+ * Posts one query to the Analytics Engine SQL API and resolves to its rows; rejects with UsageApiError (status 0:
+ * network). Shared by fetchUsage and fetchPrevTotals.
+ */
+async function runSql({ accountId, token, fetch: f }, q) {
+  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/analytics_engine/sql`;
+  let res;
+  try {
+    res = await f(url, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: q });
+  } catch {
+    throw new UsageApiError(0);
+  }
+  if (!res.ok) throw new UsageApiError(res.status);
+  try {
+    const body = await res.json();
+    return Array.isArray(body?.data) ? body.data : [];
+  } catch {
+    throw new UsageApiError(res.status);
+  }
+}
+
+/**
  * Runs the four queries against the Analytics Engine SQL API. `fetch` is injectable for tests.
  * Resolves to { events, fails, settings, guides } (arrays of rows); rejects with UsageApiError (status 0: network).
  */
 export async function fetchUsage({ accountId, token, dataset, days, fetch: f = fetch }) {
   const sql = usageSql(dataset, days);
-  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/analytics_engine/sql`;
-  const run = async (q) => {
-    let res;
-    try {
-      res = await f(url, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: q });
-    } catch {
-      throw new UsageApiError(0);
-    }
-    if (!res.ok) throw new UsageApiError(res.status);
-    try {
-      const body = await res.json();
-      return Array.isArray(body?.data) ? body.data : [];
-    } catch {
-      throw new UsageApiError(res.status);
-    }
-  };
-  const [events, fails, settings, guides] = await Promise.all([run(sql.events), run(sql.fails), run(sql.settings), run(sql.guides)]);
+  const api = { accountId, token, fetch: f };
+  const [events, fails, settings, guides] = await Promise.all([runSql(api, sql.events), runSql(api, sql.fails), runSql(api, sql.settings), runSql(api, sql.guides)]);
   return { events, fails, settings, guides };
+}
+
+/**
+ * The previous period's totals for the admin page deltas: { start, success, fail, arrive } (numbers; other kinds are
+ * ignored). Rejects with UsageApiError like fetchUsage.
+ */
+export async function fetchPrevTotals({ accountId, token, dataset, days, fetch: f = fetch }) {
+  const rows = await runSql({ accountId, token, fetch: f }, usagePrevSql(dataset, days));
+  const totals = { start: 0, success: 0, fail: 0, arrive: 0 };
+  for (const r of rows) if (Object.hasOwn(totals, r?.kind)) totals[r.kind] += num(r.n);
+  return totals;
 }
 
 // ---------- shaping and rendering ----------
@@ -230,6 +259,51 @@ export const TOOL_LABELS = {
   'pdf-password': 'PDF 암호 해제·설정',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
+/**
+ * Fail codes the tools send (track({ e: 'fail' }) / usageFail() call sites under src/tools and src/lib) -> plain
+ * Korean for the admin page. A code missing here is shown raw.
+ */
+export const FAIL_LABELS = {
+  engine: '기능을 불러오지 못함',
+  unknown: '알 수 없는 오류',
+  corrupt: '손상된 파일',
+  empty: '빈 파일',
+  'not-image': '사진 파일이 아님',
+  'not-pdf': 'PDF 파일이 아님',
+  'not-hwp': '한글(HWP) 파일이 아님',
+  animated: '움직이는 사진',
+  dims: '사진 크기(픽셀)가 맞지 않음',
+  oom: '메모리 부족',
+  timeout: '시간 초과',
+  'too-large': '파일이 너무 큼',
+  'too-big': '파일이 너무 큼',
+  'too-many': '파일이 너무 많음',
+  truncated: '파일이 덜 받아짐(잘림)',
+  unsupported: '지원하지 않는 형식',
+  verify: '결과 확인 실패',
+  zip: 'ZIP 만들기 실패',
+  encode: '결과 파일 만들기 실패',
+  noimage: '사진을 읽지 못함',
+  'already-encrypted': '이미 암호가 걸린 파일',
+  'not-encrypted': '암호가 없는 파일',
+  password: '암호가 필요함',
+  'wrong-password': '암호가 틀림',
+  distribution: '배포용 문서라 열 수 없음',
+  heic: '아이폰 사진(HEIC)',
+  canvas: '화면 그리기 실패',
+  crash: '처리 중 멈춤',
+  mask: '배경 나누기 실패',
+  nosubject: '사람·물체를 찾지 못함',
+  unreachable: '목표 용량에 못 맞춤',
+  'target-unreachable': '목표 용량에 못 맞춤',
+  network: '내려받기 실패(인터넷)',
+  'model-corrupt': '받은 기능 파일이 손상됨',
+  allpaper: '글씨·도장을 찾지 못함(빈 종이)',
+  noink: '글씨·도장을 찾지 못함',
+  'cloud-busy': '서버가 바쁨',
+  'cloud-quota': '서버 사용 한도 넘음',
+  'cloud-failed': '서버 처리 실패',
+};
 const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일' };
 const VALUE_LABELS = {
   le100: '100KB 이하',
@@ -268,8 +342,9 @@ const count = (n) => Math.round(n).toLocaleString('en-US');
 const rate = (part, whole) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : '-');
 
 /**
- * Query rows -> display tables (strings only, not yet escaped). Shared by the admin page (HTML) and the weekly
- * report (markdown). Also returns the totals for the report summary.
+ * Query rows -> display tables (strings only, not yet escaped) for the weekly report (markdown), the totals for its
+ * summary, and raw numbers for the admin page (scripts/lib/admin-view.mjs): kpi (rate in percent, null without
+ * attempts), tools (TOOLS order) and failRows (codeLabel null for a code outside FAIL_LABELS).
  * @param {{ events?: Array<Record<string, any>>, fails?: Array<Record<string, any>>, settings?: Array<Record<string, any>>, guides?: Array<Record<string, any>> }} rows
  */
 export function shapeUsage({ events = [], fails = [], settings = [], guides = [] }) {
@@ -278,7 +353,9 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
     if (!per.has(tool)) per.set(tool, { pick: 0, start: 0, success: 0, fail: 0, download: 0, guide: { success: 0, fail: 0 }, direct: { success: 0, fail: 0 } });
     return per.get(tool);
   };
+  let arrive = 0;
   for (const r of events) {
+    if (TOOLS.includes(r.tool) && r.event === 'arrive') arrive += num(r.n);
     if (!TOOLS.includes(r.tool) || !EVENTS.includes(r.event) || r.event === 'arrive') continue;
     const c = cell(r.tool);
     const n = num(r.n);
@@ -288,9 +365,11 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
   const tools = TOOLS.filter((t) => per.has(t));
   let success = 0;
   let fail = 0;
+  let start = 0;
   for (const t of tools) {
     success += per.get(t).success;
     fail += per.get(t).fail;
+    start += per.get(t).start;
   }
 
   const bySetting = new Map();
@@ -316,6 +395,15 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
 
   return {
     totals: { success, fail, rate: rate(success, success + fail) },
+    kpi: { start, success, fail, rate: success + fail > 0 ? (success / (success + fail)) * 100 : null, arrive },
+    tools: tools.map((t) => {
+      const c = per.get(t);
+      return { tool: t, label: TOOL_LABELS[t], pick: c.pick, start: c.start, success: c.success, fail: c.fail, download: c.download, guide: { ...c.guide }, direct: { ...c.direct } };
+    }),
+    failRows: fails.slice(0, 20).map((r) => {
+      const code = String(r.code ?? '');
+      return { tool: String(r.tool ?? ''), toolLabel: label(TOOL_LABELS, r.tool), code, codeLabel: Object.hasOwn(FAIL_LABELS, code) ? FAIL_LABELS[code] : null, phaseLabel: label(PHASE_LABELS, r.phase), n: num(r.n) };
+    }),
     tables: [
       {
         title: '도구별',
