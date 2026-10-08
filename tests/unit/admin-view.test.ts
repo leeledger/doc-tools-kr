@@ -182,9 +182,10 @@ describe('renderAdminPage', () => {
 
   it('error notice: exact text with role="status" inside the shell with the tabs', () => {
     const html = renderAdminPage({ days: 30, notice: 'HTTP 500', now: NOW });
-    expect(html).toContain('<p class="notice" role="status">통계를 불러오지 못했어요 (HTTP 500).</p>');
+    expect(html).toContain('<p class="notice" role="status">도구 사용 통계를 불러오지 못했어요 (HTTP 500).</p>');
     expect(html).toContain('<a href="?days=30" aria-current="page">30일</a>');
-    expect(html).toContain('<h1>문서딱 사용 통계</h1>');
+    expect(html).toContain('<h1>문서딱 방문·사용 통계</h1>');
+    expect(html).toContain('<title>문서딱 방문·사용 통계</title>');
     expect(renderAdminPage({ days: 7, notice: '<b>' })).toContain('(&lt;b&gt;)');
   });
 

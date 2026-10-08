@@ -29,6 +29,7 @@ import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { USAGE_ON, arrival, browserFamily, buildPayload, createTracker, startUsage, track } from '../../src/lib/ui/usage';
 import { route } from '../../src/sw/sw';
 import { FULL } from '../fixtures/usage-rows.mjs';
+import { RUM_EMPTY } from '../fixtures/rum-rows.mjs';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -276,7 +277,7 @@ describe('SQL builders and table shaping', () => {
       | 사진 용량 줄이기 | 목표 용량 | 200KB 이하 | 60 |
       | 사진 용량 줄이기 | 목표 용량 | 100KB 이하 | 35 |
       | 사진 용량 줄이기 | 목표 용량 | 500KB 이하 | 25 |
-      | 증명사진 규격 맞추기 | 증명사진 규격 | passport_online | 6 |
+      | 증명사진 규격 맞추기 | 증명사진 규격 | 여권 (온라인 신청·정부24) | 6 |
       | 증명사진 규격 맞추기 | 증명사진 규격 | 직접 입력 | 4 |
 
       ### 안내 글에서 도구로
@@ -285,7 +286,7 @@ describe('SQL builders and table shaping', () => {
       | --- | --- | --- | --- |
       | photo-200kb | 사진 용량 줄이기 | 20 | 75% |
       | pdf-under-5mb | PDF 용량 줄이기 | 10 | 100% |
-      | resume-photo | 사진 용량 줄이기 | 5 | 0% |
+      | 이력서 사진 규격, 사람인·잡코리아 크기와 용량 | 사진 용량 줄이기 | 5 | 0% |
 
       ### 도구별 성공률 (안내에서 온 경우와 바로 온 경우)
 
@@ -528,7 +529,9 @@ describe('Pages Function /admin/', () => {
   const get = (path: string, authorization?: string) => new Request(`https://docttak.com${path}`, { headers: authorization ? { authorization } : {} });
   const sqlApi = (rows: Record<string, Record<string, unknown>[]> = {}, status = 200, prevStatus = status) => {
     const bodies: string[] = [];
-    const f = vi.fn(async (_url: string, init: RequestInit) => {
+    const f = vi.fn(async (url: string, init: RequestInit) => {
+      // The visits query (Web Analytics GraphQL) is answered empty; only SQL bodies are recorded.
+      if (String(url).endsWith('/graphql')) return new Response(JSON.stringify(RUM_EMPTY));
       const sql = String(init.body);
       bodies.push(sql);
       // "AS kind" (the previous-period query) is checked before "AS event".
@@ -596,13 +599,19 @@ describe('Pages Function /admin/', () => {
   });
 
   it('missing account or token, a bad dataset, or an SQL API error -> a Korean notice with status 200, never the token', async () => {
-    const { f } = sqlApi();
-    for (const env of [{ ...ENV, CF_ACCOUNT_ID: undefined }, { ...ENV, AE_API_TOKEN: undefined }, { ...ENV, USAGE_DATASET: 'bad-name' }]) {
+    const { f, bodies } = sqlApi();
+    for (const env of [{ ...ENV, CF_ACCOUNT_ID: undefined }, { ...ENV, AE_API_TOKEN: undefined }]) {
       const res = await adminFn({ request: get('/admin/', auth('admin', PW)), env });
       expect(res.status).toBe(200);
-      expect(await res.text()).toContain('통계를 불러오지 못했어요');
+      const html = await res.text();
+      expect(html).toContain('도구 사용 통계를 불러오지 못했어요 (CF_ACCOUNT_ID 또는 AE_API_TOKEN 없음)');
+      expect(html).toContain('방문 통계를 불러오지 못했어요 (CF_ACCOUNT_ID 또는 AE_API_TOKEN 없음)');
     }
     expect(f).not.toHaveBeenCalled();
+    const badSet = await (await adminFn({ request: get('/admin/', auth('admin', PW)), env: { ...ENV, USAGE_DATASET: 'bad-name' } })).text();
+    expect(badSet).toContain('도구 사용 통계를 불러오지 못했어요 (USAGE_DATASET 이름이 올바르지 않음)');
+    expect(badSet).not.toContain('방문 통계를 불러오지 못했어요');
+    expect(bodies).toEqual([]);
     sqlApi({}, 500);
     const res = await adminFn({ request: get('/admin/', auth('admin', PW)), env: ENV });
     expect(res.status).toBe(200);

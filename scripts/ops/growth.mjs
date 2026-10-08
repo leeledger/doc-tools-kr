@@ -2,7 +2,8 @@
 //   node scripts/ops/growth.mjs [--reports reports/growth] [--out-json .ops-state/growth.json] [--dry-run]
 // Env: GSC_SERVICE_ACCOUNT_JSON (Search Console, property sc-domain:docttak.com), CF_API_TOKEN (+ optional
 // CF_ZONE_ID), AE_API_TOKEN + CF_ACCOUNT_ID (anonymous usage statistics, Analytics Engine SQL API; optional
-// USAGE_DATASET). A missing secret skips that part with a note in the report; an API error is noted too and puts
+// USAGE_DATASET), the same two for site visits (Web Analytics GraphQL, scripts/lib/visits.mjs; optional RUM_SITE_TAG;
+// a visits failure is one note line and does not mark the run). A missing secret skips that part with a note in the report; an API error is noted too and puts
 // "(오류 있음)" in the summary issue title. Writes reports/growth/YYYY-WW.md (ISO week of the run; the workflow
 // commits it), the full data for A-6 to --out-json, and a summary issue labelled ops:growth (last week's is
 // closed). --dry-run prints the report and the issue, commits no report and sends nothing (--out-json is still
@@ -16,6 +17,7 @@ import { PROPERTY, accessToken, fetchGrowth, gscClient, parseServiceAccount } fr
 import { sitemapEntries } from './lib/html.mjs';
 import { isoWeek, parseReportData, r1Status, renderReport } from './lib/report.mjs';
 import { datasetName, fetchUsage, shapeUsage } from '../lib/usage.mjs';
+import { fetchVisits, shapeVisits, siteTagOf } from '../lib/visits.mjs';
 
 export const LABEL = 'ops:growth';
 /** Search Console data is final about three days later. */
@@ -76,6 +78,18 @@ export async function collect({ env, now, fetchImpl = fetch, wait }) {
       notes.push(`도구 사용 통계 오류: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+  let visits = null;
+  if (!env.AE_API_TOKEN || !env.CF_ACCOUNT_ID) notes.push('AE_API_TOKEN 또는 CF_ACCOUNT_ID 비밀값이 없어 방문 부분을 건너뛰었습니다.');
+  else {
+    try {
+      const siteTag = siteTagOf(env.RUM_SITE_TAG);
+      if (!siteTag) throw new Error('RUM_SITE_TAG 형식이 올바르지 않습니다');
+      const v = shapeVisits(await fetchVisits({ accountId: env.CF_ACCOUNT_ID, token: env.AE_API_TOKEN, siteTag, days: 7, now, compare: false, fetch: fetchImpl }), 7, now);
+      visits = { ...v.totals, estimated: v.estimated };
+    } catch (err) {
+      notes.push(`방문 통계 오류: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   let sitemapCount = 0;
   try {
     sitemapCount = await liveSitemapCount(fetchImpl, wait);
@@ -83,14 +97,15 @@ export async function collect({ env, now, fetchImpl = fetch, wait }) {
     failed = true;
     notes.push(`sitemap 오류: ${err instanceof Error ? err.message : String(err)}`);
   }
-  return { gsc, cf, usage, notes, failed, sitemapCount };
+  return { gsc, cf, usage, visits, notes, failed, sitemapCount };
 }
 
 export function summaryBody(data, file, failed) {
-  const { gsc, cf, usage, r1, notes } = data;
+  const { gsc, cf, usage, visits = null, r1, notes } = data;
   const lines = [`${data.week} 성장 리포트: \`${file}\``, ''];
   if (gsc) lines.push(`- 서치콘솔 7일: 클릭 ${gsc.last7.clicks}, 노출 ${gsc.last7.impressions}, CTR ${(gsc.last7.ctr * 100).toFixed(1)}%, 평균 순위 ${gsc.last7.position.toFixed(1)}`, `- 서치콘솔 28일: 클릭 ${gsc.last28.clicks}, 노출 ${gsc.last28.impressions}`);
   if (cf) lines.push(`- Cloudflare 7일: 요청 ${cf.last7.requests.toLocaleString('en-US')}, 페이지뷰 ${cf.last7.pageViews.toLocaleString('en-US')}, 대역폭 ${(cf.last7.bytes / 1e6).toFixed(1)} MB`);
+  if (visits) lines.push(`- 방문 7일: ${Math.round(visits.visits).toLocaleString('en-US')}회, 페이지뷰 ${Math.round(visits.pageViews).toLocaleString('en-US')} (Web Analytics${visits.estimated ? ', 추정' : ''})`);
   if (usage) lines.push(`- 도구 사용 7일: 성공 ${Math.round(usage.totals.success).toLocaleString('en-US')}회, 성공률 ${usage.totals.rate}`);
   lines.push(`- R1: 페이지 ${r1.sitemapCount}개(${r1.pagesOk ? '충족' : '미충족'}), 주 100클릭 연속 ${r1.streak}주(${r1.clicksOk ? '충족' : '미충족'})`);
   if (notes.length) lines.push('', ...notes.map((x) => `> ${x}`));
@@ -113,7 +128,7 @@ export async function run(argv, io = {}) {
   const md = renderReport(data);
   const file = `reports/growth/${week}.md`;
   const title = `성장 리포트 ${week}${c.failed ? ' (오류 있음)' : ''}`;
-  const body = summaryBody(data, file, c.failed);
+  const body = summaryBody({ ...data, visits: c.visits }, file, c.failed);
   if (dryRun) log(`[dry-run] ${file}\n${md}`);
   else {
     mkdirSync(dir, { recursive: true });

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="color-scheme" content="light dark">
-<title>문서딱 사용 통계</title>
+<title>문서딱 방문·사용 통계</title>
 <style>
 :root{color-scheme:light dark;--bg:#f5f7f6;--surface:#fff;--text:#12201d;--muted:#4b5b57;--line:#d5dedb;--brand:#0f766e;--on-brand:#fff;--track:#e3ebe9;--bar:#5aa69c;
 --good:#0f766e;--good-bg:#e7f5f2;--warn:#b45309;--warn-bg:#fdf4e4;--bad:#b91c1c;--bad-bg:#fdeded;--few:#4b5563;--few-bg:#eef0f2;--notice-bg:#fff4e5;--notice-line:#f0b46a}
@@ -52,13 +52,28 @@ code{font:12px/1.4 ui-monospace,Consolas,monospace;color:var(--muted);overflow-w
 footer{color:var(--muted);font-size:14px}
 footer p{margin:0 0 4px}
 .sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.group-title{font-size:20px;margin:0 0 4px}
+.group-note{margin:0 0 12px;font-size:14px}
+.ratio-note{margin:-12px 0 24px;font-size:13px}
+.group{margin:0 0 32px}
+.kpis3{grid-template-columns:repeat(3,1fr)}
+.chart{margin:0 0 8px}
+.chart svg{display:block;width:100%;height:160px;color:var(--brand)}
+.chart .col{fill:currentColor}
+.chart .hit{fill:transparent}
+.chart .grid{stroke:var(--line);stroke-width:1;stroke-dasharray:4 3}
+.chart .base{stroke:var(--muted);stroke-width:1}
+.chart-max{margin:0 0 4px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chart-x{display:flex;justify-content:space-between;gap:8px;margin:4px 0 0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chart-table summary{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;color:var(--brand);font-weight:600}
+.chart-table summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
 @media (max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}.card.wide{grid-column:span 2}.card .value{font-size:22px}section[aria-labelledby]{padding:12px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-<h1>문서딱 사용 통계</h1>
+<h1>문서딱 방문·사용 통계</h1>
 <p class="sub">지난 7일 · 2026-10-07 14:03 기준 (한국 시간)</p>
 <nav class="tabs" aria-label="기간"><a href="?days=1">1일</a><a href="?days=7" aria-current="page">7일</a><a href="?days=30">30일</a><a href="?days=90">90일</a></nav>
 </header>
@@ -120,7 +135,7 @@ footer p{margin:0 0 4px}
 <tr><td>사진 용량 줄이기</td><td>목표 용량</td><td>200KB 이하</td><td class="num">60</td></tr>
 <tr><td>사진 용량 줄이기</td><td>목표 용량</td><td>100KB 이하</td><td class="num">35</td></tr>
 <tr><td>사진 용량 줄이기</td><td>목표 용량</td><td>500KB 이하</td><td class="num">25</td></tr>
-<tr><td>증명사진 규격 맞추기</td><td>증명사진 규격</td><td>passport_online</td><td class="num">6</td></tr>
+<tr><td>증명사진 규격 맞추기</td><td>증명사진 규격</td><td>여권 (온라인 신청·정부24)</td><td class="num">6</td></tr>
 <tr><td>증명사진 규격 맞추기</td><td>증명사진 규격</td><td>직접 입력</td><td class="num">4</td></tr>
 </tbody>
 </table>
@@ -134,7 +149,7 @@ footer p{margin:0 0 4px}
 <tbody>
 <tr><td>photo-200kb</td><td>사진 용량 줄이기</td><td class="num">20</td><td class="num">75%</td></tr>
 <tr><td>pdf-under-5mb</td><td>PDF 용량 줄이기</td><td class="num">10</td><td class="num">100%</td></tr>
-<tr><td>resume-photo</td><td>사진 용량 줄이기</td><td class="num">5</td><td class="num">0%</td></tr>
+<tr><td>이력서 사진 규격, 사람인·잡코리아 크기와 용량</td><td>사진 용량 줄이기</td><td class="num">5</td><td class="num">0%</td></tr>
 </tbody>
 </table>
 </div>

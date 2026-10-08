@@ -19,6 +19,8 @@ import { run as growth } from '../../scripts/ops/growth.mjs';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { RUM_ERRORS, rumAnswer, trendRows } from '../fixtures/rum-rows.mjs';
+import { windows } from '../../scripts/lib/visits.mjs';
 
 const quiet = { log: () => undefined, error: () => undefined };
 const html = (status: number, body: string, type = 'text/html; charset=utf-8') => new Response(body, { status, headers: { 'content-type': type } });
@@ -467,6 +469,7 @@ describe('growth report run (A-5)', () => {
   const sitemap = SITEMAP(Array.from({ length: 16 }, (_, i) => [`https://docttak.com/p${i}/`, '2026-09-30'] as [string, string]));
   function apis() {
     const seen: string[] = [];
+    const rumBodies: string[] = [];
     const fetchImpl = vi.fn(async (u: string | URL, init?: RequestInit) => {
       const url = String(u);
       seen.push(url);
@@ -485,18 +488,23 @@ describe('growth report run (A-5)', () => {
         if (sql.includes('AS event')) return new Response(JSON.stringify({ data: [{ tool: 'photo-compress', event: 'success', via: 'direct', n: 30 }, { tool: 'photo-compress', event: 'fail', via: 'direct', n: 10 }] }));
         return new Response(JSON.stringify({ data: [] }));
       }
+      if (url.endsWith('/client/v4/graphql') && String(init!.body).includes('rumPageloadEventsAdaptiveGroups')) {
+        expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer ae');
+        rumBodies.push(String(init!.body));
+        return new Response(JSON.stringify(rumAnswer(init!.body)));
+      }
       if (url.endsWith('/client/v4/graphql')) {
         const days = Array.from({ length: 28 }, (_, i) => ({ dimensions: { date: new Date(Date.UTC(2026, 8, 3 + i)).toISOString().slice(0, 10) }, sum: { requests: 100, cachedRequests: 50, bytes: 1e6, cachedBytes: 5e5, pageViews: 20 }, uniq: { uniques: 10 } }));
         return new Response(JSON.stringify({ data: { viewer: { zones: [{ httpRequests1dGroups: days }] } } }));
       }
       throw new Error(`unexpected ${url}`);
     });
-    return { fetchImpl, seen };
+    return { fetchImpl, seen, rumBodies };
   }
   it('writes the report with both sources, the data for A-6, and a summary issue', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'growth-'));
     const out = join(dir, 'growth.json');
-    const { fetchImpl } = apis();
+    const { fetchImpl, rumBodies } = apis();
     const gh = fakeGitHub();
     const env = { OPS_TODAY: '2026-10-01', GSC_SERVICE_ACCOUNT_JSON: JSON.stringify({ client_email: 'a@b', private_key: privateKey }), CF_API_TOKEN: 'cf', CF_ZONE_ID: 'z', AE_API_TOKEN: 'ae', CF_ACCOUNT_ID: 'acc' };
     expect(await growth(['--reports', dir, '--out-json', out], { ...quiet, env, fetchImpl: fetchImpl as unknown as typeof fetch, wait: noWait, github: gh })).toBe(0);
@@ -512,6 +520,31 @@ describe('growth report run (A-5)', () => {
     expect(md).toContain('### 실패 이유\n\n기록이 아직 없어요.');
     expect(parseReportData(md).usage).toEqual({ success: 30, fail: 10, rate: '75%' });
     expect(gh.create.mock.calls[0]![0].body).toContain('- 도구 사용 7일: 성공 30회, 성공률 75%');
+    // Visits (brief ADMIN-VISITS step 8): one summary line after the Cloudflare line, numbers as returned, one
+    // request (7 days, no comparison).
+    const w = windows(7, new Date('2026-10-01T00:00:00Z')).cur;
+    const rows = trendRows(w.start, w.end);
+    const v = rows.reduce((t, r) => t + r.sum.visits, 0).toLocaleString('en-US');
+    const pv = rows.reduce((t, r) => t + r.count, 0).toLocaleString('en-US');
+    const summary = gh.create.mock.calls[0]![0].body as string;
+    expect(summary).toContain(`- Cloudflare 7일: 요청 700, 페이지뷰 140, 대역폭 7.0 MB
+- 방문 7일: ${v}회, 페이지뷰 ${pv} (Web Analytics)`);
+    expect(rumBodies).toHaveLength(1);
+    expect(md).not.toContain('방문 통계 오류');
+  });
+  it('visits: an API error is one note line, the report is still built and the run is not marked', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'growth-'));
+    const { fetchImpl } = apis();
+    const failing = vi.fn(async (u: string | URL, init?: RequestInit) =>
+      String(init?.body ?? '').includes('rumPageloadEventsAdaptiveGroups') ? new Response(JSON.stringify(RUM_ERRORS)) : fetchImpl(u, init),
+    );
+    const gh = fakeGitHub();
+    await growth(['--reports', dir], { ...quiet, env: { OPS_TODAY: '2026-10-01', AE_API_TOKEN: 'ae', CF_ACCOUNT_ID: 'acc' }, fetchImpl: failing as unknown as typeof fetch, wait: noWait, github: gh });
+    const md = readFileSync(join(dir, '2026-40.md'), 'utf8');
+    expect(md.match(/방문 통계 오류: cannot request data older than 31d/g)).toHaveLength(1);
+    expect(md).toContain('## 도구 사용 (지난 7일)');
+    expect(gh.create.mock.calls[0]![0].title).toBe('성장 리포트 2026-40');
+    expect(gh.create.mock.calls[0]![0].body).not.toContain('- 방문 7일');
   });
   it('usage statistics: skipped with a note without AE_API_TOKEN / CF_ACCOUNT_ID; an SQL API error is a note and marks the run', async () => {
     const skipDir = mkdtempSync(join(tmpdir(), 'growth-'));

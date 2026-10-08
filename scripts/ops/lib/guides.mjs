@@ -137,3 +137,16 @@ export function watchList(guides, presets) {
   }
   return [...byKey.values()];
 }
+
+/**
+ * { slug: title } of every published guide and every hub (both live at /guide/<slug>/), keys sorted. The source of
+ * scripts/lib/guide-titles.json (scripts/gen-guide-titles.mjs); a unit test keeps the committed file equal to it.
+ */
+export function guideTitles(root = ROOT) {
+  const hubDir = join(root, 'src', 'content', 'hubs');
+  const hubs = readdirSync(hubDir)
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => ({ slug: f.replace(/\.md$/, ''), ...parseFrontmatter(readFileSync(join(hubDir, f), 'utf8')) }));
+  const pages = [...readGuides(root), ...hubs].filter((g) => !g.draft && g.title);
+  return Object.fromEntries(pages.map((g) => [g.slug, g.title]).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}

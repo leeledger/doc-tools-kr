@@ -5,7 +5,10 @@
 // Every value from the rows is HTML-escaped. dist/ has no /admin page: this Function is the only answer there.
 // The page itself is rendered by scripts/lib/admin-view.mjs (brief handoff/ARCHITECT-BRIEF-ADMIN-UI.md); for 1, 7
 // and 30 days one more query reads the period before for the KPI changes (its failure only drops the comparison).
+// Visits (brief handoff/ARCHITECT-BRIEF-ADMIN-VISITS.md) come from the Web Analytics GraphQL API in one POST
+// (scripts/lib/visits.mjs); usage and visits are fetched side by side and each failure shows its own notice.
 import { COMPARE_PERIODS, DEFAULT_DAYS, PERIODS, UsageApiError, datasetName, fetchPrevTotals, fetchUsage, shapeUsage } from '../../scripts/lib/usage.mjs';
+import { VisitsApiError, fetchVisits, shapeVisits, siteTagOf } from '../../scripts/lib/visits.mjs';
 import { renderAdminPage, sampleShareOf } from '../../scripts/lib/admin-view.mjs';
 
 export interface Env {
@@ -14,6 +17,7 @@ export interface Env {
   AE_API_TOKEN?: string;
   USAGE_DATASET?: string;
   PUBLIC_USAGE_SAMPLE?: string;
+  RUM_SITE_TAG?: string;
 }
 interface Ctx {
   request: Request;
@@ -80,15 +84,38 @@ export async function onRequest({ request, env }: Ctx): Promise<Response> {
   if (!(await authorized(request.headers.get('authorization'), password))) return plain(401, { 'WWW-Authenticate': REALM });
 
   const days = period(url);
-  const base = { days, now: new Date(), sampleShare: sampleShareOf(env.PUBLIC_USAGE_SAMPLE) };
-  const dataset = datasetName(env.USAGE_DATASET);
-  if (!env.CF_ACCOUNT_ID || !env.AE_API_TOKEN) return html(renderAdminPage({ ...base, notice: 'CF_ACCOUNT_ID 또는 AE_API_TOKEN 없음' }));
-  if (!dataset) return html(renderAdminPage({ ...base, notice: 'USAGE_DATASET 이름이 올바르지 않음' }));
-  const api = { accountId: env.CF_ACCOUNT_ID, token: env.AE_API_TOKEN, dataset, days };
-  try {
-    const [rows, prev] = await Promise.all([fetchUsage(api), COMPARE_PERIODS.includes(days) ? fetchPrevTotals(api).catch(() => null) : null]);
-    return html(renderAdminPage({ ...base, shaped: shapeUsage(rows), prev }));
-  } catch (err) {
-    return html(renderAdminPage({ ...base, notice: err instanceof UsageApiError ? `HTTP ${err.status}` : '알 수 없는 오류' }));
+  const now = new Date();
+  const base = { days, now, sampleShare: sampleShareOf(env.PUBLIC_USAGE_SAMPLE) };
+  if (!env.CF_ACCOUNT_ID || !env.AE_API_TOKEN) {
+    const missing = 'CF_ACCOUNT_ID 또는 AE_API_TOKEN 없음';
+    return html(renderAdminPage({ ...base, notice: missing, visitsNotice: missing }));
   }
+  const accountId = env.CF_ACCOUNT_ID;
+  const token = env.AE_API_TOKEN;
+  const dataset = datasetName(env.USAGE_DATASET);
+  const siteTag = siteTagOf(env.RUM_SITE_TAG);
+  const usageTask = async () => {
+    if (!dataset) return { error: 'USAGE_DATASET 이름이 올바르지 않음' };
+    const api = { accountId, token, dataset, days };
+    const [rows, prev] = await Promise.all([fetchUsage(api), COMPARE_PERIODS.includes(days) ? fetchPrevTotals(api).catch(() => null) : null]);
+    return { shaped: shapeUsage(rows), prev };
+  };
+  const visitsTask = async () => {
+    if (!siteTag) return { error: 'RUM_SITE_TAG 형식이 올바르지 않음' };
+    return { visits: shapeVisits(await fetchVisits({ accountId, token, siteTag, days, now }), days, now) };
+  };
+  const [u, v] = await Promise.allSettled([usageTask(), visitsTask()]);
+  const usage =
+    u.status === 'fulfilled'
+      ? 'error' in u.value
+        ? { notice: u.value.error }
+        : { shaped: u.value.shaped, prev: u.value.prev }
+      : { notice: u.reason instanceof UsageApiError ? `HTTP ${u.reason.status}` : '알 수 없는 오류' };
+  const visits =
+    v.status === 'fulfilled'
+      ? 'error' in v.value
+        ? { visitsNotice: v.value.error }
+        : { visits: v.value.visits }
+      : { visitsNotice: v.reason instanceof VisitsApiError ? v.reason.message : '알 수 없는 오류' };
+  return html(renderAdminPage({ ...base, ...usage, ...visits }));
 }

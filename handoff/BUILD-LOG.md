@@ -2357,3 +2357,29 @@ Brief handoff/ARCHITECT-BRIEF-ADMIN-UI.md, followed in order.
 
 **ADMIN_PASSWORD changed (2026-10-08, owner's instruction)**
 - Owner chose a new 16-character password (warned it contains a phone number and is in the chat log); set in Pages production secrets by the orchestrator. Deployed with this log entry.
+
+## ADMIN-VISITS — 방문 통계 on /admin/ (2026-10-08, Bob) — DONE (local, not committed)
+Brief handoff/ARCHITECT-BRIEF-ADMIN-VISITS.md + orchestrator live-probe override (90-day query works; wider windows sampled more → estimate count × avg{sampleInterval} per bucket; mark estimates).
+- New: scripts/lib/visits.mjs, scripts/lib/admin-chart.mjs, scripts/lib/guide-titles.json + scripts/gen-guide-titles.mjs, tests/fixtures/rum-rows.mjs (fake numbers, probe shape), tests/unit/visits.test.ts.
+- Changed: scripts/lib/admin-view.mjs (visits block, scoped notices, title), functions/admin/[[path]].ts (allSettled, RUM_SITE_TAG), scripts/lib/usage.mjs (guide titles, all preset labels), scripts/ops/lib/guides.mjs (guideTitles), scripts/ops/growth.mjs (visits line / note), scripts/qa/admin-preview.mjs (6 visits scenarios), tests (usage, admin-view, ops; snapshots updated intentionally).
+- Decisions: **1 GraphQL request per page view** (cur + prev aliases in one POST; no window splitting, RUM_MAX_WINDOW_DAYS dropped); totals = sum of per-hour estimates (no total alias); trend limit 2200 with a "too many rows" error instead of silent truncation; limits are literals (variable type unverified); guide-titles.json moved out of src/ because the UI font scanner reads every src/**/*.json; 1일 = 25 KST hour buckets; usage notice renamed "도구 사용 통계를…"; a weekly visits failure is a note only.
+- Gates: unit 1147/1147; astro check 0 errors; default + cloud builds check-dist OK (precache unchanged 416.8 / 422.6 KB); wrangler pages functions build OK; qa:admin 11 scenarios, 360 px scrollWidth 360.
+- rum-*.json captures stay under handoff/ (nothing copied into tests/).
+### Known Gaps
+- Live-unverified: token permission for RUM, avg{sampleInterval} on dimension groups, trend limit 2200 — post-deploy check.
+- Visits estimate applies the page-load sampleInterval average to visits too (approximation).
+- No lint script in package.json.
+
+## ADMIN-VISITS round 2 (2026-10-08, Bob) — DONE (local, not committed)
+Orchestrator correction: windows ≤7 days = fine tier; 14+ days = coarse tier with count / sum{visits} already extrapolated (sampleInterval 10, hour-grain visits can be 0). Round 1's single request + count × sampleInterval removed.
+- visits.mjs: RUM_MAX_WINDOW_DAYS = 7 restored; chunks() (≤7 days, oldest first, 1 s steps); queries 'full' (current pieces) and 'trend' (previous pieces); readGroups uses numbers as returned, sampleInterval > 1 only sets `estimated`; mergeRows sums by key; pool of 4 in flight; one 8 s deadline per call; approxTops when a piece's top table is full in a multi-piece period; compare:false for the weekly report.
+- Requests per page view: 1일 2, 7일 2, 30일 10, 90일 13 (no comparison); 7일 / 30일 send 1 / 5 until 2026-10-21 / 2026-12-06 (previous window before RUM_START). Weekly report 1.
+- Review round 1 Should Fix: body-read timeout → "시간 초과"; ratio card delta in 회 ("▲ +1.2회"). Both tested.
+- UI: "(추정)" and the estimate sentence only when sampled; approximate-ranking note with approxTops. qa:admin adds visits-sampled; after-shots re-taken.
+- Gates: unit 1151/1151; astro check 0 errors; default + cloud builds check-dist OK (precache unchanged); wrangler functions build OK; 360 px scrollWidth 360 in all 12 scenarios.
+### Known Gaps
+- Hour grain in ≤7-day windows assumed fine tier (probes were day grain); confirm at the post-deploy check.
+- Per-piece top tables capped at 50 rows (approximate-ranking note when hit).
+
+**ADMIN-VISITS — deploy gate (2026-10-08)**
+- Richard: clear (round 1 for security/UI, round 2 for estimation). Orchestrator live-probed: ≤7-day windows give fine data and hourly sums equal daily sums (127/84); ≥14-day windows switch to an already-extrapolated coarse tier (hence ≤7-day chunking, no multiplication). Should Fix logged: 90일 (13 requests) inside one 8 s budget may time out on slow days; the approximate-ranking notice margin. Deployed on the owner's earlier request; live check follows.

@@ -1,7 +1,9 @@
-// The /admin/ usage page (brief handoff/ARCHITECT-BRIEF-ADMIN-UI.md): server HTML with one inline <style>, no client
-// script, no external URL. functions/admin/[[path]].ts handles auth, headers, the period and the queries and hands
-// the shaped rows (scripts/lib/usage.mjs shapeUsage) here. Every string is escaped at the point of output.
-// Plain ESM, no dependencies: the Function, the Node preview (scripts/qa/admin-preview.mjs) and vitest import it.
+// The /admin/ page (briefs handoff/ARCHITECT-BRIEF-ADMIN-UI.md, ARCHITECT-BRIEF-ADMIN-VISITS.md): server HTML with
+// one inline <style>, no client script, no external URL. functions/admin/[[path]].ts handles auth, headers, the
+// period and the queries and hands the shaped rows here: visits (scripts/lib/visits.mjs shapeVisits) first, then
+// usage (scripts/lib/usage.mjs shapeUsage). Each block has its own notice. Every string is escaped at the point of
+// output. Plain ESM, no dependencies: the Function, the Node preview (scripts/qa/admin-preview.mjs) and vitest import it.
+import { trendSvg } from './admin-chart.mjs';
 import { COMPARE_PERIODS, PERIODS, TOOLS, escapeHtml, usageSample } from './usage.mjs';
 
 const esc = escapeHtml;
@@ -173,6 +175,74 @@ function emptyBlock(days) {
 </section>`;
 }
 
+/** Visits per 100 starts ratio: usage starts / visits × 100 (one decimal), null when visits are 0 or usage failed. */
+export function startsPer100(start, visits) {
+  if (!Number.isFinite(start) || !(visits > 0)) return null;
+  return Math.round((start / visits) * 1000) / 10;
+}
+
+const VISITS_NOTE = '쿠키 없이 센 방문 횟수예요. 같은 사람이 여러 번 오면 여러 번 셉니다. 자동 프로그램(봇)은 대부분 빠져요. 방문 집계는 2026-10-07부터예요.';
+const VISITS_ESTIMATE = '일부 숫자는 Cloudflare가 표본으로 세어 보정한 추정치예요.';
+const APPROX_TOPS = '7일씩 나눠 받은 순위를 더한 값이라 순위는 대략적이에요.';
+
+/**
+ * The ratio card's change in its own unit (회 per 100 visits, one decimal): { text, sr } like delta().
+ * @param {number} cur
+ * @param {number} prev
+ * @param {number} days
+ */
+export function ratioDelta(cur, prev, days) {
+  const d = Math.round((cur - prev) * 10) / 10;
+  const than = `직전 ${days}일보다`;
+  if (d > 0) return { text: `▲ +${d.toFixed(1)}회`, sr: `${than} ${d.toFixed(1)}회 늘었어요` };
+  if (d < 0) return { text: `▼ -${(-d).toFixed(1)}회`, sr: `${than} ${(-d).toFixed(1)}회 줄었어요` };
+  return { text: '0회', sr: `${than} 같아요` };
+}
+const RATIO_NOTE = '처리 시작은 도구 사용 기록, 방문은 Cloudflare 집계라 서로 다른 방법으로 센 값이에요. 대략적인 비교로만 보세요.';
+
+function visitsKpis(visits, kpi, prevUsage, days) {
+  const compares = COMPARE_PERIODS.includes(days);
+  const none = visits.prevBeforeStart ? '비교 없음 (집계 시작 전)' : '비교 없음';
+  const p = compares ? visits.prevTotals : null;
+  const ratio = kpi ? startsPer100(kpi.start, visits.totals.visits) : null;
+  const prevRatio = p && prevUsage ? startsPer100(prevUsage.start, p.visits) : null;
+  const rDelta = ratio !== null && prevRatio !== null ? ratioDelta(ratio, prevRatio, days) : { text: none, sr: '' };
+  const label = p ? `<p class="muted kpi-note">직전 ${days}일 대비</p>` : '';
+  const est = visits.estimated ? ' (추정)' : '';
+  return `<section aria-label="방문 요약">
+<div class="kpis kpis3">
+${kpiCard(`방문${est}`, count(visits.totals.visits), delta(visits.totals.visits, p?.visits, days, 'count', none))}
+${kpiCard(`페이지뷰${est}`, count(visits.totals.pageViews), delta(visits.totals.pageViews, p?.pageViews, days, 'count', none))}
+${kpiCard('방문 100회당 처리 시작 (약)', ratio === null ? '-' : `약 ${ratio.toFixed(1)}회`, rDelta, ' wide')}
+</div>
+${label}
+</section>`;
+}
+
+function visitsBlock({ visits, visitsNotice, kpi, prevUsage, days }) {
+  const head = `<h2 class="group-title">방문</h2>
+<p class="muted group-note">${esc(VISITS_NOTE)}${visits?.estimated ? ` ${esc(VISITS_ESTIMATE)}` : ''}</p>`;
+  if (visitsNotice !== undefined || !visits) return `<div class="group" id="visits">
+${head}
+<p class="notice" role="status">방문 통계를 불러오지 못했어요 (${esc(visitsNotice ?? '')}).</p>
+</div>`;
+  const n = (x) => count(x);
+  const chart = `<section aria-labelledby="s-trend">
+<h2 id="s-trend">방문 추이</h2>
+${trendSvg(visits.trend, { title: `지난 ${days}일 방문 추이 (${days === 1 ? '시간별' : '날짜별'})` })}
+</section>`;
+  return `<div class="group" id="visits">
+${head}
+${visitsKpis(visits, kpi, prevUsage, days)}
+<p class="muted ratio-note">${esc(RATIO_NOTE)}</p>
+${chart}
+${section('s-pages', '많이 본 페이지', ['페이지', '주소', '방문', '페이지뷰'], visits.pages.map((r) => [esc(r.label), `<code>${esc(r.path)}</code>`, n(r.visits), n(r.pageViews)]), [2, 3])}
+${section('s-referrers', '들어온 곳', ['들어온 곳', '방문', '페이지뷰'], visits.referrers.map((r) => [esc(r.label), n(r.visits), n(r.pageViews)]), [1, 2])}
+${section('s-countries', '나라', ['나라', '방문'], visits.countries.map((r) => [esc(r.label), n(r.visits)]), [1])}
+${section('s-devices', '기기', ['기기', '방문'], visits.devices.map((r) => [esc(r.label), n(r.visits)]), [1])}${visits.approxTops ? `\n<p class="muted ratio-note">${esc(APPROX_TOPS)}</p>` : ''}
+</div>`;
+}
+
 const STYLE = `
 :root{color-scheme:light dark;--bg:#f5f7f6;--surface:#fff;--text:#12201d;--muted:#4b5b57;--line:#d5dedb;--brand:#0f766e;--on-brand:#fff;--track:#e3ebe9;--bar:#5aa69c;
 --good:#0f766e;--good-bg:#e7f5f2;--warn:#b45309;--warn-bg:#fdf4e4;--bad:#b91c1c;--bad-bg:#fdeded;--few:#4b5563;--few-bg:#eef0f2;--notice-bg:#fff4e5;--notice-line:#f0b46a}
@@ -219,24 +289,44 @@ code{font:12px/1.4 ui-monospace,Consolas,monospace;color:var(--muted);overflow-w
 footer{color:var(--muted);font-size:14px}
 footer p{margin:0 0 4px}
 .sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.group-title{font-size:20px;margin:0 0 4px}
+.group-note{margin:0 0 12px;font-size:14px}
+.ratio-note{margin:-12px 0 24px;font-size:13px}
+.group{margin:0 0 32px}
+.kpis3{grid-template-columns:repeat(3,1fr)}
+.chart{margin:0 0 8px}
+.chart svg{display:block;width:100%;height:160px;color:var(--brand)}
+.chart .col{fill:currentColor}
+.chart .hit{fill:transparent}
+.chart .grid{stroke:var(--line);stroke-width:1;stroke-dasharray:4 3}
+.chart .base{stroke:var(--muted);stroke-width:1}
+.chart-max{margin:0 0 4px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chart-x{display:flex;justify-content:space-between;gap:8px;margin:4px 0 0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chart-table summary{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;color:var(--brand);font-weight:600}
+.chart-table summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
 @media (max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}.card.wide{grid-column:span 2}.card .value{font-size:22px}section[aria-labelledby]{padding:12px}}
 `;
 
 /**
- * The whole /admin/ page.
+ * The whole /admin/ page. The visits block appears when `visits` (shapeVisits) or `visitsNotice` is given; `notice`
+ * replaces only the usage block.
  * @param {{ days: number, shaped?: any, prev?: { start: number, success: number, fail: number, arrive: number } | null,
- *   now?: Date, sampleShare?: number | null, notice?: string }} opts
+ *   now?: Date, sampleShare?: number | null, notice?: string, visits?: any, visitsNotice?: string }} opts
  */
-export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = null, notice }) {
+export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = null, notice, visits, visitsNotice }) {
   const tabs = PERIODS.map((d) => `<a href="?days=${d}"${d === days ? ' aria-current="page"' : ''}>${d}일</a>`).join('');
   const when = now instanceof Date && !Number.isNaN(now.getTime()) ? ` · ${formatKst(now)} 기준 (한국 시간)` : '';
   let body;
-  if (notice !== undefined || !shaped) body = `<p class="notice" role="status">통계를 불러오지 못했어요 (${esc(notice ?? '')}).</p>`;
+  const usageOk = notice === undefined && Boolean(shaped);
+  if (!usageOk) body = `<p class="notice" role="status">도구 사용 통계를 불러오지 못했어요 (${esc(notice ?? '')}).</p>`;
   else if (isEmpty(shaped)) body = emptyBlock(days);
   else {
     const [, , settings, guides] = shaped.tables;
     body = [kpis(shaped.kpi, prev, days), toolsSection(shaped.tools), failSection(shaped.failRows), shapedSection('s-settings', settings, [3]), shapedSection('s-guides', guides, [2, 3]), viaSection(shaped.tools)].join('\n');
   }
+  const hasVisits = visits !== undefined || visitsNotice !== undefined;
+  const visitsHtml = hasVisits ? `${visitsBlock({ visits, visitsNotice, kpi: usageOk ? shaped.kpi : null, prevUsage: usageOk ? prev : null, days })}\n` : '';
+  const usageHead = hasVisits ? '<h2 class="group-title">도구 사용</h2>\n' : '';
   const sample = typeof sampleShare === 'number' && sampleShare < 1 ? `\n<p>지금은 방문의 ${Math.round(sampleShare * 100)}%만 기록해요.</p>` : '';
   return `<!doctype html>
 <html lang="ko">
@@ -245,18 +335,18 @@ export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="color-scheme" content="light dark">
-<title>문서딱 사용 통계</title>
+<title>문서딱 방문·사용 통계</title>
 <style>${STYLE}</style>
 </head>
 <body>
 <div class="wrap">
 <header>
-<h1>문서딱 사용 통계</h1>
+<h1>문서딱 방문·사용 통계</h1>
 <p class="sub">지난 ${esc(days)}일${when}</p>
 <nav class="tabs" aria-label="기간">${tabs}</nav>
 </header>
 <main>
-${body}
+${visitsHtml}${usageHead}${body}
 </main>
 <footer>
 <p>기록은 3개월 동안만 남아요.</p>
