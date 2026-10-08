@@ -140,7 +140,7 @@ export function watchList(guides, presets) {
 
 /**
  * { slug: title } of every published guide and every hub (both live at /guide/<slug>/), keys sorted. The source of
- * scripts/lib/guide-titles.json (scripts/gen-guide-titles.mjs); a unit test keeps the committed file equal to it.
+ * scripts/lib/guide-titles.mjs (scripts/gen-guide-titles.mjs); a unit test keeps the committed file equal to it.
  */
 export function guideTitles(root = ROOT) {
   const hubDir = join(root, 'src', 'content', 'hubs');

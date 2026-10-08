@@ -2383,3 +2383,7 @@ Orchestrator correction: windows ≤7 days = fine tier; 14+ days = coarse tier w
 
 **ADMIN-VISITS — deploy gate (2026-10-08)**
 - Richard: clear (round 1 for security/UI, round 2 for estimation). Orchestrator live-probed: ≤7-day windows give fine data and hourly sums equal daily sums (127/84); ≥14-day windows switch to an already-extrapolated coarse tier (hence ≤7-day chunking, no multiplication). Should Fix logged: 90일 (13 requests) inside one 8 s budget may time out on slow days; the approximate-ranking notice margin. Deployed on the owner's earlier request; live check follows.
+
+**ADMIN-VISITS hotfix (2026-10-08)**
+- The production Pages build of b77bf14 failed: "Expected ';' but found 'with'" — the Pages Functions bundler rejects JSON import attributes (`import … from './guide-titles.json' with { type: 'json' }`); local wrangler 4.148 accepts them. Fix: scripts/gen-guide-titles.mjs now writes scripts/lib/guide-titles.mjs (export default), usage.mjs imports it plainly; unit tests 1151/1151, wrangler functions build OK. The live site stayed on b95e2ec meanwhile.
+- Rule for later: no JSON import attributes anywhere in the functions/ import graph.

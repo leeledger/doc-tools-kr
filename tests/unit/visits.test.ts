@@ -467,8 +467,8 @@ describe('Function /admin/: usage and visits side by side', () => {
 });
 
 describe('guide titles and preset labels', () => {
-  it('scripts/lib/guide-titles.json equals the guides and hubs (run node scripts/gen-guide-titles.mjs when stale)', () => {
-    const committed = readFileSync(join(process.cwd(), 'scripts', 'lib', 'guide-titles.json'), 'utf8').replace(/\r\n/g, '\n');
+  it('scripts/lib/guide-titles.mjs equals the guides and hubs (run node scripts/gen-guide-titles.mjs when stale)', () => {
+    const committed = readFileSync(join(process.cwd(), 'scripts', 'lib', 'guide-titles.mjs'), 'utf8').replace(/\r\n/g, '\n');
     expect(committed, 'stale: run node scripts/gen-guide-titles.mjs').toBe(serialize(guideTitles()));
     expect(GUIDE_TITLES['photo-sizes']).toBeTruthy();
   });
