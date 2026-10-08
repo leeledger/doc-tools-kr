@@ -2387,3 +2387,13 @@ Orchestrator correction: windows ≤7 days = fine tier; 14+ days = coarse tier w
 **ADMIN-VISITS hotfix (2026-10-08)**
 - The production Pages build of b77bf14 failed: "Expected ';' but found 'with'" — the Pages Functions bundler rejects JSON import attributes (`import … from './guide-titles.json' with { type: 'json' }`); local wrangler 4.148 accepts them. Fix: scripts/gen-guide-titles.mjs now writes scripts/lib/guide-titles.mjs (export default), usage.mjs imports it plainly; unit tests 1151/1151, wrangler functions build OK. The live site stayed on b95e2ec meanwhile.
 - Rule for later: no JSON import attributes anywhere in the functions/ import graph.
+
+**ADMIN-CHART-AXIS (2026-10-08) — DONE (not committed)**
+- Owner request: the /admin/ visits trend had no vertical scale. scripts/lib/admin-chart.mjs: new exported `niceTicks(max)` (1/2/5×10^n integer step, smallest that covers max in ≤4 intervals, at least 2 intervals → 3–5 ticks, top ≥ max; max ≤ 0 / NaN counts as 1 → 0,1,2). Columns now scale to the top tick (h = v / top × 100) instead of the max; one gridline per non-zero tick, drawn before the columns; desc adds "세로 눈금은 0회부터 N회까지."
+- Tick labels: HTML `<p class="chart-y">` beside the SVG (the SVG stretches, so SVG text would distort). Ticks are evenly spaced, so CSS spreads them with flex space-between over 176 px (= 160 px plot + one 16 px line, margin -8px) — label centres land on the gridlines with no per-label position in markup (no style attributes). `.chart` is now a 2-column grid (auto labels | minmax(0,1fr) plot); x labels sit in the plot column; SVG overflow visible so the top gridline is not half-clipped; gridlines solid var(--line) instead of dashed.
+- Decision: removed the "최대 N회" caption — the axis gives the scale, the exact max stays in desc, per-column tooltips and the 표로 보기 table. Replaced by a small "(회)" unit label above the axis.
+- Tests: niceTicks for 0, 1, 7, 16, 46, 99, 100, 1234, NaN plus invariants; bar heights against the top tick (12 of 15 → 80, not 100), gridline positions and order, label order. admin-full-7 file snapshot updated (CSS only).
+- Gates: unit 1153/1153; astro check 0 errors; wrangler pages functions build OK; qa:admin after-shots in scratchpad/admin-axis-shots/after, 360 px scrollWidth 360 in all 12 scenarios × light/dark.
+
+**ADMIN-CHART-AXIS — deploy gate (2026-10-08)**
+- Richard: clear, 0 Must Fix. Note kept: the tick-label column height (176px) = SVG height (160px) + line height (16px); change them together. Deployed on the owner's request.

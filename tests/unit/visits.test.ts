@@ -25,7 +25,7 @@ import {
   visitsQuery,
   windows,
 } from '../../scripts/lib/visits.mjs';
-import { trendSvg } from '../../scripts/lib/admin-chart.mjs';
+import { niceTicks, trendSvg } from '../../scripts/lib/admin-chart.mjs';
 import { ratioDelta, renderAdminPage, startsPer100 } from '../../scripts/lib/admin-view.mjs';
 import { GUIDE_TITLES, PRESETS, VALUE_LABELS, shapeUsage } from '../../scripts/lib/usage.mjs';
 import { guideTitles } from '../../scripts/ops/lib/guides.mjs';
@@ -298,12 +298,45 @@ describe('trend chart', () => {
     const html = trendSvg(trend, { title: '지난 7일 방문 추이' });
     expect(html).toContain('<svg role="img" aria-labelledby="visits-trend-t visits-trend-d" viewBox="0 0 30 100" preserveAspectRatio="none"');
     expect(html).toContain('<title id="visits-trend-t">지난 7일 방문 추이</title>');
-    expect(html).toContain('<desc id="visits-trend-d">모두 약 15회. 가장 많은 때는 &lt;b&gt;&quot;10/3&quot;&lt;/b&gt;, 약 12회.</desc>');
+    expect(html).toContain('<desc id="visits-trend-d">모두 약 15회. 가장 많은 때는 &lt;b&gt;&quot;10/3&quot;&lt;/b&gt;, 약 12회. 세로 눈금은 0회부터 15회까지.</desc>');
     expect(html).toContain('<summary>표로 보기</summary>');
     expect(html).toContain('<th scope="col">기간</th><th scope="col" class="num">방문</th><th scope="col" class="num">페이지뷰</th>');
     expect(html.match(/<rect class="col"/g)).toHaveLength(2);
     expect(html).not.toMatch(/style=|<script|href=|<img|width="\d+px"/);
     expect(html).not.toContain('<b>');
+  });
+
+  it('niceTicks: 1/2/5 x 10^n integer steps, 3-5 ticks, top tick >= max, 0 -> a 0-2 scale', () => {
+    expect(niceTicks(0)).toEqual([0, 1, 2]);
+    expect(niceTicks(1)).toEqual([0, 1, 2]);
+    expect(niceTicks(7)).toEqual([0, 2, 4, 6, 8]);
+    expect(niceTicks(16)).toEqual([0, 5, 10, 15, 20]);
+    expect(niceTicks(46)).toEqual([0, 20, 40, 60]);
+    expect(niceTicks(99)).toEqual([0, 50, 100]);
+    expect(niceTicks(100)).toEqual([0, 50, 100]);
+    expect(niceTicks(1234)).toEqual([0, 500, 1000, 1500]);
+    expect(niceTicks(Number.NaN)).toEqual([0, 1, 2]);
+    for (const m of [1, 3, 9, 12, 37, 250, 999, 4321, 87654]) {
+      const t = niceTicks(m);
+      expect(t.length).toBeGreaterThanOrEqual(3);
+      expect(t.length).toBeLessThanOrEqual(5);
+      expect(t[t.length - 1]).toBeGreaterThanOrEqual(m);
+      expect(t.every(Number.isInteger)).toBe(true);
+      expect([1, 2, 5]).toContain(t[1] / 10 ** Math.floor(Math.log10(t[1])));
+    }
+  });
+
+  it('y-axis: columns scaled to the top tick, gridlines before columns, labels top-down with the unit', () => {
+    const html = trendSvg(trend, { title: 't' }); // max 12 -> ticks 0, 5, 10, 15
+    expect(html).toContain('<p class="chart-y" aria-hidden="true"><span>15</span><span>10</span><span>5</span><span>0</span></p>');
+    expect(html).toContain('<p class="chart-unit" aria-hidden="true">(회)</p>');
+    expect(html).not.toContain('chart-max');
+    // 12 / 15 of 100 = 80 high (scaled to the max it would be the full height); 3 / 15 = 20
+    expect(html).toContain('<rect class="col" x="21" y="20.00" width="8" height="80.00"/>');
+    expect(html).toContain('<rect class="col" x="1" y="80.00" width="8" height="20.00"/>');
+    const grids = [...html.matchAll(/<line class="grid" x1="0" y1="([\d.]+)"/g)].map((m) => m[1]);
+    expect(grids).toEqual(['66.67', '33.33', '0.00']);
+    expect(html.lastIndexOf('class="grid"')).toBeLessThan(html.indexOf('class="col"'));
   });
 
   it('all zero (or no buckets) -> no SVG, the empty sentence, table still there', () => {
