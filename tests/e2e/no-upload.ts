@@ -20,19 +20,35 @@ export function recordNetwork(context: BrowserContext, page: Page): NetworkLog {
   return log;
 }
 
-export function expectNoUpload(log: NetworkLog, baseURL: string, navigated = true, allowUpload: readonly AllowedUpload[] = []): void {
-  expect(uploadProblems(log, baseURL, allowUpload), 'network activity that could carry file data').toEqual([]);
+export function expectNoUpload(log: NetworkLog, baseURL: string, navigated = true, allowUpload: readonly AllowedUpload[] = [], ga = false): void {
+  expect(uploadProblems(log, baseURL, allowUpload, ga), 'network activity that could carry file data').toEqual([]);
   if (navigated) expect(log.requests.length, 'the recorder saw the page load').toBeGreaterThan(0);
 }
 
-export const test = base.extend<{ network: NetworkLog; allowUpload: AllowedUpload[] }>({
+/**
+ * Google Analytics 4 (owner 2026-10-08), for the GA-on build (the cloud-* projects): gtag.js is answered by this stub,
+ * which sends one bodiless GET collect hit carrying the configured page_location (as gtag.js would), and every Google
+ * Analytics host answers 204. No test reaches Google.
+ */
+export const GTAG_STUB =
+  "(function(){var nav=performance.getEntriesByType('navigation')[0];window.__gtagStub={afterLoad:!!nav&&nav.loadEventEnd>0};" +
+  "var dl=window.dataLayer||[];for(var i=0;i<dl.length;i++){var a=dl[i];if(a&&a[0]==='config'){" +
+  "fetch('https://region1.google-analytics.com/g/collect?v=2&en=page_view&tid='+encodeURIComponent(a[1])+'&dl='+encodeURIComponent(a[2].page_location),{mode:'no-cors'}).catch(function(){});}}})();";
+
+export const test = base.extend<{ network: NetworkLog; allowUpload: AllowedUpload[]; ga: boolean }>({
   // Empty for every spec: only the 배경 지우기 cloud spec sets it (test.use), for its one endpoint.
   allowUpload: [[], { option: true }],
+  // False for every project but cloud-* (their build has PUBLIC_GA_ID): only then Google Analytics may load (stubbed).
+  ga: [false, { option: true }],
   network: [
-    async ({ context, page, baseURL, allowUpload }, use) => {
+    async ({ context, page, baseURL, allowUpload, ga }, use) => {
+      if (ga) {
+        await context.route(/^https:\/\/www\.googletagmanager\.com\/gtag\/js\?/, (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: GTAG_STUB }));
+        await context.route(/^https:\/\/[^/]+\.(google-analytics\.com|analytics\.google\.com)\//, (r) => r.fulfill({ status: 204 }));
+      }
       const log = recordNetwork(context, page);
       await use(log);
-      expectNoUpload(log, baseURL!, page.url() !== 'about:blank', allowUpload);
+      expectNoUpload(log, baseURL!, page.url() !== 'about:blank', allowUpload, ga);
     },
     { auto: true },
   ],

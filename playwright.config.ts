@@ -23,13 +23,15 @@ const BG_SPEC = /remove-background\.spec\.ts$/;
  * privacy officer and contact), built into dist-bgcloud/. Its spec runs there in all five browsers (cloud-*), and
  * nowhere else. /api/remove-bg is answered by page.route fixtures: no test reaches Cloudflare. The same build has the
  * anonymous usage statistics on (PUBLIC_USAGE_STATS=1), so usage.spec.ts runs there too; /api/usage is page.route'd.
+ * It also has Google Analytics on (PUBLIC_GA_ID=G-TEST000000; ga.cloud.spec.ts): the `ga` option lets the no-upload
+ * fixture stub gtag.js and the collect hosts and accept exactly those requests and the GA CSP.
  */
 const CLOUD_PORT = Number(process.env.E2E_CLOUD_PORT ?? 4183);
 const CLOUD = existsSync('dist-bgcloud/remove-background/index.html');
-const CLOUD_SPEC = /(remove-background\.cloud|usage)\.spec\.ts$/;
+const CLOUD_SPEC = /(remove-background\.cloud|usage|ga\.cloud)\.spec\.ts$/;
 const CLOUD_DEVICES = { chromium: 'Desktop Chrome', firefox: 'Desktop Firefox', webkit: 'Desktop Safari', 'mobile-chrome': 'Pixel 7', 'mobile-safari': 'iPhone 14' } as const;
 
-export default defineConfig({
+export default defineConfig<{ ga: boolean }>({
   testDir: 'tests/e2e',
   timeout: 60_000,
   expect: { timeout: 15_000 },
@@ -79,7 +81,7 @@ export default defineConfig({
           testIgnore: [],
           testMatch: CLOUD_SPEC,
           ...(name === 'firefox' ? { retries: process.env.CI ? 2 : 1 } : {}),
-          use: { ...devices[device], baseURL: `http://127.0.0.1:${CLOUD_PORT}` },
+          use: { ...devices[device], baseURL: `http://127.0.0.1:${CLOUD_PORT}`, ga: true },
         }))
       : []),
   ],

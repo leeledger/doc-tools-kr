@@ -1,76 +1,46 @@
-# Review Request — TOOLS5 U1 round 2
+# Review Request — GA4
 Date: 2026-10-08
-Ready for Review: YES. Status **DONE**; not committed, not pushed. Answers handoff/REVIEW-FEEDBACK.md (TOOLS5 U0+U1).
+Ready for Review: YES. Status **DONE_WITH_CONCERNS** (two deviations from the brief, below; everything green). Not committed, not pushed.
+Brief: handoff/ARCHITECT-BRIEF-GA4.md (owner decision: G-TFP7W8X8BG behind PUBLIC_GA_ID, no banner, no footer blog link).
 
-## Files Changed (round 2)
-- src/tools/image-to-jpg/controller.ts — `Entry.runError`; `runnable()` (run button counts run-error rows); `clearRunErrors()` + `onOptionChange()` on 저장 형식 / 화질 change; `run()` clears run errors before taking the rows; `markError(…, true)` for run-time errors; hint only for read errors.
-- tests/e2e/image-to-jpg.spec.ts — new test "WebP fails on this device … 저장 형식 JPG brings it back and it converts".
-- src/content/guides/heic-to-jpg.md:29 — the share quote is Apple's full sentence naming AirDrop, 메시지, 이메일 (check:quotes 148 verbatim).
-- handoff/BUILD-LOG.md — round 2 notes; Should Fix 2 and 3 logged as known gaps.
+## Files Changed
+- scripts/lib/ga.mjs:1-67 (new) — GA_ID_RE / gaId, the CSP host lists (Google CSP guide "without Ads features" + `*.analytics.google.com`), withGaCsp (script-src, connect-src, img-src; throws unless exactly one CSP line with all three), loaderSource (ES5 IIFE: loc first, dataLayer, `push(arguments)`, js + config with both signal flags false, cookie_expires 34128000, then load → requestIdleCallback(2000) | setTimeout).
+- scripts/gen-ga.mjs:1-17 (new) — postbuild: valid ID → dist/ga.js; else removes it (invalid → check-dist reports).
+- package.json:14 — postbuild starts with `node scripts/gen-ga.mjs && `.
+- src/data/ga.ts:1-10 (new), src/env.d.ts:11-14 — GA_ID / GA_ON / GA_LOADER; `ImportMetaEnv.PUBLIC_GA_ID`.
+- src/layouts/Base.astro:7, 97-99 — `<script is:inline defer src="/ga.js" data-site-ga>` at the end of head next to the CF beacon line; every module script is in body (built HTML checked; check-dist now enforces "before the first module script").
+- scripts/gen-headers.mjs:11, 54-61 — on: withGaCsp + `/ga.js  Cache-Control: no-cache` block.
+- scripts/check-dist.mjs:10, 48-54, 91-116 — invalid ID error; on: one marked tag per page before module scripts, dist/ga.js === loaderSource(id) and both flags; always: no `googletagmanager` / `gtag(` in HTML; off: no tag, no ga.js, `googletagmanager` in no text file of dist (no whitelist was needed).
+- scripts/ops/lib/html.mjs:71-75 — comment only (GA is first-party via /ga.js).
+- src/data/legal.ts:2, 13-15, 21-23 — PRIVACY_GA '2026년 10월 8일' (confirm at deploy), PRIVACY_REVISED / PRIVACY_TERMS_UPDATED switch on GA_ON. /terms/ has no 쿠키/분석 wording: unchanged.
+- src/pages/privacy/index.astro:5-7, 19-30, 40, 74-95, 117 — n() gains `GA_ON && base >= 4`; section 1 sentence; section `id="ga"` after 사이트를 여는 기록 (purpose, cookies, collected items, 국외 이전 6 items, signals off, refusal); change-log line.
+- docs/COPY.md:93-94 — GA bullets (env, what changes, GA admin settings are manual).
+- .github/workflows/ci.yml:99-100, 109 — `PUBLIC_GA_ID: 'G-TEST000000'` on the dist-bgcloud build only.
+- playwright.config.ts:26-27, 31, 34, 84 — CLOUD_SPEC += ga.cloud; cloud-* projects `use: { ga: true }`; `defineConfig<{ ga: boolean }>`.
+- tests/e2e/upload-guard.ts:3, 43-62, 64, 73, 82 — **guard change (see concern 1)**: `isGaRequest`, `uploadProblems(..., ga = false)`.
+- tests/e2e/no-upload.ts:23-24, 28-51 — `ga` fixture option (default false); when true, context routes stub gtag.js (GTAG_STUB sends one GET collect with page_location and records afterLoad) and answer GA hosts 204.
+- tests/e2e/usage.spec.ts:227-234 — cookieless sentence / usage date asserted only when the build has no `#ga` (dist-bgcloud now has GA).
+- tests/e2e/ga.spec.ts (new) — GA-off default build: no tag, no dataLayer, no Google request, no GA section.
+- tests/e2e/ga.cloud.spec.ts (new) — tag; gtag.js after load (stub sees loadEventEnd > 0); one collect per page; exact CSP header; zero CSP violations; utm_source kept, hash dropped; `비밀-파일명.pdf` through /pdf-compress/ absent from dataLayer and all Google URLs; privacy numbering on the cloud+usage+GA build (GA = 5, usage = 7, 변경 이력 = 9).
+- tests/unit/ga.test.ts (new) — gaId, withGaCsp (+ both compose orders), loaderSource text and behaviour (vm), no document.title assignment in src/, sw route() and gen-sw precache, guard GA allowance, GA-off dist + check-dist refusal, and a GA-on astro build in a temp dir (gen-ga, check-dist, gen-headers, every page's tag, privacy text/numbering/links, sitemap lastmod 2026-10-08, check-dist failure modes).
+- tests/unit/ops.test.ts:108-115 — /ga.js + CF beacon pass; raw gtag/js script flagged.
+- tests/unit/postbuild.test.ts:507-508 — buildEnv passes PUBLIC_GA_ID when dist has ga.js.
 
-## Results (round 2)
-- Builds default / auto-frame / bg / cloud: check-dist OK (controller 18.4 / 22 KB; precache unchanged). astro check 0 errors. Unit image-to-jpg + guides-schema + postbuild 110 passed. e2e image-to-jpg chromium + mobile-chrome + webkit + mobile-safari 42 passed / 2 skipped, retries 0.
+## Concerns / Open Questions
+1. **No-upload guard (not in the brief).** The guard fails on any third-party request and on any CSP whose connect-src is not exactly `'self'`. Turning GA on in dist-bgcloud therefore fails every cloud-* spec. I added an opt-in `ga` fixture option, set only on the cloud-* projects: bodiless GETs to `https://www.googletagmanager.com/gtag/js` or `*.google-analytics.com` / `*.analytics.google.com` pass, and the CSP may be exactly `'self'` + the GA connect list. POST/body to Google, other Google paths (gtm.js, www.google.com), http, look-alike hosts and a wider CSP still fail (unit-tested). The fixture also stubs those hosts so no CI test reaches Google. Richard/Arch: please confirm this is acceptable for the privacy guard.
+2. **"GA-off dist identical to U1 HEAD dist" holds except the UI font.** gen-ui-font builds the core subset from source text regardless of flags, so the GA policy copy adds 6 core glyphs (꺼 널 략 언 역 틱): anolim-ui-400 44,548 → 44,860 B, -800 47,820 → 48,024 B; hence new font hashes, Base CSS hash, sw.js and deploy-manifest. Every HTML differs only in those hashed names (diff after normalising them: none). The GA-on build needs the glyphs anyway. Same as the cloud/usage sections before.
+3. Google contact: policies.google.com/privacy?hl=ko itself links `mailto:googlekrsupport@google.com` as "문의"; I used the privacy form the brief asked for, `https://support.google.com/policies/contact/general_privacy_form?hl=ko` (HTTP 200, 2026-10-08). Opt-out page `https://tools.google.com/dlpage/gaoptout?hl=ko` 200.
+4. Section 1 heading stays "받는 개인정보가 없어요" (brief did not change it) while the section now names GA cookies; Arch may want a wording look.
 
-## Open Questions
-- After a run where every row failed, the run button stays on for the same format (a retry may work, e.g. a transient worker load failure). OK, or should it require an option change?
+## CLAUDE.md proposal (orchestrator applies; replaces the "only third-party script" sentence)
+"Third-party scripts: the cookieless Cloudflare Web Analytics beacon (`PUBLIC_CF_ANALYTICS_TOKEN`, scripts/lib/analytics.mjs) and Google Analytics 4 (`PUBLIC_GA_ID`, scripts/lib/ga.mjs; owner-approved 2026-10-08): a self-hosted /ga.js loads gtag.js after `load`, page_view only, Google signals and ad personalization off, never file data. Each widens the CSP only when its env var is set; otherwise CSP `script-src`/`connect-src 'self'`."
+Suggested addition to the Privacy/runtime line: "the cloud-* e2e projects (GA-on build) allow only bodiless GETs to gtag.js and the GA collect hosts, stubbed."
 
----
+## Gates (2026-10-08, local Windows)
+- astro check 0 errors; unit 56 files / 1,208 passed (default dist; ga.test incl. the GA-on temp build, 64 s).
+- Builds, all postbuild OK: default (2,401 files), auto-frame (2,408), bg (2,419), cloud+GA G-TEST000000 (2,421; `gen-ga: ga.js for G-TEST000000`, CSP + /ga.js no-cache), GA-only (2,402). Precache cloud 427.3 KB / 450 (was 425.6), default 421.0, bg 424.4, auto 423.2.
+- e2e retries 0: ga.spec + ga.cloud.spec + usage.spec + remove-background.cloud.spec on chromium, mobile-chrome, webkit, cloud-chromium, cloud-mobile-chrome, cloud-webkit: 70 passed, 5 skipped (pre-existing skips).
+- Lighthouse, GA-on build, **real gtag.js** (collect hits sent, G-TEST000000), 5 runs, median: / perf 0.99, LCP 1,669 ms, CLS 0.000, BP 1; /pdf-compress/ 0.99, 1,822, 0.000, 1; /id-photo/ 0.99, 1,818, 0.000, 1; /guide/passport-photo/ 0.99, 1,670, 0.000, 1. a11y/SEO 1. Only `resource-summary:script:size` fails, as expected on GA-on (158–175 KB; budget stays a GA-off first-party gate, lighthouserc unchanged).
 
-# Round 1 (for reference)
-
-Date: 2026-10-08
-Ready for Review: YES. Status **DONE** (U0 and U1) locally; not committed, not pushed. Brief: handoff/ARCHITECT-BRIEF-TOOLS5.md. U0 is meant to be its own commit (files below).
-
-## Files Changed — U0 (refactor, no visible change)
-- src/lib/zip/stored.ts:1-40 — `StoredZip`, the streaming stored ZIP moved verbatim from pdf-to-jpg/output.ts (`JpegZip`).
-- src/lib/zip/names.ts:1-18 — `dedupeNames` moved verbatim from photo-compress/zip.ts.
-- src/lib/image/caps.ts:1-23 — `CanvasCaps`, `fitsCaps`, `fitWithinCaps` (the pageScale clamp, same arithmetic).
-- src/tools/pdf-to-jpg/scale.ts:1-22 — `pageScale` calls fitsCaps / fitWithinCaps.
-- src/tools/pdf-to-jpg/limits.ts:3 — CanvasCaps from lib/image/caps.
-- src/tools/pdf-to-jpg/output.ts:1-4 — JpegZip removed (comment points at lib/zip).
-- src/tools/pdf-to-jpg/controller.ts:19-22, 341 — imports StoredZip.
-- src/tools/photo-compress/zip.ts:1-20 — imports dedupeNames; keeps zipSync (not a pure move, see BUILD-LOG).
-- src/lib/pdf/inspect.ts:3, 105-131, 147 — `renderPageCanvas(doc, pageNo, w)` → `renderPageThumb(doc, index, maxW, maxH = Infinity)` + pure `thumbCssWidth`.
-- src/tools/pdf-compress/controller.ts:621, 629 — call renderPageThumb(…, 0, …).
-- tests/unit/tools5-shared.test.ts (new) — StoredZip + dedupeNames, fitsCaps / fitWithinCaps edges, thumbCssWidth.
-- tests/unit/pdf-to-jpg.test.ts:9-10, 98-128 and tests/unit/photo-tool.test.ts:12-13 — import lines only (JpegZip → StoredZip, dedupeNames path).
-- handoff/BUILD-LOG.md — "TOOLS5 — brief" log notes, U0 notes.
-
-## Files Changed — U1 (/image-to-jpg/ 사진 JPG 변환)
-- src/tools/image-to-jpg/limits.ts (new) — limits (사진 PDF 변환 numbers) + canvas caps; `planAdd` with 바꾸기 wording.
-- src/tools/image-to-jpg/convert.ts (new) — pure rules (accepted formats, canStripOnly, quality, names, drawSize / decodeEdge, notes, oncePerCode) and the injected canvas runner `convertImage` (strip path, transparency + white, WebP type check → fallback, encoder/canvas errors).
-- src/tools/image-to-jpg/controller.ts (new) — UI: list, thumbnails, one photo at a time with a yield, 취소, single file or StoredZip, per-row downloads, usage once per code per batch / run; `browserDeps` 103-145 (WebP fallback worker 122-141).
-- src/tools/image-to-jpg/entry.ts (new) — lazy controller on first interaction (jpg-to-pdf pattern).
-- src/lib/codecs/webp.worker.ts (new) — @jsquash/webp encode in a worker (fallback only).
-- src/pages/image-to-jpg/index.astro (new) — page, options, how-to, FAQ, related.
-- src/content/guides/heic-to-jpg.md (new) — guide with 5 Apple KR quotes; src/content/guides/kakao-photo.md:13 related += heic-to-jpg; scripts/lib/guide-titles.mjs:9 regenerated.
-- src/data/tools.ts:8, 56-65, 389-429 — FAQ numbers from limits; the tool entry after photo-compress.
-- src/data/og.json:10, 26; src/data/site.ts:27; src/data/tool-facts.ts:14, 59-62; src/data/guides.ts:51-52, 62 — registration.
-- src/lib/ui/usage.ts:13, 23-24 and scripts/lib/usage.mjs:43, 60-63, 266, 293, 315, 354-357 — tool, `to` setting, labels, FAIL_LABELS.encoder.
-- src/sw/sw.ts:32, scripts/gen-sw.mjs:50 — RUNTIME_PAGES / NOT_PRECACHED.
-- scripts/check-dist.mjs:168-188 — webp.worker budget 11.2 KB, controller budget 22 KB, no ZIP/WebP code in the initial JS, no codec in the controller's static imports.
-- scripts/lib/bgcloud.mjs:62, lighthouserc.json:14, scripts/qa/visual.mjs:35 — lists.
-- src/styles/app.css:190-191, 211 — `.file-list.no-handle` (rows without the drag column).
-- docs/COPY.md:13 — JPG, PNG allowed; HEIC as "아이폰 사진(HEIC)".
-- tests/unit/image-to-jpg.test.ts (new) — rules + runner on @napi-rs/canvas (transparency, alpha kept, WebP fallback, encoder/canvas errors, caps, GIF note, strip path, re-encode path).
-- tests/e2e/image-to-jpg.spec.ts (new) — 10 tests incl. the forced WebP fallback; tests/e2e/usage.spec.ts:166-188 (HEIC batch → exactly one fail c=heic); site/polish lists; unit polish/postbuild/bgcloud/usage/admin-view lists.
-- handoff/BUILD-LOG.md — U1 notes.
-
-## Results
-- astro check 0 errors; unit 55 files 1,186 passed; check:quotes 148 verbatim; check:licenses OK.
-- Builds default / auto-frame / bg / cloud: check-dist OK; precache 419.8 / 421.8 / 423.1 / 425.6 KB of 450.
-- UI font: no new core character; preloaded margins 2,516 / 2,112 / 2,468 / 2,468 B (unchanged).
-- e2e chromium + mobile-chrome + webkit: image-to-jpg + site + polish + growth 388 passed / 11 skipped; image-to-jpg also on mobile-safari (38 passed / 2 skipped over 4 projects, retries 0); usage cloud 16 passed; regression merge/pdf-to-jpg/compress/photo 134 passed / 34 skipped.
-- Lighthouse local (dist-bg, 5 runs): /image-to-jpg/ 1,656 ms, /photo-compress/ 1,806, /pdf-merge/ 1,807, /guide/heic-to-jpg/ 1,656; CLS 0.
-
-## Open Questions
-- U0 `renderPageThumb` takes `(doc, index, maxW, maxH = Infinity)` instead of the brief's `(doc, index, maxPx)`: a long-edge cap would have shrunk the merge card's portrait thumbnail (visible change). OK for U2?
-- WebP fallback is a small worker, not a main-thread import (the main-thread import duplicated the MozJPEG/resize wasm in dist). Fine with the extra 9.3 KB lazy worker?
-- Usage once per code per batch for every parse code (not only heic) and once per code per run while converting. jpg-to-pdf sends heic once per photo (logged, not changed).
-- Problem rows do not block the run (the others continue), unlike jpg-to-pdf where they block. Intended per brief decisions 7/8.
-- Main-thread encode keeps the page busy while one large photo is drawn (decision 6; the yield is between photos).
-
-## Out of Scope (logged in BUILD-LOG)
-- CLAUDE.md line 3 should name 사진 JPG 변환 (not edited by Bob: owner/orchestrator).
-- Firefox parallel-download flake on this PC (also in unchanged specs); qa:visual not run; owner device checks (iOS HEIC picker, real Safari WebP).
-- docs/OPS-RUNBOOK.md working-tree change is not Bob's.
+## Out of Scope (logged in BUILD-LOG Known Gaps)
+- GA tool events, consent banner / Consent Mode, Ads, GTM, footer blog link, /admin/ changes.

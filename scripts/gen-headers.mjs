@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { analyticsToken, withAnalyticsCsp } from './lib/analytics.mjs';
 import { BG_PATH, bgRemoveOn } from './lib/bgremove.mjs';
+import { GA_LOADER, gaId, withGaCsp } from './lib/ga.mjs';
 import { distDir, publicEnv } from './lib/dist.mjs';
 
 export const PAGES_DEV = 'doc-tools-kr.pages.dev';
@@ -49,6 +50,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (analyticsToken(env.PUBLIC_CF_ANALYTICS_TOKEN)) {
     writeFileSync(file, withAnalyticsCsp(readFileSync(file, 'utf8')));
     console.log('gen-headers: CSP allows the Cloudflare Web Analytics beacon');
+  }
+  // Google Analytics 4 (owner 2026-10-08): the CSP lets gtag.js load and report; /ga.js is unhashed, so it is
+  // revalidated on every load (a changed ID must not stick in caches).
+  if (gaId(env.PUBLIC_GA_ID)) {
+    writeFileSync(file, `${withGaCsp(readFileSync(file, 'utf8'))}${GA_LOADER}
+  Cache-Control: no-cache
+`);
+    console.log(`gen-headers: CSP allows Google Analytics; ${GA_LOADER} no-cache`);
   }
   // Path rules before the host rules: the COEP block applies on every host.
   if (coep) appendFileSync(file, coep);

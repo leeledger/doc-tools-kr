@@ -2465,3 +2465,30 @@ Refactor only; one commit of its own (file list in REVIEW-REQUEST "U0").
 
 **TOOLS5 U0+U1 — deploy gate (2026-10-08)**
 - Richard: round 1 one Must Fix (run-time errors never cleared) → fixed in round 2; round 2 clear. Orchestrator updated CLAUDE.md line 3 tool list. docs/OPS-RUNBOOK.md §8 also records the WAF /api/ rate-limit rule set by the orchestrator on the owner's go-ahead (100 req / 10 s per IP+colo, 10 s block; burst test 79/250 → 429, home unaffected). Pushed under the owner's "순차 적용" go-ahead. Next: GA4 (owner decision) then U2.
+
+## GA4 (Bob, 2026-10-08) — status DONE_WITH_CONCERNS
+Brief: handoff/ARCHITECT-BRIEF-GA4.md. GA4 behind `PUBLIC_GA_ID` (owner: G-TFP7W8X8BG, set in Pages env after merge). Files and line ranges: handoff/REVIEW-REQUEST.md (GA4).
+
+**Built:** scripts/lib/ga.mjs (gaId, CSP hosts, withGaCsp, loaderSource), scripts/gen-ga.mjs (postbuild first), src/data/ga.ts + env.d.ts, Base.astro tag (end of head; module scripts are all in body), gen-headers (CSP + `/ga.js` no-cache), check-dist on/off assertions (incl. tag before the first module script, ga.js === loaderSource), ops html.mjs comment, legal.ts (PRIVACY_GA '2026년 10월 8일' — Arch re-confirms at the deploy gate), privacy section `id="ga"` + section 1 sentence + change log, COPY.md, CI (G-TEST000000 on dist-bgcloud only), playwright CLOUD_SPEC + `ga` option.
+
+**Decisions taken:**
+- No-upload guard: opt-in `ga` option (cloud-* projects only) allowing bodiless GETs to gtag/js and the GA collect hosts and exactly the GA connect-src; the fixture stubs them (no test reaches Google). Without it every cloud-* spec fails on the GA-on build. Escalated in REVIEW-REQUEST concern 1.
+- gen-ga does not throw on an invalid ID (writes nothing); check-dist reports it with gaId's message and fails the build.
+- Google contact link: the privacy form `support.google.com/policies/contact/general_privacy_form?hl=ko` (200 on 2026-10-08); the Korean policy page's own "문의" link is `mailto:googlekrsupport@google.com` (noted, not used).
+- usage.spec privacy test: cookieless sentence and usage date only when the build has no `#ga`.
+
+**Deviation:** GA-off dist equals the U1 HEAD dist except the UI font: 6 new core glyphs from the GA policy copy (꺼널략언역틱), 400: 44,548 → 44,860 B, 800: 47,820 → 48,024 B (+516 B preloaded); HTML differs only in hashed asset names.
+
+**Gates (local):** astro check 0 errors; unit 56 files 1,208 passed; builds default / auto-frame / bg / cloud+GA / GA-only all postbuild OK; e2e (retries 0) ga + ga.cloud + usage + remove-background.cloud on chromium, mobile-chrome, webkit and cloud-chromium, cloud-mobile-chrome, cloud-webkit: 70 passed, 5 skipped (pre-existing).
+**Lighthouse GA-on (real gtag.js, median of 5):** / perf 0.99 LCP 1,669 ms CLS 0 TBT 114 BP 1; /pdf-compress/ 0.99, 1,822, 0, 123, 1; /id-photo/ 0.99, 1,818, 0, 102, 1; /guide/passport-photo/ 0.99, 1,670, 0, 96, 1. `resource-summary:script:size` GA-on: 158,139 / 175,207 / 170,646 / 158,139 B (over the 30 KB first-party budget by design; CI asserts it on the GA-off build; lighthouserc unchanged).
+
+**Known Gaps:**
+- GA tool events mirroring the usage whitelist (if marketing asks).
+- Consent banner / Consent Mode if EU traffic grows or ads come (owner accepts the EU ePrivacy residual risk).
+- Footer blog link, Google Ads/AdSense, GTM, /admin/ GA: out of scope.
+- GA admin settings (retention 2 months, signals and ad personalization off, enhanced measurement page-change / downloads / forms off) are manual owner steps; nothing in code checks them.
+- Real collect host coverage is verified only by the owner's GA Realtime check after deploy (Owner step 5); the e2e uses a stub.
+
+**GA4 — deploy gate (2026-10-08)**
+- Richard: clear, 0 Must Fix; Bob's four concerns accepted (cloud-* upload-guard `ga` allowance; +516 B core glyphs from the privacy copy, logged as a deviation from "identical to U1 HEAD"; Google privacy form as contact; section 1 title). Orchestrator applied: section 1 title when GA is on → "1. 이름·연락처는 받지 않아요"; transfer items now name the IP address ("지역 추정에만 쓰고 저장하지 않아요"); ga.test updated; production-like GA-on build OK; CLAUDE.md third-party script sentence replaced.
+- Owner steps after PUBLIC_GA_ID is set: GA data retention 2 months (and user-data retention if shown), Google signals + ad personalization off, enhanced measurement: page changes based on browser history / file downloads / form interactions off; confirm in the realtime report that only page_view/session events arrive.

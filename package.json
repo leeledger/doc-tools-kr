@@ -11,7 +11,7 @@
     "dev": "astro dev",
     "prebuild": "node scripts/copy-vendor.mjs && node scripts/vendor-rhwp.mjs && node scripts/gen-hwp-fonts.mjs && node scripts/gen-licenses.mjs && node scripts/gen-ui-font.mjs && node scripts/gen-brand.mjs",
     "build": "astro build",
-    "postbuild": "node scripts/check-dist.mjs && node scripts/gen-headers.mjs && node scripts/carry-assets.mjs && node scripts/gen-sw.mjs",
+    "postbuild": "node scripts/gen-ga.mjs && node scripts/check-dist.mjs && node scripts/gen-headers.mjs && node scripts/carry-assets.mjs && node scripts/gen-sw.mjs",
     "preview": "node tests/e2e/serve.mjs",
     "check": "astro check",
     "test": "vitest run",

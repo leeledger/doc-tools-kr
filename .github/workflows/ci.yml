@@ -96,7 +96,8 @@ jobs:
       # C2-cloud: the cloud path of 배경 지우기 (PUBLIC_BG_CLOUD=1 needs the privacy officer and contact) goes to
       # dist-bgcloud/ for the cloud-<project> projects, in all five browsers. /api/remove-bg is answered by page.route
       # fixtures; no test reaches Cloudflare. The same build carries the anonymous usage statistics (usage.spec.ts;
-      # /api/usage is page.route'd too).
+      # /api/usage is page.route'd too) and Google Analytics with a test ID (ga.cloud.spec.ts; gtag.js and the collect
+      # hosts are stubbed by the no-upload fixture). The default and checks builds stay GA-off.
       - name: Build (배경 지우기 cloud on → dist-bgcloud)
         run: mv dist dist-keep && npm run build && mv dist dist-bgcloud && mv dist-keep dist
         env:
@@ -105,6 +106,7 @@ jobs:
           PUBLIC_PRIVACY_OFFICER: '이종림'
           PUBLIC_CONTACT_EMAIL: 'robotncoding@kakao.com'
           PUBLIC_USAGE_STATS: '1'
+          PUBLIC_GA_ID: 'G-TEST000000'
       - name: Install Playwright browser
         run: |
           case "${{ matrix.project }}" in

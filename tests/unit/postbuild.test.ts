@@ -504,6 +504,8 @@ describe('built output', () => {
     ...(usageBuilt() ? { PUBLIC_USAGE_STATS: '1', PUBLIC_CONTACT_EMAIL: process.env.PUBLIC_CONTACT_EMAIL || 'robotncoding@kakao.com' } : { PUBLIC_USAGE_STATS: '0' }),
     PUBLIC_ERROR_BEACON_PATH: '',
     PUBLIC_USAGE_SAMPLE: '',
+    // Google Analytics (owner 2026-10-08): on when the build has /ga.js (the test ID of the CI cloud build).
+    PUBLIC_GA_ID: existsSync(join(DIST, 'ga.js')) ? (/gtag\('config','(G-[A-Z0-9]+)'/.exec(readFileSync(join(DIST, 'ga.js'), 'utf8'))?.[1] ?? '') : '',
   });
   /** The build under test has the anonymous usage statistics (PUBLIC_USAGE_STATS=1): /privacy/ has id="usage". */
   function usageBuilt(): boolean {

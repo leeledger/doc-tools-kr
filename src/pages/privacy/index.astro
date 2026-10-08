@@ -2,8 +2,9 @@
 import Base from '../../layouts/Base.astro';
 import { CONTACT_EMAIL, PRIVACY_OFFICER, SITE } from '../../data/site';
 import { josa } from '../../lib/ui/josa';
-import { PRIVACY_ANALYTICS, PRIVACY_CLOUD, PRIVACY_REVISED, PRIVACY_USAGE, PRIVACY_V1 } from '../../data/legal';
+import { PRIVACY_ANALYTICS, PRIVACY_CLOUD, PRIVACY_GA, PRIVACY_REVISED, PRIVACY_USAGE, PRIVACY_V1 } from '../../data/legal';
 import { ANALYTICS_ON } from '../../data/analytics';
+import { GA_ON } from '../../data/ga';
 import { USAGE_ON } from '../../lib/ui/usage';
 import { downloadBytes } from '../../lib/bgremove/assets';
 import { aboutMB } from '../../tools/remove-background/copy';
@@ -15,10 +16,16 @@ import { aboutMB } from '../../tools/remove-background/copy';
 // C2-cloud (brief §7.1): with the 배경 지우기 cloud path on, section 3 says what is sent, to whom and how to refuse,
 // and the policy names the 개인정보 보호책임자 (owner-approved 2026-10-02; the build fails without the two values).
 // The items follow 개인정보 보호법 제28조의8 제2항 and 제30조 제1항 (law.go.kr, fetched 2026-10-02; BUILD-LOG C2-cloud).
+// Google Analytics (owner 2026-10-08): with PUBLIC_GA_ID set, its own section right after the access records (the
+// cookies, what is collected, the transfer to Google LLC in the USA, how to refuse); section 1 then names the cookies.
 const cloud = __BG_CLOUD__;
-const n = (base: number): number => base + (cloud && base >= 3 ? 1 : 0) + (USAGE_ON && base >= 5 ? 1 : 0);
+const n = (base: number): number => base + (cloud && base >= 3 ? 1 : 0) + (GA_ON && base >= 4 ? 1 : 0) + (USAGE_ON && base >= 5 ? 1 : 0);
+const gaSection = n(4) - 1;
 const deviceMB = aboutMB(Math.max(downloadBytes('webgpu'), downloadBytes('wasm')));
 const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
+/** Google's privacy contact form (linked from policies.google.com/privacy; checked live 2026-10-08). */
+const GOOGLE_PRIVACY_FORM = 'https://support.google.com/policies/contact/general_privacy_form?hl=ko';
+const GA_OPTOUT = 'https://tools.google.com/dlpage/gaoptout?hl=ko';
 ---
 <Base
   title={`개인정보 처리방침 | ${SITE.name}`}
@@ -29,8 +36,8 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
       <h1>개인정보 처리방침</h1>
       <p class="meta-line">시행일: {PRIVACY_REVISED}</p>
 
-      <h2>1. 받는 개인정보가 없어요</h2>
-      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. {ANALYTICS_ON || USAGE_ON ? '쿠키도 쓰지 않아요.' : '쿠키와 방문 분석 도구도 쓰지 않아요.'}</p>
+      <h2>{GA_ON ? '1. 이름·연락처는 받지 않아요' : '1. 받는 개인정보가 없어요'}</h2>
+      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. {GA_ON ? `방문 분석을 위해 Google 애널리틱스 쿠키를 써요(${gaSection}항).` : ANALYTICS_ON || USAGE_ON ? '쿠키도 쓰지 않아요.' : '쿠키와 방문 분석 도구도 쓰지 않아요.'}</p>
 
       <h2>2. 고른 파일은 내 폰·컴퓨터 안에서 처리해요</h2>
       <p>고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요{cloud && ' (사진 배경 지우기는 제외: 3항)'}. 운영자나 다른 곳으로 보내지 않고, 저장하지도 않아요. PDF 비밀번호도 처리하는 동안에만 쓰고 저장하거나 보내지 않아요. 창을 닫으면 모두 사라져요.</p>
@@ -64,6 +71,28 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
         <p id="analytics">방문자 수와 많이 보는 페이지를 알기 위해 Cloudflare Web Analytics를 써요. 쿠키를 쓰지 않고, 연 페이지 주소, 들어온 곳, 쓰는 기기와 앱의 종류, 나라 같은 정보만 모아 합계로만 봐요. 고른 파일과 그 내용은 담기지 않아요.</p>
       )}
 
+      {GA_ON && (
+        <>
+          <h2 id="ga">{gaSection}. Google 애널리틱스(방문 분석)</h2>
+          <ul>
+            <li><strong>목적:</strong> 어떤 페이지가 많이 읽히고 어디서 들어오는지 알아 사이트를 고치는 데 써요.</li>
+            <li><strong>쿠키(자동 수집 장치):</strong> <code>_ga</code>, <code>_ga_&lt;번호&gt;</code>. 다시 온 방문인지 구분하는 임의의 번호예요. 최대 13개월 보관돼요.</li>
+            <li><strong>모으는 정보:</strong> 연 페이지 주소, 들어온 곳, 쿠키의 임의 번호, 기기·브라우저 종류, 화면 크기, 언어, 대략적인 지역(IP로 추정하며 IP 주소 자체는 Google 애널리틱스에 저장되지 않아요). 고른 파일의 이름과 내용은 담기지 않아요.</li>
+          </ul>
+          <p><strong>국외 이전</strong> (개인정보 보호법 제28조의8)</p>
+          <ul>
+            <li>받는 자: Google LLC, 연락처 <a href={GOOGLE_PRIVACY_FORM} rel="noopener">Google 개인정보 문의 양식</a></li>
+            <li>이전 국가: 미국</li>
+            <li>이전 일시·방법: 페이지를 열 때마다 인터넷으로 전송</li>
+            <li>이전 항목: 위 '모으는 정보'와 IP 주소(지역 추정에만 쓰고 저장하지 않아요)</li>
+            <li>이용 목적: 방문 통계</li>
+            <li>보유·이용 기간: Google 애널리틱스에 2개월 보관 후 삭제 (쿠키는 최대 13개월)</li>
+          </ul>
+          <p>Google 신호와 광고 개인화는 꺼 두었고, 광고에 쓰지 않아요.</p>
+          <p><strong>거부 방법:</strong> 브라우저 설정에서 쿠키를 막거나 <a href={GA_OPTOUT} rel="noopener">Google 애널리틱스 차단 부가 기능</a>을 쓰면 돼요. 막아도 모든 도구를 그대로 쓸 수 있어요.</p>
+        </>
+      )}
+
       <h2>{n(4)}. 광고</h2>
       <p>지금은 광고가 없어요. 광고(Google AdSense 등)를 싣게 되면, 그 전에 이 방침을 고치고 필요한 동의 절차를 먼저 마련할게요.</p>
 
@@ -85,6 +114,7 @@ const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
 
       <h2>{n(5) + (cloud ? 1 : 0)}. 변경 이력</h2>
       <ul>
+        {GA_ON && <li>{PRIVACY_GA}: Google 애널리틱스(방문 분석, 쿠키)와 국외 이전 내용을 더함</li>}
         {USAGE_ON && <li>{PRIVACY_USAGE}: 익명 사용 통계를 더함</li>}
         {ANALYTICS_ON && <li>{PRIVACY_ANALYTICS}: 방문자 수 집계(Cloudflare Web Analytics)를 더함</li>}
         {cloud && <li>{PRIVACY_CLOUD}: 배경 지우기에서 사진을 보내는 경우(3항)와 개인정보 보호책임자를 더함</li>}

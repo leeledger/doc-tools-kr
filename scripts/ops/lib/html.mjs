@@ -68,7 +68,11 @@ export function pageProblems(html, pageUrl) {
 
 const INJECTED = /\/cdn-cgi\/|cloudflareinsights|rocket-loader|email-decode/i;
 
-/** Our own Web Analytics tag (Base.astro, PUBLIC_CF_ANALYTICS_TOKEN): marked, so an injected beacon still shows. */
+/**
+ * Our own Web Analytics tag (Base.astro, PUBLIC_CF_ANALYTICS_TOKEN): marked, so an injected beacon still shows.
+ * Google Analytics needs no exception: it loads first-party through /ga.js (PUBLIC_GA_ID), so a raw gtag.js tag (a
+ * dashboard or Zaraz injection) still shows as off-site.
+ */
 const OWN_BEACON = /<script\b(?=[^>]*\bdata-site-analytics\b)(?=[^>]*\bsrc="https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js")[^>]*><\/script>/gi;
 
 /** <script src> that is off-site or injected by Cloudflare (absolute URLs). */

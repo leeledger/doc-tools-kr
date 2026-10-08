@@ -4,6 +4,7 @@ import '../styles/global.css';
 import '../styles/app.css';
 import { SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } from '../data/site';
 import { ANALYTICS_ON, BEACON_SRC, CF_ANALYTICS_TOKEN } from '../data/analytics';
+import { GA_LOADER, GA_ON } from '../data/ga';
 import { BUILD_ID } from '../data/build';
 import { LIVE_TOOLS } from '../data/tools';
 import JsonLd from '../components/JsonLd.astro';
@@ -93,6 +94,9 @@ const favicon =
 <link rel="preload" href={uiFont800} as="font" type="font/woff2" crossorigin>
 {jsonLd && <JsonLd data={jsonLd} />}
 <slot name="head" />
+{/* Google Analytics 4 (owner 2026-10-08): a classic defer script, so it runs before the page's module scripts (document
+    order) and reads the URL before quicklinks drops utm_*. It loads gtag.js only after the page has loaded. */}
+{GA_ON && <script is:inline defer src={GA_LOADER} data-site-ga></script>}
 {ANALYTICS_ON && <script is:inline defer src={BEACON_SRC} data-cf-beacon={JSON.stringify({ token: CF_ANALYTICS_TOKEN })} data-site-analytics></script>}
 </head>
 <body>

@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
 import { autoframeOn } from './lib/autoframe.mjs';
 import { BEACON_SRC, analyticsToken } from './lib/analytics.mjs';
+import { GA_LOADER, gaId, loaderSource } from './lib/ga.mjs';
 import { API_PATH as CLOUD_API, CLAIM_FILE_RE, EXCEPTION_PAGES, EXCEPTION_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, bgCloudOn, claimText, privacyGate, unqualifiedClaims } from './lib/bgcloud.mjs';
 import { bgRemoveOn } from './lib/bgremove.mjs';
 import { USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
@@ -41,6 +42,13 @@ if (email && !EMAIL_RE.test(email)) errors.push(`PUBLIC_CONTACT_EMAIL "${email}"
 let analytics = '';
 try {
   analytics = analyticsToken(env.PUBLIC_CF_ANALYTICS_TOKEN);
+} catch (e) {
+  errors.push(e.message);
+}
+// Google Analytics 4 (owner 2026-10-08): an ID that is not one never ships.
+let ga = '';
+try {
+  ga = gaId(env.PUBLIC_GA_ID);
 } catch (e) {
   errors.push(e.message);
 }
@@ -79,6 +87,32 @@ for (const [p, html] of pageHtml) {
   const has = html.includes(BEACON_SRC);
   if (analytics && !has) errors.push(`${p}: no Cloudflare Web Analytics beacon although PUBLIC_CF_ANALYTICS_TOKEN is set`);
   if (!analytics && has) errors.push(`${p}: Cloudflare Web Analytics beacon although PUBLIC_CF_ANALYTICS_TOKEN is not set`);
+}
+// Google Analytics 4: on, every page has exactly one marked /ga.js tag, before its module scripts (so it reads the URL
+// first), and dist/ga.js is the loader for this ID; on or off, no page loads gtag.js itself or calls gtag inline.
+// Off, nothing of it ships at all.
+const GA_TAG = /<script\b[^>]*\bsrc="\/ga\.js"[^>]*>/g;
+for (const [p, html] of pageHtml) {
+  const tags = html.match(GA_TAG) ?? [];
+  if (ga) {
+    if (tags.length !== 1 || !tags[0].includes(' data-site-ga')) errors.push(`${p}: ${tags.length} Google Analytics tags (expected exactly one ${GA_LOADER} tag with data-site-ga)`);
+    else {
+      const firstModule = html.indexOf('type="module"');
+      if (firstModule >= 0 && html.indexOf(tags[0]) > firstModule) errors.push(`${p}: the ${GA_LOADER} tag comes after a module script`);
+    }
+  } else if (tags.length) errors.push(`${p}: Google Analytics tag although PUBLIC_GA_ID is not set`);
+  if (html.includes('googletagmanager')) errors.push(`${p}: names googletagmanager (Google Analytics loads only through ${GA_LOADER})`);
+  if (html.includes('gtag(')) errors.push(`${p}: inline gtag( call (Google Analytics loads only through ${GA_LOADER})`);
+}
+const gaFile = files.some((f) => f.path === 'ga.js');
+if (ga) {
+  const src = gaFile ? read('ga.js').toString('utf8') : '';
+  if (!gaFile) errors.push('PUBLIC_GA_ID is set but dist/ga.js is missing (postbuild gen-ga)');
+  else if (src !== loaderSource(ga) || !src.includes('allow_google_signals:false') || !src.includes('allow_ad_personalization_signals:false')) errors.push(`dist/ga.js is not the loader for ${ga}`);
+} else if (!env.PUBLIC_GA_ID?.trim()) {
+  if (gaFile) errors.push('dist/ga.js ships although PUBLIC_GA_ID is not set');
+  const TEXT = /\.(html|m?js|css|txt|xml|json|webmanifest|svg)$|^_headers$|^_redirects$/;
+  for (const f of files) if (TEXT.test(f.path) && read(f.path).includes('googletagmanager')) errors.push(`${f.path}: names googletagmanager although PUBLIC_GA_ID is not set`);
 }
 const initialJs = (html) => [...new Set(moduleEntries(html).flatMap((e) => staticClosure(dist, e)))];
 

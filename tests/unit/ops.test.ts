@@ -105,6 +105,14 @@ describe('page checks (A-4)', () => {
     expect(offSiteScripts(GOOD(url, own), url)).toEqual([]);
     expect(offSiteScripts(GOOD(url, `${own}<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{}'></script>`), url)).toEqual(['https://static.cloudflareinsights.com/beacon.min.js']);
   });
+  it('Google Analytics (owner 2026-10-08): our first-party /ga.js tag next to the beacon passes; a raw gtag.js tag is still flagged', () => {
+    const own = '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;:&quot;0123456789abcdef0123456789abcdef&quot;}" data-site-analytics></script>';
+    const ga = '<script defer src="/ga.js" data-site-ga></script>';
+    expect(offSiteScripts(GOOD(url, `${ga}${own}`), url)).toEqual([]);
+    expect(pageProblems(GOOD(url, `${ga}${own}`), url)).toEqual([]);
+    const raw = '<script async src="https://www.googletagmanager.com/gtag/js?id=G-TFP7W8X8BG"></script>';
+    expect(offSiteScripts(GOOD(url, `${ga}${raw}`), url)).toEqual(['https://www.googletagmanager.com/gtag/js?id=G-TFP7W8X8BG']);
+  });
   it('lists internal links without fragments, mailto or other hosts', () => {
     expect(internalLinks(GOOD(url), url)).toEqual(['https://docttak.com/pdf-merge/', 'https://docttak.com/guide/x/']);
   });

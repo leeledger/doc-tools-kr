@@ -225,7 +225,11 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   const main = page.locator('main');
   await expect(page.locator('#usage')).toContainText('익명 사용 통계');
   await expect(main).toContainText('보내지 않는 것: 파일 이름, 크기, 내용, IP 주소, 쿠키, 나를 알아볼 수 있는 값.');
-  await expect(main).toContainText('쿠키도 쓰지 않아요.');
-  await expect(main).toContainText(`시행일: ${PRIVACY_USAGE}`);
   await expect(main).toContainText(`${PRIVACY_USAGE}: 익명 사용 통계를 더함`);
+  // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence and later date win then
+  // (ga.cloud.spec.ts checks them); without it, the cookieless sentence and the usage date.
+  if ((await page.locator('#ga').count()) === 0) {
+    await expect(main).toContainText('쿠키도 쓰지 않아요.');
+    await expect(main).toContainText(`시행일: ${PRIVACY_USAGE}`);
+  }
 });
