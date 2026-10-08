@@ -2354,3 +2354,6 @@ Brief handoff/ARCHITECT-BRIEF-ADMIN-UI.md, followed in order.
 
 **ADMIN-UI — deploy gate (2026-10-07)**
 - Richard: clear, 0 Must Fix. Owner saw the before/after screenshots and said deploy. Follow-ups logged: show guide titles instead of slugs and Korean labels for raw preset ids (e.g. passport_online) in the admin tables; add PUBLIC_USAGE_SAMPLE as a Pages runtime variable to the runbook when the share drops below 1.
+
+**ADMIN_PASSWORD changed (2026-10-08, owner's instruction)**
+- Owner chose a new 16-character password (warned it contains a phone number and is in the chat log); set in Pages production secrets by the orchestrator. Deployed with this log entry.
