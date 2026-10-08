@@ -186,6 +186,26 @@ test('사진 JPG 변환 (TOOLS5 U1): a batch with three HEIC this browser cannot
   }
 });
 
+test('PDF 나누기·쪽 편집 (TOOLS5 U2): range split = pick, start (o=save, v=ranges), success, download; no range, count or file name in any body', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/pdf-split/');
+  await page.setInputFiles('#ps-input', fixturePath('gen_links_outline.pdf'));
+  await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'ready');
+  await page.locator('label.chip', { hasText: '범위대로 나누기' }).click();
+  await page.locator('#ps-ranges').fill('1-2\n3');
+  await page.locator('#ps-run').click();
+  await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#ps-download').click()]);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'start', 'success', 'download']);
+  expectClean(beacons);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'start', t: 'pdf-split', o: 'save', v: 'ranges' });
+  for (const b of beacons) {
+    expect(b.ev).toMatchObject({ t: 'pdf-split', via: 'direct', w: 1 });
+    expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
+    expect(b.body).not.toMatch(/gen_links_outline|1-2|쪽|나누기/);
+  }
+});
+
 test('PDF 용량 줄이기 with a file that is not a PDF: fail with code not-pdf', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

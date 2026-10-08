@@ -8,6 +8,10 @@ export interface WorkerFile {
   buffer: ArrayBuffer;
   password?: string;
   title: string;
+  /** 0-based source pages in output order (PDF 나누기·쪽 편집); omitted = all pages. */
+  pages?: number[];
+  /** Extra clockwise degrees per entry of `pages`. */
+  rotate?: number[];
 }
 
 export type MergeRequest =
@@ -15,6 +19,8 @@ export type MergeRequest =
       type: 'merge';
       files: WorkerFile[];
       addFileBookmarks: boolean;
+      /** Report whether an input carries a digital signature (MergeReport.signed). */
+      detectSignature?: boolean;
     }
   /** Preload (Polish P.7): the worker script and its imports are loaded by now; nothing else is lazy. */
   | { type: 'warm' };
@@ -43,9 +49,10 @@ scope.onmessage = async (ev) => {
   if (req?.type !== 'merge') return;
   try {
     const { bytes, report } = await mergePlus(
-      req.files.map((f) => ({ bytes: new Uint8Array(f.buffer), password: f.password, title: f.title })),
+      req.files.map((f) => ({ bytes: new Uint8Array(f.buffer), password: f.password, title: f.title, pages: f.pages, rotate: f.rotate })),
       {
         addFileBookmarks: req.addFileBookmarks,
+        detectSignature: req.detectSignature,
         onProgress: (done, total) => post({ type: 'progress', done, total }),
       },
     );

@@ -457,10 +457,11 @@ describe('live-only description (P.6)', () => {
     expect(n).toBeLessThanOrEqual(120);
   });
 
-  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4, image-to-jpg in TOOLS5 U1), no duplicates, every tool listed', () => {
+  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4, image-to-jpg in TOOLS5 U1, pdf-split in U2), no duplicates, every tool listed', () => {
     const slugs = new Set([...TOOLS, BG_REMOVE_TOOL].map((t) => t.slug));
     expect(slugs.has('pdf-password')).toBe(true);
     expect(slugs.has('image-to-jpg')).toBe(true);
+    expect(slugs.has('pdf-split')).toBe(true);
     expect(HOME_DESC_ORDER.filter((s) => !slugs.has(s))).toEqual([]);
     expect(new Set(HOME_DESC_ORDER).size).toBe(HOME_DESC_ORDER.length);
     for (const s of slugs) expect(HOME_DESC_ORDER, s).toContain(s);
@@ -649,7 +650,7 @@ describe('service worker (P.11)', () => {
 
   it('C2 round 2 + TOOLS4 T4 round 2: legal pages and the non-precached tool pages are stored when visited; offline they come from the cache', async () => {
     const cache = new FakeCache();
-    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/']) {
+    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/']) {
       const ev = event(req(path, 'GET', 'navigate'));
       handleFetch(ev.e, envWith(async () => new Response(`page ${path}`), cache));
       await ev.responded;

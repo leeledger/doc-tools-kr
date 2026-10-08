@@ -40,7 +40,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -59,8 +59,10 @@ export const PPI_LEVELS = ['p96', 'p150', 'p300'];
 export const PASSWORD_ACTIONS = ['lock', 'unlock'];
 /** 사진 JPG 변환 저장 형식 (TOOLS5 U1): JPG | PNG | WebP. */
 export const IMAGE_TARGETS = ['jpg', 'png', 'webp'];
+/** PDF 나누기·쪽 편집 저장 방식 (TOOLS5 U2): 편집한 PDF 하나 | 고른 쪽만 | 범위대로 | N쪽씩 | 한 쪽씩. Never the ranges or counts. */
+export const SAVE_MODES = ['edit', 'extract', 'ranges', 'every', 'each'];
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -264,6 +266,7 @@ export const TOOL_LABELS = {
   'pdf-to-jpg': 'PDF JPG 변환',
   'pdf-password': 'PDF 암호 해제·설정',
   'image-to-jpg': '사진 JPG 변환',
+  'pdf-split': 'PDF 나누기·쪽 편집',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**
@@ -291,6 +294,7 @@ export const FAIL_LABELS = {
   zip: 'ZIP 만들기 실패',
   encode: '결과 파일 만들기 실패',
   encoder: '고른 형식으로 저장 실패',
+  'no-pages': '남은 쪽 없음',
   noimage: '사진을 읽지 못함',
   'already-encrypted': '이미 암호가 걸린 파일',
   'not-encrypted': '암호가 없는 파일',
@@ -312,7 +316,7 @@ export const FAIL_LABELS = {
   'cloud-quota': '서버 사용 한도 넘음',
   'cloud-failed': '서버 처리 실패',
 };
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식' };
 export const VALUE_LABELS = {
   le100: '100KB 이하',
   le200: '200KB 이하',
@@ -354,6 +358,11 @@ export const VALUE_LABELS = {
   jpg: 'JPG',
   png: 'PNG',
   webp: 'WebP',
+  edit: '편집한 PDF 하나',
+  extract: '고른 쪽만',
+  ranges: '범위대로 나누기',
+  every: 'N쪽씩 나누기',
+  each: '한 쪽씩 나누기',
 };
 const label = (map, x) => (Object.hasOwn(map, x) ? map[x] : String(x ?? ''));
 const num = (x) => {

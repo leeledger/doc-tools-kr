@@ -121,7 +121,7 @@ describe('whitelist (scripts/lib/usage.mjs)', () => {
     ['missing w', body({ ...BASE, w: undefined })],
     ['missing b', body({ ...BASE, b: undefined })],
     ['unknown event', body({ ...BASE, e: 'view' })],
-    ['unknown tool', body({ ...BASE, t: 'pdf-split' })],
+    ['unknown tool', body({ ...BASE, t: 'pdf-ocr' })],
     ['unknown via', body({ ...BASE, via: 'ad' })],
     ['unknown device', body({ ...BASE, d: 'tv' })],
     ['bad build', body({ ...BASE, b: 'XYZ' })],
@@ -786,6 +786,34 @@ describe('사진 JPG 변환 (TOOLS5 U1)', () => {
       ['사진 JPG 변환', '저장 형식', 'WebP', '1'],
     ]);
     expect(FAIL_LABELS.encoder).toBe('고른 형식으로 저장 실패');
+  });
+});
+
+describe('PDF 나누기·쪽 편집 (TOOLS5 U2)', () => {
+  it('tool and 저장 방식 setting are whitelisted; its fail codes pass; ranges, counts and names are refused as values', () => {
+    expect(TOOLS).toContain('pdf-split');
+    for (const v of ['edit', 'extract', 'ranges', 'every', 'each']) expect(validate(body({ ...BASE, t: 'pdf-split', e: 'start', o: 'save', v })), v).not.toBeNull();
+    for (const v of ['1-3', '2', 'split', 'EDIT', 'a.pdf']) expect(validate(body({ ...BASE, t: 'pdf-split', e: 'start', o: 'save', v })), v).toBeNull();
+    for (const c of ['not-pdf', 'corrupt', 'too-many', 'too-big', 'wrong-password', 'oom', 'engine', 'unknown', 'verify', 'no-pages']) {
+      expect(validate(body({ ...BASE, t: 'pdf-split', e: 'fail', c, p: 'process' })), c).not.toBeNull();
+    }
+  });
+
+  it('admin labels are Korean: PDF 나누기·쪽 편집, 저장 방식 and its five values', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'pdf-split', event: 'success', via: 'direct', n: 2 }],
+      settings: [
+        { tool: 'pdf-split', setting: 'save', value: 'ranges', n: 2 },
+        { tool: 'pdf-split', setting: 'save', value: 'each', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('PDF 나누기·쪽 편집');
+    expect(settings!.rows).toEqual([
+      ['PDF 나누기·쪽 편집', '저장 방식', '범위대로 나누기', '2'],
+      ['PDF 나누기·쪽 편집', '저장 방식', '한 쪽씩 나누기', '1'],
+    ]);
+    expect(FAIL_LABELS['no-pages']).toBe('남은 쪽 없음');
   });
 });
 

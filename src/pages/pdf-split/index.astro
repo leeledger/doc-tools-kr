@@ -1,0 +1,177 @@
+---
+// /pdf-split/ (TOOLS5 U2): one PDF -> remove, rotate, reorder pages with page pictures; save the edited PDF, only the
+// chosen pages, or split it (by ranges, every N pages, every page; several files -> one ZIP).
+// The controller loads on the first interaction (entry.ts); pdf.js when a file is chosen; pdf-lib only in the merge worker.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+
+const tool = getTool('pdf-split');
+const jsonLd = toolJsonLd(tool, Astro.site);
+const modes = [
+  { value: 'edit', label: '편집한 PDF 하나로' },
+  { value: 'extract', label: '고른 쪽만 새 PDF로' },
+  { value: 'ranges', label: '범위대로 나누기' },
+  { value: 'every', label: '몇 쪽씩 나누기' },
+  { value: 'each', label: '한 쪽씩 나누기' },
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">PDF를 원하는 쪽으로 나누고, 필요 없는 쪽은 빼고, 옆으로 누운 쪽은 돌리고, 순서도 바꿉니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="ps-tool" class="merge" data-state="empty">
+        <div class="drop" id="ps-drop">
+          <input id="ps-input" class="file-input" type="file" accept="application/pdf,.pdf">
+          <label class="btn primary" for="ps-input" id="ps-pick">PDF 파일 선택</label>
+          <p class="drop-hint">또는 여기에 PDF 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱에서 PDF를 고를 수 있습니다.</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="notice" id="ps-notice" hidden></p>
+        <EngineError />
+
+        <div class="file-item file-card" id="ps-file" hidden>
+          <div class="meta">
+            <p class="name" id="ps-name"></p>
+            <p class="info" id="ps-info"></p>
+          </div>
+          <form class="pw" id="ps-pw" novalidate hidden>
+            <p class="pw-state" id="ps-pw-state">이 파일은 비밀번호로 보호되어 있습니다.</p>
+            <label class="pw-label" for="ps-pw-input">비밀번호</label>
+            <div class="row pw-row">
+              <input class="pw-input" id="ps-pw-input" type="password" autocomplete="off" aria-describedby="ps-pw-state ps-pw-error">
+              <button type="button" class="btn small ghost icon-btn pw-toggle" id="ps-pw-toggle" aria-label="비밀번호 보기" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button type="submit" class="btn small primary">확인</button>
+            </div>
+            <p class="pw-error" id="ps-pw-error"></p>
+          </form>
+        </div>
+
+        <div class="row page-bulk" id="ps-bulk" hidden>
+          <button type="button" class="btn small ghost" id="ps-all">모두 선택</button>
+          <button type="button" class="btn small ghost" id="ps-rotate-sel" disabled>고른 쪽 돌리기</button>
+          <button type="button" class="btn small ghost danger" id="ps-remove-sel" disabled>고른 쪽 빼기</button>
+        </div>
+
+        <ol class="file-list page-list" id="ps-list" aria-label="쪽 목록" hidden></ol>
+
+        <div class="merge-controls" id="ps-controls" hidden>
+          <fieldset class="levels" id="ps-mode-group">
+            <legend>저장 방식</legend>
+            <div class="chips">
+              {modes.map((o, i) => (
+                <label class="chip"><input type="radio" name="ps-mode" value={o.value} checked={i === 0}><span>{o.label}</span></label>
+              ))}
+            </div>
+          </fieldset>
+          <div class="ph-custom" id="ps-ranges-box" hidden>
+            <label class="target-label" for="ps-ranges">쪽 범위 (한 줄에 PDF 하나)</label>
+            <textarea class="num-input range-input ranges-input" id="ps-ranges" rows="3" autocomplete="off" spellcheck="false" placeholder={'1-3\n4-6'} aria-describedby="ps-ranges-hint ps-ranges-error"></textarea>
+            <p class="hint" id="ps-ranges-hint">예: 첫 줄에 1-3, 다음 줄에 4-6을 쓰면 PDF 두 개가 됩니다.</p>
+            <p class="field-error" id="ps-ranges-error"></p>
+          </div>
+          <div class="ph-custom" id="ps-every-box" hidden>
+            <label class="target-label" for="ps-every">몇 쪽씩</label>
+            <input class="num-input" id="ps-every" type="text" inputmode="numeric" autocomplete="off" value="2" aria-describedby="ps-every-error">
+            <p class="field-error" id="ps-every-error"></p>
+          </div>
+          <div class="confirm" id="ps-confirm" hidden>
+            <p id="ps-confirm-text"></p>
+            <div class="row">
+              <button type="button" class="btn primary" id="ps-confirm-yes">계속하기</button>
+              <button type="button" class="btn ghost" id="ps-confirm-no">취소</button>
+            </div>
+          </div>
+          <p class="hint" id="ps-hint"></p>
+        </div>
+
+        <div class="row merge-actions" id="ps-actions" hidden>
+          <button type="button" class="btn primary" id="ps-run" disabled>PDF 저장하기</button>
+          <button type="button" class="btn ghost" id="ps-change">다른 파일 고르기</button>
+        </div>
+
+        <div class="progress-box" id="ps-progress" hidden>
+          <p id="ps-progress-text">저장하는 중…</p>
+          <progress id="ps-progress-bar" max="1" value="0" aria-labelledby="ps-progress-text"></progress>
+          <button type="button" class="btn ghost" id="ps-cancel">취소</button>
+        </div>
+
+        <div class="result" id="ps-result" hidden>
+          <p class="result-title" id="ps-headline" tabindex="-1">PDF가 준비되었습니다</p>
+          <p class="result-summary" id="ps-summary"></p>
+          <ul class="result-notes" id="ps-notes" hidden></ul>
+          <div class="row">
+            <a class="btn primary" id="ps-download" download tabindex="0">내려받기</a>
+            <button type="button" class="btn ghost" id="ps-again">다시 편집하기</button>
+            <button type="button" class="btn ghost" id="ps-reset">다른 파일 처리하기</button>
+          </div>
+          <p class="save-name" id="ps-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/pdf-split/', Astro.site!).description} id="ps-share" />
+          <p class="related-line">여러 PDF를 하나로 묶으려면 <a href="/pdf-merge/">PDF 합치기</a>를, 용량이 크다면 <a href="/pdf-compress/">PDF 용량 줄이기</a>를 쓰세요.</p>
+        </div>
+
+        <p class="error-box" id="ps-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="ps-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="pdf-split-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>PDF 파일 선택</strong><span>편집할 PDF를 고르거나 끌어다 놓습니다. 비밀번호가 걸린 파일은 비밀번호를 입력합니다.</span></li>
+        <li><strong>쪽 편집하기</strong><span>쪽 그림을 보며 필요 없는 쪽은 빼고, 옆으로 누운 쪽은 돌리고, 위로·아래로 버튼이나 왼쪽 손잡이로 순서를 바꿉니다.</span></li>
+        <li><strong>저장 방식 고르고 내려받기</strong><span>편집한 PDF 하나로 받거나, 고른 쪽만 새 PDF로 받거나, 여러 PDF로 나누어 받습니다. 여러 PDF는 ZIP 파일 하나로 받습니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>원본은 그대로입니다</strong><span>편집한 내용은 새 PDF로 저장되고, 고른 원본 파일은 바뀌지 않습니다.</span></li>
+        <li><strong>설치·가입하지 않습니다</strong><span>PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['pdf-merge', 'pdf-compress', 'pdf-to-jpg']} />
+  <div class="wrap narrow"><AdSlot id="pdf-split-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import '../../tools/pdf-split/entry';
+</script>

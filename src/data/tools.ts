@@ -6,6 +6,7 @@ import { LIMITS as PDF_JPG_LIMITS, PPI } from '../tools/pdf-to-jpg/limits';
 import { pageScale } from '../tools/pdf-to-jpg/scale';
 import { LIMITS as PDF_PW_LIMITS, PASSWORD_MAX, PASSWORD_MIN } from '../tools/pdf-password/limits';
 import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
+import { LIMITS as PDF_SPLIT_LIMITS } from '../tools/pdf-split/limits';
 
 /** HWP numbers in the /hwp-viewer/ FAQ, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -61,6 +62,16 @@ const IMG_JPG_FAQ = {
   filePhone: `${n(IMG_JPG_LIMITS.mobile.maxFileBytes / MB)} MB`,
   totalPc: `${n(IMG_JPG_LIMITS.desktop.maxTotalBytes / MB)} MB`,
   totalPhone: `${n(IMG_JPG_LIMITS.mobile.maxTotalBytes / MB)} MB`,
+} as const;
+
+/** PDF 나누기·쪽 편집 numbers in its FAQ, read from its limits (MB = 1,048,576 bytes). */
+const PDF_SPLIT_FAQ = {
+  filePc: `${n(PDF_SPLIT_LIMITS.desktop.maxFileBytes / MB)} MB`,
+  filePhone: `${n(PDF_SPLIT_LIMITS.mobile.maxFileBytes / MB)} MB`,
+  thumbsPc: `${n(PDF_SPLIT_LIMITS.desktop.maxThumbPages)}쪽`,
+  thumbsPhone: `${n(PDF_SPLIT_LIMITS.mobile.maxThumbPages)}쪽`,
+  partsPc: `${n(PDF_SPLIT_LIMITS.desktop.maxParts)}개`,
+  partsPhone: `${n(PDF_SPLIT_LIMITS.mobile.maxParts)}개`,
 } as const;
 
 export type ToolStatus = 'live' | 'soon';
@@ -345,6 +356,46 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['pdf 암호 해제', 'pdf 비밀번호 해제', 'pdf 암호 설정', '정부24 pdf 암호 해제', '홈택스 pdf 비밀번호'],
+  },
+  {
+    // TOOLS5 U2. name = h1 (COPY.md). No release flag (TOOLS4 decision 1): static, sends nothing, one revert rolls it back.
+    slug: 'pdf-split',
+    name: 'PDF 나누기·쪽 편집',
+    title: 'PDF 분할·쪽 삭제·회전 — 나누기, 빼기, 돌리기, 순서 바꾸기 무료 | 문서딱',
+    description:
+      'PDF를 원하는 쪽으로 나누고, 필요 없는 쪽은 빼고, 옆으로 누운 쪽은 돌리고, 순서도 바꿉니다. 쪽 그림을 보며 고르고 가입 없이 무료로 씁니다.',
+    h1: 'PDF 나누기·쪽 편집',
+    summary: 'PDF를 여러 파일로 나누고, 필요 없는 쪽은 빼고, 쪽을 돌리거나 순서를 바꿉니다.',
+    icon: '<path d="M6 12V3h8l4 4v5"/><path d="M3 15h3M10.5 15h3M18 15h3"/><path d="M6 18v3h12v-3"/>',
+    status: 'live',
+    updated: '2026-10-08',
+    faq: [
+      {
+        q: 'PDF를 여러 파일로 나누기도 되나요?',
+        a: '네. 저장 방식에서 「범위대로 나누기」를 고르고 한 줄에 「1-3」처럼 범위를 하나씩 쓰면 줄마다 PDF 하나가 됩니다. 「몇 쪽씩 나누기」나 「한 쪽씩 나누기」도 고를 수 있고, 여러 PDF는 ZIP 파일 하나로 받습니다.',
+      },
+      {
+        q: '필요 없는 쪽만 빼거나 몇 쪽만 따로 저장할 수 있나요?',
+        a: '네. 쪽마다 있는 빼기 버튼으로 필요 없는 쪽을 빼고 「편집한 PDF 하나로」 저장하면 남은 쪽만 담깁니다. 몇 쪽만 따로 저장하려면 그 쪽을 고른 뒤 「고른 쪽만 새 PDF로」를 고르세요.',
+      },
+      {
+        q: '옆으로 누운 쪽을 바로 세울 수 있나요?',
+        a: '네. 돌리기 버튼을 누를 때마다 오른쪽으로 90°씩 돌아갑니다. 여러 쪽을 고른 뒤 「고른 쪽 돌리기」로 한 번에 돌릴 수도 있습니다. 글자와 그림은 그대로 두고 쪽만 돌립니다.',
+      },
+      {
+        q: '비밀번호가 걸린 PDF나 전자서명이 있는 문서도 되나요?',
+        a: '열 때 쓰는 비밀번호를 알면 됩니다. 저장한 PDF에는 비밀번호가 걸려 있지 않습니다. 전자서명이 들어 있는 문서는 편집해 새로 저장하면 전자서명이 더 이상 유효하지 않으니, 내려받기 전에 알려 드립니다.',
+      },
+      {
+        q: '휴대폰에서도 되나요? 크기 제한이 있나요?',
+        a: `네. 휴대폰에서도 같은 방법으로 쓸 수 있습니다. PDF 파일은 PC에서 ${PDF_SPLIT_FAQ.filePc}, 휴대폰에서 ${PDF_SPLIT_FAQ.filePhone}까지 열 수 있습니다. PC에서 ${PDF_SPLIT_FAQ.thumbsPc}, 휴대폰에서 ${PDF_SPLIT_FAQ.thumbsPhone}이 넘는 파일은 쪽 그림 없이 쪽 번호로 보여 드리고, 한 번에 PC에서 ${PDF_SPLIT_FAQ.partsPc}, 휴대폰에서 ${PDF_SPLIT_FAQ.partsPhone}까지 PDF를 만들 수 있습니다.`,
+      },
+      {
+        q: '제 파일이 어디로 보내지나요?',
+        a: '어디로도 보내지 않습니다. PDF는 이 기기 안에서 편집되고, 파일과 비밀번호는 이 화면을 닫으면 남지 않습니다.',
+      },
+    ],
+    keywords: ['pdf 분할', 'pdf 나누기', 'pdf 페이지 삭제', 'pdf 회전', 'pdf 페이지 순서 바꾸기'],
   },
   {
     slug: 'photo-compress',

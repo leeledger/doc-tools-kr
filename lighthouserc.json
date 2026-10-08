@@ -12,6 +12,7 @@
         "http://127.0.0.1:4173/pdf-to-jpg/",
         "http://127.0.0.1:4173/pdf-password/",
         "http://127.0.0.1:4173/image-to-jpg/",
+        "http://127.0.0.1:4173/pdf-split/",
         "http://127.0.0.1:4173/photo-compress/",
         "http://127.0.0.1:4173/hwp-to-pdf/",
         "http://127.0.0.1:4173/hwp-viewer/",

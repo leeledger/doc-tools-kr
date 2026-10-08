@@ -22,6 +22,7 @@ import {
   type PDFObject,
   type PDFPage,
 } from '@cantoo/pdf-lib';
+import { hasSignature } from './compress/signature';
 import { PdfCorruptError, PdfError, assertPdfHeader, isOutOfMemory, mapLoadError } from './errors';
 
 export interface MergeInput {
@@ -40,10 +41,14 @@ export interface MergeReport {
   droppedLinkDests: number;
   remappedLinkDests: number;
   pageCount: number;
+  /** Set only when `detectSignature` was asked for: an input carries a digital signature (the output no longer keeps it valid). */
+  signed?: boolean;
 }
 
 export interface MergeOptions {
   addFileBookmarks?: boolean;
+  /** Check the inputs for a digital signature (PDF 나누기·쪽 편집, TOOLS5 U2) and report it as `signed`. */
+  detectSignature?: boolean;
   /** Called after each input file has been copied. */
   onProgress?: (done: number, total: number) => void;
 }
@@ -282,6 +287,7 @@ export async function mergePlus(
     const f = files[fi]!;
     try {
       const src = await loadSource(f);
+      if (opts.detectSignature) report.signed = report.signed === true || hasSignature(src);
       const sctx = src.context;
       const srcPages = await readingInput(() => src.getPages());
       const srcRefs = srcPages.map((p) => p.ref.toString());

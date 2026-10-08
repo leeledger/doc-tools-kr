@@ -1,4 +1,4 @@
-# Review Feedback — GA4
+# Review Feedback — TOOLS5 U2 (/pdf-split/)
 Date: 2026-10-08
 Ready for Builder: YES
 
@@ -6,18 +6,39 @@ Ready for Builder: YES
 None.
 
 ## Should Fix
-- src/pages/privacy/index.astro:84 (confidence: 7/10) — 국외 이전 "이전 항목: 위 '모으는 정보'와 같아요" omits the IP address. Line 80 itself says the region is "IP로 추정하며 IP 주소 자체는 ... 저장되지 않아요": the IP is still transmitted to Google LLC (US) with every hit; only storage is excluded. 제28조의8 asks for the items transferred, not the items stored. — Fix: `이전 항목: 위 '모으는 정보'와 IP 주소(지역 추정에만 쓰고 저장하지 않아요)`. Check the new glyphs against the core subset (GA-on only; GA-off unaffected).
-- handoff/ARCHITECT-BRIEF-GA4.md owner step 2 / docs/COPY.md:94 (confidence: 5/10, verify this) — the policy promises "Google 애널리틱스에 2개월 보관 후 삭제". Current GA4 admin "데이터 보관" shows two settings, 이벤트 데이터 보관 and 사용자 데이터 보관; the owner step names only the first. — Fix: owner step and COPY.md bullet set both to 2개월 (if the property shows both). Aggregated standard reports are kept by Google regardless; they carry no identifiers, so the sentence stands.
-- tests/e2e/ga.cloud.spec.ts (informational, confidence: 6/10) — the file-name assertion runs against GTAG_STUB, not real gtag.js, so it proves our loader/dataLayer never carry the name, not what real enhanced measurement would send (file_download link_text/link_url, form_interaction). This rests on owner step 4 (파일 다운로드·양식 상호작용 OFF). Keep owner step 5 explicit: after deploy, check Realtime shows only page_view/session events; log as a Known Gap line, no code change.
-
-## Rulings on Bob's concerns
-1. Upload-guard `ga` allowance — ACCEPTED. Scoped to cloud-* projects only (playwright.config.ts:84, option default false in no-upload.ts:43); only bodiless https GET to `www.googletagmanager.com/gtag/js` or `*.google-analytics.com` / `*.analytics.google.com` (leading-dot suffix match, no look-alikes); `*.google.com`, gtm.js, POST/body still fail; CSP must be exactly `'self'` + GA_CONNECT_SRC (SELF_AND_GA built from the same constant gen-headers uses). The privacy invariant (no file data off the device) is preserved: the hits that pass carry no body and the spec asserts the file name is absent from every Google URL. Both hosts are stubbed by route, no CI test reaches Google. Apply the CLAUDE.md addition Bob proposed.
-2. GA-off font delta (+6 core glyphs, +312 B / +204 B per weight, +516 B preload) — ACCEPTED. Same precedent as the cloud and usage sections; HTML differs only in hashed names; check-dist/precache budgets pass (default precache 421.0 KB). The brief's "identical to U1 HEAD" is met in behaviour (no tag, no ga.js, CSP and policy unchanged, no googletagmanager anywhere in dist). Note it in BUILD-LOG as the accepted deviation.
-3. Google contact link — ACCEPTED: the general_privacy_form is what policies.google.com/privacy links as the privacy contact and satisfies "연락처" under 제28조의8. Optional, not required: also name `googlekrsupport@google.com`.
-4. Section 1 heading — see Escalate.
+- src/tools/pdf-split/controller.ts:872 + 309-310 (confidence: 8/10) — 「고른 쪽 빼기」 removes the chosen pages and clears
+  their selection (`p.selected = false`, line 427), so `updateBulk()` sets `removeSel.disabled = !chosen` = true while the
+  button still has focus. Chrome/WebKit drop focus to <body>; a keyboard / screen-reader user loses their place after a
+  bulk remove. Single-row 빼기 is fine (focus restored via data-role="remove"). — After a bulk remove, move focus to
+  `allBtn` when it is enabled, else to the first row's 되살리기 button (or the list). Add one e2e assertion on
+  `document.activeElement` after bulk remove.
+- src/tools/pdf-split/controller.ts:569 vs 630 (confidence: 8/10) — `showNotice('PDF 파일은 한 번에 하나만 … 첫 번째
+  파일만 열었습니다.')` is set before opening, then `showNotice(fileNotice())` on a successful open replaces it (null for
+  an ordinary file). The multi-file notice is only visible during "여는 중". — Keep a `multiNote` flag for this open and
+  include it in `fileNotice()`; clear it in clearFile().
+- src/tools/pdf-split/controller.ts:714-760 (confidence: 5/10, verify) — during save the pdf.js document stays open (its
+  worker holds a full copy of the file), the main thread holds `bytes`, and each part posts another full copy to
+  merge.worker; thumbnails may keep rendering meanwhile. On a phone at the 150 MB limit that is ~3 copies plus pdf-lib's
+  parse. Not a correctness bug and pdf-merge's limits were set for one copy fewer. — Measure peak memory on mobile-chrome
+  emulation with a 150 MB file; if it is tight, pause `pump()` while `state === 'working'` (cheap) and log the number.
+- src/pages/pdf-split/index.astro:105 (confidence: 6/10) — when 「저장」 is disabled, the reason is only in #ps-hint, which
+  the button does not reference. — `aria-describedby="ps-hint"` on #ps-run.
 
 ## Escalate to Architect
-- privacy/index.astro:39 heading "1. 받는 개인정보가 없어요" — with GA on, the same page discloses a 국외 이전 of 개인정보 under 제28조의8 (cookie IDs, IP). The heading then contradicts the body. Proposed: GA_ON-conditional heading `1. 이름·연락처는 받지 않아요` (all glyphs already in the section, so no font change; GA-off build stays byte-identical). This is policy copy, so Arch decides; I recommend it lands before the deploy gate.
+- Bob's logged deviations look intentional and reasonable; Arch to confirm: one-page part named `{base}_{p}.pdf` (brief
+  `{first}-{last}`); a split that yields one part downloads a plain PDF, not a ZIP; `no-pages` whitelisted but never sent
+  (button disabled instead of a fail event).
+- CLAUDE.md line 3 tool list needs "PDF 나누기·쪽 편집" at commit (orchestrator rule, as Bob noted).
+
+## Answers to Bob's open question
+- hasSignature on a 500 MB input: acceptable. It walks `context.enumerateIndirectObjects()` of the document pdf-lib has
+  already parsed (no second parse), runs only when `detectSignature` is set, and pdf-split asks only on k === 0, so it is
+  once per save. pdf-merge never sets it, so its reports and timing are unchanged (`signed` absent).
 
 ## Cleared
-GA-off path (no tag, no dist/ga.js, CSP untouched, dist-wide googletagmanager refusal), GA-on path (ID validated at gen-ga and check-dist, loaderSource exact-match, /ga.js defer in head before every body module script so loc is captured before quicklinks' replaceState, gtag.js on load+idle, page_view only, both signal flags false, cookie 395 d, CSP widened only by the brief's hosts and only when on, /ga.js no-cache and never precached, SW route() default for /ga.js and Google, /admin/ untouched, ops health first-party), privacy numbering for all flag combinations, legal dates, and tests were reviewed and pass.
+Reviewed plan.ts (edit/extract/split over the edited document, per-line parseRange with line numbers, everyN short last
+part, names), limits.ts, controller (selection, rotate, ↑↓/drag reorder, 빼기/되살리기, five save modes, parts cap, soft
+confirm, encrypted/owner rule identical to pdf-merge inspect, cancel/pagehide/bfcache via runId + terminate, docId-guarded
+lazy thumbnails at 64 CSS px × dpr ≤ 2 = 128 px, 2 in flight, caps 500/200), mergePlus/merge.worker opt-in signature
+flag, ZIP naming with dedupeNames, usage events (mode only; no names, sizes, counts or ranges), page copy/FAQ numbers
+from limits, check-dist laziness + budget, SW runtime page; pdf-split unit suite re-run 21/21 green.

@@ -12,6 +12,7 @@ import { LIMITS as JPG_PDF_LIMITS } from '../tools/jpg-to-pdf/limits';
 import { LIMITS as PDF_JPG_LIMITS } from '../tools/pdf-to-jpg/limits';
 import { LIMITS as PDF_PW_LIMITS, PASSWORD_MAX, PASSWORD_MIN } from '../tools/pdf-password/limits';
 import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
+import { LIMITS as PDF_SPLIT_LIMITS } from '../tools/pdf-split/limits';
 import { LIMITS as PHOTO_LIMITS } from '../tools/photo-compress/limits';
 import { KB_BYTES, RANGES } from '../tools/photo-compress/options';
 
@@ -60,6 +61,10 @@ export const TOOL_FACTS = {
   'image-to-jpg.maxImages.mobile': { value: IMG_JPG_LIMITS.mobile.maxImages },
   'image-to-jpg.maxFileMb.desktop': { value: IMG_JPG_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
   'image-to-jpg.maxFileMb.mobile': { value: IMG_JPG_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
+  'pdf-split.maxFileMb.desktop': { value: PDF_SPLIT_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
+  'pdf-split.maxFileMb.mobile': { value: PDF_SPLIT_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
+  'pdf-split.maxParts.desktop': { value: PDF_SPLIT_LIMITS.desktop.maxParts },
+  'pdf-split.maxParts.mobile': { value: PDF_SPLIT_LIMITS.mobile.maxParts },
   // HWP (1 MB = 1,000,000 bytes there): the largest file a device opens, the PDF caps on phones, the search span.
   'hwp.maxMb.desktop': { value: HWP_LIMITS.desktop.hardBytes / MB_DEC, unit: 'MB' },
   'hwp.maxMb.mobile': { value: HWP_LIMITS.mobile.hardBytes / MB_DEC, unit: 'MB' },

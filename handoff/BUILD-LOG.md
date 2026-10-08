@@ -2492,3 +2492,34 @@ Brief: handoff/ARCHITECT-BRIEF-GA4.md. GA4 behind `PUBLIC_GA_ID` (owner: G-TFP7W
 **GA4 — deploy gate (2026-10-08)**
 - Richard: clear, 0 Must Fix; Bob's four concerns accepted (cloud-* upload-guard `ga` allowance; +516 B core glyphs from the privacy copy, logged as a deviation from "identical to U1 HEAD"; Google privacy form as contact; section 1 title). Orchestrator applied: section 1 title when GA is on → "1. 이름·연락처는 받지 않아요"; transfer items now name the IP address ("지역 추정에만 쓰고 저장하지 않아요"); ga.test updated; production-like GA-on build OK; CLAUDE.md third-party script sentence replaced.
 - Owner steps after PUBLIC_GA_ID is set: GA data retention 2 months (and user-data retention if shown), Google signals + ad personalization off, enhanced measurement: page changes based on browser history / file downloads / form interactions off; confirm in the realtime report that only page_view/session events arrive.
+
+## TOOLS5 U2 (Bob, 2026-10-08) — status DONE
+/pdf-split/ PDF 나누기·쪽 편집. Files and line ranges: handoff/REVIEW-REQUEST.md (TOOLS5 U2).
+
+**Built:** src/tools/pdf-split/{plan,limits,controller,entry}.ts, page src/pages/pdf-split/index.astro, registration (tools.ts after pdf-password, og.json, HOME_DESC_ORDER after pdf-password, tool-facts, NEXT_GUIDES, usage.mjs/usage.ts, NOT_PRECACHED + RUNTIME_PAGES, LOCAL_SCOPE_RE, lighthouserc, qa:visual, check-dist, site/polish/usage e2e lists), merge.worker `pages`/`rotate`/`detectSignature` → mergePlus `report.signed`, `.page-list` CSS, COPY.md "쪽 그림".
+
+**Decisions taken:**
+- Range split syntax: one PDF per line (textarea, example "첫 줄에 1-3, 다음 줄에 4-6"); ";" is a junk error; each line is `parseRange` ("1-3, 5" allowed); errors name the line when there are several lines. Overlapping parts allowed.
+- Split modes and 고른 쪽만 count pages of the edited document (kept pages in the shown order); rows show "원래 N쪽" and "N° 돌림".
+- 빼기 marks the row (picture dimmed, "빼는 쪽", 되살리기) instead of deleting it.
+- Names: `{base}_편집.pdf`, `{base}_추출.pdf`, `{base}_나누기.zip` with `{base}_{first}-{last}.pdf`; a one-page part is `{base}_{p}.pdf`; overlapping parts deduped (`dedupeNames`); a split giving one part downloads the PDF itself.
+- Saving: one merge.worker per run, one request per output PDF (input buffer copied each time), `addFileBookmarks: false` (one input → the source outline entries that point at kept pages), signature checked on the first request only.
+- Soft confirm with the PDF 합치기 soft limits, own wording ("계속할까요?"). Owner-only encrypted: pdf-merge's note as a notice; user-encrypted: password form, result note "저장한 PDF에는 비밀번호가 걸려 있지 않습니다."
+- `no-pages` fail code: whitelisted + label "남은 쪽 없음", never sent (button disabled).
+- Unverified (e): mergePlus with one input and a subset [3, 0] of gen_links_outline: no crash, order/rotation right, outline count ≤ source (unit test).
+
+**Sizes / budgets:** controller (lazy, with reorder and fflate Zip) 17.3 KB gzip → budget 20.8 KB; initial JS /pdf-split/ 8.3 KB (9.1 cloud) / 30; merge.worker 248,047 → 248,279 B gzip (+232, hasSignature). Precache (/pdf-split/ not precached): default 425.1, auto-frame 427.3, bg 428.5, cloud 431.4 KB / 450.
+
+**UI font:** new core characters: none (FAQ/page copy rephrased: "나눌/나눕니다/뺄/바뀝니다" would have added 눌 눕 뺄 뀝). Core 603 / 607 / 604 / 604; late 36 → 38. Preloaded core 400 + 800: default 92,884 B (margin 2,000), auto-frame 93,380 (1,504), bg / cloud 93,044 (1,840).
+
+**Gates (2026-10-08, local, Windows):** astro check 0 errors; unit 57 files 1,231 passed (ga.test needs public/ in the no-flag state: run `node scripts/copy-vendor.mjs` after a flagged build); four builds check-dist OK; e2e retries 0: pdf-split + site + polish + growth on chromium + mobile-chrome + webkit 404 passed / 11 skipped (2 failures re-run green: a WebKit misclick during smooth scroll, fixed in the test with `settled()` / checked `mode()`; one ERR_NO_BUFFER_SPACE network flake); pdf-split repeat 2 on chromium + mobile-chrome + webkit + mobile-safari 71 passed / 4 skipped; firefox serial 10/10; usage cloud ×3 24 passed / 3 skipped; pdf-merge regression 18 passed / 3 skipped. Lighthouse (local lhci on dist-bg, 5 runs): /pdf-split/ LCP median 1,664 ms (1,663–1,686), perf 1.00, a11y 1.00, CLS 0; /pdf-merge/ 1,814.
+
+**Known Gaps:**
+- CLAUDE.md line 3 tool list needs "PDF 나누기·쪽 편집" (orchestrator at commit).
+- Firefox parallel download-event flake (environment, as in U1).
+- Every output PDF re-parses the whole input in the worker (brief: one run per part); a 500-part split of a large file is slow. Each part's output is held in the ZIP Blob parts.
+- Large lists (over the thumbnail cap, up to thousands of rows) re-render the whole list on remove/reorder/rotate.
+- qa:visual not run (manual screenshots at 360 light/dark and 1280 checked).
+
+**TOOLS5 U2 — deploy gate (2026-10-08)**
+- Richard: clear, 0 Must Fix. Bob's deviations accepted (one-page part `{base}_{p}.pdf`; a single-part split downloads a plain PDF; `no-pages` allowed but unsent). Should Fix 1 (focus after bulk remove), 2 (multi-file notice overwritten), 4 (aria-describedby on #ps-run) carried into the SEO-LENGTH step; 3 (phone memory while saving) to measure there. Orchestrator updated CLAUDE.md line 3. Also logged: the owner submitted the sitemap and crawl requests for the four new tool URLs in Naver Search Advisor (2026-10-08). Pushed.

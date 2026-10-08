@@ -28,6 +28,7 @@ export const HOME_DESC_ORDER: readonly string[] = [
   'hwp-to-pdf',
   'hwp-viewer',
   'pdf-password',
+  'pdf-split',
   'stamp-signature',
   'remove-background',
 ];
