@@ -225,6 +225,22 @@ budget('password.worker*.js (pdf-password)', match(/^_astro\/password\.worker[^/
     budget('pdf-split controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 20.8 * KB);
   }
 }
+// PDF 서명·도장 넣기 (TOOLS5 U3): no worker of its own (the PDF 합치기 merge.worker draws the picture, its `sign` message).
+// The controller (the controller*.js chunk that owns #sg-range-error, and what only it imports) loads on the first
+// interaction or with a picture handed over from /stamp-signature/, never with the page; no initial script of the page
+// names pdf.js, pdf-lib or the merge worker (controller 15.3 KB gzip measured with the shared decode/sniff, budget + 20 %).
+{
+  const html = pageHtml.get('pdf-sign/index.html');
+  if (!html) errors.push('pdf-sign/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('sg-range-error'));
+    if (controller.length !== 1) errors.push(`pdf-sign controller: ${controller.length} chunk(s) name #sg-range-error, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /pdf-sign/ controller loads with the page');
+    for (const f of initial) if (/pdfjs|pdf\.worker|getDocument|merge\.worker|PDFDocument/.test(read(f).toString('utf8'))) errors.push(`${f}: pdf.js, pdf-lib or the merge worker in the /pdf-sign/ initial JS`);
+    budget('pdf-sign controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 18.4 * KB);
+  }
+}
 // 사진 JPG 변환 (TOOLS5 U1): no worker (canvas on the main thread). The controller (the controller*.js chunk that owns
 // #ij-quality-group, and what only it imports, fflate's Zip included) loads on the first interaction, never with the page;
 // no initial script of the page names the ZIP code or @jsquash/webp, and the WebP fallback (@jsquash/webp and its wasm)

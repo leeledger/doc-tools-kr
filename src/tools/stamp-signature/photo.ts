@@ -14,6 +14,7 @@ import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { COPY, areaMessage, dims, strengthLabel } from './copy';
 import { checkDims, checkFileBytes, LIMITS } from './limits';
+import { HANDOFF_FAILED, sendToPdfSign } from '../../lib/ui/sign-handoff';
 import { encodeWithRetry, saveBlob } from './png';
 
 const DEBOUNCE_MS = 150;
@@ -58,6 +59,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
   const strengthOut = must<HTMLOutputElement>('ss-strength-out');
   const noPad = must<HTMLInputElement>('ss-nopad');
   const downloadBtn = must<HTMLButtonElement>('ss-download');
+  const toPdfBtn = must<HTMLButtonElement>('ss-to-pdf');
   const saveName = must<HTMLElement>('ss-save-name');
   const newBtn = must<HTMLButtonElement>('ss-new');
   const sizeInputs = [...root.querySelectorAll<HTMLInputElement>('input[name="ss-size"]')];
@@ -89,6 +91,11 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     loading.hidden = p !== 'loading';
     work.hidden = p !== 'work';
     drop.hidden = p !== 'empty' && p !== 'error';
+  }
+
+  function setSaveable(on: boolean): void {
+    downloadBtn.disabled = !on;
+    toPdfBtn.disabled = !on;
   }
 
   function showError(msg: string, retry = false): void {
@@ -133,7 +140,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     bitmap?.close();
     bitmap = null;
     current = null;
-    downloadBtn.disabled = true;
+    setSaveable(false);
     saveName.textContent = '';
   }
 
@@ -239,7 +246,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     if (msg || !m.out || !m.rect) {
       current = null;
       previews.hidden = true;
-      downloadBtn.disabled = true;
+      setSaveable(false);
       saveName.textContent = '';
       outcome(false, m.status === 'allpaper' ? 'allpaper' : 'noink');
       showError(msg ?? COPY.noink);
@@ -259,7 +266,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     paint(onChecker, px);
     paint(onWhite, px);
     previews.hidden = false;
-    downloadBtn.disabled = false;
+    setSaveable(true);
     saveName.textContent = `저장될 이름: ${m.fileName} · ${dims(px.width, px.height)}`;
     say(COPY.ready(px.width, px.height));
   }
@@ -271,7 +278,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     if (!bitmap) return toEmpty();
     setPhase('work');
     previews.hidden = true;
-    downloadBtn.disabled = true;
+    setSaveable(false);
     showError(COPY.crashed, true);
   }
 
@@ -374,22 +381,36 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     startWorker();
   });
 
-  downloadBtn.addEventListener('click', async () => {
-    if (!current) return;
-    const { px, fileName } = current;
-    downloadBtn.disabled = true;
+  /** The current result as a PNG (once more at the next smaller size if the first encode gives nothing). */
+  async function encodeCurrent(): Promise<Blob | null> {
+    if (!current) return null;
+    const { px } = current;
+    setSaveable(false);
     const blob = await encodeWithRetry(px, async (size) => {
       const r = await runAt(size);
       return r?.out ? { data: new Uint8ClampedArray(r.out.pixels), width: r.out.width, height: r.out.height } : null;
     });
-    downloadBtn.disabled = !current;
+    setSaveable(Boolean(current));
     if (!blob) {
       usageFail('encode', 'save');
-      return showError(COPY.encode);
+      showError(COPY.encode);
     }
+    return blob;
+  }
+
+  downloadBtn.addEventListener('click', async () => {
+    const fileName = current?.fileName;
+    const blob = await encodeCurrent();
+    if (!blob || !fileName) return;
     saveBlob(blob, fileName);
     track({ e: 'download', t: 'stamp-signature' });
     say(COPY.saved(fileName));
+  });
+
+  // PDF 서명·도장 넣기 (TOOLS5 U3): the PNG goes to /pdf-sign/ in this tab's sessionStorage.
+  toPdfBtn.addEventListener('click', async () => {
+    const blob = await encodeCurrent();
+    if (blob && !(await sendToPdfSign(blob))) showError(HANDOFF_FAILED);
   });
 
   newBtn.addEventListener('click', () => {

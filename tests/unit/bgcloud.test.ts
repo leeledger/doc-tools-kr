@@ -420,7 +420,7 @@ describe('site-wide "files never leave" claims with the cloud path on (round 2, 
     expect(claimText('llms.txt', 'a\n\nb')).toBe('a b');
   });
   it('scope: the other tools and the guides are local; home, 404, offline, privacy, terms, llms.txt and 배경 지우기 are not', () => {
-    for (const p of ['pdf-merge/index.html', 'jpg-to-pdf/index.html', 'pdf-to-jpg/index.html', 'pdf-password/index.html', 'image-to-jpg/index.html', 'pdf-split/index.html', 'hwp-viewer/index.html', 'guide/passport-photo/index.html', 'guide/photo-sizes/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(true);
+    for (const p of ['pdf-merge/index.html', 'jpg-to-pdf/index.html', 'pdf-to-jpg/index.html', 'pdf-password/index.html', 'image-to-jpg/index.html', 'pdf-split/index.html', 'pdf-sign/index.html', 'hwp-viewer/index.html', 'guide/passport-photo/index.html', 'guide/photo-sizes/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(true);
     for (const p of ['index.html', '404.html', 'offline/index.html', 'privacy/index.html', 'terms/index.html', 'guide/index.html', 'llms.txt', 'sitemap.xml', 'remove-background/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(false);
   });
   it('og.json: share texts and image lines make no "files never leave" claim, so none needs the exception (owner 2026-10-05)', () => {

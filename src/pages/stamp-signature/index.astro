@@ -94,6 +94,7 @@ const limits = [
 
             <div class="row ss-save-row">
               <button type="button" class="btn primary" id="ss-download" disabled>PNG로 내려받기</button>
+              <button type="button" class="btn ghost" id="ss-to-pdf" disabled>PDF에 넣기</button>
               <button type="button" class="btn ghost" id="ss-new">다른 사진 고르기</button>
             </div>
             <p class="save-name" id="ss-save-name"></p>
@@ -160,6 +161,7 @@ const limits = [
           </fieldset>
           <div class="row ss-save-row">
             <button type="button" class="btn primary" id="ss-pad-download" disabled aria-describedby="ss-pad-reason">PNG로 내려받기</button>
+            <button type="button" class="btn ghost" id="ss-pad-to-pdf" disabled aria-describedby="ss-pad-reason">PDF에 넣기</button>
           </div>
           <p class="hint" id="ss-pad-reason">{COPY.padEmpty}</p>
           <p class="error-box" role="alert" data-live="alert" hidden></p>
@@ -214,7 +216,7 @@ const limits = [
       ))}
     </div>
   </section>
-  <RelatedTools current={tool.slug} only={['photo-compress', 'hwp-to-pdf', 'pdf-merge']} />
+  <RelatedTools current={tool.slug} only={['pdf-sign', 'photo-compress', 'hwp-to-pdf', 'pdf-merge']} />
   <div class="wrap narrow"><AdSlot id="stamp-signature-footer" size="leaderboard" /></div>
 </Base>
 

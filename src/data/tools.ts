@@ -7,6 +7,7 @@ import { pageScale } from '../tools/pdf-to-jpg/scale';
 import { LIMITS as PDF_PW_LIMITS, PASSWORD_MAX, PASSWORD_MIN } from '../tools/pdf-password/limits';
 import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
 import { LIMITS as PDF_SPLIT_LIMITS } from '../tools/pdf-split/limits';
+import { LIMITS as PDF_SIGN_LIMITS } from '../tools/pdf-sign/limits';
 
 /** HWP numbers in the /hwp-viewer/ FAQ, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -72,6 +73,12 @@ const PDF_SPLIT_FAQ = {
   thumbsPhone: `${n(PDF_SPLIT_LIMITS.mobile.maxThumbPages)}쪽`,
   partsPc: `${n(PDF_SPLIT_LIMITS.desktop.maxParts)}개`,
   partsPhone: `${n(PDF_SPLIT_LIMITS.mobile.maxParts)}개`,
+} as const;
+
+/** PDF 서명·도장 넣기 numbers in its FAQ, read from its limits (MB = 1,048,576 bytes). */
+const PDF_SIGN_FAQ = {
+  filePc: `${n(PDF_SIGN_LIMITS.desktop.maxFileBytes / MB)} MB`,
+  filePhone: `${n(PDF_SIGN_LIMITS.mobile.maxFileBytes / MB)} MB`,
 } as const;
 
 export type ToolStatus = 'live' | 'soon';
@@ -396,6 +403,50 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['pdf 분할', 'pdf 나누기', 'pdf 페이지 삭제', 'pdf 회전', 'pdf 페이지 순서 바꾸기'],
+  },
+  {
+    // TOOLS5 U3. name = h1 (COPY.md). No release flag (TOOLS4 decision 1): static, sends nothing, one revert rolls it back.
+    slug: 'pdf-sign',
+    name: 'PDF 서명·도장 넣기',
+    title: 'PDF 서명 넣기 — 서명·도장 그림을 원하는 쪽에 무료로 | 문서딱',
+    description: 'PDF 서명 넣기를 무료로. 서명·도장 그림을 원하는 쪽, 원하는 자리에 크기를 맞춰 넣어요. 만든 서명 그림을 바로 써요.',
+    h1: 'PDF 서명·도장 넣기',
+    summary: 'PDF의 원하는 쪽, 원하는 자리에 서명이나 도장 그림을 넣습니다.',
+    icon: '<path d="M14 3H6v18h12V7l-4-4z"/><path d="M14 3v4h4"/><path d="M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-.5 1.5-1 2.5.5"/>',
+    status: 'live',
+    updated: '2026-10-08',
+    faq: [
+      {
+        q: '인증서로 하는 전자서명과 같은가요?',
+        a: '아닙니다. 서명 그림을 문서 위에 올리는 기능입니다. 인증서로 하는 전자서명과는 다르니, 받는 곳이 그림 서명을 받아 주는지 먼저 확인하세요.',
+      },
+      {
+        q: 'PDF에 서명이나 도장을 넣으려면 어떻게 하나요?',
+        a: 'PDF 파일을 고르고 서명이나 도장 그림을 고른 뒤, 미리보기에서 그림을 끌어 원하는 자리에 놓고 크기를 맞춰 저장합니다. 그림이 없다면 전자서명·도장 이미지 만들기에서 만든 뒤 「PDF에 넣기」를 누르세요.',
+        links: [{ href: '/stamp-signature/', text: '전자서명·도장 이미지 만들기' }],
+      },
+      {
+        q: '여러 쪽에 같은 서명을 넣을 수 있나요?',
+        a: '네. 넣을 쪽에서 「모든 쪽」을 고르면 모든 쪽의 같은 자리에 들어가고, 「쪽 범위」에 「1-3, 5」처럼 쓰면 그 쪽에만 들어갑니다. 「그림 하나 더 넣기」로 다른 자리에 더 넣을 수도 있습니다.',
+      },
+      {
+        q: 'JPG 서명 그림에 흰 배경이 같이 보여요.',
+        a: 'JPG 그림에는 투명한 부분이 없어 흰 배경이 그대로 들어갑니다. 전자서명·도장 이미지 만들기에서 배경을 지운 투명 PNG를 만들어 쓰세요.',
+      },
+      {
+        q: '비밀번호가 걸린 PDF나 전자서명이 있는 문서도 되나요?',
+        a: '열 때 쓰는 비밀번호를 알면 됩니다. 저장한 PDF에는 비밀번호가 걸려 있지 않으니, 다시 걸려면 PDF 암호 해제·설정을 쓰세요. 전자서명이 들어 있는 문서는 그림을 넣어 새로 저장하면 전자서명이 더 이상 유효하지 않으니, 내려받기 전에 알려 드립니다.',
+      },
+      {
+        q: '휴대폰에서도 되나요? 크기 제한이 있나요?',
+        a: `네. 휴대폰에서는 손가락으로 그림을 끌어 옮깁니다. PDF 파일은 PC에서 ${PDF_SIGN_FAQ.filePc}, 휴대폰에서 ${PDF_SIGN_FAQ.filePhone}까지 열 수 있습니다.`,
+      },
+      {
+        q: '제 파일이 어디로 보내지나요?',
+        a: '어디로도 보내지 않습니다. PDF와 그림은 이 기기 안에서 처리되고, 파일과 비밀번호는 이 화면을 닫으면 남지 않습니다.',
+      },
+    ],
+    keywords: ['pdf 서명 넣기', 'pdf 도장 넣기', 'pdf 서명', 'pdf 싸인 넣기', 'pdf 전자서명 넣기'],
   },
   {
     slug: 'photo-compress',

@@ -1,7 +1,9 @@
-// Module worker: runs mergePlus off the main thread. @cantoo/pdf-lib is only ever loaded here.
+// Module worker: runs mergePlus off the main thread. @cantoo/pdf-lib is only ever loaded here. PDF 서명·도장 넣기
+// (TOOLS5 U3) sends `sign` here too, so the site carries no second pdf-lib copy for it.
 import { isEngineLoadFailure } from '../ui/engine-load';
 import { PdfError, errorCode, type WorkerErrorCode } from './errors';
 import { mergePlus, type MergeReport } from './mergePlus';
+import { signPdf, type SignStamp } from './sign';
 import { verifyOutput } from './verify';
 
 export interface WorkerFile {
@@ -22,12 +24,15 @@ export type MergeRequest =
       /** Report whether an input carries a digital signature (MergeReport.signed). */
       detectSignature?: boolean;
     }
+  /** PDF 서명·도장 넣기: one PNG drawn on the given pages of one PDF. */
+  | { type: 'sign'; buffer: ArrayBuffer; password?: string; png: ArrayBuffer; stamps: SignStamp[] }
   /** Preload (Polish P.7): the worker script and its imports are loaded by now; nothing else is lazy. */
   | { type: 'warm' };
 
 export type MergeResponse =
   | { type: 'progress'; done: number; total: number }
   | { type: 'done'; bytes: Uint8Array; report: MergeReport }
+  | { type: 'signed'; bytes: Uint8Array; signed: boolean }
   | { type: 'error'; code: WorkerErrorCode; fileIndex?: number }
   | { type: 'warm-done' };
 
@@ -44,6 +49,16 @@ scope.onmessage = async (ev) => {
   const req = ev.data;
   if (req?.type === 'warm') {
     post({ type: 'warm-done' });
+    return;
+  }
+  if (req?.type === 'sign') {
+    try {
+      const out = await signPdf(new Uint8Array(req.buffer), req.password, new Uint8Array(req.png), req.stamps);
+      await verifyOutput(out.bytes, out.pageCount);
+      post({ type: 'signed', bytes: out.bytes, signed: out.signed }, [out.bytes.buffer]);
+    } catch (err) {
+      post({ type: 'error', code: isEngineLoadFailure(err) ? 'engine' : errorCode(err) });
+    }
     return;
   }
   if (req?.type !== 'merge') return;

@@ -2567,3 +2567,40 @@ Orchestrator decisions after a clear review (0 Must Fix).
 
 **SEO-LENGTH + U2 follow-ups — deploy gate (2026-10-08)**
 - Richard: clear, 0 Must Fix. Round 2 applied Richard's two recommendations verbatim (pdf-split mobile cap 100 MB; yearend-tax-pdf description object restored); orchestrator accepted without a further review round (small, test-covered). Pushed.
+
+## TOOLS5 U3 (Bob, 2026-10-08) — /pdf-sign/ PDF 서명·도장 넣기 — status DONE
+Files and line ranges: handoff/REVIEW-REQUEST.md (TOOLS5 U3). Not committed.
+
+**Built:** src/tools/pdf-sign/{place,limits,controller,entry}.ts + sign.css (page-inline), page src/pages/pdf-sign/index.astro, src/lib/pdf/sign.ts (`signPdf`) behind a `sign` message on merge.worker, src/lib/ui/sign-handoff.ts (`docttak:sign-png`, read once), /stamp-signature/ 「PDF에 넣기」 (photo + pad) and related link, registration (tools.ts after pdf-split, og.json, HOME_DESC_ORDER after stamp-signature, tool-facts, NEXT_GUIDES e-signature-law / stamp-image / pdf-password, usage.mjs `place` one/range/all + `no-image`, usage.ts, NOT_PRECACHED + RUNTIME_PAGES, LOCAL_SCOPE_RE, lighthouserc, qa:visual, check-dist block, e2e/unit lists), COPY.md term line.
+
+**Decisions:** merge.worker `sign` (+290 B gzip by esbuild vs ~250 KB for a second pdf-lib worker); placement = one box shared by its pages with 넣을 쪽 per placement, several placements, one picture; picture re-encoded to PNG ≤ 2,000 px on the main thread; signature warning in the result notes (U2 pattern); honest copy "얹는"→"올리는" (font); PDF/A-1 inputs save without object streams (pdf-lib refuses them; found on signed_fake); hand-over failure = alert + related link; `no-image` = stored value not a PNG data URL.
+
+**Unverified (d):** confirmed — pixel check of the saved PDF (pdf.js + @napi-rs/canvas in Node) puts each quarter of a four-colour PNG in place and upright on /Rotate 90 and /Rotate 270 + CropBox (36,36), on all five browser projects. Unit: toPdfRect against real pdf.js viewports for 0/90/180/270 × CropBox (0,0)/(36,36).
+
+**Sizes:** controller (lazy) 15.4 KB gzip → budget 18.4; initial JS /pdf-sign/ 9.0 KB (9.7 cloud) / 30; stamp-signature controls 12.5 / 13.5 KB; built merge.worker 248,266 B gzip -9. Precache (/pdf-sign/ not precached): 428.0 / 430.2 / 431.4 / 434.3 KB / 450.
+
+**UI font:** new core characters: none (core 603 / 607 / 604 / 604, late 38). Preloaded core 400 + 800: 92,884 / 93,380 / 93,044 / 93,044 B (margins 2,000 / 1,504 / 1,840 / 1,840).
+
+**Gates (local, Windows):** astro check 0 errors; unit 59 files 1,266 passed; four CI builds check-dist OK; e2e retries 0 — pdf-sign + stamp-signature ×3 (chromium, mobile-chrome, webkit) 52 passed / 2 skipped (+ PDF에 넣기 3/3 after a test-stub CSP fix), site + polish + growth ×3 392 / 10 skipped, usage cloud ×3 27 / 3 skipped, pdf-sign firefox + mobile-safari 19 / 1 skipped, pdf-merge + pdf-split chromium 16 / 1 skipped, pdf-sign ×3 after the final CSS fix 29 / 1 skipped. Lighthouse local (dist-bg, 5 runs): /pdf-sign/ LCP median 1,669 ms, perf 1.00, a11y 1.00; /stamp-signature/ 1,666 ms.
+
+**Known Gaps:**
+- CLAUDE.md line 3 tool list needs "PDF 서명·도장 넣기" (orchestrator at commit; not edited by rule).
+- A PDF/A-1 input saved with a transparent picture no longer conforms to PDF/A-1 (SMask); the file opens normally.
+- One picture per run (a signature and a 도장 together need two runs); no drawing pad (O3).
+- dist-noauto / dist-bg / dist-bgcloud built before the final page-inline CSS grid fix (budgets unaffected); qa:visual not run (manual screenshots 1280 / Pixel 7).
+
+## TOOLS5 U3 round 2 (Bob, 2026-10-08; Richard's U3 review items 1–3) — status DONE
+- (1) drawBoxes clamps a display-only copy (`boxButton(p, k, shown)`); viewing a smaller page no longer rewrites a 모든 쪽 / 쪽 범위 placement. Drag starts from the shown (clamped) box; 그림 바꾸기 reshapes without clamping. Save already clamps per page (toPdfRect). Tests: unit stampsFor with 600×800 + 200×300; e2e mixed-size PDF (relative box position unchanged after next/prev, output pixels on both pages). The e2e failed with the old write-back put back temporarily (regression proof).
+- (2) place.ts `edge()` / `aspectOf()`: clampBox and resizeBox never produce 0, NaN or sub-MIN_EDGE sides; unit test for 0, negative, NaN, ∞ widths and degenerate boxes.
+- (3) Unbalanced-cm unit test now checks pdf.js's operator order (`q cm Q` before the image) and the exact CTM at paintImageXObject ([80,0,0,40,100,100]).
+- Orchestrator: 4 related links on /stamp-signature/ and the shared-placement model kept; CLAUDE.md line 3 by the orchestrator.
+- Gates: unit 59 files 1,268 passed; astro check 0 errors; default build check-dist OK (precache 430.2 KB, controller 15.4 / 18.4 KB, fonts unchanged); pdf-sign e2e chromium + mobile-chrome + webkit 32 passed / 1 skipped, mixed test ×4 on the three projects 12/12.
+- Known Gaps: one unexplained failure of the mixed e2e right after the restore rebuild (not reproduced in 13 later runs); the other three builds not rebuilt this round (controller-only change, budgets unaffected).
+
+## TOOLS5 U3 round 3 (Bob, 2026-10-08; Richard's round 2 Should Fix 1–2) — status DONE
+- (1) e2e `stageReady()`: waits for canvas.sign-page, a stable stage size (two equal reads 100 ms apart) and the boxes before the mixed-size baselines; position reads rounded to whole points. Mixed-size tests --repeat-each=10 on chromium + mobile-chrome + webkit: 60/60, run first after a fresh build. The round 2 "unexplained failure" was the same race (the position poll never resolved while the stage was still being sized); not seen since.
+- (2) Arrow keys and the size slider start from the box as shown on the current page (clampBox), like the drag. New e2e: on a 200 × 300 page one ArrowLeft moves the clamped box to x 49, slider 50 % gives width 100, output pixels match. Failed with the old line put back (regression proof).
+- Gates: default build check-dist OK (precache 430.2 KB, controller 15.4 / 18.4 KB); astro check 0 errors; unit pdf-sign + usage 143 passed; pdf-sign e2e ×3 35 passed / 1 skipped.
+
+**TOOLS5 U3 — deploy gate (2026-10-08)**
+- Richard: clear (round 1 and round 2, 0 Must Fix). Rounds 2–3 applied Richard's Should Fix (display-only clamped copy; drag/arrow/slider from the displayed box; MIN_EDGE; strengthened cm test; e2e stageReady wait, 60/60 with --repeat-each=10 on three engines). Orchestrator accepted round 3 without another review (implements Richard's exact fixes, test-covered). Decisions: keep 4 related links on /stamp-signature/; keep the shared-placement model. CLAUDE.md line 3 updated. Pushed. Next: U4 HWPX→HWP spike.

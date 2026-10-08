@@ -1,0 +1,43 @@
+/* PDF 서명·도장 넣기 (/pdf-sign/, TOOLS5 U3). Inlined on that page only. */
+.sign-image, .sign-editor { margin-top: 16px; display: grid; gap: 10px; }
+.sign-image[hidden], .sign-editor[hidden], .sign-controls[hidden] { display: none; }
+.sign-image-row {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; grid-template-areas: "thumb meta pick"; gap: 12px; align-items: center; text-align: left;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+}
+.sign-image-row .meta p { margin: 0; }
+.sign-image-row > .btn { grid-area: pick; }
+.sign-image-row .name { font-weight: 800; }
+.sign-image-row .info { font-size: 14.5px; color: var(--muted); }
+.sign-image-thumb {
+  grid-area: thumb; display: grid; place-items: center; width: 64px; height: 64px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+  background: repeating-conic-gradient(#d9dcdb 0 25%, #ffffff 0 50%) 0 0 / 12px 12px;
+}
+.sign-image-thumb img { max-width: 100%; max-height: 100%; }
+.sign-nav { align-items: center; gap: 8px; }
+.sign-goto { display: inline-flex; align-items: center; gap: 6px; }
+.sign-goto .num-input { width: 4.5em; text-align: center; }
+.sign-stage {
+  position: relative; max-width: 100%; margin: 0 auto; background: #ffffff; box-shadow: 0 0 0 1px var(--line);
+  touch-action: pan-y; user-select: none; -webkit-user-select: none;
+}
+.sign-page { display: block; }
+.sign-box {
+  position: absolute; display: block; padding: 0; margin: 0; border: 2px dashed color-mix(in srgb, var(--brand) 70%, transparent);
+  background: transparent; cursor: move; touch-action: none; min-width: 0; min-height: 0;
+}
+.sign-box img { display: block; width: 100%; height: 100%; pointer-events: none; }
+.sign-box.selected { border-style: solid; border-color: var(--brand); }
+.sign-box:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.sign-handle {
+  position: absolute; right: -12px; bottom: -12px; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--brand); border: 2px solid #ffffff; cursor: nwse-resize; touch-action: none;
+}
+.sign-box:not(.selected) .sign-handle { display: none; }
+.sign-controls { display: grid; gap: 12px; }
+.sign-controls .levels { display: grid; gap: 8px; }
+@media (max-width: 520px) {
+  .sign-image-row { grid-template-columns: 48px minmax(0, 1fr); grid-template-areas: "thumb meta" "pick pick"; }
+  .sign-image-row > .btn { justify-self: start; }
+  .sign-image-thumb { width: 48px; height: 48px; }
+}

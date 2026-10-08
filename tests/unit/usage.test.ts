@@ -789,6 +789,34 @@ describe('사진 JPG 변환 (TOOLS5 U1)', () => {
   });
 });
 
+describe('PDF 서명·도장 넣기 (TOOLS5 U3)', () => {
+  it('tool and 넣을 쪽 setting are whitelisted; its fail codes pass; pages, ranges and positions are refused as values', () => {
+    expect(TOOLS).toContain('pdf-sign');
+    for (const v of ['one', 'range', 'all']) expect(validate(body({ ...BASE, t: 'pdf-sign', e: 'start', o: 'place', v })), v).not.toBeNull();
+    for (const v of ['1-3', '2', 'ALL', 'x120y40', 'a.pdf']) expect(validate(body({ ...BASE, t: 'pdf-sign', e: 'start', o: 'place', v })), v).toBeNull();
+    for (const c of ['not-pdf', 'corrupt', 'too-big', 'wrong-password', 'oom', 'engine', 'unknown', 'verify', 'heic', 'not-image', 'canvas', 'no-image']) {
+      expect(validate(body({ ...BASE, t: 'pdf-sign', e: 'fail', c, p: 'parse' })), c).not.toBeNull();
+    }
+  });
+
+  it('admin labels are Korean: PDF 서명·도장 넣기, 넣을 쪽 and its three values', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'pdf-sign', event: 'success', via: 'direct', n: 3 }],
+      settings: [
+        { tool: 'pdf-sign', setting: 'place', value: 'all', n: 2 },
+        { tool: 'pdf-sign', setting: 'place', value: 'one', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('PDF 서명·도장 넣기');
+    expect(settings!.rows).toEqual([
+      ['PDF 서명·도장 넣기', '넣을 쪽', '모든 쪽', '2'],
+      ['PDF 서명·도장 넣기', '넣을 쪽', '고른 쪽', '1'],
+    ]);
+    expect(FAIL_LABELS['no-image']).toBe('서명 그림을 읽지 못함');
+  });
+});
+
 describe('PDF 나누기·쪽 편집 (TOOLS5 U2)', () => {
   it('tool and 저장 방식 setting are whitelisted; its fail codes pass; ranges, counts and names are refused as values', () => {
     expect(TOOLS).toContain('pdf-split');

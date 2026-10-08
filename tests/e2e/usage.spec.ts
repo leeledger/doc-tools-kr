@@ -206,6 +206,27 @@ test('PDF 나누기·쪽 편집 (TOOLS5 U2): range split = pick, start (o=save, 
   }
 });
 
+test('PDF 서명·도장 넣기 (TOOLS5 U3): 모든 쪽 = pick, start (o=place, v=all), success, download; no file name, page, range or position in any body', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/pdf-sign/');
+  await page.setInputFiles('#sg-input', fixturePath('gen_links_outline.pdf'));
+  await expect(page.locator('#sg-tool')).toHaveAttribute('data-state', 'ready');
+  await page.setInputFiles('#sg-image-input', PORTRAIT);
+  await expect(page.locator('.sign-box')).toHaveCount(1);
+  await page.locator('label.chip', { hasText: '모든 쪽' }).click();
+  await page.locator('#sg-run').click();
+  await expect(page.locator('#sg-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#sg-download').click()]);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'start', 'success', 'download']);
+  expectClean(beacons);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'start', t: 'pdf-sign', o: 'place', v: 'all' });
+  for (const b of beacons) {
+    expect(b.ev).toMatchObject({ t: 'pdf-sign', via: 'direct', w: 1 });
+    expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
+    expect(b.body).not.toMatch(new RegExp(`gen_links_outline|${PORTRAIT_NAME}|쪽|서명`));
+  }
+});
+
 test('PDF 용량 줄이기 with a file that is not a PDF: fail with code not-pdf', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

@@ -30,6 +30,7 @@ export const HOME_DESC_ORDER: readonly string[] = [
   'pdf-password',
   'pdf-split',
   'stamp-signature',
+  'pdf-sign',
   'remove-background',
 ];
 

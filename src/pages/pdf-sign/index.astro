@@ -1,0 +1,191 @@
+---
+// /pdf-sign/ (TOOLS5 U3): one PDF + one signature or 도장 picture (PNG, JPG, WebP, HEIC where the device opens it, or the
+// PNG handed over from /stamp-signature/) -> the picture drawn where it was placed, on one page, a range or every page.
+// The controller loads on the first interaction, or at once when a picture was handed over (entry.ts); pdf.js when a
+// file is chosen; pdf-lib only in the PDF 합치기 worker (its `sign` message).
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+// Page-only styles, inlined (the /stamp-signature/ pattern): no other page carries them.
+import signCss from '../../tools/pdf-sign/sign.css?inline';
+
+const tool = getTool('pdf-sign');
+const jsonLd = toolJsonLd(tool, Astro.site);
+const where = [
+  { value: 'one', label: '이 쪽만' },
+  { value: 'range', label: '쪽 범위' },
+  { value: 'all', label: '모든 쪽' },
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={signCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">PDF의 원하는 쪽, 원하는 자리에 서명이나 도장 그림을 크기를 맞춰 넣습니다. 전자서명·도장 이미지 만들기에서 만든 그림을 바로 씁니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="sg-tool" class="merge" data-state="empty">
+        <div class="drop" id="sg-drop">
+          <input id="sg-input" class="file-input" type="file" accept="application/pdf,.pdf">
+          <label class="btn primary" for="sg-input" id="sg-pick">PDF 파일 선택</label>
+          <p class="drop-hint">또는 여기에 PDF 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱에서 PDF를 고를 수 있습니다.</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="notice" id="sg-notice" hidden></p>
+        <EngineError />
+
+        <div class="file-item file-card" id="sg-file" hidden>
+          <div class="meta">
+            <p class="name" id="sg-name"></p>
+            <p class="info" id="sg-info"></p>
+          </div>
+          <form class="pw" id="sg-pw" novalidate hidden>
+            <p class="pw-state" id="sg-pw-state">이 파일은 비밀번호로 보호되어 있습니다.</p>
+            <label class="pw-label" for="sg-pw-input">비밀번호</label>
+            <div class="row pw-row">
+              <input class="pw-input" id="sg-pw-input" type="password" autocomplete="off" aria-describedby="sg-pw-state sg-pw-error">
+              <button type="button" class="btn small ghost icon-btn pw-toggle" id="sg-pw-toggle" aria-label="비밀번호 보기" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button type="submit" class="btn small primary">확인</button>
+            </div>
+            <p class="pw-error" id="sg-pw-error"></p>
+          </form>
+        </div>
+
+        <div class="sign-image" id="sg-image" hidden>
+          <input id="sg-image-input" class="file-input" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp,.heic,.heif">
+          <div class="sign-image-row">
+            <span class="sign-image-thumb" id="sg-image-thumb" aria-hidden="true"></span>
+            <div class="meta">
+              <p class="name" id="sg-image-name">서명·도장 그림</p>
+              <p class="info" id="sg-image-info">배경이 투명한 PNG가 좋습니다.</p>
+            </div>
+            <label class="btn small primary" for="sg-image-input" id="sg-image-pick">그림 고르기</label>
+          </div>
+          <p class="hint">그림이 없다면 <a href="/stamp-signature/">전자서명·도장 이미지 만들기</a>에서 만든 뒤 「PDF에 넣기」를 누르세요.</p>
+        </div>
+
+        <div class="sign-editor" id="sg-editor" hidden>
+          <div class="row sign-nav">
+            <button type="button" class="btn small ghost" id="sg-prev">이전 쪽</button>
+            <label class="sign-goto" for="sg-goto"><input class="num-input" id="sg-goto" type="text" inputmode="numeric" autocomplete="off" value="1" aria-describedby="sg-page-count"><span id="sg-page-count"></span></label>
+            <button type="button" class="btn small ghost" id="sg-next">다음 쪽</button>
+          </div>
+          <div class="sign-stage" id="sg-stage"></div>
+          <p class="hint" id="sg-stage-hint">그림을 끌어 옮기고, 오른쪽 아래 모서리를 끌어 크기를 바꿉니다. 그림을 고른 뒤 화살표 키로도 옮길 수 있습니다.</p>
+          <div class="row"><button type="button" class="btn small ghost" id="sg-add" disabled>그림 하나 더 넣기</button></div>
+
+          <div class="sign-controls" id="sg-controls" hidden>
+            <div class="ph-range">
+              <label for="sg-size">크기</label>
+              <input id="sg-size" type="range" min="1" max="100" step="1" value="25">
+              <output id="sg-size-out" for="sg-size"></output>
+            </div>
+            <fieldset class="levels">
+              <legend>넣을 쪽</legend>
+              <div class="chips">
+                {where.map((o, i) => (
+                  <label class="chip"><input type="radio" name="sg-where" value={o.value} checked={i === 0}><span>{o.label}</span></label>
+                ))}
+              </div>
+            </fieldset>
+            <div class="ph-custom" id="sg-range-box" hidden>
+              <label class="target-label" for="sg-range">쪽 범위</label>
+              <input class="num-input range-input" id="sg-range" type="text" autocomplete="off" spellcheck="false" placeholder="1-3, 5" aria-describedby="sg-range-hint sg-range-error">
+              <p class="hint" id="sg-range-hint">예: 1-3, 5</p>
+              <p class="field-error" id="sg-range-error"></p>
+            </div>
+            <div class="row">
+              <button type="button" class="btn small ghost danger" id="sg-remove">이 그림 빼기</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="hint" id="sg-hint"></p>
+        <div class="row merge-actions" id="sg-actions" hidden>
+          <button type="button" class="btn primary" id="sg-run" aria-describedby="sg-hint" disabled>서명 넣어 저장</button>
+          <button type="button" class="btn ghost" id="sg-change">다른 파일 고르기</button>
+        </div>
+
+        <div class="progress-box" id="sg-progress" hidden>
+          <p id="sg-progress-text">저장하는 중…</p>
+          <progress id="sg-progress-bar" aria-labelledby="sg-progress-text"></progress>
+          <button type="button" class="btn ghost" id="sg-cancel">취소</button>
+        </div>
+
+        <div class="result" id="sg-result" hidden>
+          <p class="result-title" id="sg-headline" tabindex="-1">PDF가 준비되었습니다</p>
+          <p class="result-summary" id="sg-summary"></p>
+          <ul class="result-notes" id="sg-notes" hidden></ul>
+          <div class="row">
+            <a class="btn primary" id="sg-download" download tabindex="0">내려받기</a>
+            <button type="button" class="btn ghost" id="sg-again">다시 편집하기</button>
+            <button type="button" class="btn ghost" id="sg-reset">다른 파일 처리하기</button>
+          </div>
+          <p class="save-name" id="sg-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/pdf-sign/', Astro.site!).description} id="sg-share" />
+          <p class="related-line">여러 PDF를 하나로 묶으려면 <a href="/pdf-merge/">PDF 합치기</a>를, 암호를 다시 걸려면 <a href="/pdf-password/">PDF 암호 해제·설정</a>을 쓰세요.</p>
+        </div>
+
+        <p class="error-box" id="sg-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="sg-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="pdf-sign-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>PDF와 그림 고르기</strong><span>서명할 PDF를 고르고, 서명이나 도장 그림을 고릅니다. 전자서명·도장 이미지 만들기에서 「PDF에 넣기」를 누르면 그림이 바로 들어갑니다.</span></li>
+        <li><strong>자리와 크기 맞추기</strong><span>미리보기에서 그림을 끌어 원하는 자리에 놓고, 모서리나 크기 막대로 크기를 맞춥니다. 같은 자리에 모든 쪽이나 쪽 범위로도 넣을 수 있습니다.</span></li>
+        <li><strong>저장하고 내려받기</strong><span>「서명 넣어 저장」을 누르면 그림이 들어간 새 PDF를 내려받습니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>그림 서명입니다</strong><span>서명 그림을 문서 위에 올리는 기능입니다. 인증서로 하는 전자서명과는 다르니, 받는 곳이 그림 서명을 받아 주는지 먼저 확인하세요.</span></li>
+        <li><strong>원본은 그대로입니다</strong><span>그림을 넣은 내용은 새 PDF로 저장되고, 고른 원본 파일은 바뀌지 않습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['stamp-signature', 'pdf-merge', 'pdf-password']} />
+  <div class="wrap narrow"><AdSlot id="pdf-sign-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import '../../tools/pdf-sign/entry';
+</script>

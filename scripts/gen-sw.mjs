@@ -47,7 +47,7 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * T4 round 2 (review): returning visitors keep offline use: /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/ and /hwp-viewer/
  * are in sw.ts RUNTIME_PAGES (stored when visited; their scripts and /vendor/ engines are runtime-cached on first use).
  */
-export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
+export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

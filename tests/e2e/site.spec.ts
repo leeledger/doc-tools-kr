@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, gotoReady, test } from './no-upload';
 import { fixturePath, photoFixture, runtimePath } from './paths';
 
-const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
+const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 for (const path of PAGES) {
@@ -39,7 +39,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   expect(await serious()).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -67,6 +67,7 @@ for (const [path, name] of [
   ['/pdf-password/', 'PDF 암호 해제'],
   ['/image-to-jpg/', 'HEIC·PNG JPG 변환'],
   ['/pdf-split/', 'PDF 분할'],
+  ['/pdf-sign/', 'PDF 서명 넣기'],
   ['/photo-compress/', '사진 용량 줄이기'],
   ['/hwp-to-pdf/', 'HWP PDF 변환'],
   ['/hwp-viewer/', 'hwp 뷰어'],
@@ -92,7 +93,7 @@ for (const [path, name] of [
   });
 }
 
-test('related tools: each tool page links to the other live tools (the HWP tools: each other and the PDF tools; /stamp-signature/, /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/, /image-to-jpg/ and /pdf-split/: their three)', async ({ page }) => {
+test('related tools: each tool page links to the other live tools (the HWP tools: each other and the PDF tools; /stamp-signature/, /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/, /image-to-jpg/, /pdf-split/ and /pdf-sign/: their three; /stamp-signature/ four)', async ({ page }) => {
   const tools = [
     ['/pdf-merge/', 'PDF 합치기'],
     ['/pdf-compress/', 'PDF 용량 줄이기'],
@@ -101,6 +102,7 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     ['/pdf-password/', 'PDF 암호 해제·설정'],
     ['/image-to-jpg/', '사진 JPG 변환'],
     ['/pdf-split/', 'PDF 나누기·쪽 편집'],
+    ['/pdf-sign/', 'PDF 서명·도장 넣기'],
     ['/photo-compress/', '사진 용량 줄이기'],
     ['/id-photo/', '여권·증명사진 규격 맞추기'],
     ['/hwp-to-pdf/', 'HWP PDF 변환'],
@@ -111,7 +113,7 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     '/hwp-to-pdf/': ['/hwp-viewer/', '/pdf-merge/', '/pdf-compress/'],
     '/hwp-viewer/': ['/hwp-to-pdf/', '/pdf-compress/'],
     // Sprint C (C1): where a signature or 도장 image goes next.
-    '/stamp-signature/': ['/photo-compress/', '/hwp-to-pdf/', '/pdf-merge/'],
+    '/stamp-signature/': ['/pdf-sign/', '/photo-compress/', '/hwp-to-pdf/', '/pdf-merge/'],
     // TOOLS4 T2 (brief decision 9).
     '/jpg-to-pdf/': ['/pdf-merge/', '/pdf-compress/', '/photo-compress/'],
     // TOOLS4 T3 (brief decision 9).
@@ -122,6 +124,8 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     '/image-to-jpg/': ['/photo-compress/', '/jpg-to-pdf/', '/id-photo/'],
     // TOOLS5 U2 (brief decision 12).
     '/pdf-split/': ['/pdf-merge/', '/pdf-compress/', '/pdf-to-jpg/'],
+    // TOOLS5 U3 (brief decision 12).
+    '/pdf-sign/': ['/stamp-signature/', '/pdf-merge/', '/pdf-password/'],
   };
   for (const [path] of tools) {
     await gotoReady(page, path);
@@ -137,7 +141,7 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
   const pages = locs.filter((p) => !p.startsWith('/guide/'));
-  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/'].sort());
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/'].sort());
   // Growth G: /guide/ and every published guide (drafts never). G2 A1: hwp-to-pdf is published; both hubs are in.
   const guides = locs.filter((p) => p.startsWith('/guide/'));
   expect(guides).toContain('/guide/');
@@ -171,7 +175,7 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(12);
+  await expect(cards).toHaveCount(13);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 PDF 변환' })).toHaveAttribute('href', '/jpg-to-pdf/');
@@ -180,12 +184,13 @@ test('landing page: live cards link to their tools, soon tools are names only, f
   await expect(cards.getByRole('link', { name: '사진 용량 줄이기' })).toHaveAttribute('href', '/photo-compress/');
   await expect(cards.getByRole('link', { name: '사진 JPG 변환' })).toHaveAttribute('href', '/image-to-jpg/');
   await expect(cards.getByRole('link', { name: 'PDF 나누기·쪽 편집' })).toHaveAttribute('href', '/pdf-split/');
+  await expect(cards.getByRole('link', { name: 'PDF 서명·도장 넣기' })).toHaveAttribute('href', '/pdf-sign/');
   await expect(cards.getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
   await expect(cards.getByRole('link', { name: 'HWP PDF 변환' })).toHaveAttribute('href', '/hwp-to-pdf/');
   await expect(cards.getByRole('link', { name: 'HWP·HWPX 파일 보기' })).toHaveAttribute('href', '/hwp-viewer/');
   await expect(cards.getByRole('link', { name: '전자서명·도장 이미지 만들기' })).toHaveAttribute('href', '/stamp-signature/');
-  await expect(cards.locator('.status')).toHaveText(Array(12).fill('사용하기'));
-  await expect(page.locator('.card')).toHaveCount(12);
+  await expect(cards.locator('.status')).toHaveText(Array(13).fill('사용하기'));
+  await expect(page.locator('.card')).toHaveCount(13);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
   // Every tool is live: the 준비 중 block is not rendered at all.
   await expect(page.locator('.soon')).toHaveCount(0);
@@ -215,7 +220,7 @@ test('licenses page lists the shipped packages and their texts', async ({ page }
 test.describe('mobile layout', () => {
   test.use({ viewport: { width: 360, height: 780 } });
 
-  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/']) {
+  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/']) {
     test(`no horizontal scroll at 360 px on ${path}`, async ({ page }) => {
       await gotoReady(page, path);
       const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);

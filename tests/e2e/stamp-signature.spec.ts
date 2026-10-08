@@ -264,3 +264,44 @@ test('axe: empty, result, area message, draw tab with a stroke', async ({ page }
   await expect(page.locator('#ss-pad-download')).toBeEnabled();
   await check('draw');
 });
+
+// TOOLS5 U3: 「PDF에 넣기」 hands the PNG to /pdf-sign/ through sessionStorage (the arrival itself: pdf-sign.spec.ts).
+test('PDF에 넣기: disabled until there is a result; stores the PNG and opens /pdf-sign/; a full storage shows the download message and stays', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('quota-test') !== '1') return;
+    Storage.prototype.setItem = function (k: string) {
+      if (k === 'docttak:sign-png') throw new DOMException('full', 'QuotaExceededError');
+    };
+  });
+  const draw = async (): Promise<void> => {
+    await page.getByRole('tab', { name: '직접 그리기' }).click();
+    const box = (await page.locator('#ss-pad').boundingBox())!;
+    await page.mouse.move(box.x + 20, box.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 140, box.y + 70, { steps: 5 });
+    await page.mouse.up();
+  };
+  await gotoReady(page, '/stamp-signature/');
+  await expect(page.locator('#ss-to-pdf')).toBeDisabled();
+  await page.getByRole('tab', { name: '직접 그리기' }).click();
+  await expect(page.locator('#ss-pad-to-pdf')).toBeDisabled();
+  await draw();
+  await expect(page.locator('#ss-pad-to-pdf')).toBeEnabled();
+  // Stop on arrival so the stored value can be read before /pdf-sign/ takes it.
+  // (the real response's headers, CSP included; an empty body).
+  await page.route('**/pdf-sign/', async (r) => r.fulfill({ response: await r.fetch(), body: '<!doctype html><title>t</title>' }));
+  await Promise.all([page.waitForURL('**/pdf-sign/'), page.locator('#ss-pad-to-pdf').click()]);
+  expect(await page.evaluate(() => sessionStorage.getItem('docttak:sign-png')?.slice(0, 22))).toBe('data:image/png;base64,');
+  await page.unroute('**/pdf-sign/');
+
+  await page.evaluate(() => {
+    sessionStorage.clear();
+    sessionStorage.setItem('quota-test', '1');
+  });
+  await gotoReady(page, '/stamp-signature/');
+  await draw();
+  await page.locator('#ss-pad-to-pdf').click();
+  await expect(page.locator('#ss-draw [role="alert"]')).toHaveText('PNG를 내려받은 뒤 PDF 서명·도장 넣기에서 골라 주세요.');
+  expect(new URL(page.url()).pathname).toBe('/stamp-signature/');
+  await expect(page.locator('.related a[href="/pdf-sign/"]')).toHaveText('PDF 서명·도장 넣기');
+});

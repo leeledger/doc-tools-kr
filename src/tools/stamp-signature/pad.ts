@@ -6,6 +6,7 @@ import { INK_COLORS, cropAndResize, cropRect, sizeOptions, type InkSize, type Rg
 import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { COPY } from './copy';
 import { track } from '../../lib/ui/usage';
+import { HANDOFF_FAILED, sendToPdfSign } from '../../lib/ui/sign-handoff';
 import { encodeWithRetry, saveBlob } from './png';
 
 export type Point = readonly [number, number];
@@ -89,6 +90,7 @@ export function initPad(): void {
   const clearBtn = must<HTMLButtonElement>('ss-clear');
   const noPad = must<HTMLInputElement>('ss-pad-nopad');
   const downloadBtn = must<HTMLButtonElement>('ss-pad-download');
+  const toPdfBtn = must<HTMLButtonElement>('ss-pad-to-pdf');
   const reason = must<HTMLElement>('ss-pad-reason');
   const sizeInputs = [...root.querySelectorAll<HTMLInputElement>('input[name="ss-pad-size"]')];
   const g = canvas.getContext('2d');
@@ -128,6 +130,7 @@ export function initPad(): void {
     undoBtn.disabled = empty;
     clearBtn.disabled = empty;
     downloadBtn.disabled = empty;
+    toPdfBtn.disabled = empty;
     reason.textContent = empty ? COPY.padEmpty : '';
     reason.hidden = !empty;
     // A 크기 bigger than the drawing is disabled (downscale only).
@@ -185,20 +188,36 @@ export function initPad(): void {
   }
   noPad.addEventListener('change', update);
 
-  downloadBtn.addEventListener('click', async () => {
+  /** The drawing as a PNG (once more at the next smaller size if the first encode gives nothing). */
+  const encodeDrawing = async (): Promise<Blob | null> => {
     const out = exportDrawing(strokes, pen(), size(), noPad.checked);
-    if (!out) return;
+    if (!out) return null;
     downloadBtn.disabled = true;
+    toPdfBtn.disabled = true;
     const blob = await encodeWithRetry(out.px, async (s) => exportDrawing(strokes, pen(), s, noPad.checked)?.px ?? null);
     downloadBtn.disabled = strokes.length === 0;
+    toPdfBtn.disabled = strokes.length === 0;
     if (!blob) {
       track({ e: 'fail', t: 'stamp-signature', c: 'encode', p: 'save' });
-      return live('alert', COPY.encode, root);
+      live('alert', COPY.encode, root);
+      return null;
     }
     clearAlert(root);
+    return blob;
+  };
+
+  downloadBtn.addEventListener('click', async () => {
+    const blob = await encodeDrawing();
+    if (!blob) return;
     saveBlob(blob, FILE_NAME);
     track({ e: 'download', t: 'stamp-signature' });
     live('status', COPY.saved(FILE_NAME), root);
+  });
+
+  // PDF 서명·도장 넣기 (TOOLS5 U3): the PNG goes to /pdf-sign/ in this tab's sessionStorage.
+  toPdfBtn.addEventListener('click', async () => {
+    const blob = await encodeDrawing();
+    if (blob && !(await sendToPdfSign(blob))) live('alert', HANDOFF_FAILED, root);
   });
 
   new ResizeObserver(resize).observe(box);
