@@ -2523,3 +2523,47 @@ Brief: handoff/ARCHITECT-BRIEF-GA4.md. GA4 behind `PUBLIC_GA_ID` (owner: G-TFP7W
 
 **TOOLS5 U2 — deploy gate (2026-10-08)**
 - Richard: clear, 0 Must Fix. Bob's deviations accepted (one-page part `{base}_{p}.pdf`; a single-part split downloads a plain PDF; `no-pages` allowed but unsent). Should Fix 1 (focus after bulk remove), 2 (multi-file notice overwritten), 4 (aria-describedby on #ps-run) carried into the SEO-LENGTH step; 3 (phone memory while saving) to measure there. Orchestrator updated CLAUDE.md line 3. Also logged: the owner submitted the sitemap and crawl requests for the four new tool URLs in Naver Search Advisor (2026-10-08). Pushed.
+
+## SEO-LENGTH + U2 follow-ups (Bob, 2026-10-08) — status DONE
+Brief: handoff/ARCHITECT-BRIEF-SEO-LENGTH.md; U2 Should Fix 1/2/4 + measure 3 from REVIEW-FEEDBACK (U2). Files: handoff/REVIEW-REQUEST.md.
+
+**Built (A, SEO-LENGTH):** scripts/lib/meta-length.mjs (TITLE_MAX 40, DESC_MIN 40, DESC_MAX 80, OG_DESC_MAX 80, metaLen, decodeEntities, head-only headMeta, metaProblems); check-dist runs it on every page incl. 404/offline and prints the longest title/description; site.ts TITLE_SUFFIX ` | 문서딱`, exported limits, defaultDescription DESC_MAX 80; tools.ts titles/descriptions exactly per the brief list (home, jpg-to-pdf, pdf-split, image-to-jpg, hwp-viewer titles changed; the rest byte-identical); guide/hub schema title+suffix ≤ 40 ("title with suffix over 40"), description 40–80; 30 guide + 2 hub descriptions shortened (brief examples verbatim, the rest by the rule), id-photo-kb title `증명사진 용량 줄이기 (200·350·500KB 맞추기)`, guide-titles.mjs regenerated; /guide/, /terms/, /licenses/ descriptions (privacy already matched the brief); admin VISITS_NOTE = the owner's sentence (exported; visits.test strips it before the "사람 수" negative check); COPY.md rule line and 80자 wording.
+
+**Built (B, U2):** bulk 「고른 쪽 빼기」 moves focus to 「모두 선택」, else the first row's 되살리기; `multiNote` keeps "첫 번째 파일만 열었습니다" after the open (cleared in clearFile); `aria-describedby="ps-hint"` on #ps-run; pump() draws no page pictures while saving and resumes on `ready`.
+
+**Decisions:**
+- 배경 지우기: the description has no cloud-on variant (only two FAQ answers branch on __BG_CLOUD__), so no disclosure lives in the meta; nothing to escalate. New text 66 chars.
+- pdf-split: the committed U2 description started "PDF를 원하는 쪽으로…"; the brief's text (starts "PDF 분할") applied as written (70).
+- Final home: title `PDF 합치기·용량 줄이기, 사진 용량·증명사진 규격 무료 | 문서딱` (38); description (12 tools) `여권·증명사진 규격 맞추기·PDF 합치기·사진 용량 줄이기·PDF 용량 줄이기·사진 PDF 변환 등 12가지 도구. 가입 없이 무료.` (74); 13 with 배경 지우기 (74).
+- Guide shortening beyond the brief examples: kuksiwon-photo dropped the agency name (with it: 90 chars); driver-license-photo keeps "도로교통공단" (dropped "안전운전 통합민원"); open-hwp-without-hangul "한컴 다운로드 센터의 뷰어" → "한컴 뷰어"; korcham-photo "…원서 사진 규격이에요. 400×500픽셀로 바뀌니 1 대 1.25 비율로 맞춰요." No new facts or numbers.
+- site.spec e2e title regex was `/^.{8,60} | 문서딱$/` (unescaped `|` = alternation, always passed); now `/^.{8,34} \| 문서딱$/`; its description keywords for image-to-jpg / pdf-split follow the new text; its 80–120 bounds → 40–80 (not in the brief's test map).
+
+**U2 item 3 — memory while saving (mobile-chrome emulation, Pixel 7, local Chromium on Windows).** 141 MB PDF (60 pages, a 2.5 MB raw image each); private bytes of the Playwright chrome processes sampled every 200 ms (renderer = largest process; the page and its dedicated workers live there):
+
+| build | mode | ready (renderer / all) | peak while saving (renderer / all) | time |
+|---|---|---|---|---|
+| before (U2 commit) | 편집한 PDF 하나로 | 384 / 484 MB | 1,026 / 1,128 MB | 2.4 s |
+| before | 편집한 PDF 하나로 (re-run) | 390 / 492 | 857 / 1,000 | 2.4 s |
+| before | 한 쪽씩 나누기 (60 parts), 2 runs | 387 / 490 | 841–905 / 1,081–1,110 | 6.7 s |
+| after (pump paused) | 편집한 PDF 하나로 | 389 / 491 | 989 / 1,092 | 2.4 s |
+| after | 한 쪽씩 나누기 | 390 / 492 | 889 / 1,107 | 6.8 s |
+
+Peak ≈ ready + 0.45–0.64 GB, about 6–7× the file in the renderer (main `bytes` + pdf.js worker copy + per-part slice + pdf-lib parse + output). Pausing the thumbnails makes no difference beyond run-to-run noise (pictures are 128 px; most were already drawn). Kept as the reviewer's cheap hygiene. About 1 GB in one renderer is tight on a 3–4 GB Android phone; the real lever is the copies (close the pdf.js document during save, or a lower mobile limit than pdf-merge's 150 MB). Arch decision, logged below.
+
+**Gates (2026-10-08, local, Windows):** astro check 0 errors; unit 58 files 1,239 passed (ga.test after `node scripts/copy-vendor.mjs && node scripts/gen-brand.mjs` with no flags, as before); four CI builds (noauto, auto-frame dist, bg, bgcloud) check-dist OK, each `meta, longest title 40 (jpg-to-pdf), longest description 79 (guide/id-photo-kb)`, UI font check passed; e2e site + polish + growth + pdf-split + hwp-viewer on chromium + mobile-chrome + webkit 468 passed / 18 skipped, retries 0; usage.spec cloud projects 24 passed / 3 skipped; visits + admin-view + usage unit 168 passed; check:quotes exit 0 (149 quotes, 148 verbatim, as before); `grep 80–120` over src, tests, docs, scripts is empty.
+
+**Known Gaps:**
+- pdf-split save peak ~0.86–1.03 GB renderer for a 141 MB file in mobile emulation (table above). Options for Arch: close the pdf.js doc while saving and reopen on 다시 편집하기, or a pdf-split mobile limit below 150 MB.
+- ga.test.ts depends on public/ being in the no-flag prebuild state (pre-existing; a flagged build leaves BG / MediaPipe vendor files there).
+- Real phone memory not measured (desktop Chromium emulation has no mobile memory cap).
+
+## SEO-LENGTH round 2 (Bob, 2026-10-08) — status DONE
+Orchestrator decisions after a clear review (0 Must Fix).
+- **/pdf-split/ phone limit 100 MB** (src/tools/pdf-split/limits.ts `MOBILE_MAX_FILE_BYTES = 100 * MB`, used for LIMITS.mobile.maxFileBytes; PC stays at PDF 합치기's 500 MB; /pdf-merge/ keeps 150 MB on phones). Rationale: saving holds the file several times over (main thread, pdf.js worker, a copy per output in merge.worker, pdf-lib's parse, the output); measured save peak in Pixel 7 emulation ≈ 6–7× the file size in the renderer (141 MB file: 0.86–1.03 GB; table in the previous section). Every visible number already reads the constant: FAQ (PDF_SPLIT_FAQ.filePhone, built page says "휴대폰에서 100 MB까지 열 수"), fileLimitMessage, tool-facts `pdf-split.maxFileMb.mobile`; no guide cites it. The soft confirm (50 MB on phones) is unchanged.
+- **yearend-tax-pdf description** (73): `연말정산 간소화 자료를 회사에 내는 방식(출력, PDF, 홈택스 간편제출)과 간소화에 없는 서류를 함께 낼 때 볼 점을 정리했어요.` With "국세청 안내로" it would be 81, so the source name stays out (no new facts).
+- Tests: pdf-split.test.ts limits case (100 MB phone, MOBILE_MAX_FILE_BYTES, PDF 합치기 still 150 MB, boundary message).
+- Gates: unit 58 files 1,239 passed; default build check-dist OK (meta: longest title 40, description 79); pdf-split e2e chromium + mobile-chrome 19 passed / 1 skipped; check:quotes exit 0.
+- Known Gaps: the e2e suite has no 100 MB phone-limit fixture (unit-tested; generating >100 MB in e2e is slow).
+
+**SEO-LENGTH + U2 follow-ups — deploy gate (2026-10-08)**
+- Richard: clear, 0 Must Fix. Round 2 applied Richard's two recommendations verbatim (pdf-split mobile cap 100 MB; yearend-tax-pdf description object restored); orchestrator accepted without a further review round (small, test-covered). Pushed.

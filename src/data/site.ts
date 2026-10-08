@@ -33,7 +33,10 @@ export const HOME_DESC_ORDER: readonly string[] = [
   'remove-background',
 ];
 
-const DESC_MAX = 120;
+/** Meta length limits (SEO-LENGTH). Same values as scripts/lib/meta-length.mjs; a unit test keeps them equal. */
+export const TITLE_MAX = 40;
+export const DESC_MIN = 40;
+export const DESC_MAX = 80;
 const fits = (s: string): boolean => [...s].length <= DESC_MAX;
 
 /**
@@ -49,7 +52,7 @@ export function defaultDescription(tools: readonly Tool[] = LIVE_TOOLS): string 
   if (fits(long)) return long;
   const short = `${names}. 가입 없이 무료.`;
   if (fits(short)) return short;
-  // E-T2-a (TOOLS4 T3): too many names for 120 characters. Name as many as fit in HOME_DESC_ORDER, then the count.
+  // E-T2-a (TOOLS4 T3): too many names for DESC_MAX characters. Name as many as fit in HOME_DESC_ORDER, then the count.
   const rank = (t: Tool): number => {
     const i = HOME_DESC_ORDER.indexOf(t.slug);
     return i < 0 ? HOME_DESC_ORDER.length : i;
@@ -70,8 +73,8 @@ export const VERIFICATION = {
   google: import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION as string | undefined,
 };
 
-/** Every tool title ends with this (tools.ts writes it out; a unit test checks they match). */
-export const TITLE_SUFFIX = '가입 없이 무료로 | 문서딱';
+/** Every page title ends with this (tools.ts writes it out; a unit test checks they match). */
+export const TITLE_SUFFIX = ` | ${SITE.name}`;
 
 const env = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
 

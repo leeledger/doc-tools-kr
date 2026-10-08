@@ -1,6 +1,6 @@
 ---
 title: HWPX가 뭔가요? 여는 법
-description: HWPX는 한글 문서를 XML로 저장하는 개방형 파일 형식이에요. HWP와 무엇이 다른지, 한글 프로그램 없이 여는 법과 저장 형식을 바꾸는 법을 정리했어요.
+description: HWPX는 한글 문서를 XML로 저장하는 개방형 파일 형식이에요. HWP와 무엇이 다른지, 한글 프로그램 없이 여는 법을 정리했어요.
 ogDescription: HWPX는 한글 문서의 개방형 형식이에요. HWP와 다른 점과 설치 없이 여는 법이에요.
 query: hwpx 열기
 answer: HWPX는 한글 문서를 XML 파일로 저장하는 개방형 문서 형식이고, 문서딱 HWP·HWPX 파일 보기에서 HWP와 같은 방법으로 설치 없이 열 수 있어요.

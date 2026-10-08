@@ -1,6 +1,6 @@
 ---
 title: 아이폰 HEIC 사진 JPG로 바꾸는 법
-description: 아이폰 사진(HEIC)을 JPG로 바꾸는 법과 앞으로 찍을 사진을 JPG로 저장하는 아이폰 설정을 Apple 안내로 정리했어요. 여러 장도 한 번에 무료로 바꿔요.
+description: 아이폰 사진(HEIC)을 JPG로 바꾸는 법과 앞으로 찍을 사진을 JPG로 저장하는 아이폰 설정을 Apple 안내로 정리했어요.
 ogDescription: 아이폰 HEIC 사진을 JPG로 바꾸는 법과 JPG로 찍는 설정을 정리했어요.
 query: heic 파일 jpg 변환
 answer: 사진 JPG 변환에서 HEIC 사진을 고르고 변환하기를 누르면 JPG로 저장되고, 앞으로 찍을 사진은 카메라 포맷을 「높은 호환성」으로 바꾸면 JPG로 저장돼요.

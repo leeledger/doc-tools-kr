@@ -187,14 +187,14 @@ describe('guards (T3 review fixes)', () => {
 
 describe('page copy (tools.ts)', () => {
   const tool = getTool('pdf-to-jpg');
-  it('name = h1, the brief title, an 80–120 character description with the search keyword, 4–6 FAQ answers', () => {
+  it('name = h1, the brief title, an 40–80 character description with the search keyword, 4–6 FAQ answers', () => {
     expect(tool.h1).toBe('PDF JPG 변환');
     expect(tool.name).toBe(tool.h1);
     expect(tool.status).toBe('live');
     expect(tool.title).toBe('PDF JPG 변환 — 쪽마다 사진으로 저장 무료 | 문서딱');
     expect(tool.description).toContain('PDF JPG 변환');
-    expect([...tool.description].length).toBeGreaterThanOrEqual(80);
-    expect([...tool.description].length).toBeLessThanOrEqual(120);
+    expect([...tool.description].length).toBeGreaterThanOrEqual(40);
+    expect([...tool.description].length).toBeLessThanOrEqual(80);
     expect(tool.faq.length).toBeGreaterThanOrEqual(4);
     expect(tool.faq.length).toBeLessThanOrEqual(6);
   });

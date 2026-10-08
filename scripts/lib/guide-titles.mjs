@@ -11,7 +11,7 @@ export default {
   "hwp-on-phone": "휴대폰·아이폰에서 HWP 열기",
   "hwp-to-pdf": "HWP PDF 변환, 한글 파일을 PDF로 바꾸는 법",
   "id-card-photo": "주민등록증 사진 규격 (신규·재발급)",
-  "id-photo-kb": "증명사진 용량 줄이기 (200KB·350KB·500KB 맞추기)",
+  "id-photo-kb": "증명사진 용량 줄이기 (200·350·500KB 맞추기)",
   "id-photo-size": "증명사진 사이즈 규격 정리 (여권·공무원·큐넷·이력서)",
   "kakao-photo": "카톡 사진 용량, 한 번에 보낼 수 있는 양",
   "korcham-photo": "컴활 원서 사진 규격 (대한상공회의소 자격시험)",

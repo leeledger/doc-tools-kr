@@ -63,6 +63,7 @@ const RANGE_MESSAGES: Record<PageRangeError, (pages: number) => string> = {
 
 const OWNER_NOTE = '보안 설정(편집 제한)이 해제된 사본이 만들어집니다.';
 const MANY_NOTE = '쪽이 많아 쪽 그림 없이 쪽 번호로 보여 드립니다.';
+const MULTI_NOTE = 'PDF 파일은 한 번에 하나만 편집할 수 있어 첫 번째 파일만 열었습니다.';
 const SIGNATURE_NOTE = '전자서명이 들어 있는 문서입니다. 편집해 새로 저장하면 전자서명이 더 이상 유효하지 않습니다. 발급받은 증명서는 원본을 제출하세요.';
 const NO_PASSWORD_NOTE = '저장한 PDF에는 비밀번호가 걸려 있지 않습니다.';
 
@@ -177,6 +178,8 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | 
 
   // Page pictures, by source page. `docId` changes with every opened file, so a late picture of an old file is dropped.
   let thumbsOn = false;
+  // More than one PDF was picked for this open: the notice stays after the first one opens.
+  let multiNote = false;
   let docId = 0;
   const thumbs = new Map<number, HTMLCanvasElement>();
   const wanted = new Set<number>();
@@ -194,7 +197,8 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | 
     notice.hidden = !msg;
     notice.textContent = msg ?? '';
   };
-  const fileNotice = (): string | null => [encrypted === 'owner' ? OWNER_NOTE : null, thumbsOn || !pages.length ? null : MANY_NOTE].filter(Boolean).join(' ') || null;
+  const fileNotice = (): string | null =>
+    [multiNote ? MULTI_NOTE : null, encrypted === 'owner' ? OWNER_NOTE : null, thumbsOn || !pages.length ? null : MANY_NOTE].filter(Boolean).join(' ') || null;
 
   const revokeBlob = (): void => {
     if (blobUrl) URL.revokeObjectURL(blobUrl);
@@ -235,6 +239,7 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | 
       (b as HTMLButtonElement | HTMLInputElement).disabled = busy || (b as HTMLElement).dataset.off === '1';
     });
     updateRun();
+    if (next === 'ready') pump();
   }
 
   // ---------- the plan for the chosen save mode ----------
@@ -485,7 +490,8 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | 
 
   function pump(): void {
     const doc = opened?.doc;
-    if (!doc) return;
+    // No new page pictures while saving: the save already holds several copies of the file (U2 review).
+    if (!doc || state === 'working') return;
     while (inFlight < THUMBS_IN_FLIGHT && wanted.size) {
       const src = wanted.values().next().value as number;
       wanted.delete(src);
@@ -542,6 +548,7 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | 
     encrypted = 'none';
     pages = [];
     thumbsOn = false;
+    multiNote = false;
     list.replaceChildren();
     pwInput.value = '';
     pwInput.type = 'password';
@@ -566,7 +573,8 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | 
     clearFile();
     clearAlert(root);
     hideEngineError();
-    showNotice(picked.length > 1 ? 'PDF 파일은 한 번에 하나만 편집할 수 있어 첫 번째 파일만 열었습니다.' : null);
+    multiNote = picked.length > 1;
+    showNotice(fileNotice());
     track({ e: 'pick', t: 'pdf-split' });
     loadDynamicFont();
     setState('empty');
@@ -869,7 +877,12 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | 
     status(on ? `${formatPages(kept.length)}을 모두 골랐습니다.` : '고른 쪽을 모두 해제했습니다.');
   });
   rotateSel.addEventListener('click', () => rotate(keptPages(pages).filter((p) => p.selected)));
-  removeSel.addEventListener('click', () => setRemoved(keptPages(pages).filter((p) => p.selected), true));
+  removeSel.addEventListener('click', () => {
+    setRemoved(keptPages(pages).filter((p) => p.selected), true);
+    // The removed pages leave the selection, so this button disables itself: keep keyboard focus in the editor.
+    if (!allBtn.disabled) allBtn.focus();
+    else list.querySelector<HTMLButtonElement>('[data-role="remove"]')?.focus();
+  });
   for (const r of modeRadios) r.addEventListener('change', updateRun);
   rangesInput.addEventListener('input', updateRun);
   everyInput.addEventListener('input', updateRun);

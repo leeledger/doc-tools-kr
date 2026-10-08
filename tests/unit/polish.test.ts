@@ -13,7 +13,7 @@ import { EngineLoadError, ENGINE_COPY, engineErrorCopy, isEngineLoadFailure, wit
 import { formatSize } from '../../src/lib/ui/format';
 import { nonPdfMessage } from '../../src/lib/ui/pdf-pick';
 import { SIGNALS, schedulePreload, warmWorker } from '../../src/lib/ui/preload';
-import { contactLine, defaultDescription, EMAIL_RE, footerContact, HOME_DESC_ORDER, liveNames, sharePreview, SITE, TITLE_SUFFIX } from '../../src/data/site';
+import { contactLine, defaultDescription, DESC_MAX, EMAIL_RE, footerContact, HOME_DESC_ORDER, liveNames, sharePreview, SITE, TITLE_SUFFIX } from '../../src/data/site';
 import og from '../../src/data/og.json';
 import { BG_REMOVE_TOOL, LIVE_TOOLS, TOOLS, type Tool } from '../../src/data/tools';
 import { handleFetch, route, staleCaches, type SwEnv } from '../../src/sw/sw';
@@ -442,7 +442,7 @@ it('nonPdfMessage: one name, several names, and more than three', () => {
 describe('live-only description (P.6)', () => {
   const soon = TOOLS.filter((t) => t.status !== 'live');
 
-  it('names live tools only, in HOME_DESC_ORDER when they do not all fit, with the count; 80–120 characters', () => {
+  it('names live tools only, in HOME_DESC_ORDER when they do not all fit, with the count; 40–80 characters', () => {
     const text = defaultDescription();
     for (const t of soon) expect(text).not.toContain(t.name);
     const named = LIVE_TOOLS.filter((t) => text.includes(t.name));
@@ -453,8 +453,8 @@ describe('live-only description (P.6)', () => {
       expect(text.startsWith(ordered.slice(0, named.length).map((t) => t.name).join('·'))).toBe(true);
     }
     const n = [...text].length;
-    expect(n).toBeGreaterThanOrEqual(80);
-    expect(n).toBeLessThanOrEqual(120);
+    expect(n).toBeGreaterThanOrEqual(40);
+    expect(n).toBeLessThanOrEqual(80);
   });
 
   it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4, image-to-jpg in TOOLS5 U1, pdf-split in U2), no duplicates, every tool listed', () => {
@@ -472,19 +472,19 @@ describe('live-only description (P.6)', () => {
     // Few tools: the long form, every name.
     const two = [fake('pdf-merge', '가나'), fake('id-photo', '다라')];
     expect(defaultDescription(two)).toBe('가나·다라. 내야 하는 문서·사진을 규격에 맞춰요. 가입 없이 무료.');
-    // Every input set from the real tools (default, cloud, all of them): 80–120, deterministic; the 등 form starts in order.
+    // Every input set from the real tools (default, cloud, all of them): 40–80, deterministic; the 등 form starts in order.
     for (const tools of [LIVE_TOOLS, [...LIVE_TOOLS, BG_REMOVE_TOOL], [...TOOLS, BG_REMOVE_TOOL].reverse()]) {
       const d = defaultDescription(tools);
       expect(defaultDescription([...tools])).toBe(d);
-      expect([...d].length, d).toBeGreaterThanOrEqual(80);
-      expect([...d].length, d).toBeLessThanOrEqual(120);
+      expect([...d].length, d).toBeGreaterThanOrEqual(40);
+      expect([...d].length, d).toBeLessThanOrEqual(80);
       const ranked = HOME_DESC_ORDER.map((s) => tools.find((t) => t.slug === s)).filter((t): t is Tool => !!t);
       if (d.includes('가지 도구')) {
         expect(d.startsWith(ranked[0]!.name), d).toBe(true);
         expect(d).toMatch(new RegExp(` 등 ${tools.length}가지 도구\. 가입 없이 무료\.$`));
         // One more name would not fit.
         const k = ranked.filter((t) => d.includes(t.name)).length;
-        expect([...`${ranked.slice(0, k + 1).map((t) => t.name).join('·')} 등 ${tools.length}가지 도구. 가입 없이 무료.`].length).toBeGreaterThan(120);
+        expect([...`${ranked.slice(0, k + 1).map((t) => t.name).join('·')} 등 ${tools.length}가지 도구. 가입 없이 무료.`].length).toBeGreaterThan(DESC_MAX);
       } else {
         for (const t of tools) expect(d).toContain(t.name);
       }
@@ -510,18 +510,18 @@ describe('live-only description (P.6)', () => {
 });
 
 describe('brand and titles (Polish Q)', () => {
-  it('every tool title carries real search terms, ends with "| 문서딱" and stays ≤ 60 chars; the H1 is the menu name', () => {
+  it('every tool title carries real search terms, ends with " | 문서딱" and stays ≤ 40 chars; the H1 is the menu name', () => {
     const KEYWORDS: Record<string, RegExp> = {
       'pdf-merge': /PDF 합치기.*병합/, 'pdf-compress': /PDF 용량 줄이기/, 'photo-compress': /사진 용량 줄이기/,
       'id-photo': /증명사진.*사이즈|사이즈.*규격/, 'hwp-to-pdf': /한글파일.*PDF/,
     };
     for (const t of TOOLS) {
-      expect(t.title.endsWith(`| ${SITE.name}`)).toBe(true);
-      expect([...t.title].length).toBeLessThanOrEqual(60);
+      expect(t.title.endsWith(TITLE_SUFFIX)).toBe(true);
+      expect([...t.title].length).toBeLessThanOrEqual(40);
       const kw = KEYWORDS[t.slug as string]; if (kw) expect(t.title).toMatch(kw);
       expect(t.h1).toBe(t.name);
     }
-    expect(TITLE_SUFFIX.endsWith(`| ${SITE.name}`)).toBe(true);
+    expect(TITLE_SUFFIX).toBe(' | 문서딱');
     expect(SITE.name).toBe('문서딱');
   });
 });

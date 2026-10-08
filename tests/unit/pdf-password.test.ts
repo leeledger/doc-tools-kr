@@ -192,14 +192,14 @@ describe('precache (deploy-gate ruling: the 450 KB limit is never raised)', () =
 describe('page copy (tools.ts)', () => {
   const tool = getTool('pdf-password');
 
-  it('live; name = h1; title and 80–120 character description from the brief; keywords', () => {
+  it('live; name = h1; title and 40–80 character description from the brief; keywords', () => {
     expect(tool.status).toBe('live');
     expect(tool.name).toBe('PDF 암호 해제·설정');
     expect(tool.h1).toBe(tool.name);
     expect(tool.title).toBe('PDF 암호 해제·설정 — 비밀번호 풀기·걸기 무료 | 문서딱');
     const n = [...tool.description].length;
-    expect(n).toBeGreaterThanOrEqual(80);
-    expect(n).toBeLessThanOrEqual(120);
+    expect(n).toBeGreaterThanOrEqual(40);
+    expect(n).toBeLessThanOrEqual(80);
     expect(tool.description).toContain('PDF 암호 해제');
     expect(tool.keywords).toContain('pdf 비밀번호 해제');
   });

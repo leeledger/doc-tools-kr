@@ -1,6 +1,6 @@
 ---
 title: 메일 첨부파일 용량 제한, 지메일·아웃룩 기준
-description: 메일 첨부파일 용량 제한을 지메일과 아웃룩(Outlook.com) 고객센터 안내로 확인했어요. 둘 다 25 MB이고, 넘는 PDF나 사진은 무료로 줄여서 보낼 수 있어요.
+description: 메일 첨부파일 용량 제한을 지메일과 아웃룩(Outlook.com) 고객센터 안내로 확인했어요. 둘 다 25 MB예요.
 ogDescription: 지메일과 Outlook.com의 첨부 한도는 25 MB예요. 넘는 PDF·사진은 줄여서 보내세요.
 query: 첨부파일 용량 제한
 answer: 개인 지메일과 Outlook.com은 첨부파일 한도가 25 MB라서, 이보다 큰 PDF나 사진은 용량을 줄이거나 나눠서 보내야 해요.

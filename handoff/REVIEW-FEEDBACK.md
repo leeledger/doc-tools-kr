@@ -1,4 +1,4 @@
-# Review Feedback — TOOLS5 U2 (/pdf-split/)
+# Review Feedback — SEO-LENGTH + U2 follow-ups
 Date: 2026-10-08
 Ready for Builder: YES
 
@@ -6,39 +6,13 @@ Ready for Builder: YES
 None.
 
 ## Should Fix
-- src/tools/pdf-split/controller.ts:872 + 309-310 (confidence: 8/10) — 「고른 쪽 빼기」 removes the chosen pages and clears
-  their selection (`p.selected = false`, line 427), so `updateBulk()` sets `removeSel.disabled = !chosen` = true while the
-  button still has focus. Chrome/WebKit drop focus to <body>; a keyboard / screen-reader user loses their place after a
-  bulk remove. Single-row 빼기 is fine (focus restored via data-role="remove"). — After a bulk remove, move focus to
-  `allBtn` when it is enabled, else to the first row's 되살리기 button (or the list). Add one e2e assertion on
-  `document.activeElement` after bulk remove.
-- src/tools/pdf-split/controller.ts:569 vs 630 (confidence: 8/10) — `showNotice('PDF 파일은 한 번에 하나만 … 첫 번째
-  파일만 열었습니다.')` is set before opening, then `showNotice(fileNotice())` on a successful open replaces it (null for
-  an ordinary file). The multi-file notice is only visible during "여는 중". — Keep a `multiNote` flag for this open and
-  include it in `fileNotice()`; clear it in clearFile().
-- src/tools/pdf-split/controller.ts:714-760 (confidence: 5/10, verify) — during save the pdf.js document stays open (its
-  worker holds a full copy of the file), the main thread holds `bytes`, and each part posts another full copy to
-  merge.worker; thumbnails may keep rendering meanwhile. On a phone at the 150 MB limit that is ~3 copies plus pdf-lib's
-  parse. Not a correctness bug and pdf-merge's limits were set for one copy fewer. — Measure peak memory on mobile-chrome
-  emulation with a 150 MB file; if it is tight, pause `pump()` while `state === 'working'` (cheap) and log the number.
-- src/pages/pdf-split/index.astro:105 (confidence: 6/10) — when 「저장」 is disabled, the reason is only in #ps-hint, which
-  the button does not reference. — `aria-describedby="ps-hint"` on #ps-run.
+- src/content/guides/yearend-tax-pdf.md:3 (confidence: 6/10) — the trim dropped the object of the second clause: was "…간편제출)과 간소화에서 나오지 않는 서류를 함께 낼 때 볼 점을…", now "…간편제출)과 함께 낼 때 볼 점을 국세청 안내로 정리했어요." "함께 낼 때" no longer says what is submitted together; it reads as a fragment. Not false, but unclear. — Restore a short object within 80, e.g. "…간편제출)과 빠진 서류를 함께 낼 때 볼 점을…" (count with metaLen; must stay ≤ 80 and add no new fact).
 
 ## Escalate to Architect
-- Bob's logged deviations look intentional and reasonable; Arch to confirm: one-page part named `{base}_{p}.pdf` (brief
-  `{first}-{last}`); a split that yields one part downloads a plain PDF, not a ZIP; `no-pages` whitelisted but never sent
-  (button disabled instead of a fail event).
-- CLAUDE.md line 3 tool list needs "PDF 나누기·쪽 편집" at commit (orchestrator rule, as Bob noted).
-
-## Answers to Bob's open question
-- hasSignature on a 500 MB input: acceptable. It walks `context.enumerateIndirectObjects()` of the document pdf-lib has
-  already parsed (no second parse), runs only when `detectSignature` is set, and pdf-split asks only on k === 0, so it is
-  once per save. pdf-merge never sets it, so its reports and timing are unchanged (`signed` absent).
+- Phone memory on /pdf-split/ while saving (U2 item 3). Measured: 141 MB PDF, renderer ready ~0.39 GB, save peak ~0.86–1.03 GB (Pixel 7 emulation, desktop Chromium, so no real mobile cap was in play). Peak is about 6–7x the file size. The limit is a product decision, so it is yours, but my recommendation:
+  - **Lower the pdf-split mobile limit to 100 MB** (src/tools/pdf-split/limits.ts:17, today `MERGE_LIMITS.mobile.hardBytes` = 150 MB; give pdf-split its own constant so pdf-merge is untouched). Linear scaling puts the 100 MB peak at ~0.6–0.7 GB, which a 3–4 GB Android phone tab can usually hold; 1 GB often cannot. pdf-split keeps a pdf.js document open next to the save copies, which pdf-merge does not, so sharing merge's cap was never justified by a measurement.
+  - **Do not close the pdf.js doc during save** in this step. It saves at most the ~0.39 GB ready baseline, adds a reopen on 다시 편집하기 (time, thumbnails redrawn, a new failure path after a successful save), and it is new behaviour, not a follow-up fix. Revisit only if a real phone still fails at 100 MB.
+  - Either way, log "real-phone measurement" as open (already in BUILD-LOG). Keep the thumbnail pause; it is harmless.
 
 ## Cleared
-Reviewed plan.ts (edit/extract/split over the edited document, per-line parseRange with line numbers, everyN short last
-part, names), limits.ts, controller (selection, rotate, ↑↓/drag reorder, 빼기/되살리기, five save modes, parts cap, soft
-confirm, encrypted/owner rule identical to pdf-merge inspect, cancel/pagehide/bfcache via runId + terminate, docId-guarded
-lazy thumbnails at 64 CSS px × dpr ≤ 2 = 128 px, 2 in flight, caps 500/200), mergePlus/merge.worker opt-in signature
-flag, ZIP naming with dedupeNames, usage events (mode only; no names, sizes, counts or ranges), page copy/FAQ numbers
-from limits, check-dist laziness + budget, SW runtime page; pdf-split unit suite re-run 21/21 green.
+Every built page (55 HTML, 404/offline included, Naver file correctly excluded) re-measured from dist with the shared counter: all titles ≤ 40 (max 40, /jpg-to-pdf/), all descriptions 40–80 (max 79), og/twitter consistent, 0 metaProblems; tool titles/descriptions, home title, guide index, terms, licenses, privacy, both hub and the four brief-example guide descriptions match the brief verbatim; changed titles keep the front keyword (사진 PDF 변환, PDF 분할·쪽 삭제·회전, HEIC·PNG JPG 변환, HWP 뷰어, PDF 합치기, 증명사진 용량 줄이기) and unchanged titles are byte-identical; the 30 guide trims only remove text — no new facts, numbers or sources (kuksiwon-photo dropping the agency, driver-license-photo "도로교통공단 안내" and open-hwp-without-hangul "한컴 뷰어" are faithful shortenings; ecfs "100M" is verbatim from the court source); check-dist runs metaProblems on every page in pageHtml with head-only parsing and entity decoding, plus the summary line asserted in postbuild.test; site.spec regex now escapes "|" and enforces 34+suffix; VISITS_NOTE is the owner's exact sentence and the "사람 수" negative check strips only that note; U2 multi-file notice survives the open (cleared in clearFile, re-set after it), pump idles in 'working' and resumes on setState('ready'), bulk remove focuses 모두 선택 or the first 되살리기, #ps-run is described by the existing #ps-hint; no "80–120" left; targeted unit suites (meta-length, guides-schema, polish, visits) pass 157/157.

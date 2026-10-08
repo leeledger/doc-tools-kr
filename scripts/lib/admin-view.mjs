@@ -181,7 +181,7 @@ export function startsPer100(start, visits) {
   return Math.round((start / visits) * 1000) / 10;
 }
 
-const VISITS_NOTE = '쿠키 없이 센 방문 횟수예요. 같은 사람이 여러 번 오면 여러 번 셉니다. 자동 프로그램(봇)은 대부분 빠져요. 방문 집계는 2026-10-07부터예요.';
+export const VISITS_NOTE = '방문 수는 2026년 10월 7일부터 집계했어요. 봇은 대부분 빠지지만 같은 사람의 재방문도 각각 세므로, 실제 사람 수보다 조금 많을 수 있어요.';
 const VISITS_ESTIMATE = '일부 숫자는 Cloudflare가 표본으로 세어 보정한 추정치예요.';
 const APPROX_TOPS = '7일씩 나눠 받은 순위를 더한 값이라 순위는 대략적이에요.';
 

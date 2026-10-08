@@ -10,7 +10,7 @@ const guides = await publishedGuides();
 const hubList = await hubs();
 const groups = topicGroups(guides);
 const title = '문서·사진 규격과 용량 안내';
-const description = '여권사진·증명사진 규격, 사진과 PDF 용량 줄이기, 메일 첨부 한도를 기관 안내를 확인해 정리했어요. 확인일과 출처를 함께 적어 두었어요.';
+const description = '여권사진·증명사진 규격, 사진과 PDF 용량 줄이기, 메일 첨부 한도를 기관 안내로 확인해 정리했어요.';
 const url = new URL('/guide/', Astro.site).href;
 const article = (headline: string, slug: string) => ({ '@type': 'Article', headline, url: new URL(guidePath(slug), Astro.site).href });
 const jsonLd = [

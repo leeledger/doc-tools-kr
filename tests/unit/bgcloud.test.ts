@@ -432,14 +432,14 @@ describe('site-wide "files never leave" claims with the cloud path on (round 2, 
       expect(unqualifiedClaims(images[p.image]!.line), `${path} image ${p.image}`).toEqual([]);
     }
   });
-  it('home description: no claim and no exception, within 80–120 characters with or without 배경 지우기', () => {
+  it('home description: no claim and no exception, within 40–80 characters with or without 배경 지우기', () => {
     const eight = [...LIVE_TOOLS, BG_REMOVE_TOOL];
     for (const tools of [LIVE_TOOLS, eight]) {
       const d = defaultDescription(tools);
       expect(unqualifiedClaims(d), d).toEqual([]);
       expect(QUALIFIER_RE.test(d), d).toBe(false);
-      expect([...d].length).toBeGreaterThanOrEqual(80);
-      expect([...d].length).toBeLessThanOrEqual(120);
+      expect([...d].length).toBeGreaterThanOrEqual(40);
+      expect([...d].length).toBeLessThanOrEqual(80);
     }
   });
 });

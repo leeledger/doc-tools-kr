@@ -199,14 +199,14 @@ describe('fixtures and site data', () => {
     expect(total).toBeLessThanOrEqual(3 * 1024 * 1024);
   });
 
-  it('hwp-to-pdf is live with the brief keywords and an 80–120 character description', () => {
+  it('hwp-to-pdf is live with the brief keywords and an 40–80 character description', () => {
     const t = getTool('hwp-to-pdf');
     expect(t.status).toBe('live');
     expect(t.name).toBe('HWP PDF 변환');
     expect(LIVE_TOOLS.map((x) => x.slug)).toContain('hwp-to-pdf');
     const n = [...t.description].length;
-    expect(n).toBeGreaterThanOrEqual(80);
-    expect(n).toBeLessThanOrEqual(120);
+    expect(n).toBeGreaterThanOrEqual(40);
+    expect(n).toBeLessThanOrEqual(80);
     expect(t.description).toContain('hwp pdf 변환');
     expect(t.description).toContain('한글파일 PDF로 변환');
     expect(t.description).not.toMatch(/밖으로|보내지 않/); // owner 2026-10-05: says what it does, not where the file goes

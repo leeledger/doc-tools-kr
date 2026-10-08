@@ -224,7 +224,7 @@ test('home, meta and JSON-LD name every live tool and no soon tool (og: no soon 
   const ld = (await page.locator('script[type="application/ld+json"]').allTextContents()).join('');
   for (const text of [lead, desc, og, ld]) {
     // Sprint C: the share preview no longer lists the tools (seven names alone pass its 80 characters).
-    // TOOLS4 T4: ten tools no longer fit the 120-character description, which names the first ones and the count
+    // TOOLS4 T4: ten tools no longer fit the 80-character description, which names the first ones and the count
     // (E-T2-a; the order and the cut are unit-tested in polish.test.ts).
     if (text === desc && desc.includes('가지 도구')) expect(desc).toMatch(new RegExp(` 등 ${LIVE.length}가지 도구\\. 가입 없이 무료\\.$`));
     else if (text !== og) for (const name of LIVE) expect(text).toContain(name);
@@ -232,8 +232,8 @@ test('home, meta and JSON-LD name every live tool and no soon tool (og: no soon 
     expect(text).not.toMatch(/한글 파일/);
   }
   expect(lead.startsWith('지금 쓸 수 있는 도구: ')).toBe(true);
-  expect([...desc].length).toBeGreaterThanOrEqual(80);
-  expect([...desc].length).toBeLessThanOrEqual(120);
+  expect([...desc].length).toBeGreaterThanOrEqual(40);
+  expect([...desc].length).toBeLessThanOrEqual(80);
   await expect(page.locator('.soon-list li')).toHaveText(SOON);
   await expect(page.locator('.soon a')).toHaveCount(0);
   const logo = JSON.parse((await page.locator('script[type="application/ld+json"]').first().textContent())!).find((d: { '@type': string }) => d['@type'] === 'Organization').logo;

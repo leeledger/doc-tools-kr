@@ -89,7 +89,7 @@ export interface Tool {
   name: string;
   /** Full document title. */
   title: string;
-  /** Meta description, 80–120 characters, contains the exact search keyword. */
+  /** Meta description, 40–80 characters, contains the exact search keyword. */
   description: string;
   h1: string;
   /** Card copy on the home page. */
@@ -115,7 +115,7 @@ export const BG_REMOVE_TOOL: Tool = {
   // C2-cloud (brief §7.2, owner-approved 2026-10-02): with the cloud path on, the description and two answers say
   // that a reduced copy is sent by default and how not to send it.
   description:
-    '사진 배경 지우기와 누끼 따기를 무료로. 사람·상품·반려동물 사진에서 배경을 지워 투명한 PNG나 흰색·파란색 배경으로 저장합니다. 가입 없이 바로 씁니다.',
+    '사진 배경 지우기와 누끼 따기를 무료로. 배경을 지워 투명한 PNG나 흰색·파란색 배경으로 저장해요. 가입 없이 바로.',
   h1: '사진 배경 지우기 (누끼)',
   summary: '사진 배경을 지워 투명한 PNG나 흰 배경 사진으로 저장합니다.',
   // Short on purpose: the icon is in every page's menu, and C2 may not grow the precache (Arch ruling 3).
@@ -166,7 +166,7 @@ export const TOOLS: Tool[] = [
     name: 'PDF 합치기',
     title: 'PDF 합치기·병합 무료 — 설치 없이 바로 | 문서딱',
     description:
-      'PDF 합치기를 폰·컴퓨터에서 바로. 여러 PDF를 원하는 순서로 한 파일로 묶고 서식·책갈피·링크도 그대로 유지합니다. 설치·가입 없이 무료.',
+      'PDF 합치기를 폰·컴퓨터에서 바로. 여러 PDF를 원하는 순서로 한 파일로 묶고 책갈피·링크도 그대로. 가입 없이 무료.',
     h1: 'PDF 합치기',
     summary: '여러 PDF를 한 파일로 묶고, 파일 순서를 원하는 대로 바꾸세요.',
     icon: '<path d="M7 3h7l4 4v11H7z"/><path d="M4 6v15h11"/>',
@@ -201,7 +201,7 @@ export const TOOLS: Tool[] = [
     name: 'PDF 용량 줄이기',
     title: 'PDF 용량 줄이기 무료 — 제출 용량에 맞게 | 문서딱',
     description:
-      'PDF 용량 줄이기를 폰·컴퓨터에서 바로. 스캔·사진이 든 PDF를 선명하게 유지하면서 줄이고, 글자는 선택·검색 가능한 그대로 둡니다. 가입 없이 무료.',
+      'PDF 용량 줄이기를 폰·컴퓨터에서 바로. 스캔·사진이 든 PDF를 선명하게 줄이고 글자는 검색되는 그대로. 가입 없이 무료.',
     h1: 'PDF 용량 줄이기',
     summary: '제출 용량 제한에 맞게 PDF를 줄입니다. 글자는 선택·검색 가능한 상태로 유지합니다.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 14l3 3 3-3M12 10v7"/>',
@@ -239,9 +239,9 @@ export const TOOLS: Tool[] = [
     // TOOLS4 T2. name = h1 (COPY.md). No release flag (brief decision 1): static, sends nothing, one revert rolls it back.
     slug: 'jpg-to-pdf',
     name: '사진 PDF 변환',
-    title: '사진 PDF 변환 — JPG·PNG·아이폰 사진을 PDF 하나로 무료 | 문서딱',
+    title: '사진 PDF 변환 — JPG·PNG·아이폰 사진 PDF로 무료 | 문서딱',
     description:
-      '사진 PDF 변환을 폰·컴퓨터에서 바로. JPG·PNG·아이폰 사진 여러 장을 원하는 순서로 PDF 하나로 묶고, A4 용지나 사진 크기에 맞춥니다. 가입 없이 무료.',
+      '사진 PDF 변환을 폰·컴퓨터에서 바로. JPG·PNG·아이폰 사진 여러 장을 원하는 순서로 PDF 하나로 묶어요. 가입 없이 무료.',
     h1: '사진 PDF 변환',
     summary: '사진 여러 장을 원하는 순서로 PDF 파일 하나로 묶습니다. A4 용지에 맞출 수도 있습니다.',
     icon: '<rect x="3" y="4" width="11" height="9" rx="1.5"/><path d="M3 11l3-3 3 3 2-2 3 3"/><path d="M10 13v8h11V9h-4"/>',
@@ -282,7 +282,7 @@ export const TOOLS: Tool[] = [
     name: 'PDF JPG 변환',
     title: 'PDF JPG 변환 — 쪽마다 사진으로 저장 무료 | 문서딱',
     description:
-      'PDF JPG 변환을 폰·컴퓨터에서 바로. PDF의 쪽마다 JPG 사진으로 저장하고, 여러 쪽은 ZIP 파일 하나로 받습니다. 선명도도 고를 수 있고 가입 없이 무료.',
+      'PDF JPG 변환을 폰·컴퓨터에서 바로. PDF의 쪽마다 JPG 사진으로 저장하고, 여러 쪽은 ZIP 하나로 받아요. 가입 없이 무료.',
     h1: 'PDF JPG 변환',
     summary: 'PDF의 쪽마다 JPG 사진으로 저장합니다. 여러 쪽은 ZIP 파일 하나로 받습니다.',
     icon: '<path d="M4 3h8l4 4v6"/><path d="M12 3v4h4"/><rect x="9" y="12" width="12" height="9" rx="1.5"/><path d="M9 19l3-3 3 3 2-2 4 4"/>',
@@ -323,7 +323,7 @@ export const TOOLS: Tool[] = [
     name: 'PDF 암호 해제·설정',
     title: 'PDF 암호 해제·설정 — 비밀번호 풀기·걸기 무료 | 문서딱',
     description:
-      'PDF 암호 해제와 암호 설정을 무료로. 비밀번호를 아는 PDF는 암호를 풀어 저장하고, 내 PDF에는 열 때 필요한 비밀번호를 겁니다. 가입 없이 바로 씁니다.',
+      'PDF 암호 해제와 암호 설정을 무료로. 아는 비밀번호로 PDF 암호를 풀고, 내 PDF에는 비밀번호를 걸어요. 가입 없이 바로.',
     h1: 'PDF 암호 해제·설정',
     summary: '비밀번호를 아는 PDF의 암호를 풀고, 내 PDF에는 열 때 필요한 비밀번호를 겁니다.',
     icon: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/>',
@@ -361,9 +361,9 @@ export const TOOLS: Tool[] = [
     // TOOLS5 U2. name = h1 (COPY.md). No release flag (TOOLS4 decision 1): static, sends nothing, one revert rolls it back.
     slug: 'pdf-split',
     name: 'PDF 나누기·쪽 편집',
-    title: 'PDF 분할·쪽 삭제·회전 — 나누기, 빼기, 돌리기, 순서 바꾸기 무료 | 문서딱',
+    title: 'PDF 분할·쪽 삭제·회전 — 나누기·순서 바꾸기 무료 | 문서딱',
     description:
-      'PDF를 원하는 쪽으로 나누고, 필요 없는 쪽은 빼고, 옆으로 누운 쪽은 돌리고, 순서도 바꿉니다. 쪽 그림을 보며 고르고 가입 없이 무료로 씁니다.',
+      'PDF 분할과 쪽 삭제·회전을 무료로. 원하는 쪽으로 나누고, 필요 없는 쪽은 빼고, 순서도 바꿔요. 쪽 그림을 보며 골라요.',
     h1: 'PDF 나누기·쪽 편집',
     summary: 'PDF를 여러 파일로 나누고, 필요 없는 쪽은 빼고, 쪽을 돌리거나 순서를 바꿉니다.',
     icon: '<path d="M6 12V3h8l4 4v5"/><path d="M3 15h3M10.5 15h3M18 15h3"/><path d="M6 18v3h12v-3"/>',
@@ -402,7 +402,7 @@ export const TOOLS: Tool[] = [
     name: '사진 용량 줄이기',
     title: '사진 용량 줄이기 — 100KB·200KB·KB 맞추기 무료 | 문서딱',
     description:
-      '사진 용량 줄이기를 폰·컴퓨터에서 바로. 100KB·200KB·500KB 등 원하는 용량에 맞춰 화질은 최대한 지키고, 촬영 위치 같은 개인정보는 지웁니다. 가입 없이 무료.',
+      '사진 용량 줄이기를 폰·컴퓨터에서 바로. 100KB·200KB·500KB 등 원하는 용량에 맞추고 촬영 위치 정보는 지워요. 무료.',
     h1: '사진 용량 줄이기',
     summary: '원하는 KB에 맞춰 사진을 줄이면서 화질은 최대한 지킵니다.',
     icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/>',
@@ -441,9 +441,9 @@ export const TOOLS: Tool[] = [
     // TOOLS5 U1. name = h1 (COPY.md). No release flag (TOOLS4 decision 1): static, sends nothing, one revert rolls it back.
     slug: 'image-to-jpg',
     name: '사진 JPG 변환',
-    title: 'HEIC·PNG JPG 변환 — 아이폰 사진·PNG·WebP를 JPG로, 여러 장 한 번에 무료 | 문서딱',
+    title: 'HEIC·PNG JPG 변환 — 아이폰 사진·WebP도 무료 | 문서딱',
     description:
-      '아이폰 HEIC 사진, PNG, WebP를 JPG로 바꿉니다. 여러 장을 한 번에 바꿔 ZIP으로 받고, PNG·WebP로도 저장합니다. 촬영 위치 같은 정보는 지웁니다. 가입 없이 무료.',
+      'HEIC·PNG JPG 변환을 무료로. 아이폰 HEIC 사진·PNG·WebP를 JPG로 바꾸고 여러 장은 ZIP으로 받아요. 가입 없이 바로.',
     h1: '사진 JPG 변환',
     summary: '아이폰 사진(HEIC)·PNG·WebP를 JPG로 바꿉니다. 여러 장을 한 번에 바꿀 수 있습니다.',
     icon: '<rect x="3" y="4" width="12" height="10" rx="1.5"/><path d="M3 11l3-3 3 3"/><path d="M14 18h7M18 15l3 3-3 3"/>',
@@ -483,7 +483,7 @@ export const TOOLS: Tool[] = [
     name: '여권·증명사진 규격 맞추기',
     title: '여권사진·증명사진 사이즈 규격 맞추기 무료 | 문서딱',
     description:
-      '여권사진 규격(413×531 픽셀, 500KB 이하)과 공무원 시험·Q-Net·이력서 증명사진 사이즈에 맞춰 사진을 자르고 용량을 맞춥니다. 사진은 보정하지 않고, 가입 없이 무료입니다.',
+      '여권사진 규격(413×531 픽셀, 500KB 이하)과 시험·이력서 증명사진 사이즈에 맞춰 자르고 용량을 맞춰요. 보정 없이 무료.',
     h1: '여권·증명사진 규격 맞추기',
     summary: '여권·시험·이력서 제출 규격에 맞게 사진을 자르고 크기와 용량을 맞춥니다. 보정은 하지 않습니다.',
     icon: '<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c1-2.5 2.6-3.5 4.5-3.5s3.5 1 4.5 3.5"/>',
@@ -529,7 +529,7 @@ export const TOOLS: Tool[] = [
     name: '전자서명·도장 이미지 만들기',
     title: '전자서명·도장 이미지 만들기 — 배경 없는 PNG 무료 | 문서딱',
     description:
-      '도장 이미지 만들기와 전자서명 만들기를 무료로. 종이에 찍은 도장이나 쓴 서명 사진에서 배경을 지워 투명한 PNG로 저장합니다. 서명은 화면에 직접 그려도 됩니다.',
+      '도장 이미지 만들기와 전자서명 만들기를 무료로. 도장·서명 사진의 배경을 지워 투명한 PNG로 저장해요. 서명은 직접 그려도 돼요.',
     h1: '전자서명·도장 이미지 만들기',
     summary: '도장·서명 사진의 배경을 지워 투명한 PNG 파일로 저장합니다. 서명은 직접 그려도 됩니다.',
     icon: '<rect x="4" y="15" width="16" height="5" rx="1"/><path d="M9 15v-3.5a3 3 0 1 1 6 0V15"/><path d="M7 23h10"/>',
@@ -565,7 +565,7 @@ export const TOOLS: Tool[] = [
     name: 'HWP PDF 변환',
     title: '한글파일(HWP) PDF로 변환 — 한글 없이 무료 | 문서딱',
     description:
-      '한글 프로그램 없이 hwp pdf 변환. 한글파일 PDF로 변환해 바로 내려받고, HWP·HWPX 문서를 뷰어처럼 열어 볼 수도 있습니다. 회원가입 없이 무료.',
+      '한글 프로그램 없이 hwp pdf 변환. 한글파일 PDF로 변환해 바로 받고, HWP·HWPX 문서를 열어 볼 수도 있어요. 가입 없이 무료.',
     h1: 'HWP PDF 변환',
     summary: '한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 내려받으세요.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 15h6M9 18h4"/>',
@@ -610,9 +610,9 @@ export const TOOLS: Tool[] = [
   {
     slug: 'hwp-viewer',
     name: 'HWP·HWPX 파일 보기',
-    title: 'HWP 뷰어 — 한글 파일(.hwp·.hwpx) 설치 없이 열기 | 문서딱',
+    title: 'HWP 뷰어 — 한글 파일(hwp·hwpx) 설치 없이 열기 | 문서딱',
     description:
-      'hwp 뷰어를 설치 없이 바로. 한글 파일(HWP·HWPX)을 폰·컴퓨터에서 바로 열어 쪽을 넘겨 보고, 글자를 찾아 복사합니다. hwpx 열기도 되고, 가입 없이 무료입니다.',
+      'hwp 뷰어를 설치 없이 바로. 한글 파일(HWP·HWPX)을 폰·컴퓨터에서 열어 쪽을 넘겨 보고 글자를 찾아 복사해요. 무료.',
     h1: 'HWP·HWPX 파일 보기',
     summary: '한글 프로그램 없이 HWP·HWPX 문서를 열어 쪽을 넘겨 보고, 글자를 찾아 보세요.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M8 15s1.6-2.6 4-2.6 4 2.6 4 2.6-1.6 2.6-4 2.6S8 15 8 15z"/><circle cx="12" cy="15" r="1"/>',
@@ -665,4 +665,4 @@ export function getTool(slug: string): Tool {
 }
 
 /** Home <title> (Growth: traffic first). Keyword-bearing; kept here so tool names live only in tools.ts. */
-export const HOME_TITLE = 'PDF 합치기·용량 줄이기, 사진 용량·증명사진 규격, 한글 PDF 변환 무료 | 문서딱';
+export const HOME_TITLE = 'PDF 합치기·용량 줄이기, 사진 용량·증명사진 규격 무료 | 문서딱';

@@ -309,11 +309,11 @@ describe('convertImage', () => {
 
 describe('page copy and facts', () => {
   const tool = getTool('image-to-jpg');
-  it('name = h1; description 80–120 characters; FAQ numbers read from the limits', () => {
+  it('name = h1; description 40–80 characters; FAQ numbers read from the limits', () => {
     expect(tool.h1).toBe(tool.name);
     const n = [...tool.description].length;
-    expect(n).toBeGreaterThanOrEqual(80);
-    expect(n).toBeLessThanOrEqual(120);
+    expect(n).toBeGreaterThanOrEqual(40);
+    expect(n).toBeLessThanOrEqual(80);
     const faq = tool.faq.map((f) => `${f.q} ${f.a}`).join(' ');
     for (const s of ['200장', '50장', '100 MB', '50 MB', '500 MB', '150 MB']) expect(faq, s).toContain(s);
     expect(faq).toContain('「높은 호환성」');

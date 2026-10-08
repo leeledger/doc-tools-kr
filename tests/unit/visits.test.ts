@@ -26,7 +26,7 @@ import {
   windows,
 } from '../../scripts/lib/visits.mjs';
 import { niceTicks, trendSvg } from '../../scripts/lib/admin-chart.mjs';
-import { ratioDelta, renderAdminPage, startsPer100 } from '../../scripts/lib/admin-view.mjs';
+import { VISITS_NOTE, ratioDelta, renderAdminPage, startsPer100 } from '../../scripts/lib/admin-view.mjs';
 import { GUIDE_TITLES, PRESETS, VALUE_LABELS, shapeUsage } from '../../scripts/lib/usage.mjs';
 import { guideTitles } from '../../scripts/ops/lib/guides.mjs';
 import { serialize } from '../../scripts/gen-guide-titles.mjs';
@@ -401,7 +401,7 @@ describe('admin page visits block', () => {
     expect(fine).toContain('<dt>페이지뷰</dt>');
     expect(fine).not.toContain('(추정)');
     expect(fine).not.toContain('표본으로 세어');
-    expect(fine).toContain('방문 집계는 2026-10-07부터예요.');
+    expect(fine).toContain(VISITS_NOTE);
     expect(fine).toMatch(/<dt>방문<\/dt><dd class="value">[\d,]+<\/dd><dd class="delta"><span aria-hidden="true">(▲ \+|▼ -)?\d+%<\/span><span class="sr">직전 7일보다/);
     const sampled = page({ notice: 'x', visits: await shaped({ si: 10 }) });
     expect(sampled).toContain('<dt>방문 (추정)</dt>');
@@ -414,7 +414,8 @@ describe('admin page visits block', () => {
     expect(page({ visits: early, notice: 'x' })).toContain('<dd class="delta">비교 없음 (집계 시작 전)</dd>');
     for (const h of [fine, sampled, page({ visitsNotice: 'x', notice: 'y' }), page({ visits: await empty(), notice: 'y' })]) {
       expect(h).not.toContain('방문자');
-      expect(h).not.toContain('사람 수');
+      // The owner's note (SEO-LENGTH step 9) is the one allowed use of "사람 수".
+      expect(h.replace(VISITS_NOTE, '')).not.toContain('사람 수');
     }
   });
 

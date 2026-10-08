@@ -1,10 +1,11 @@
-// Device limits for PDF 나누기·쪽 편집 (brief TOOLS5 decision 9): the PDF 합치기 limits for one file, the page count up
-// to which page pictures are drawn, and the number of files one split may make. The FAQ reads these numbers.
+// Device limits for PDF 나누기·쪽 편집 (brief TOOLS5 decision 9): the PDF 합치기 limits for one file (phones: lower, see
+// MOBILE_MAX_FILE_BYTES), the page count up to which page pictures are drawn, and the number of files one split may make.
+// The FAQ reads these numbers.
 import { MB, type Device } from '../../lib/ui/device';
 import { LIMITS as MERGE_LIMITS } from '../pdf-merge/limits';
 
 export interface DeviceLimits {
-  /** The largest PDF that is opened (PDF 합치기 hard limit). */
+  /** The largest PDF that is opened (PDF 합치기 hard limit on PCs; MOBILE_MAX_FILE_BYTES on phones). */
   maxFileBytes: number;
   /** Above this many pages the list shows page numbers only, no page pictures. */
   maxThumbPages: number;
@@ -12,9 +13,16 @@ export interface DeviceLimits {
   maxParts: number;
 }
 
+/**
+ * Phones open at most 100 MB here, below PDF 합치기's 150 MB (SEO-LENGTH round 2, orchestrator): saving holds the file
+ * several times over (main thread, the pdf.js worker, a copy per output in merge.worker, pdf-lib's parse, the output).
+ * Measured peak while saving, Pixel 7 emulation: about 6–7× the file size in the renderer (141 MB file: 0.86–1.03 GB).
+ */
+export const MOBILE_MAX_FILE_BYTES = 100 * MB;
+
 export const LIMITS: Record<Device, DeviceLimits> = {
   desktop: { maxFileBytes: MERGE_LIMITS.desktop.hardBytes, maxThumbPages: 500, maxParts: 500 },
-  mobile: { maxFileBytes: MERGE_LIMITS.mobile.hardBytes, maxThumbPages: 200, maxParts: 100 },
+  mobile: { maxFileBytes: MOBILE_MAX_FILE_BYTES, maxThumbPages: 200, maxParts: 100 },
 };
 
 const n = (x: number): string => x.toLocaleString('ko-KR');

@@ -168,14 +168,14 @@ describe('자동 classification and file names (Arch rulings, C1 review)', () =>
 describe('stamp-signature tool entry and guides', () => {
   const tool = getTool('stamp-signature');
 
-  it('title, H1 = name, a description with both keywords, 80–120 characters', () => {
+  it('title, H1 = name, a description with both keywords, 40–80 characters', () => {
     expect(tool.title).toBe('전자서명·도장 이미지 만들기 — 배경 없는 PNG 무료 | 문서딱');
     expect(tool.h1).toBe('전자서명·도장 이미지 만들기');
     expect(tool.name).toBe(tool.h1);
     expect(tool.description).toContain('도장 이미지 만들기');
     expect(tool.description).toContain('전자서명');
-    expect([...tool.description].length).toBeGreaterThanOrEqual(80);
-    expect([...tool.description].length).toBeLessThanOrEqual(120);
+    expect([...tool.description].length).toBeGreaterThanOrEqual(40);
+    expect([...tool.description].length).toBeLessThanOrEqual(80);
   });
 
   it('the FAQ says what the tool does: no law, no 인감, no promise of legal effect', () => {

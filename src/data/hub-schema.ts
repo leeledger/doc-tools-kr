@@ -10,10 +10,17 @@ const isoDate = z.preprocess(
   z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD'),
 );
 
+/** Page title without " | 문서딱": the rendered title (with the suffix) is at most 40 code points (SEO-LENGTH). */
+const SUFFIX_LEN = [...' | 문서딱'].length;
+const pageTitle = z
+  .string()
+  .refine((s) => [...s].length >= 4, 'at least 4 characters')
+  .refine((s) => [...s].length + SUFFIX_LEN <= 40, 'title with suffix over 40');
+
 export const hubSchema = z
   .object({
-    title: len(4, 40),
-    description: len(50, 110),
+    title: pageTitle,
+    description: len(40, 80),
     ogDescription: len(10, 80),
     answer: len(10, 120),
     published: isoDate,

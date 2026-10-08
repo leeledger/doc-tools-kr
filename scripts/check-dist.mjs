@@ -13,6 +13,7 @@ import { bgRemoveOn } from './lib/bgremove.mjs';
 import { USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
+import { headMeta, metaLen, metaProblems } from './lib/meta-length.mjs';
 import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fontcover.mjs';
 
@@ -88,6 +89,15 @@ for (const [p, html] of pageHtml) {
   if (analytics && !has) errors.push(`${p}: no Cloudflare Web Analytics beacon although PUBLIC_CF_ANALYTICS_TOKEN is set`);
   if (!analytics && has) errors.push(`${p}: Cloudflare Web Analytics beacon although PUBLIC_CF_ANALYTICS_TOKEN is not set`);
 }
+// SEO-LENGTH: every page (noindex 404/offline included) has a title of at most 40 code points and a description of
+// 40–80, og/twitter consistent with them (scripts/lib/meta-length.mjs).
+const metaMax = { title: { n: 0, p: '' }, description: { n: 0, p: '' } };
+for (const [p, html] of pageHtml) {
+  errors.push(...metaProblems(p, html));
+  const m = headMeta(html);
+  for (const k of ['title', 'description']) if (m[k] && metaLen(m[k]) > metaMax[k].n) metaMax[k] = { n: metaLen(m[k]), p };
+}
+console.log(`check-dist: meta, longest title ${metaMax.title.n} (${metaMax.title.p}), longest description ${metaMax.description.n} (${metaMax.description.p})`);
 // Google Analytics 4: on, every page has exactly one marked /ga.js tag, before its module scripts (so it reads the URL
 // first), and dist/ga.js is the loader for this ID; on or off, no page loads gtag.js itself or calls gtag inline.
 // Off, nothing of it ships at all.

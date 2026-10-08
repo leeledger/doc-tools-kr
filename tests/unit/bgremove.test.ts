@@ -793,21 +793,21 @@ describe('copy and limits (brief: honest limits up front, plain words)', () => {
     expect(checkFileBytes(31 * 1048576, 'mobile')).toContain('30 MB');
   });
 
-  it('tool entry: name = h1, 80–120 character description with the keywords; FAQ states the output size and links /stamp-signature/', () => {
+  it('tool entry: name = h1, 40–80 character description with the keywords; FAQ states the output size and links /stamp-signature/', () => {
     const t = BG_REMOVE_TOOL;
     expect(t.name).toBe(t.h1);
     expect(t.title).toBe('사진 배경 지우기·누끼 따기 무료 — 투명 PNG | 문서딱');
     const n = [...t.description].length;
-    expect(n).toBeGreaterThanOrEqual(80);
-    expect(n).toBeLessThanOrEqual(120);
+    expect(n).toBeGreaterThanOrEqual(40);
+    expect(n).toBeLessThanOrEqual(80);
     expect(t.description).toContain('배경 지우기');
     expect(t.description).toContain('누끼 따기');
     expect(t.faq.map((f) => f.a).join()).toContain('4,096픽셀');
     expect(t.faq.flatMap((f) => f.links ?? []).map((l) => l.href)).toContain('/stamp-signature/');
-    // With the flag on (every tool) the home description still fits 80–120 characters.
+    // With the flag on (every tool) the home description still fits 40–80 characters.
     const d = defaultDescription([...TOOLS, t]);
-    expect([...d].length).toBeLessThanOrEqual(120);
-    expect([...d].length).toBeGreaterThanOrEqual(80);
+    expect([...d].length).toBeLessThanOrEqual(80);
+    expect([...d].length).toBeGreaterThanOrEqual(40);
     // E-T2-a: with ten tools the names no longer all fit; 배경 지우기 is last in HOME_DESC_ORDER, so it is counted.
     expect(d).toContain(`${TOOLS.length + 1}가지 도구`);
   });

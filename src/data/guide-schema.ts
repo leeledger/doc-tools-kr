@@ -30,6 +30,13 @@ const isoDate = z.preprocess(
 const len = (min: number, max: number) =>
   z.string().refine((s) => [...s].length >= min && [...s].length <= max, `${min}–${max} characters`);
 
+/** Page title without " | 문서딱": the rendered title (with the suffix) is at most 40 code points (SEO-LENGTH). */
+const SUFFIX_LEN = [...' | 문서딱'].length;
+const pageTitle = z
+  .string()
+  .refine((s) => [...s].length >= 4, 'at least 4 characters')
+  .refine((s) => [...s].length + SUFFIX_LEN <= 40, 'title with suffix over 40');
+
 const presetSource = z.object({ preset: z.string() }).strict();
 const urlSource = z
   .object({
@@ -68,8 +75,8 @@ export const specRowSchema = z
 
 export const publishedGuideSchema = z
   .object({
-    title: len(4, 40),
-    description: len(50, 110),
+    title: pageTitle,
+    description: len(40, 80),
     ogDescription: len(10, 80),
     query: z.string().min(2),
     answer: len(10, 120),
@@ -100,7 +107,7 @@ export const publishedGuideSchema = z
 export const draftGuideSchema = z
   .object({
     draft: z.literal(true),
-    title: len(4, 40),
+    title: pageTitle,
     query: z.string().min(2),
     blockedBy: z.string().min(4),
     publishBy: isoDate.optional(),

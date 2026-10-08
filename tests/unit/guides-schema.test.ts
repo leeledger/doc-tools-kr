@@ -195,6 +195,25 @@ describe('G2 A1: topics, spec rows, hubs', () => {
   });
   const hubGuides = published.map((g) => ({ id: g.slug, data: g.parsed }));
 
+  it('SEO-LENGTH: every published guide and hub renders a title of at most 40 (with " | 문서딱") and a 40–80 description; the schema says why', () => {
+    const len = (s: string) => [...s].length;
+    for (const { slug, data } of [...published.map((g) => ({ slug: g.slug, data: g.parsed })), ...hubFiles]) {
+      expect(len(`${data.title} | 문서딱`), slug).toBeLessThanOrEqual(40);
+      expect(len(data.description), slug).toBeGreaterThanOrEqual(40);
+      expect(len(data.description), slug).toBeLessThanOrEqual(80);
+    }
+    const base = published[0]!.data;
+    const issues = (d: Record<string, unknown>) => {
+      const r = publishedGuideSchema.safeParse(d);
+      return r.success ? [] : r.error.issues.map((i) => i.message);
+    };
+    expect(issues({ ...base, title: '가'.repeat(34) })).toEqual([]);
+    expect(issues({ ...base, title: '가'.repeat(35) })).toContain('title with suffix over 40');
+    expect(issues({ ...base, description: '가'.repeat(39) })).toContain('40–80 characters');
+    expect(issues({ ...base, description: '가'.repeat(81) })).toContain('40–80 characters');
+    expect(hubSchema.safeParse({ ...hubFiles[0]!.data, title: '가'.repeat(35) }).success).toBe(false);
+  });
+
   it('every published guide has a topic; every topic group the index shows is non-empty and lists each guide once', () => {
     for (const g of published) expect(TOPICS, g.slug).toContain(g.parsed.topic);
     const shown = TOPICS.map((t) => published.filter((g) => g.parsed.topic === t)).filter((x) => x.length);

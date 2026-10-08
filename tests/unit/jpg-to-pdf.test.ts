@@ -110,14 +110,14 @@ describe('limits', () => {
 
 describe('page copy (tools.ts)', () => {
   const tool = getTool('jpg-to-pdf');
-  it('name = h1, the brief title, an 80–120 character description with the search keyword, 4–6 FAQ answers', () => {
+  it('name = h1, the brief title, an 40–80 character description with the search keyword, 4–6 FAQ answers', () => {
     expect(tool.h1).toBe('사진 PDF 변환');
     expect(tool.name).toBe(tool.h1);
     expect(tool.status).toBe('live');
-    expect(tool.title).toBe('사진 PDF 변환 — JPG·PNG·아이폰 사진을 PDF 하나로 무료 | 문서딱');
+    expect(tool.title).toBe('사진 PDF 변환 — JPG·PNG·아이폰 사진 PDF로 무료 | 문서딱');
     expect(tool.description).toContain('사진 PDF 변환');
-    expect([...tool.description].length).toBeGreaterThanOrEqual(80);
-    expect([...tool.description].length).toBeLessThanOrEqual(120);
+    expect([...tool.description].length).toBeGreaterThanOrEqual(40);
+    expect([...tool.description].length).toBeLessThanOrEqual(80);
     expect(tool.faq.length).toBeGreaterThanOrEqual(4);
     expect(tool.faq.length).toBeLessThanOrEqual(6);
   });

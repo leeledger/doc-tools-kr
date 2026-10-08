@@ -503,7 +503,7 @@ test('axe: empty, a document with the page list and search open, after a downloa
 
 test('SEO and legal: title, H1, canonical, FAQPage JSON-LD with the notice, the Hancom and trademark lines, 3 HWP guides', async ({ page }) => {
   await gotoReady(page, '/hwp-viewer/');
-  await expect(page).toHaveTitle('HWP 뷰어 — 한글 파일(.hwp·.hwpx) 설치 없이 열기 | 문서딱');
+  await expect(page).toHaveTitle('HWP 뷰어 — 한글 파일(hwp·hwpx) 설치 없이 열기 | 문서딱');
   await expect(page.locator('h1')).toHaveCount(1);
   await expect(page.locator('h1')).toHaveText('HWP·HWPX 파일 보기');
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute('href'))!).pathname).toBe('/hwp-viewer/');

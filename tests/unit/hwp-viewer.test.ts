@@ -96,7 +96,7 @@ describe('glyphText (worker search text)', () => {
 describe('tool entry and copy (legal)', () => {
   const t = getTool('hwp-viewer');
   it('the title, H1 and FAQ follow the brief; no Hancom product name anywhere in them', () => {
-    expect(t.title).toBe('HWP 뷰어 — 한글 파일(.hwp·.hwpx) 설치 없이 열기 | 문서딱');
+    expect(t.title).toBe('HWP 뷰어 — 한글 파일(hwp·hwpx) 설치 없이 열기 | 문서딱');
     expect(t.h1).toBe('HWP·HWPX 파일 보기');
     expect(t.status).toBe('live');
     const all = [t.title, t.name, t.h1, t.description, t.summary, ...t.faq.flatMap((f) => [f.q, f.a])].join('\n');

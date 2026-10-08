@@ -568,6 +568,11 @@ describe('built output', () => {
     expect(r.stderr).toContain('PUBLIC_CONTACT_EMAIL "not-an-email" is not an email address');
     const ok = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_CONTACT_EMAIL: 'help@example.kr' }, encoding: 'utf8' });
     expect(ok.status).toBe(0);
+    // SEO-LENGTH: check-dist measured every page's meta and found none over the limits.
+    const meta = /check-dist: meta, longest title (\d+) \(.+?\), longest description (\d+) /.exec(ok.stdout);
+    expect(meta, ok.stdout).not.toBeNull();
+    expect(Number(meta![1])).toBeLessThanOrEqual(40);
+    expect(Number(meta![2])).toBeLessThanOrEqual(80);
   });
 
   it('usage statistics (brief USAGE): a stale PUBLIC_ERROR_BEACON_PATH, usage on without a contact, or a bad sample fail check-dist', () => {
@@ -710,7 +715,7 @@ describe('built output', () => {
     expect(misnamed).toEqual([]);
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
     expect(home).toContain('<meta property="og:site_name" content="문서딱">');
-    expect(home).toContain('<title>PDF 합치기·용량 줄이기, 사진 용량·증명사진 규격, 한글 PDF 변환 무료 | 문서딱</title>');
+    expect(home).toContain('<title>PDF 합치기·용량 줄이기, 사진 용량·증명사진 규격 무료 | 문서딱</title>');
     const manifest = JSON.parse(readFileSync(join(DIST, 'manifest.webmanifest'), 'utf8')) as { name: string; short_name: string };
     expect(manifest.short_name).toBe('문서딱');
     expect(manifest.name.startsWith('문서딱')).toBe(true);

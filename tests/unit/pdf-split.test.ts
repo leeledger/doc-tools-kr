@@ -7,7 +7,8 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mergePlus } from '../../src/lib/pdf/mergePlus';
 import { MB } from '../../src/lib/ui/device';
-import { LIMITS, fileLimitMessage, partsLimitMessage, softLimitMessage } from '../../src/tools/pdf-split/limits';
+import { LIMITS, MOBILE_MAX_FILE_BYTES, fileLimitMessage, partsLimitMessage, softLimitMessage } from '../../src/tools/pdf-split/limits';
+import { LIMITS as MERGE_LIMITS } from '../../src/tools/pdf-merge/limits';
 import {
   editName,
   editPlan,
@@ -151,11 +152,15 @@ describe('names', () => {
 });
 
 describe('limits', () => {
-  it('file size = the PDF 합치기 hard limits; thumbnails and parts caps per device', () => {
+  it('file size: the PDF 합치기 hard limit on PCs, its own 100 MB on phones; thumbnails and parts caps per device', () => {
     expect(LIMITS.desktop).toEqual({ maxFileBytes: 500 * MB, maxThumbPages: 500, maxParts: 500 });
-    expect(LIMITS.mobile).toEqual({ maxFileBytes: 150 * MB, maxThumbPages: 200, maxParts: 100 });
-    expect(fileLimitMessage(150 * MB, 'mobile')).toBeNull();
-    expect(fileLimitMessage(150 * MB + 1, 'mobile')).toContain('150 MB');
+    expect(LIMITS.mobile).toEqual({ maxFileBytes: 100 * MB, maxThumbPages: 200, maxParts: 100 });
+    expect(MOBILE_MAX_FILE_BYTES).toBe(100 * MB);
+    // PDF 합치기 keeps its 150 MB phone limit.
+    expect(MERGE_LIMITS.mobile.hardBytes).toBe(150 * MB);
+    expect(fileLimitMessage(100 * MB, 'mobile')).toBeNull();
+    expect(fileLimitMessage(100 * MB + 1, 'mobile')).toContain('100 MB');
+    expect(fileLimitMessage(500 * MB, 'desktop')).toBeNull();
   });
 
   it('parts cap: the message names the cap and the count', () => {

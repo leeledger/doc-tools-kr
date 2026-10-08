@@ -65,8 +65,8 @@ for (const [path, name] of [
   ['/jpg-to-pdf/', '사진 PDF 변환'],
   ['/pdf-to-jpg/', 'PDF JPG 변환'],
   ['/pdf-password/', 'PDF 암호 해제'],
-  ['/image-to-jpg/', 'JPG로 바꿉니다'],
-  ['/pdf-split/', 'PDF를 원하는 쪽으로 나누고'],
+  ['/image-to-jpg/', 'HEIC·PNG JPG 변환'],
+  ['/pdf-split/', 'PDF 분할'],
   ['/photo-compress/', '사진 용량 줄이기'],
   ['/hwp-to-pdf/', 'HWP PDF 변환'],
   ['/hwp-viewer/', 'hwp 뷰어'],
@@ -83,11 +83,12 @@ for (const [path, name] of [
       offers: { price: 0, priceCurrency: 'KRW' },
     });
     expect(data.some((d: { '@type': string }) => d['@type'] === 'BreadcrumbList')).toBe(true);
-    await expect(page).toHaveTitle(/^.{8,60} | 문서딱$/);
+    // SEO-LENGTH: at most 40 characters with " | 문서딱" (the body at most 34).
+    await expect(page).toHaveTitle(/^.{8,34} \| 문서딱$/);
     const desc = (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
     expect(desc.toLowerCase()).toContain(name.toLowerCase());
-    expect([...desc].length).toBeGreaterThanOrEqual(80);
-    expect([...desc].length).toBeLessThanOrEqual(120);
+    expect([...desc].length).toBeGreaterThanOrEqual(40);
+    expect([...desc].length).toBeLessThanOrEqual(80);
   });
 }
 

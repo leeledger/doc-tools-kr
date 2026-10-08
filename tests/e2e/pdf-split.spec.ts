@@ -168,10 +168,16 @@ test('range typos: "3-1" and "9" get messages, the button stays off; every page 
   await expect(page.locator('#ps-run')).toBeEnabled();
 
   await mode(page, '편집한 PDF 하나로');
+  // 「고른 쪽 빼기」 disables itself once its pages are out: focus moves to 「모두 선택」, or to the first 되살리기 when
+  // no page is left to choose (U2 review).
+  await row(page, 4).locator('[data-role="pick"]').check();
+  await page.locator('#ps-remove-sel').click();
+  await expect(page.locator('#ps-all')).toBeFocused();
   await page.locator('#ps-all').click();
   await expect(page.locator('#ps-all')).toHaveText('선택 해제');
   await page.locator('#ps-remove-sel').click();
   await expect(page.locator('#ps-list li.removed')).toHaveCount(5);
+  await expect(row(page, 0).locator('[data-role="remove"]')).toBeFocused();
   await expect(page.locator('#ps-run')).toBeDisabled();
   await expect(page.locator('#ps-hint')).toHaveText('쪽을 하나 이상 남겨 주세요.');
   await row(page, 0).locator('[data-role="remove"]').click();
@@ -217,6 +223,8 @@ test('signed PDF: the result warns that the signature is no longer valid; an uns
 
 test('page pictures are drawn for the rows and turn with 돌리기; a file that is not a PDF gets a message', async ({ page }) => {
   await open(page, FIVE);
+  await expect(page.locator('#ps-notice')).toBeHidden();
+  await expect(page.locator('#ps-run')).toHaveAttribute('aria-describedby', 'ps-hint');
   await expect(page.locator('#ps-list .thumb canvas')).toHaveCount(5);
   await row(page, 0).locator('[data-role="rotate"]').click();
   await expect(row(page, 0).locator('.thumb canvas')).toHaveAttribute('style', /rotate\(90deg\)/);
@@ -225,6 +233,19 @@ test('page pictures are drawn for the rows and turn with 돌리기; a file that 
   await page.setInputFiles('#ps-input', runtimePath('not_a_pdf'));
   await expect(page.locator('#ps-error')).toHaveText('PDF 파일이 아닙니다. PDF 파일을 골라 주세요.');
   await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'empty');
+
+  // Two PDFs dropped at once: the first opens and the notice saying so stays after the open (U2 review).
+  const dt = await page.evaluateHandle((b64) => {
+    const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const t = new DataTransfer();
+    for (const name of ['a.pdf', 'b.pdf']) t.items.add(new File([bin], name, { type: 'application/pdf' }));
+    return t;
+  }, readFileSync(FIVE).toString('base64'));
+  await page.dispatchEvent('#ps-drop', 'dragover', { dataTransfer: dt });
+  await page.dispatchEvent('#ps-drop', 'drop', { dataTransfer: dt });
+  await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#ps-notice')).toHaveText('PDF 파일은 한 번에 하나만 편집할 수 있어 첫 번째 파일만 열었습니다.');
+  await expect(page.locator('#ps-list li')).toHaveCount(5);
 });
 
 test('axe: the page list (a removed and a turned page, 범위대로 나누기 with an error) and the result have no serious or critical violations', async ({ page }) => {
