@@ -11,6 +11,7 @@ import { LIMITS as MERGE_LIMITS, MAX_FILES } from '../tools/pdf-merge/limits';
 import { LIMITS as JPG_PDF_LIMITS } from '../tools/jpg-to-pdf/limits';
 import { LIMITS as PDF_JPG_LIMITS } from '../tools/pdf-to-jpg/limits';
 import { LIMITS as PDF_PW_LIMITS, PASSWORD_MAX, PASSWORD_MIN } from '../tools/pdf-password/limits';
+import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
 import { LIMITS as PHOTO_LIMITS } from '../tools/photo-compress/limits';
 import { KB_BYTES, RANGES } from '../tools/photo-compress/options';
 
@@ -55,6 +56,10 @@ export const TOOL_FACTS = {
   'pdf-password.maxFileMb.mobile': { value: PDF_PW_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
   'pdf-password.passwordMin': { value: PASSWORD_MIN },
   'pdf-password.passwordMax': { value: PASSWORD_MAX },
+  'image-to-jpg.maxImages.desktop': { value: IMG_JPG_LIMITS.desktop.maxImages },
+  'image-to-jpg.maxImages.mobile': { value: IMG_JPG_LIMITS.mobile.maxImages },
+  'image-to-jpg.maxFileMb.desktop': { value: IMG_JPG_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
+  'image-to-jpg.maxFileMb.mobile': { value: IMG_JPG_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
   // HWP (1 MB = 1,000,000 bytes there): the largest file a device opens, the PDF caps on phones, the search span.
   'hwp.maxMb.desktop': { value: HWP_LIMITS.desktop.hardBytes / MB_DEC, unit: 'MB' },
   'hwp.maxMb.mobile': { value: HWP_LIMITS.mobile.hardBytes / MB_DEC, unit: 'MB' },

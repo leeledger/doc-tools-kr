@@ -10,7 +10,7 @@ import { detectDevice, type Device } from './device';
 
 export const USAGE_ON: boolean = __USAGE_STATS__;
 
-export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password';
+export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg';
 export type UsagePhase = 'load' | 'parse' | 'process' | 'save';
 export type UsageSetting =
   | { o: 'target-kb'; v: 'le100' | 'le200' | 'le300' | 'le500' | 'le1000' | 'gt1000' }
@@ -20,7 +20,8 @@ export type UsageSetting =
   | { o: 'mode'; v: 'cloud' | 'device' }
   | { o: 'page'; v: 'fit' | 'a4' }
   | { o: 'ppi'; v: 'p96' | 'p150' | 'p300' }
-  | { o: 'action'; v: 'lock' | 'unlock' };
+  | { o: 'action'; v: 'lock' | 'unlock' }
+  | { o: 'to'; v: 'jpg' | 'png' | 'webp' };
 
 /** What a tool reports. Tool pages never build the payload themselves. */
 export type UsageEvent =

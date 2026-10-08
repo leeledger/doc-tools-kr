@@ -187,6 +187,8 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .file-list > .file-item > .row-note { grid-column: 1 / -1; margin: 4px 0; }
 .file-list > .file-item > .pw { grid-area: auto; grid-column: 1 / -1; padding-bottom: 4px; }
 .file-list .thumb { width: 48px; height: 64px; border-radius: 6px; }
+/* A list without reordering (사진 JPG 변환): no handle column. */
+.file-list.no-handle > .file-item { grid-template-columns: 48px minmax(0, 1fr) auto; grid-template-areas: "thumb meta actions"; }
 .file-list .thumb-ph { font-size: 12px; text-align: center; line-height: 1.2; }
 .file-list .meta .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .file-list .meta .info { font-size: 14.5px; }
@@ -206,6 +208,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 @media (max-width: 400px) {
   /* At phone widths the name needs the room more than the thumbnail does. */
   .file-list > .file-item { grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "handle meta actions"; }
+  .file-list.no-handle > .file-item { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "meta actions"; }
   .file-list .thumb { display: none; }
 }
 @media (max-width: 640px) {

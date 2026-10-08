@@ -53,7 +53,7 @@ describe('shapeUsage admin fields', () => {
       'engine', 'unknown', 'corrupt', 'empty', 'not-image', 'not-pdf', 'not-hwp', 'animated', 'dims', 'oom', 'timeout', 'too-large', 'too-big', 'too-many',
       'truncated', 'unsupported', 'verify', 'zip', 'encode', 'noimage', 'already-encrypted', 'not-encrypted', 'password', 'wrong-password', 'distribution',
       'heic', 'canvas', 'crash', 'mask', 'nosubject', 'unreachable', 'target-unreachable', 'network', 'model-corrupt', 'allpaper', 'noink',
-      'cloud-busy', 'cloud-quota', 'cloud-failed',
+      'cloud-busy', 'cloud-quota', 'cloud-failed', 'encoder',
     ];
     for (const c of SENT) expect(FAIL_LABELS[c as keyof typeof FAIL_LABELS], c).toMatch(/[가-힣]/);
   });

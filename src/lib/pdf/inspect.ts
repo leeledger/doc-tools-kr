@@ -1,6 +1,6 @@
 // Main-thread inspection of one PDF with pdf.js: page count, encryption status, page-1 thumbnail.
 // pdf.js is imported dynamically the first time a file is inspected, so it is not part of the initial page JS.
-// openPdf / renderPageCanvas are shared with PDF 용량 줄이기 (result check, previews, raster rendering).
+// openPdf / renderPageThumb are shared with PDF 용량 줄이기 (result check, previews, raster rendering).
 import { EngineLoadError, isEngineLoadFailure, withEngineRetry } from '../ui/engine-load';
 import { PdfCorruptError, PdfWrongPasswordError, assertPdfHeader } from './errors';
 
@@ -102,11 +102,20 @@ export async function openPdf(bytes: Uint8Array, password?: string): Promise<Ope
   }
 }
 
-/** Renders page `pageNo` (1-based) `cssWidth` CSS px wide at min(devicePixelRatio, 2). Null if rendering failed. */
-export async function renderPageCanvas(doc: PdfJsDoc, pageNo: number, cssWidth: number): Promise<HTMLCanvasElement | null> {
+/** CSS size of a `unitW` × `unitH` page drawn at most `maxW` wide and `maxH` tall, aspect kept. Pure. */
+export function thumbCssWidth(unitW: number, unitH: number, maxW: number, maxH = Infinity): number {
+  return Math.min(maxW, (maxH * unitW) / unitH);
+}
+
+/**
+ * Renders page `index` (0-based) at most `maxW` × `maxH` CSS px (aspect kept; `maxH` unbounded by default, so the
+ * page is `maxW` wide) at min(devicePixelRatio, 2). Null if rendering failed.
+ */
+export async function renderPageThumb(doc: PdfJsDoc, index: number, maxW: number, maxH = Infinity): Promise<HTMLCanvasElement | null> {
   try {
-    const page = await doc.getPage(pageNo);
+    const page = await doc.getPage(index + 1);
     const unit = page.getViewport({ scale: 1 });
+    const cssWidth = thumbCssWidth(unit.width, unit.height, maxW, maxH);
     const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
     const viewport = page.getViewport({ scale: (cssWidth * dpr) / unit.width });
     const canvas = document.createElement('canvas');
@@ -135,7 +144,7 @@ export async function inspect(bytes: Uint8Array, password?: string): Promise<Ins
   try {
     const pageCount = doc.numPages;
     const encrypted: EncryptionStatus = password ? 'user' : (await doc.getPermissions()) !== null ? 'owner' : 'none';
-    const thumbnail = await renderPageCanvas(doc, 1, THUMB_WIDTH);
+    const thumbnail = await renderPageThumb(doc, 0, THUMB_WIDTH);
     return { pageCount, encrypted, thumbnail };
   } finally {
     await opened.close();

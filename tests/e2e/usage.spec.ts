@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import type { Page, Request } from '@playwright/test';
 import { validate } from '../../scripts/lib/usage.mjs';
 import { expect, gotoReady, test } from './no-upload';
-import { fixturePath, photoFixture, runtimePath } from './paths';
+import { fixturePath, photoFixture, photoRuntime, runtimePath } from './paths';
 
 test.use({ allowUpload: [{ method: 'POST', path: '/api/usage' }] });
 test.describe.configure({ timeout: 120_000 });
@@ -160,6 +160,29 @@ test('PDF 암호 해제·설정 (TOOLS4 T4): lock = pick, start (o=action, v=loc
     expect(b.body).not.toContain(password);
     expect(b.body).not.toMatch(/gen_links_outline|encrypted|쪽/);
     for (const [k, v] of Object.entries(b.ev)) if (k !== 'b') expect(String(v), k).not.toMatch(/1234|0000|문서딱/);
+  }
+});
+
+test('사진 JPG 변환 (TOOLS5 U1): a batch with three HEIC this browser cannot open sends fail c=heic exactly once; then start (o=to, v=webp), success, download; no name, size or count', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/image-to-jpg/');
+  const heic = readFileSync(photoRuntime('fake.heic'));
+  const heics = ['IMG_0001.HEIC', 'IMG_0002.HEIC', 'IMG_0003.HEIC'].map((name) => ({ name, mimeType: 'image/heic', buffer: heic }));
+  await page.setInputFiles('#ij-input', [...heics, { name: 'portrait_pd.jpg', mimeType: 'image/jpeg', buffer: readFileSync(PORTRAIT) }]);
+  await expect(page.locator('#ij-list .file-error')).toHaveCount(3);
+  await page.locator('label.chip', { hasText: 'WebP' }).click();
+  await page.locator('#ij-run').click();
+  await expect(page.locator('#ij-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#ij-download').click()]);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'fail', 'start', 'success', 'download']);
+  expectClean(beacons);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'fail', t: 'image-to-jpg', c: 'heic', p: 'parse' });
+  expect(typeof beacons[1]!.ev.br).toBe('string');
+  expect(beacons[2]!.ev).toMatchObject({ e: 'start', t: 'image-to-jpg', o: 'to', v: 'webp' });
+  for (const b of beacons) {
+    expect(b.ev).toMatchObject({ t: 'image-to-jpg', via: 'direct', w: 1 });
+    expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
+    expect(b.body).not.toMatch(/IMG_000|장/);
   }
 });
 

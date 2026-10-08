@@ -1,0 +1,135 @@
+---
+// /image-to-jpg/ (TOOLS5 U1): HEIC·PNG·WebP·JPG·AVIF·GIF·BMP -> JPG, PNG or WebP, many at once (one file or one ZIP).
+// The controller loads on the first interaction (entry.ts); @jsquash/webp only if the browser cannot save WebP itself.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+
+const tool = getTool('image-to-jpg');
+const jsonLd = toolJsonLd(tool, Astro.site);
+const accept = 'image/jpeg,image/png,image/webp,image/avif,image/gif,image/bmp,.jpg,.jpeg,.png,.webp,.avif,.gif,.bmp,.heic,.heif';
+const groups = [
+  { name: 'ij-to', legend: '저장 형식', options: [{ value: 'jpg', label: 'JPG' }, { value: 'png', label: 'PNG' }, { value: 'webp', label: 'WebP' }] },
+  { name: 'ij-quality', legend: '화질', options: [{ value: 'high', label: '높음' }, { value: 'normal', label: '보통' }, { value: 'small', label: '작게' }] },
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">아이폰 사진(HEIC), PNG, WebP를 JPG로 바꿉니다. 여러 장을 한 번에 바꾸고, PNG나 WebP로도 저장할 수 있습니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="ij-tool" class="merge" data-state="empty">
+        <div class="drop" id="ij-drop">
+          <input id="ij-input" class="file-input" type="file" accept={accept} multiple>
+          <label class="btn primary" for="ij-input" id="ij-pick">사진 선택</label>
+          <p class="drop-hint">또는 여기에 사진을 끌어다 놓으세요 (아이폰 사진·PNG·WebP·JPG 등)</p>
+          <p class="drop-hint-touch">휴대폰의 사진 보관함이나 「파일」 앱에서 여러 장을 고를 수 있습니다.</p>
+          <p class="privacy-note">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="error-box" id="ij-unsupported" role="alert" hidden>지금 쓰는 앱에서는 사진 JPG 변환이 안 됩니다. Chrome·Safari·삼성 인터넷 등 다른 앱으로 이 페이지를 열어 주세요.</p>
+        <p class="notice" id="ij-notice" hidden></p>
+        <EngineError />
+
+        <ol class="file-list no-handle" id="ij-list" aria-label="바꿀 사진 목록" hidden></ol>
+
+        <div class="merge-controls ph-controls" id="ij-controls" hidden>
+          {groups.map((g) => (
+            <fieldset class="levels" id={`${g.name}-group`}>
+              <legend>{g.legend}</legend>
+              <div class="chips">
+                {g.options.map((o, i) => (
+                  <label class="chip"><input type="radio" name={g.name} value={o.value} checked={i === 0}><span>{o.label}</span></label>
+                ))}
+              </div>
+            </fieldset>
+          ))}
+          <p class="hint" id="ij-hint"></p>
+        </div>
+
+        <div class="row merge-actions" id="ij-actions" hidden>
+          <button type="button" class="btn primary" id="ij-run" disabled>변환하기</button>
+          <input id="ij-add" class="file-input" type="file" accept={accept} multiple>
+          <label class="btn ghost" for="ij-add" id="ij-add-label">사진 추가</label>
+        </div>
+
+        <div class="progress-box" id="ij-progress" hidden>
+          <p id="ij-progress-text">바꾸는 중…</p>
+          <progress id="ij-progress-bar" max="1" value="0" aria-labelledby="ij-progress-text"></progress>
+          <button type="button" class="btn ghost" id="ij-cancel">취소</button>
+        </div>
+
+        <div class="result" id="ij-result" hidden>
+          <p class="result-title" id="ij-headline" tabindex="-1">사진이 준비되었습니다</p>
+          <p class="result-summary" id="ij-summary"></p>
+          <div class="row">
+            <a class="btn primary" id="ij-download" download tabindex="0">내려받기</a>
+            <button type="button" class="btn ghost" id="ij-reset">다른 사진 처리하기</button>
+          </div>
+          <p class="save-name" id="ij-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/image-to-jpg/', Astro.site!).description} id="ij-share" />
+          <p class="related-line">용량도 줄이려면 <a href="/photo-compress/">사진 용량 줄이기</a>를 쓰고, 여러 장을 PDF 하나로 묶으려면 <a href="/jpg-to-pdf/">사진 PDF 변환</a>을 쓰세요.</p>
+        </div>
+
+        <p class="error-box" id="ij-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="ij-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="image-to-jpg-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>사진 선택</strong><span>바꿀 사진을 고르거나 끌어다 놓습니다. 여러 장을 한 번에 고를 수 있습니다.</span></li>
+        <li><strong>저장 형식 고르기</strong><span>JPG·PNG·WebP 중에서 저장 형식을 고르고, JPG와 WebP는 화질도 고릅니다.</span></li>
+        <li><strong>바꾸고 내려받기</strong><span>변환하기를 누른 뒤 내려받기로 저장합니다. 여러 장은 ZIP 파일 하나로 받습니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>사진 정보는 지웁니다</strong><span>촬영 날짜·위치 같은 정보는 지우고 저장합니다. 옆으로 누운 사진은 바로 세워 저장합니다.</span></li>
+        <li><strong>설치·가입하지 않습니다</strong><span>PC와 휴대폰에서 이 페이지를 열면 바로 쓸 수 있습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['photo-compress', 'jpg-to-pdf', 'id-photo']} />
+  <div class="wrap narrow"><AdSlot id="image-to-jpg-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import '../../tools/image-to-jpg/entry';
+</script>

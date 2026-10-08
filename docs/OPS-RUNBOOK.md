@@ -94,7 +94,7 @@ Actions에서는 각 워크플로의 **Run workflow**에 “Dry run” 체크박
    - `PUBLIC_CONTACT_EMAIL`이 있어야 합니다(없으면 빌드 실패). `PUBLIC_ERROR_BEACON_PATH`가 있으면 지웁니다(없어진 설정이라 빌드 실패).
 4. GitHub → Settings → Secrets and variables → Actions: `AE_API_TOKEN`, `CF_ACCOUNT_ID` (§2 표). 주간 성장 리포트에 "도구 사용 (지난 7일)" 표가 붙습니다.
 5. Pages → Deployments → 최신 배포 → Retry deployment. 확인: `https://docttak.com/admin/`이 비밀번호를 묻습니다(사용자 이름 `admin`). 도구를 한 번 써 보고 몇 분 뒤 새로고침하면 표에 줄이 생깁니다.
-6. (선택) Security → WAF → Rate limiting rules: `/api/usage`에 IP당 10초 60회 넘으면 차단. (선택) Zero Trust → Access로 `docttak.com/admin*`에 한 겹 더 잠금.
+6. Security → WAF → Rate limiting rules: **설정됨 (2026-10-08)** — `/api/`로 시작하는 요청이 같은 IP·같은 데이터센터에서 10초에 100회를 넘으면 10초 차단(무료 요금제 규칙 1개). 시험: 250회 연속 요청 중 79회가 429, 홈은 영향 없음, 10초 뒤 자동 해제. (선택) Zero Trust → Access로 `docttak.com/admin*`에 한 겹 더 잠금.
 
 - **끄기:** `PUBLIC_USAGE_STATS`를 지우고 다시 배포합니다(통계 코드가 사이트에서 빠집니다). 쌓인 기록은 3개월 안에 지워집니다.
 - **요청 한도:** `/api/usage`와 배경 지우기(`/api/remove-bg`), `/admin/`은 Workers 무료 한도(하루 10만 요청)를 함께 씁니다. 방문이 늘어 한도에 가까워지면 `PUBLIC_USAGE_SAMPLE`을 낮춥니다(예: 0.2). Analytics Engine은 하루 기록 10만 건·조회 1만 건까지 포함입니다.

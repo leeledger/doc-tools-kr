@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   BLOB_KEYS,
+  FAIL_LABELS,
   LEVEL_IDS,
   MAX_BODY,
   PRESETS,
@@ -757,6 +758,34 @@ describe('PDF 암호 해제·설정 (TOOLS4 T4)', () => {
       ['PDF 암호 해제·설정', '할 일', '암호 풀기', '3'],
       ['PDF 암호 해제·설정', '할 일', '암호 걸기', '1'],
     ]);
+  });
+});
+
+describe('사진 JPG 변환 (TOOLS5 U1)', () => {
+  it('tool and 저장 형식 setting are whitelisted (jpg / png / webp only); its fail codes pass; unknown values are refused', () => {
+    expect(TOOLS).toContain('image-to-jpg');
+    for (const v of ['jpg', 'png', 'webp']) expect(validate(body({ ...BASE, t: 'image-to-jpg', e: 'start', o: 'to', v })), v).not.toBeNull();
+    for (const v of ['avif', 'JPG', 'heic', 'IMG_0001.jpg']) expect(validate(body({ ...BASE, t: 'image-to-jpg', e: 'start', o: 'to', v })), v).toBeNull();
+    for (const c of ['heic', 'not-image', 'corrupt', 'empty', 'too-many', 'too-big', 'canvas', 'encoder', 'oom', 'engine', 'unknown']) {
+      expect(validate(body({ ...BASE, t: 'image-to-jpg', e: 'fail', c, p: 'parse' })), c).not.toBeNull();
+    }
+  });
+
+  it('admin labels are Korean: 사진 JPG 변환, 저장 형식, JPG / PNG / WebP, and the encoder failure', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'image-to-jpg', event: 'success', via: 'direct', n: 4 }],
+      settings: [
+        { tool: 'image-to-jpg', setting: 'to', value: 'jpg', n: 3 },
+        { tool: 'image-to-jpg', setting: 'to', value: 'webp', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('사진 JPG 변환');
+    expect(settings!.rows).toEqual([
+      ['사진 JPG 변환', '저장 형식', 'JPG', '3'],
+      ['사진 JPG 변환', '저장 형식', 'WebP', '1'],
+    ]);
+    expect(FAIL_LABELS.encoder).toBe('고른 형식으로 저장 실패');
   });
 });
 

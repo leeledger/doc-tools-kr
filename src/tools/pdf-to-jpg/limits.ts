@@ -1,6 +1,6 @@
 // Device limits for PDF JPG 변환 (brief TOOLS4 T3). The FAQ and the guides' tool facts read these numbers.
 import { MB, type Device } from '../../lib/ui/device';
-import type { CanvasCaps } from './scale';
+import type { CanvasCaps } from '../../lib/image/caps';
 
 /** 선명도: the resolution each page is drawn at (pixels per inch of the page). */
 export const PPI = { p96: 96, p150: 150, p300: 300 } as const;

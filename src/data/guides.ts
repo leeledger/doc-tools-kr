@@ -48,7 +48,8 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
  * HWP·HWPX 파일 보기 → the three HWP guides (G2 A0); PDF 합치기 → 대학 원서 서류 (G2 A1); 전자서명·도장 이미지 만들기 → its two guides (Sprint C, C1);
  * 사진 PDF 변환 → 대학 원서 서류 (A4 PDF로 내는 서류), PDF 합치기, PDF 용량 줄이기 (TOOLS4 T2);
  * PDF JPG 변환 → 사진 용량 맞추기 (사진만 받는 제출처), PDF 용량 줄이기, 메일 첨부 용량 (TOOLS4 T3);
- * PDF 암호 해제·설정 → PDF 합치기, PDF 용량 줄이기, 연말정산 PDF (TOOLS4 T4; its own guide comes first by `tools`).
+ * PDF 암호 해제·설정 → PDF 합치기, PDF 용량 줄이기, 연말정산 PDF (TOOLS4 T4; its own guide comes first by `tools`);
+ * 사진 JPG 변환 → 사진 용량 맞추기 (HEIC가 안 열릴 때 포함), 대학 원서 서류 (파일 형식이 안 맞을 때), 큐넷 사진 (JPG만 받는 곳) (TOOLS5 U1).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
@@ -58,6 +59,7 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'jpg-to-pdf': ['univ-docs-upload', 'pdf-merge', 'pdf-compress'],
   'pdf-to-jpg': ['photo-kb', 'pdf-compress', 'email-attachment-limit'],
   'pdf-password': ['pdf-merge', 'pdf-compress', 'yearend-tax-pdf'],
+  'image-to-jpg': ['photo-kb', 'univ-docs-upload', 'qnet-photo'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */

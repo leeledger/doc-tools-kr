@@ -29,7 +29,7 @@ export const BYPASS = ['/sw.js', '/deploy-manifest.json'];
  * (/_astro/) and engines (/vendor/ qpdf, pdf.js, rhwp) are runtime-cached on first use, so a returning visitor can work
  * offline. /remove-background/ is not here: it needs the network for its model or cloud path anyway.
  */
-export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/'];
+export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/'];
 /** 배경 지우기 (Sprint C, C2): the model and the runtime go straight to the network (src/lib/bgremove/assets.ts caches them). */
 export const NETWORK_PREFIXES = ['/vendor/birefnet-lite-512/', '/vendor/onnxruntime-web/'];
 export const NAV_TIMEOUT_MS = 3000;

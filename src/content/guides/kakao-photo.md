@@ -10,7 +10,7 @@ category: 사진
 topic: 사진 보내기
 tools: [photo-compress]
 cta: { href: '/photo-compress/', label: '사진 용량 줄이기' }
-related: [photo-kb, email-attachment-limit, id-photo-kb]
+related: [photo-kb, email-attachment-limit, id-photo-kb, heic-to-jpg]
 sources:
   - url: https://cs.kakao.com/helps_html/1073209424
     title: 카카오 고객센터 — 첨부/ 전송할 수 있는 멀티미디어는 무엇인가요?

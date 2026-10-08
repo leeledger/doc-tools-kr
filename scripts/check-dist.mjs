@@ -165,6 +165,27 @@ budget('password.worker*.js (pdf-password)', match(/^_astro\/password\.worker[^/
     budget('pdf-password controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 6 * KB);
   }
 }
+// 사진 JPG 변환 (TOOLS5 U1): no worker (canvas on the main thread). The controller (the controller*.js chunk that owns
+// #ij-quality-group, and what only it imports, fflate's Zip included) loads on the first interaction, never with the page;
+// no initial script of the page names the ZIP code or @jsquash/webp, and the WebP fallback (@jsquash/webp and its wasm)
+// is not in the controller's static imports either: webp.worker loads only when the browser cannot save WebP itself
+// (controller 18.3 KB gzip measured with the shared decode/sniff/strip/raster and fflate's Zip, budget + 20 %; webp.worker
+// 9.3 KB gzip measured, budget + 20 %).
+budget('webp.worker*.js (image-to-jpg WebP fallback)', match(/^_astro\/webp\.worker[^/]*\.js$/), 11.2 * KB);
+{
+  const html = pageHtml.get('image-to-jpg/index.html');
+  if (!html) errors.push('image-to-jpg/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('ij-quality-group'));
+    if (controller.length !== 1) errors.push(`image-to-jpg controller: ${controller.length} chunk(s) name #ij-quality-group, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /image-to-jpg/ controller loads with the page');
+    for (const f of initial) if (/ZipPassThrough|webp_enc|wasm-feature-detect/.test(read(f).toString('utf8'))) errors.push(`${f}: the ZIP code or the WebP encoder in the /image-to-jpg/ initial JS`);
+    const closure = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
+    for (const f of closure) if (/webp_enc|mozjpeg_enc/.test(read(f).toString('utf8'))) errors.push(`${f}: an image codec in the /image-to-jpg/ controller's static imports (the WebP fallback is its own worker)`);
+    budget('image-to-jpg controller (lazy)', closure, 22 * KB);
+  }
+}
 if (!autoframe) {
   for (const f of files) if (/mediapipe|vision_bundle|vision_wasm|face_landmarker/i.test(f.path)) errors.push(`${f.path}: MediaPipe file in a build without auto-framing`);
   for (const js of match(/\.m?js$/)) if (/FaceLandmarker|odml\.pa\.googleapis/.test(read(js).toString('latin1'))) errors.push(`${js} contains MediaPipe code in a build without auto-framing`);

@@ -24,6 +24,7 @@ export const HOME_DESC_ORDER: readonly string[] = [
   'pdf-compress',
   'jpg-to-pdf',
   'pdf-to-jpg',
+  'image-to-jpg',
   'hwp-to-pdf',
   'hwp-viewer',
   'pdf-password',

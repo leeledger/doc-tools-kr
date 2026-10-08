@@ -6,6 +6,7 @@ export default {
   "ecfs-pdf-limit": "전자소송 PDF 용량, 파일 하나 20MB까지",
   "email-attachment-limit": "메일 첨부파일 용량 제한, 지메일·아웃룩 기준",
   "gosi-photo": "공무원 시험 원서 사진 규격 (국가직)",
+  "heic-to-jpg": "아이폰 HEIC 사진 JPG로 바꾸는 법",
   "history-exam-photo": "한국사능력검정시험 원서 사진 규격",
   "hwp-on-phone": "휴대폰·아이폰에서 HWP 열기",
   "hwp-to-pdf": "HWP PDF 변환, 한글 파일을 PDF로 바꾸는 법",

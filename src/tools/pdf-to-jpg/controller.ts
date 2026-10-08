@@ -16,9 +16,10 @@ import { formatPages, formatSize } from '../../lib/ui/format';
 import { bindPasswordToggle } from '../../lib/ui/password';
 import { isPdfFile } from '../../lib/ui/pdf-pick';
 import { track, type UsagePhase } from '../../lib/ui/usage';
+import { StoredZip } from '../../lib/zip/stored';
 import { CanvasError, TaskSlot, restrictionNote, runErrorCode } from './guards';
 import { DEFAULT_PPI, LIMITS, PPI, fileLimitMessage, runLimitMessage, type PpiLevel } from './limits';
-import { JpegZip, jpgName, zipName } from './output';
+import { jpgName, zipName } from './output';
 import { pageScale } from './scale';
 
 type State = 'empty' | 'opening' | 'locked' | 'ready' | 'working' | 'done';
@@ -337,7 +338,7 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
     status('JPG로 바꾸는 중입니다.');
     cancelBtn.focus();
 
-    const zip = pages.length > 1 ? new JpegZip() : null;
+    const zip = pages.length > 1 ? new StoredZip() : null;
     let single: Uint8Array | null = null;
     const clamped: { page: number; width: number; height: number }[] = [];
     try {

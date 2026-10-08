@@ -32,6 +32,7 @@ const PAGES = [
   ['jpgpdf', '/jpg-to-pdf/'],
   ['pdfjpg', '/pdf-to-jpg/'],
   ['pdfpw', '/pdf-password/'],
+  ['imgjpg', '/image-to-jpg/'],
   ['photo', '/photo-compress/'],
   ['hwp', '/hwp-to-pdf/'],
   ['hwpview', '/hwp-viewer/'],

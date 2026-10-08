@@ -6,7 +6,8 @@ import { TOOL_FACTS } from '../../src/data/tool-facts';
 import { MB } from '../../src/lib/ui/device';
 import { LIMITS, PPI, fileLimitMessage, pageCap, runLimitMessage } from '../../src/tools/pdf-to-jpg/limits';
 import { CanvasError, RESTRICTED_NOTE, TaskSlot, restrictionNote, runErrorCode } from '../../src/tools/pdf-to-jpg/guards';
-import { JpegZip, jpgName, zipName } from '../../src/tools/pdf-to-jpg/output';
+import { StoredZip } from '../../src/lib/zip/stored';
+import { jpgName, zipName } from '../../src/tools/pdf-to-jpg/output';
 import { pageScale } from '../../src/tools/pdf-to-jpg/scale';
 
 const A4 = [595.28, 841.89] as const;
@@ -94,10 +95,10 @@ describe('output', () => {
     expect(zipName('a:b?.pdf')).toBe('ab_jpg.zip');
   });
 
-  it('JpegZip: a stored ZIP whose entries are the JPEG bytes as given, in order, with Korean names', async () => {
+  it('StoredZip: a stored ZIP whose entries are the JPEG bytes as given, in order, with Korean names', async () => {
     const a = new Uint8Array([0xff, 0xd8, 1, 2, 3, 0xff, 0xd9]);
     const b = new Uint8Array([0xff, 0xd8, 9, 9, 0xff, 0xd9]);
-    const zip = new JpegZip();
+    const zip = new StoredZip();
     zip.add('보고서_p001.jpg', a);
     zip.add('보고서_p002.jpg', b);
     const blob = await zip.finish();
@@ -111,7 +112,7 @@ describe('output', () => {
     expect(bytes[8] | (bytes[9]! << 8)).toBe(0);
   });
 
-  describe('JpegZip memory (T3 review Should Fix 3)', () => {
+  describe('StoredZip memory (T3 review Should Fix 3)', () => {
     afterEach(() => vi.unstubAllGlobals());
 
     it('wraps every chunk in its own Blob; the final Blob is made of Blobs only, never raw byte arrays', async () => {
@@ -124,7 +125,7 @@ describe('output', () => {
         }
       }
       vi.stubGlobal('Blob', Spy);
-      const zip = new JpegZip();
+      const zip = new StoredZip();
       zip.add('a.jpg', new Uint8Array(1000).fill(7));
       zip.add('b.jpg', new Uint8Array(500).fill(9));
       const blob = await zip.finish();

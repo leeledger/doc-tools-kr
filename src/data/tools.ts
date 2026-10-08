@@ -5,6 +5,7 @@ import { LIMITS as JPG_PDF_LIMITS } from '../tools/jpg-to-pdf/limits';
 import { LIMITS as PDF_JPG_LIMITS, PPI } from '../tools/pdf-to-jpg/limits';
 import { pageScale } from '../tools/pdf-to-jpg/scale';
 import { LIMITS as PDF_PW_LIMITS, PASSWORD_MAX, PASSWORD_MIN } from '../tools/pdf-password/limits';
+import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
 
 /** HWP numbers in the /hwp-viewer/ FAQ, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -50,6 +51,16 @@ const PDF_PW_FAQ = {
   filePhone: `${n(PDF_PW_LIMITS.mobile.maxFileBytes / MB)} MB`,
   min: `${PASSWORD_MIN}자`,
   max: `${PASSWORD_MAX}자`,
+} as const;
+
+/** 사진 JPG 변환 numbers in its FAQ, read from its limits (MB = 1,048,576 bytes, as in the tool). */
+const IMG_JPG_FAQ = {
+  imagesPc: `${n(IMG_JPG_LIMITS.desktop.maxImages)}장`,
+  imagesPhone: `${n(IMG_JPG_LIMITS.mobile.maxImages)}장`,
+  filePc: `${n(IMG_JPG_LIMITS.desktop.maxFileBytes / MB)} MB`,
+  filePhone: `${n(IMG_JPG_LIMITS.mobile.maxFileBytes / MB)} MB`,
+  totalPc: `${n(IMG_JPG_LIMITS.desktop.maxTotalBytes / MB)} MB`,
+  totalPhone: `${n(IMG_JPG_LIMITS.mobile.maxTotalBytes / MB)} MB`,
 } as const;
 
 export type ToolStatus = 'live' | 'soon';
@@ -374,6 +385,47 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['사진 용량 줄이기', '이미지 용량 줄이기', '증명사진 용량 줄이기', '사진 kb 줄이기', 'jpg 용량 줄이기'],
+  },
+  {
+    // TOOLS5 U1. name = h1 (COPY.md). No release flag (TOOLS4 decision 1): static, sends nothing, one revert rolls it back.
+    slug: 'image-to-jpg',
+    name: '사진 JPG 변환',
+    title: 'HEIC·PNG JPG 변환 — 아이폰 사진·PNG·WebP를 JPG로, 여러 장 한 번에 무료 | 문서딱',
+    description:
+      '아이폰 HEIC 사진, PNG, WebP를 JPG로 바꿉니다. 여러 장을 한 번에 바꿔 ZIP으로 받고, PNG·WebP로도 저장합니다. 촬영 위치 같은 정보는 지웁니다. 가입 없이 무료.',
+    h1: '사진 JPG 변환',
+    summary: '아이폰 사진(HEIC)·PNG·WebP를 JPG로 바꿉니다. 여러 장을 한 번에 바꿀 수 있습니다.',
+    icon: '<rect x="3" y="4" width="12" height="10" rx="1.5"/><path d="M3 11l3-3 3 3"/><path d="M14 18h7M18 15l3 3-3 3"/>',
+    status: 'live',
+    updated: '2026-10-08',
+    faq: [
+      {
+        q: '아이폰 사진(HEIC)이 안 열려요.',
+        a: '아이폰 사진 형식(HEIC)은 기기나 앱에 따라 열리지 않을 수 있습니다. 그럴 때는 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 고르거나, 사진을 JPG로 내보낸 뒤 다시 선택해 주세요. 열리지 않는 사진만 목록에 표시되고, 나머지 사진은 그대로 바꿉니다.',
+      },
+      {
+        q: 'PNG를 JPG로 바꾸면 투명한 곳은 어떻게 되나요?',
+        a: 'JPG에는 투명한 부분이 없어 흰색으로 채웁니다. 투명한 배경을 지키려면 저장 형식에서 PNG나 WebP를 고르세요.',
+      },
+      {
+        q: '촬영 위치 정보도 남나요?',
+        a: '아니요. 촬영 날짜·위치 같은 사진 정보는 지우고 저장합니다. 옆으로 누운 사진은 바로 세워 저장합니다.',
+      },
+      {
+        q: '화질이 떨어지나요?',
+        a: '화질은 「높음」이 기본입니다. JPG 사진을 JPG 「높음」으로 저장하면 대부분 화질은 그대로 두고 사진 정보만 지웁니다. 「보통」이나 「작게」를 고르면 용량이 줄어드는 대신 화질이 조금 낮아집니다. 원하는 KB에 맞추려면 사진 용량 줄이기를 쓰세요.',
+        links: [{ href: '/photo-compress/', text: '사진 용량 줄이기' }],
+      },
+      {
+        q: '몇 장까지 한 번에 바꿀 수 있나요?',
+        a: `PC에서는 ${IMG_JPG_FAQ.imagesPc}, 휴대폰에서는 ${IMG_JPG_FAQ.imagesPhone}까지 한 번에 바꿀 수 있고, 여러 장은 ZIP 파일 하나로 받습니다. 사진 한 장은 PC에서 ${IMG_JPG_FAQ.filePc}, 휴대폰에서 ${IMG_JPG_FAQ.filePhone}까지, 모두 합쳐 PC에서 ${IMG_JPG_FAQ.totalPc}, 휴대폰에서 ${IMG_JPG_FAQ.totalPhone}까지 넣을 수 있습니다.`,
+      },
+      {
+        q: 'WebP는 어디에 쓰나요?',
+        a: 'WebP는 같은 화질에서 JPG보다 용량이 작은 경우가 많아 블로그나 홈페이지에 올릴 때 좋습니다. 다만 제출하는 곳이 WebP 파일을 받는지 먼저 확인하세요.',
+      },
+    ],
+    keywords: ['jpg 변환', 'png jpg 변환', 'heic 파일 jpg 변환', 'webp jpg 변환', '아이폰 사진 jpg 변환'],
   },
   {
     slug: 'id-photo',

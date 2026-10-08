@@ -9,7 +9,8 @@ import { formatSize } from '../../src/lib/ui/format';
 import { DEFAULT_FORM, parseOptions, parseWhole, reductionPercent, type FormState } from '../../src/tools/photo-compress/options';
 import { cancelRun, crash, currentRow, startRun, type QueueRow } from '../../src/tools/photo-compress/queue';
 import { doneSummary, outcomeOf, type OutcomeRow } from '../../src/tools/photo-compress/headline';
-import { buildZip, dedupeNames } from '../../src/tools/photo-compress/zip';
+import { dedupeNames } from '../../src/lib/zip/names';
+import { buildZip } from '../../src/tools/photo-compress/zip';
 
 const MB = 1024 * 1024;
 const form = (over: Partial<FormState>): FormState => ({ ...DEFAULT_FORM, ...over });

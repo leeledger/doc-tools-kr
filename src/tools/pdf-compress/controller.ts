@@ -618,7 +618,7 @@ export function initCompressTool(): void {
     let aspect = 1 / Math.SQRT2;
     let ok = false;
     try {
-      const { openPdf, renderPageCanvas } = await loadInspect();
+      const { openPdf, renderPageThumb } = await loadInspect();
       orig = await openPdf(bytes, password);
       res = await openPdf(out);
       if (orig && res) {
@@ -626,7 +626,7 @@ export function initCompressTool(): void {
         if (ok) {
           const unit = (await orig.doc.getPage(1)).getViewport({ scale: 1 });
           aspect = unit.width / unit.height;
-          canvases = [await renderPageCanvas(orig.doc, 1, PREVIEW_WIDTH), await renderPageCanvas(res.doc, 1, PREVIEW_WIDTH)];
+          canvases = [await renderPageThumb(orig.doc, 0, PREVIEW_WIDTH), await renderPageThumb(res.doc, 0, PREVIEW_WIDTH)];
         }
       }
     } catch (err) {
