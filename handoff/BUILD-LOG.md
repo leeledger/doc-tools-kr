@@ -2604,3 +2604,6 @@ Files and line ranges: handoff/REVIEW-REQUEST.md (TOOLS5 U3). Not committed.
 
 **TOOLS5 U3 — deploy gate (2026-10-08)**
 - Richard: clear (round 1 and round 2, 0 Must Fix). Rounds 2–3 applied Richard's Should Fix (display-only clamped copy; drag/arrow/slider from the displayed box; MIN_EDGE; strengthened cm test; e2e stageReady wait, 60/60 with --repeat-each=10 on three engines). Orchestrator accepted round 3 without another review (implements Richard's exact fixes, test-covered). Decisions: keep 4 related links on /stamp-signature/; keep the shared-placement model. CLAUDE.md line 3 updated. Pushed. Next: U4 HWPX→HWP spike.
+
+**TOOLS5 U4 spike — HWPX→HWP (2026-10-08, DONE_WITH_CONCERNS)**
+- rhwp 0.8.6 exportHwpWithReport on the 4 HWPX fixtures (Node + Chromium desktop/phone emulation, byte-identical): verify recovered true, content-loss 0, pages equal, text recall 1.0 (rhwp reload and an independent record walk), tables/pictures/equations/headers/footers counts equal; export ≤ 56 ms, whole flow < 1 s, wasm heap ≤ 14 MiB; +0 wasm bytes; MIT. Gating: owner's 한글 check on 3 files (O4) still open; 5 public HWPX downloads were blocked by permissions (URLs listed). Report: handoff/SPIKE-HWPX-TO-HWP.md; code: scripts/spike/ (not shipped). Effort if go: 2–3 days.
