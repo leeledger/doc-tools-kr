@@ -10,6 +10,15 @@ export const SITE = {
   locale: 'ko_KR',
 } as const;
 
+/**
+ * Our own blogs (owner, FOOTER-BLOGS): the footer links them on every page and the home Organization JSON-LD lists
+ * them in `sameAs`. Followed links (rel="noopener", no nofollow): they are our properties.
+ */
+export const BLOGS = [
+  { name: '네이버', label: '네이버 블로그', url: 'https://blog.naver.com/robohelio' },
+  { name: '티스토리', label: '티스토리 블로그', url: 'https://docttak.tistory.com' },
+] as const;
+
 /** Live tool names joined with "·". Tool names are written only in tools.ts (docs/COPY.md release checklist). */
 export const liveNames = (tools: readonly Tool[] = LIVE_TOOLS): string => tools.map((t) => t.name).join('·');
 

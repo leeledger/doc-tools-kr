@@ -133,14 +133,16 @@ for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-
     await expect(foot.getByRole('link', { name: '이용약관' })).toHaveAttribute('href', '/terms/');
     await expect(foot.getByRole('link', { name: '개인정보 처리방침' })).toHaveAttribute('href', '/privacy/');
     await expect(foot.getByRole('link', { name: '오픈소스 라이선스' })).toHaveAttribute('href', '/licenses/');
+    await expect(foot.locator('.foot-blog')).toHaveText('블로그: 네이버 · 티스토리');
     // One left edge for every footer line (UX-AUDIT-1 §4, the 12 px mobile indent).
     const lefts = await foot.evaluate((f) => {
-      const text = (el: Element | null) => {
+      // .foot-blog starts with plain text ("블로그:"), so its line starts at the paragraph, not at its first link.
+      const text = (el: Element | null, line = false) => {
         const r = document.createRange();
-        r.selectNodeContents(el!.querySelector('a') ?? el!);
+        r.selectNodeContents(line ? el! : (el!.querySelector('a') ?? el!));
         return Math.round(r.getBoundingClientRect().left);
       };
-      return [text(f.querySelector('.foot-links')), text(f.querySelector('.foot-copy'))];
+      return [text(f.querySelector('.foot-links')), text(f.querySelector('.foot-blog'), true), text(f.querySelector('.foot-copy'))];
     });
     expect(Math.max(...lefts) - Math.min(...lefts)).toBeLessThanOrEqual(1);
   });

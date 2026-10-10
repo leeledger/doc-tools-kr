@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import JsonLd from '../components/JsonLd.astro';
-import { SITE, defaultDescription, liveNames } from '../data/site';
+import { BLOGS, SITE, defaultDescription, liveNames } from '../data/site';
 import { HOME_TITLE, LIVE_TOOLS, TOOLS } from '../data/tools';
 import { guidePath, guidesBySlug } from '../data/guides';
 import { toolListJsonLd } from '../data/jsonld';
@@ -29,6 +29,7 @@ const jsonLd = [
     url: home,
     description: defaultDescription(),
     logo: new URL('/brand/icon-512.png', Astro.site).href,
+    sameAs: BLOGS.map((b) => b.url),
   },
   toolListJsonLd(LIVE_TOOLS, Astro.site),
 ];

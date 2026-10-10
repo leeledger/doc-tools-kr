@@ -743,10 +743,10 @@ describe('built output', () => {
     const found = files.filter((f) => readFileSync(f, 'utf8').includes('안올림'));
     expect(found).toEqual([]);
     // Owner's brand rule: the name is always 문서딱. "docttak" appears only as the domain (docttak.com), never
-    // as a name ("Docttak", "DOCTTAK", "독딱").
+    // as a name ("Docttak", "DOCTTAK", "독딱"); FOOTER-BLOGS adds the blog address https://docttak.tistory.com.
     // Sprint C, C2: the brief's Cache Storage name `docttak-model-birefnet-<exportId>` is an internal key, never shown;
     // so is C2-cloud's localStorage key `docttak-bg-mode`, and TOOLS5 U3's sessionStorage key `docttak:sign-png`.
-    const misnamed = files.filter((f) => /독딱|docttak(?!\.com|-model-birefnet-|-bg-mode|:sign-png)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.com/gi, '')));
+    const misnamed = files.filter((f) => /독딱|docttak(?!\.com|-model-birefnet-|-bg-mode|:sign-png)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.(tistory\.)?com/gi, '')));
     expect(misnamed).toEqual([]);
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
     expect(home).toContain('<meta property="og:site_name" content="문서딱">');

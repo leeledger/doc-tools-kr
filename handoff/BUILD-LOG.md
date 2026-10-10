@@ -2701,3 +2701,11 @@ Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP").
 
 **TOOL-GUIDES — deploy gate (2026-10-10)**
 - Richard: clear, 0 Must Fix; both deviations accepted by the orchestrator (requires-guides linked from their tool page instead of another guide; jpg-to-pdf related gains pdf-to-jpg). Round 2 added verbatim quotes for the two uncovered sentences (check:quotes 178 OK). Pushed; CI watched (also re-checks the /hwp-viewer/ Lighthouse NO_NAVSTART seen in the last two runs).
+
+**FOOTER-BLOGS — blog links in the footer + Organization sameAs (2026-10-10)** — DONE (not committed)
+- Owner request: footer line 「블로그: 네이버 · 티스토리」 on every Base page (guides included) linking https://blog.naver.com/robohelio and https://docttak.tistory.com; rel="noopener", followed, same tab (site convention for non-tool external links); aria-labels 「네이버 블로그」/「티스토리 블로그」. Single source `BLOGS` in src/data/site.ts; home Organization JSON-LD `sameAs` lists both.
+- Font: 티·토 added to the core subset (+64 B preloaded; 90.8/90.9 KB vs 92.66 KB tripwire). postbuild brand test now treats docttak.tistory.com as a domain.
+- vitest 1,341/1,341; astro check 0 errors; default + cloud builds check-dist OK; site/polish/growth × chromium/mobile-chrome/webkit green (1 known webkit share flake, passed on retry). New growth test covers every sitemap page + offline + 404 and the sameAs.
+
+**FOOTER-BLOGS — deploy gate (2026-10-10)**
+- Orchestrator decisions: wording 「블로그: 네이버 · 티스토리」 accepted; sameAs on the home Organization only (guide publisher unchanged). Small, test-covered change; pushed without a separate review round and CI watched. Also on 2026-10-10 the orchestrator added a Cloudflare redirect rule www.docttak.com → https://docttak.com (301, path + query kept), verified live.

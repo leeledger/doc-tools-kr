@@ -15,11 +15,11 @@
 
 /* footer: operator and contact, legal links, copyright (Polish P.4) */
 .foot-inner { display: grid; gap: 2px; }
-.foot-op a { color: var(--muted); display: inline-block; min-height: 24px; }
+.foot-op a, .foot-blog a { color: var(--muted); display: inline-block; min-height: 24px; }
 /* The links' own padding is pulled back so every footer line starts at the same edge (UX-AUDIT-1 §4). */
 .foot-links { display: flex; flex-wrap: wrap; gap: 0 8px; margin-left: -6px; }
 .foot-links a { color: var(--muted); display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
-.foot-links a:hover, .foot-op a:hover { color: var(--text); }
+.foot-links a:hover, .foot-op a:hover, .foot-blog a:hover { color: var(--text); }
 
 /* header tools menu (Polish P.9) */
 .menu { position: relative; }

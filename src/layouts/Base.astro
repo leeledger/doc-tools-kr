@@ -2,7 +2,7 @@
 import '../generated/anolim-ui.css';
 import '../styles/global.css';
 import '../styles/app.css';
-import { SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } from '../data/site';
+import { BLOGS, SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } from '../data/site';
 import { ANALYTICS_ON, BEACON_SRC, CF_ANALYTICS_TOKEN } from '../data/analytics';
 import { GA_LOADER, GA_ON } from '../data/ga';
 import { BUILD_ID } from '../data/build';
@@ -145,6 +145,7 @@ const favicon =
       <a href="/privacy/">개인정보 처리방침</a>
       <a href="/licenses/">오픈소스 라이선스</a>
     </nav>
+    <p class="foot-blog">블로그: {BLOGS.map((b, i) => <>{i > 0 && ' · '}<a href={b.url} rel="noopener" aria-label={b.label}>{b.name}</a></>)}</p>
     <p class="foot-copy">© 2026 {SITE.name} · {SITE.tagline}</p>
   </div>
 </footer>

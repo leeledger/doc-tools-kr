@@ -201,3 +201,33 @@ test('404: /hwp/abc suggests /hwp-to-pdf/; an unrelated path suggests nothing', 
   await gotoReady(page, '/zzz-qqq/');
   await expect(page.locator('#nf-suggest')).toBeHidden();
 });
+
+// FOOTER-BLOGS (owner 2026-10-10): our two blogs in the footer of every page (sitemap, plus 404 and offline), followed
+// links (rel="noopener", no nofollow, same tab like the site's other external links), and in the home Organization sameAs.
+const BLOG_LINKS = [
+  { name: '네이버 블로그', href: 'https://blog.naver.com/robohelio' },
+  { name: '티스토리 블로그', href: 'https://docttak.tistory.com' },
+];
+
+test('every page: the footer links both blogs (followed, same tab); the home Organization sameAs lists them', async ({ page }) => {
+  const sitemap = await (await page.request.get('/sitemap.xml')).text();
+  const paths = [...sitemap.matchAll(/<loc>https?:\/\/[^/]+(\/[^<]*)<\/loc>/g)].map((m) => m[1]!);
+  expect(paths.length).toBeGreaterThan(20);
+  for (const path of [...paths, '/offline/', '/does-not-exist/']) {
+    const html = await (await page.request.get(path)).text();
+    const foot = html.slice(html.indexOf('<footer'), html.indexOf('</footer>'));
+    for (const b of BLOG_LINKS) {
+      const a = foot.match(new RegExp(`<a [^>]*href="${b.href}"[^>]*>`))?.[0] ?? '';
+      expect.soft(a, `${path} ${b.name}`).toContain('rel="noopener"');
+      expect.soft(a, `${path} ${b.name}`).not.toContain('nofollow');
+      expect.soft(a, `${path} ${b.name}`).not.toContain('target=');
+    }
+  }
+  await gotoReady(page, '/');
+  const foot = page.locator('footer');
+  for (const b of BLOG_LINKS) await expect(foot.getByRole('link', { name: b.name })).toHaveAttribute('href', b.href);
+  const org = await page.locator('script[type="application/ld+json"]').evaluateAll((els) =>
+    els.flatMap((e) => [JSON.parse(e.textContent ?? 'null')].flat()).find((d) => d?.['@type'] === 'Organization'),
+  );
+  expect(org?.sameAs).toEqual(BLOG_LINKS.map((b) => b.href));
+});
