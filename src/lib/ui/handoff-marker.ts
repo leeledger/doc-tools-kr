@@ -73,3 +73,12 @@ export function pendingHandoff(slug: string, session: Session | null = tabSessio
   removeMarker(session);
   return false;
 }
+
+/**
+ * A page that sends or takes files (이어서 하기): when the site flag says a stored file may still be waiting, loads
+ * handoff.ts and deletes records older than 10 minutes. Without the flag nothing loads and IndexedDB stays closed.
+ */
+export function sweepIfDue(): void {
+  if (!sweepDue()) return;
+  void import('./handoff').then(({ sweepLingering }) => sweepLingering()).catch(() => undefined);
+}

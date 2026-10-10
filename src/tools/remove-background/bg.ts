@@ -131,6 +131,12 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   const downloadBtn = must<HTMLButtonElement>('bg-download');
   const saveName = must<HTMLElement>('bg-save-name');
   const newBtn = must<HTMLButtonElement>('bg-new');
+  const nextSlot = must<HTMLElement>('bg-next');
+  // The 이어서 하기 module loads with a result only (this controller's budget, check-dist); hiding needs none of it.
+  const hideNext = (): void => {
+    nextSlot.replaceChildren();
+    nextSlot.hidden = true;
+  };
   // C2-cloud elements: only in a build with the cloud path on.
   const ready = document.getElementById('bg-ready');
   const deviceRetry = document.getElementById('bg-device-retry');
@@ -187,6 +193,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     progress.hidden = !v.progress;
     cancelBtn.hidden = !v.cancel;
     result.hidden = !v.result;
+    if (phase !== 'done') hideNext();
     nosubject.hidden = !v.nosubject;
     if (!v.bytes) bar.removeAttribute('value');
   }
@@ -431,6 +438,21 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     setPhase('done');
     downloadBtn.disabled = false;
     updateSave();
+    // 이어서 하기: the picture with the background chosen when a button is pressed (a transparent one turns white in
+    // the next tool, as a picked PNG does).
+    const shown = out;
+    void import('../../lib/ui/next-steps-lazy')
+      .then(({ showNextStepsLater }) => {
+        // Still this result (not a new photo or 다른 사진 고르기 while the module loaded).
+        if (phase !== 'done' || cut !== shown) return;
+        showNextStepsLater(nextSlot, 'remove-background', [
+          async () => {
+            const blob = (await encode(1)) ?? (await encode(0.5));
+            return blob ? { blob, name: fileName(choice(), format()) } : null;
+          },
+        ]);
+      })
+      .catch(() => undefined);
     title.focus();
     say(COPY.doneSay(out.width, out.height));
   }

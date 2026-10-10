@@ -121,6 +121,7 @@ const modes = [
             <button type="button" class="btn ghost" id="ps-again">다시 편집하기</button>
             <button type="button" class="btn ghost" id="ps-reset">다른 파일 처리하기</button>
           </div>
+          <div id="ps-next" class="next-steps" role="group" aria-labelledby="ps-next-label" hidden></div>
           <p class="save-name" id="ps-save-name"></p>
           <Share name={tool.name} text={sharePreview('/pdf-split/', Astro.site!).description} id="ps-share" />
           <p class="related-line">여러 PDF를 하나로 묶으려면 <a href="/pdf-merge/">PDF 합치기</a>를, 용량이 크다면 <a href="/pdf-compress/">PDF 용량 줄이기</a>를 쓰세요.</p>

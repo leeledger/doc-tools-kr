@@ -73,6 +73,7 @@ const jsonLd = toolJsonLd(tool, Astro.site);
             <a class="btn primary" id="merge-download" download tabindex="0">내려받기</a>
             <button type="button" class="btn ghost" id="merge-reset">다른 파일 처리하기</button>
           </div>
+          <div id="merge-next" class="next-steps" role="group" aria-labelledby="merge-next-label" hidden></div>
           <p class="save-name" id="merge-save-name"></p>
           <Share name={tool.name} text={sharePreview('/pdf-merge/', Astro.site!).description} id="merge-share" />
           <ul class="result-notes" id="merge-notes"></ul>

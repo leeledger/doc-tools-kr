@@ -12,6 +12,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page, Request, Route } from '@playwright/test';
 import { sniffImage } from '../../src/lib/image/sniff';
 import { CLOUD, COPY } from '../../src/tools/remove-background/copy';
+import { openPdf, renderRgba } from '../../scripts/regress/lib.mjs';
 import { expect, gotoReady, test } from './no-upload';
 
 // Two entries: Playwright reads an array whose second item is an object as [value, options], hence the tuple form.
@@ -368,4 +369,85 @@ test('the exception wording is on the privacy and terms pages, with the officer 
   await gotoReady(page, '/photo-compress/');
   await expect(page.locator('body')).not.toContainText('배경 지우기는 예외');
   await expect(page.locator('body')).not.toContainText('Cloudflare(미국 회사)');
+});
+
+// 이어서 하기 (CHAIN X2): this page sends its result; the page also sweeps a file nobody took (privacy page promise).
+const SWEEP_FLAG = 'docttak:handoff-sweep';
+
+/** Runs `fn` on the handoff store (created empty when missing) and resolves with its request's result. */
+const onStore = <T>(page: Page, mode: 'count' | 'putStale'): Promise<T> =>
+  page.evaluate(
+    (m) =>
+      new Promise<T>((resolve, reject) => {
+        const r = indexedDB.open('docttak-handoff', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('files', { keyPath: 'key' });
+        r.onerror = () => reject(r.error);
+        r.onsuccess = () => {
+          const db = r.result;
+          const tx = db.transaction('files', m === 'count' ? 'readonly' : 'readwrite');
+          const s = tx.objectStore('files');
+          const req: IDBRequest =
+            m === 'count'
+              ? s.count()
+              : s.put({ key: 'd'.repeat(32), to: 'jpg-to-pdf', from: 'remove-background', name: 'old.png', type: 'image/png', blob: new ArrayBuffer(8), at: Date.now() - 11 * 60 * 1000 });
+          tx.oncomplete = () => {
+            db.close();
+            resolve(req.result as T);
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    mode,
+  );
+
+
+test('이어서 하기: the transparent cut-out → 사진 PDF 변환 arrives; its transparent part shows white on the PDF page, never black; the page sweeps old files', async ({ page }) => {
+  await api(page, ok);
+  await gotoReady(page, '/');
+  await onStore<number>(page, 'putStale');
+  await page.evaluate((k) => localStorage.setItem(k, '1'), SWEEP_FLAG);
+  await gotoReady(page, PATH);
+  await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), SWEEP_FLAG)).toBeNull();
+  expect(await onStore<number>(page, 'count')).toBe(0);
+
+  await pick(page, SUBJECT);
+  await ready(page);
+  await page.locator('#bg-send').click();
+  await expect(page.locator('#bg-result')).toBeVisible({ timeout: 30_000 });
+  const group = page.getByRole('group', { name: '이 파일로 이어서 하기' });
+  await expect(group.getByRole('button')).toHaveText(['사진 PDF 변환', '사진 용량 줄이기']);
+  const axe = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+
+  await group.getByRole('button', { name: '사진 PDF 변환' }).click();
+  await expect(page).toHaveURL(/\/jpg-to-pdf\/$/);
+  // Playwright WebKit on Windows has no OffscreenCanvas: 사진 PDF 변환 shows its unsupported line and the photo is dropped.
+  // Either the arrival notice or that line shows; wait for one before looking.
+  await expect(page.locator('#jp-notice, #jp-unsupported').filter({ visible: true })).toHaveCount(1);
+  if (await page.locator('#jp-unsupported').isVisible()) {
+    await expect.poll(() => onStore<number>(page, 'count')).toBe(0);
+    test.skip(true, 'This browser has no OffscreenCanvas (Playwright WebKit on Windows): the PDF cannot be made here.');
+  }
+  await expect(page.locator('#jp-notice')).toHaveText('방금 만든 파일을 가져왔습니다.');
+  await expect(page.locator('#jp-list > li .name')).toHaveText(['누끼.png']);
+  expect(await onStore<number>(page, 'count')).toBe(0);
+
+  await expect(page.locator('#jp-list .thumb-ph', { hasText: '확인 중' })).toHaveCount(0);
+  await page.locator('#jp-run').click();
+  await expect(page.locator('#jp-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#jp-download').click()]);
+  // The page as a reader shows it (pdf.js on white paper): the red subject is there, and where the cut-out is
+  // transparent the paper shows, never black (a transparent picture flattened onto black would leave black there).
+  const doc = await openPdf(new Uint8Array(readFileSync((await download.path())!)));
+  const { rgba } = await renderRgba(doc, 0, 1);
+  doc.close();
+  let red = 0;
+  let dark = 0;
+  for (let i = 0; i < rgba.length; i += 4) {
+    const [r, g, b] = [rgba[i]!, rgba[i + 1]!, rgba[i + 2]!];
+    if (r > 180 && g < 80 && b < 80) red++;
+    if (Math.max(r, g, b) < 60) dark++;
+  }
+  expect(red).toBeGreaterThan(1000);
+  expect(dark).toBe(0);
 });

@@ -2757,3 +2757,33 @@ Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP").
 
 **CHAIN X1 — deploy gate (2026-10-11)**
 - Richard: clear (0 Must Fix) in r1 and r3. Orchestrator decisions: pdf-password opens handed-off files in lock mode; privacy sentence 해요체 + lingering clause, PRIVACY_CHAIN 2026-10-11; handoff.ts lazy; localStorage sweep flag keeps F4. Known gap (Richard r3, 5/10): cross-tab flag-clear race can drop the sweep flag in a few-ms window; file then lingers until the next store/take. Pushed; CI watched. Next: X2 (remaining senders; each sender page must also run the sweep-flag check).
+
+**CHAIN X2 — remaining senders + X1 CI fix (2026-10-11)** — DONE (not committed; waiting for Richard). Details and line ranges: handoff/REVIEW-REQUEST.md.
+- X1 CI fix (run 38068648525, mobile-chrome, pdf-sign.spec.ts:387):
+  - Root cause: choosing 쪽 범위 focuses `#sg-range`, and that focus scroll runs with the site's smooth scrolling. The test measured mid-scroll (diagnostic: scrollY 715 → 1110, field bottom 826 → 431, bar top 520).
+  - It reproduced 3/3 locally, also with the pre-X1 src (3e63d08), so this is not an X1 regression.
+  - Fix: `await settled(page)` before the measurement; assertion unchanged. Verified 8/8 (×4, mobile-chrome + chromium); pdf-sign + chain ×3: 159 passed.
+- Built:
+  - Slots + show/hide in pdf-merge, pdf-split (edit/extract only), pdf-sign (slot `sg-chain`, because `sg-next` is taken), pdf-password (unlock only), hwp-to-pdf (shared session, hwp-to-pdf page only), image-to-jpg (1 photo), photo-compress (exactly one downloadable photo), remove-background, id-photo.
+  - `sweepIfDue()` (handoff-marker) on the 5 sender-only pages, so the privacy sentence holds on every 이어서 하기 page; its wording is unchanged.
+  - `NextMaker` in next-steps (remove-background encodes on click).
+  - `next-steps-lazy.ts` for pdf-password and remove-background, whose budgets (6 / 14.5 KB) had no room. A direct dynamic import of next-steps put Rollup's namespace helper in the HWP export chunk.
+- Gates:
+  - vitest 1,381/1,381; astro check 0.
+  - Default build check-dist OK: core 605/38, precache 440.5/450, no budget changed.
+  - Cloud build OK: core 606 = HEAD cloud, precache 446.8/450.
+  - AUTOFRAME=1 build OK: 442.7.
+  - e2e chain + polish + site × 5 projects: 690 passed, 32 skipped, 3 Firefox flaky (goto timeouts), 0 failed.
+  - Cloud: remove-background.cloud + usage × 5: 103 passed, 12 skipped.
+  - Tool specs × chromium + mobile-chrome: green; id-photo on the AUTOFRAME=1 build.
+  - Lighthouse, qa:visual and licenses not run.
+- Known Gaps:
+  - (1) Cloud precache 446.8/450: little headroom.
+  - (2) next-steps-lazy exists only because of the two budgets (Arch could raise them instead).
+  - (3) The brief's "alpha flattens to white" holds for photo-compress only. jpg-to-pdf keeps the alpha (PNG + SMask), so the PDF page shows paper; the e2e asserts no black.
+  - (4) remove-background hands over the currently chosen 배경/형식 (default transparent PNG). Question to Arch.
+  - (5) photo-compress offers a kept original as the single result. Question to Arch.
+  - (6) hwp-viewer, pdf-to-jpg and multi-file stay out of scope (brief).
+
+**CHAIN X2 + X1 CI fix — deploy gate (2026-10-11)**
+- Richard: clear (0 Must Fix). Orchestrator decisions: remove-background hands over the background/format chosen at click time; photo-compress shows the buttons for an unchanged single original; next-steps-lazy.ts instead of raising budgets. Should Fix (tests only, deferred): reset-hides-buttons, photo-compress two-photo, pdf-password fast-reset. Cloud precache 446.8/450 KB — next JS addition needs precache work first. Pushed; CI watched.

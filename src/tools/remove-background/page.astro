@@ -141,6 +141,7 @@ const limits = [
             <button type="button" class="btn ghost" id="bg-compare" aria-pressed="false">원본과 비교</button>
             <button type="button" class="btn ghost" id="bg-new">다른 사진 고르기</button>
           </div>
+          <div id="bg-next" class="next-steps" role="group" aria-labelledby="bg-next-label" hidden></div>
           <p class="save-name" id="bg-save-name"></p>
           <Share name={tool.name} text={sharePreview('/remove-background/', Astro.site!).description} id="bg-share" />
         </div>

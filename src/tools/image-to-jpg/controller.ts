@@ -14,6 +14,7 @@ import { announce, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize } from '../../lib/ui/format';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { dedupeNames } from '../../lib/zip/names';
 import { StoredZip } from '../../lib/zip/stored';
@@ -194,6 +195,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
   const saveName = must<HTMLParagraphElement>('ij-save-name');
   const download = must<HTMLAnchorElement>('ij-download');
   const resetBtn = must<HTMLButtonElement>('ij-reset');
+  const nextSlot = must<HTMLDivElement>('ij-next');
 
   let state: State = 'empty';
   let entries: Entry[] = [];
@@ -248,6 +250,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
     actions.hidden = !has || busy || next === 'done';
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
+    if (next !== 'done') hideNextSteps(nextSlot);
     renderList();
     updateRun();
   }
@@ -537,6 +540,8 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
       .filter(Boolean)
       .join(' · ');
     setState('done');
+    // 이어서 하기: one photo only (a ZIP is not offered).
+    if (out && count === 1) showNextSteps(nextSlot, 'image-to-jpg', [{ blob: out, name }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
     status(`${headline.textContent}. ${summary.textContent}.`);

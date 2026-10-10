@@ -63,15 +63,29 @@ export interface NextFile {
   name: string;
 }
 
+/**
+ * A result made only when a button is pressed (사진 배경 지우기 encodes the chosen background then); null when it could
+ * not be made. Its size is checked against NEXT_MAX_BYTES once made.
+ */
+export type NextMaker = () => Promise<NextFile | null>;
+
 /** The usage/handoff tool of a sender. */
 export function sourceTool(from: NextSource): UsageTool {
   return from === 'pdf-password-unlock' || from === 'pdf-password-lock' ? 'pdf-password' : from;
 }
 
 /** The tools `files` can be opened in: none unless there is exactly one file of at most 200 MB. */
-export function nextTargets(from: NextSource, files: readonly NextFile[]): readonly NextTarget[] {
-  if (files.length !== 1 || files[0]!.blob.size > NEXT_MAX_BYTES) return [];
+export function nextTargets(from: NextSource, files: readonly (NextFile | NextMaker)[]): readonly NextTarget[] {
+  if (files.length !== 1) return [];
+  const f = files[0]!;
+  if (typeof f !== 'function' && f.blob.size > NEXT_MAX_BYTES) return [];
   return FLOW[from] ?? [];
+}
+
+/** The file to hand over: made now for a NextMaker; null when it cannot be made or is over 200 MB. */
+async function fileOf(f: NextFile | NextMaker): Promise<NextFile | null> {
+  const file = typeof f === 'function' ? await f() : f;
+  return file && file.blob.size <= NEXT_MAX_BYTES ? file : null;
 }
 
 /** Empties and hides the slot (reset, new file, error). */
@@ -85,7 +99,7 @@ export interface NextDeps extends HandoffDeps {
 }
 
 /** Fills the slot with the group label and one button per next tool; hidden when there is none. */
-export function showNextSteps(slot: HTMLElement, from: NextSource, files: readonly NextFile[], deps: NextDeps = {}): void {
+export function showNextSteps(slot: HTMLElement, from: NextSource, files: readonly (NextFile | NextMaker)[], deps: NextDeps = {}): void {
   const targets = nextTargets(from, files);
   if (!targets.length) {
     hideNextSteps(slot);
@@ -115,8 +129,8 @@ export function showNextSteps(slot: HTMLElement, from: NextSource, files: readon
       b.setAttribute('aria-busy', 'true');
       track({ e: 'next', t: tool, o: 'next', v: to });
       // The IndexedDB code loads on the first click only (src/lib/ui/handoff.ts); a failed load counts as a failed store.
-      void import('./handoff')
-        .then(({ sendTo }) => sendTo(to, tool, file.blob, file.name, file.blob.type, deps.go, deps))
+      void Promise.all([import('./handoff'), fileOf(file)])
+        .then(([{ sendTo }, f]) => (f ? sendTo(to, tool, f.blob, f.name, f.blob.type, deps.go, deps) : false))
         .catch(() => false)
         .then((ok) => {
           if (ok) return;

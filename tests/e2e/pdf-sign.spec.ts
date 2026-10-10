@@ -394,6 +394,9 @@ test('axe: the editor with a picture and the result have no serious or critical 
   await page.locator('label.chip', { hasText: '쪽 범위' }).click();
   await page.locator('#sg-range').fill('9');
   // The focused field is not under the actions bar (sticky at phone widths; scroll-padding-bottom keeps it clear).
+  // Measured once the page stops moving: focusing the field scrolls it clear with the site's smooth scrolling, and a
+  // read during that animation sees it on its way (CI mobile-chrome, X1).
+  await settled(page);
   const field = (await page.locator('#sg-range').boundingBox())!;
   expect(field.y + field.height).toBeLessThanOrEqual((await page.locator('#sg-actions').boundingBox())!.y + 1);
   expect(await serious()).toEqual([]);

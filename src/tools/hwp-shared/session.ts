@@ -20,6 +20,7 @@ import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize } from '../../lib/ui/format';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import type { BootStart } from './boot';
@@ -137,6 +138,8 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
   const doneText = must<HTMLParagraphElement>('hw-done-text');
   const again = must<HTMLAnchorElement>('hw-again');
   const preview = must<HTMLDivElement>('hw-preview');
+  // 이어서 하기 slot: /hwp-to-pdf/ only (the viewer's PDF is not offered, brief out of scope).
+  const nextSlot = hooks.tool === 'hwp-to-pdf' ? document.getElementById('hw-next') : null;
 
   let state: State = 'empty';
   /** The routed mode of the open document (the state an export returns to). */
@@ -236,6 +239,7 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
     again.removeAttribute('href');
     doneText.textContent = '';
     done.hidden = true;
+    if (nextSlot) hideNextSteps(nextSlot);
   }
 
   function stopExport(): void {
@@ -530,6 +534,7 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
       doneText.textContent = stats.failedPages ? `${line}. ${COPY.failedPages(stats.failedPages)}` : line;
       setState(base);
       done.hidden = false;
+      if (nextSlot) showNextSteps(nextSlot, 'hwp-to-pdf', [{ blob, name }]);
       announce(doneText.textContent);
       button.focus();
     } catch (err) {

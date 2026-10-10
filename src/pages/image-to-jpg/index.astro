@@ -79,6 +79,7 @@ const groups = [
             <a class="btn primary" id="ij-download" download tabindex="0">내려받기</a>
             <button type="button" class="btn ghost" id="ij-reset">다른 사진 처리하기</button>
           </div>
+          <div id="ij-next" class="next-steps" role="group" aria-labelledby="ij-next-label" hidden></div>
           <p class="save-name" id="ij-save-name"></p>
           <Share name={tool.name} text={sharePreview('/image-to-jpg/', Astro.site!).description} id="ij-share" />
           <p class="related-line">용량도 줄이려면 <a href="/photo-compress/">사진 용량 줄이기</a>를 쓰고, 여러 장을 PDF 하나로 묶으려면 <a href="/jpg-to-pdf/">사진 PDF 변환</a>을 쓰세요.</p>

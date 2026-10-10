@@ -169,6 +169,7 @@ const nudges = [
           <div class="row">
             <a class="btn primary" id="idp-download" tabindex="0">내려받기</a>
           </div>
+          <div id="idp-next" class="next-steps" role="group" aria-labelledby="idp-next-label" hidden></div>
           <p class="save-name" id="idp-save-name"></p>
           <p class="notice" id="idp-print" hidden></p>
           <Share name={tool.name} text={sharePreview('/id-photo/', Astro.site!).description} id="idp-share" />

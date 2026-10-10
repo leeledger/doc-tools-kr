@@ -6,6 +6,7 @@
 // that cannot load (offline, a new deploy) shows the shared engine panel.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { sweepIfDue } from '../../lib/ui/handoff-marker';
 import { bindQuickLinks, readUrl, writeUrl } from '../../lib/ui/quicklinks';
 import { startUsage, track } from '../../lib/ui/usage';
 import { getPreset } from '../../data/id-photo-presets';
@@ -50,6 +51,8 @@ if (root && drop) {
   for (const ev of EVENTS) root.addEventListener(ev, start, { passive: true });
   drop.addEventListener('dragover', onDragOver);
   drop.addEventListener('drop', onDrop);
+  // This page sends files (이어서 하기): a file stored earlier and never taken is deleted once older than 10 minutes.
+  sweepIfDue();
 
   // Deep links (Growth G.5, G.6): ?preset=<id> picks that 제출처 before the controller loads (the controller reads
   // the select when it starts), and the address follows the select from then on.

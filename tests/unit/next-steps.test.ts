@@ -107,4 +107,36 @@ describe('showNextSteps / hideNextSteps', () => {
     expect(alert.hidden).toBe(false);
     expect(alert.textContent).toBe(sendFailed('PDF 암호 걸기'));
   });
+
+  it('a result made on click (NextMaker): offered before it exists, made once on the click, then stored', async () => {
+    const store = memStore();
+    const go = vi.fn();
+    const maker = vi.fn(async () => ({ blob: new Blob([new Uint8Array(4)], { type: 'image/png' }), name: '배경_투명.png' }));
+    expect(nextTargets('id-photo', [maker])).toEqual(['jpg-to-pdf']);
+    showNextSteps(slot, 'id-photo', [maker], { store, session: memSession(), local: memSession(), go });
+    expect(maker).not.toHaveBeenCalled();
+    slot.querySelector<HTMLButtonElement>('[data-next="jpg-to-pdf"]')!.click();
+    await vi.waitFor(() => expect(go).toHaveBeenCalledWith('/jpg-to-pdf/'));
+    expect(maker).toHaveBeenCalledTimes(1);
+    const [rec] = [...store.recs.values()];
+    expect(rec).toMatchObject({ to: 'jpg-to-pdf', from: 'id-photo', name: '배경_투명.png', type: 'image/png' });
+  });
+
+  it('a NextMaker that makes nothing, throws or makes more than 200 MB: alert, nothing stored, buttons back', async () => {
+    const makers = [async () => null, async () => Promise.reject(new Error('encode')), async () => ({ blob: { size: NEXT_MAX_BYTES + 1, type: 'image/png' } as Blob, name: 'big.png' })];
+    for (const maker of makers) {
+      const store = memStore();
+      const go = vi.fn();
+      document.querySelector<HTMLElement>('[data-live="alert"]')!.hidden = true;
+      showNextSteps(slot, 'id-photo', [maker], { store, session: memSession(), local: memSession(), go });
+      const b = slot.querySelector<HTMLButtonElement>('[data-next="jpg-to-pdf"]')!;
+      b.click();
+      await vi.waitFor(() => expect(b.disabled).toBe(false));
+      expect(go).not.toHaveBeenCalled();
+      expect(store.recs.size).toBe(0);
+      const alert = document.querySelector<HTMLElement>('[data-live="alert"]')!;
+      expect(alert.hidden).toBe(false);
+      expect(alert.textContent).toBe(sendFailed('사진 PDF 변환'));
+    }
+  });
 });

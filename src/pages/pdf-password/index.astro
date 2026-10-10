@@ -104,6 +104,7 @@ const EYE = '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle
             <a class="btn primary" id="pp-download" download tabindex="0">내려받기</a>
             <button type="button" class="btn ghost" id="pp-reset">다른 파일 처리하기</button>
           </div>
+          <div id="pp-next" class="next-steps" role="group" aria-labelledby="pp-next-label" hidden></div>
           <p class="save-name" id="pp-save-name"></p>
           <Share name={tool.name} text={sharePreview('/pdf-password/', Astro.site!).description} id="pp-share" />
           <p class="related-line">용량을 줄이려면 <a href="/pdf-compress/">PDF 용량 줄이기</a>를, 여러 파일을 하나로 묶으려면 <a href="/pdf-merge/">PDF 합치기</a>를 쓰세요.</p>

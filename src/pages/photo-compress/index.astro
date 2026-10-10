@@ -76,6 +76,7 @@ const accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.
             <button type="button" class="btn ghost" id="ph-again">이 설정으로 다시 줄이기</button>
             <button type="button" class="btn ghost" id="ph-reset">다른 사진 처리하기</button>
           </div>
+          <div id="ph-next" class="next-steps" role="group" aria-labelledby="ph-next-label" hidden></div>
           <Share name={tool.name} text={sharePreview('/photo-compress/', Astro.site!).description} id="ph-share" />
           <p class="error-box" id="ph-zip-error" role="alert" data-live="alert" hidden></p>
         </div>

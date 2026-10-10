@@ -76,6 +76,12 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): Promis
   const download = must<HTMLAnchorElement>('pp-download');
   const resetBtn = must<HTMLButtonElement>('pp-reset');
   const saveName = must<HTMLParagraphElement>('pp-save-name');
+  const nextSlot = must<HTMLDivElement>('pp-next');
+  // The 이어서 하기 module loads with a 암호 풀기 result only (this controller's 6 KB budget); hiding needs none of it.
+  const hideNext = (): void => {
+    nextSlot.replaceChildren();
+    nextSlot.hidden = true;
+  };
   const actionRadios = Array.from(root.querySelectorAll<HTMLInputElement>('input[name="pp-action"]'));
 
   let state: State = 'empty';
@@ -129,6 +135,7 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): Promis
     actions.hidden = !(next === 'ask' || next === 'stop' || next === 'opening');
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
+    if (next !== 'done') hideNext();
   }
 
   function clearFile(): void {
@@ -397,6 +404,17 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): Promis
     saveName.textContent = `저장될 이름: ${download.download}`;
     clearPasswords();
     setState('done');
+    // 암호 걸기 results offer nothing (FLOW): every next tool would ask for the password again.
+    if (act === 'unlock') {
+      const shown = blobUrl;
+      const name = download.download;
+      void import('../../lib/ui/next-steps-lazy')
+        .then(({ showNextStepsLater }) => {
+          // Still this result (not reset or replaced while the module loaded).
+          if (state === 'done' && blobUrl === shown) showNextStepsLater(nextSlot, 'pdf-password-unlock', [{ blob, name }]);
+        })
+        .catch(() => undefined);
+    }
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
     status(`${headline.textContent}. ${summary.textContent}.${signed ? ` ${SIGNATURE_NOTE}` : ''}`);

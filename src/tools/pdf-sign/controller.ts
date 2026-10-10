@@ -17,6 +17,7 @@ import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatPages, formatSize } from '../../lib/ui/format';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { bindPasswordToggle } from '../../lib/ui/password';
 import { isPdfFile } from '../../lib/ui/pdf-pick';
 import { takeSignPng } from '../../lib/ui/sign-handoff';
@@ -198,6 +199,8 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
   const againBtn = must<HTMLButtonElement>('sg-again');
   const resetBtn = must<HTMLButtonElement>('sg-reset');
   const saveName = must<HTMLParagraphElement>('sg-save-name');
+  // sg-next is the 다음 쪽 button; the 이어서 하기 slot is sg-chain.
+  const nextSlot = must<HTMLDivElement>('sg-chain');
   const whereRadios = Array.from(root.querySelectorAll<HTMLInputElement>('input[name="sg-where"]'));
 
   let state: State = 'empty';
@@ -275,6 +278,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     hint.hidden = next !== 'ready';
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
+    if (next !== 'done') hideNextSteps(nextSlot);
     updateUi();
   }
 
@@ -860,6 +864,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     notes.hidden = !lines.length;
     saveName.textContent = `저장될 이름: ${download.download}`;
     setState('done');
+    showNextSteps(nextSlot, 'pdf-sign', [{ blob: out, name: download.download }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
     status(`${headline.textContent}. ${summary.textContent}.${notes.textContent ? ` ${Array.from(notes.children, (li) => li.textContent).join(' ')}` : ''}`);

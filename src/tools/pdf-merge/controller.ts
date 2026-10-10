@@ -11,6 +11,8 @@ import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { baseName, formatPages, formatSize } from '../../lib/ui/format';
+import { sweepIfDue } from '../../lib/ui/handoff-marker';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { passwordToggle } from '../../lib/ui/password';
 import { nonPdfMessage, splitPdfFiles } from '../../lib/ui/pdf-pick';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
@@ -115,6 +117,7 @@ export function initMergeTool(): void {
   const notes = must<HTMLUListElement>('merge-notes');
   const download = must<HTMLAnchorElement>('merge-download');
   const resetBtn = must<HTMLButtonElement>('merge-reset');
+  const nextSlot = must<HTMLDivElement>('merge-next');
 
   let state: State = 'empty';
   let entries: Entry[] = [];
@@ -194,6 +197,7 @@ export function initMergeTool(): void {
     actions.hidden = !hasFiles || busy || next === 'done';
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
+    if (next !== 'done') hideNextSteps(nextSlot);
     confirmBox.hidden = true;
     list.querySelectorAll('button, input').forEach((b) => {
       (b as HTMLButtonElement | HTMLInputElement).disabled = busy;
@@ -640,6 +644,7 @@ export function initMergeTool(): void {
     }
     notes.replaceChildren(...n.map((t) => el('li', undefined, t)));
     setState('done');
+    showNextSteps(nextSlot, 'pdf-merge', [{ blob, name: download.download }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
     status(`합치기를 마쳤습니다. ${summary.textContent}. ${n.join(' ')}`.trim());
@@ -726,4 +731,5 @@ export function initMergeTool(): void {
 
   startUsage('pdf-merge');
   setState('empty');
+  sweepIfDue();
 }

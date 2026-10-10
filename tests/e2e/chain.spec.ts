@@ -4,6 +4,7 @@
 // both result screens with the group showing. Every test runs under the no-upload guard; after an arrival the IndexedDB
 // store is empty.
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import type { Download, Page } from '@playwright/test';
 import { withPdf } from '../helpers/pdf';
@@ -229,4 +230,207 @@ test('photo-compress in a browser that cannot use it: a handed-over photo is tak
   test.skip(!(await page.locator('#ph-unsupported').isVisible()), 'Only where the tool is unsupported (Playwright WebKit on Windows).');
   await expect.poll(() => stored(page)).toBe(0);
   expect(await marker(page)).toBeNull();
+});
+
+// ---------- X2: the other senders ----------
+
+const GROUP = '이 파일로 이어서 하기';
+const ALPHA = photoFixture('alpha.png');
+const PLAIN = fixturePath('gen_links_outline.pdf');
+const LAW05 = join(process.cwd(), 'tests', 'corpus', 'hwp', 'law05.hwp');
+const SWEEP_FLAG = 'docttak:handoff-sweep';
+const group = (page: Page) => page.getByRole('group', { name: GROUP });
+
+/** The download name the result offers. */
+const offered = async (page: Page, link: string): Promise<string> => (await page.locator(link).getAttribute('download'))!;
+
+test('pdf-merge → pdf-password: the merged PDF opens in 암호 걸기', async ({ page }) => {
+  await gotoReady(page, '/pdf-merge/');
+  await page.setInputFiles('#merge-input', [SCAN, PLAIN]);
+  await expect(page.locator('#merge-list > li .info', { hasText: '쪽' })).toHaveCount(2);
+  await page.getByRole('button', { name: /^PDF \d+개 합치기$/ }).click();
+  await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 암호 걸기', 'PDF 서명·도장 넣기']);
+  const name = await offered(page, '#merge-download');
+  await group(page).getByRole('button', { name: 'PDF 암호 걸기' }).click();
+  await expect(page).toHaveURL(/\/pdf-password\/$/);
+  await expect(page.locator('#pp-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'ask');
+  await expect(page.locator('#pp-name')).toHaveText(name);
+  expect(await stored(page)).toBe(0);
+});
+
+test('pdf-split: 범위대로 나누기 offers nothing; 고른 쪽만 새 PDF로 → pdf-sign → pdf-compress (pdf-sign sends too)', async ({ page }) => {
+  await gotoReady(page, '/pdf-split/');
+  await page.setInputFiles('#ps-input', PLAIN);
+  await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'ready');
+  // One range is one PDF, but the ranges mode never offers it (brief decision 5).
+  await page.locator('label.chip', { hasText: '범위대로 나누기' }).click();
+  await page.locator('#ps-ranges').fill('1');
+  await page.locator('#ps-run').click();
+  await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect(page.locator('#ps-next')).toBeHidden();
+  await expect(page.locator('#ps-next button')).toHaveCount(0);
+
+  await page.locator('#ps-again').click();
+  await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'ready');
+  await page.locator('label.chip', { hasText: '고른 쪽만 새 PDF로' }).click();
+  await page.locator('#ps-list li[data-id="0"] [data-role="pick"]').check();
+  await page.locator('#ps-run').click();
+  await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 암호 걸기', 'PDF 서명·도장 넣기']);
+  const name = await offered(page, '#ps-download');
+  await group(page).getByRole('button', { name: 'PDF 서명·도장 넣기' }).click();
+  await expect(page).toHaveURL(/\/pdf-sign\/$/);
+  await expect(page.locator('#sg-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#sg-tool')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#sg-name')).toHaveText(name);
+  await expect(page.locator('#sg-page-count')).toContainText('/ 1쪽');
+  expect(await stored(page)).toBe(0);
+
+  // Signed, the result goes on (the slot is #sg-chain: #sg-next is the 다음 쪽 button).
+  await page.setInputFiles('#sg-image-input', ALPHA);
+  await expect(page.locator('.sign-box')).toHaveCount(1);
+  await page.locator('#sg-run').click();
+  await expect(page.locator('#sg-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 암호 걸기']);
+  expect(await axeSerious(page)).toEqual([]);
+  const signed = await offered(page, '#sg-download');
+  await group(page).getByRole('button', { name: 'PDF 용량 줄이기' }).click();
+  await expect(page).toHaveURL(/\/pdf-compress\/$/);
+  await expect(page.locator('#cmp-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#cmp-name')).toHaveText(signed);
+  await expect(page.locator('#cmp-info')).toContainText('1쪽');
+  expect(await stored(page)).toBe(0);
+});
+
+test('pdf-password: a 암호 걸기 result offers nothing; the 암호 풀기 result → pdf-compress', async ({ page }) => {
+  await gotoReady(page, '/pdf-password/');
+  await page.locator('label.chip', { hasText: '암호 걸기' }).click();
+  await page.setInputFiles('#pp-input', SCAN);
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'ask');
+  await page.locator('#pp-new').fill('문서딱암호12');
+  await page.locator('#pp-again').fill('문서딱암호12');
+  await page.getByRole('button', { name: '암호 걸기', exact: true }).click();
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect(page.locator('#pp-next')).toBeHidden();
+  await expect(page.locator('#pp-next button')).toHaveCount(0);
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: '내려받기' }).click()]);
+  const d = download as Download;
+  const locked = { name: d.suggestedFilename(), mimeType: 'application/pdf', buffer: readFileSync(await d.path()) };
+
+  await page.locator('#pp-reset').click();
+  await page.locator('label.chip', { hasText: '암호 풀기' }).click();
+  await page.setInputFiles('#pp-input', locked);
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'ask');
+  await page.locator('#pp-pw').fill('문서딱암호12');
+  await page.getByRole('button', { name: '암호 풀기', exact: true }).click();
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 서명·도장 넣기', 'PDF 나누기·쪽 편집']);
+  expect(await axeSerious(page)).toEqual([]);
+  const name = await offered(page, '#pp-download');
+  await group(page).getByRole('button', { name: 'PDF 용량 줄이기' }).click();
+  await expect(page).toHaveURL(/\/pdf-compress\/$/);
+  await expect(page.locator('#cmp-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#cmp-name')).toHaveText(name);
+  await expect(page.locator('#compress-tool')).toHaveAttribute('data-state', 'ready');
+  expect(await stored(page)).toBe(0);
+});
+
+test('hwp-to-pdf → pdf-compress: the saved PDF opens without a second pick', async ({ page }) => {
+  test.setTimeout(240_000);
+  await gotoReady(page, '/hwp-to-pdf/');
+  await page.setInputFiles('#hw-input', LAW05);
+  await expect(page.locator('#hwp-tool')).toHaveAttribute('data-state', 'convert', { timeout: 150_000 });
+  await expect(page.locator('#hw-next')).toBeHidden();
+  await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), page.locator('#hw-save').click()]);
+  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 암호 걸기', 'PDF 서명·도장 넣기']);
+  await group(page).getByRole('button', { name: 'PDF 용량 줄이기' }).click();
+  await expect(page).toHaveURL(/\/pdf-compress\/$/);
+  await expect(page.locator('#cmp-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#cmp-name')).toHaveText('law05.pdf');
+  await expect(page.locator('#compress-tool')).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  expect(await stored(page)).toBe(0);
+});
+
+test('image-to-jpg: several photos offer nothing; one photo → photo-compress', async ({ page }) => {
+  await gotoReady(page, '/image-to-jpg/');
+  await page.setInputFiles('#ij-input', [ALPHA, PORTRAIT]);
+  await expect(page.locator('#ij-list > li')).toHaveCount(2);
+  await expect(page.locator('#ij-list .thumb-ph', { hasText: '확인 중' })).toHaveCount(0);
+  await page.locator('#ij-run').click();
+  await expect(page.locator('#ij-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await expect(page.locator('#ij-next')).toBeHidden();
+  await expect(page.locator('#ij-next button')).toHaveCount(0);
+
+  await page.locator('#ij-reset').click();
+  await page.setInputFiles('#ij-input', ALPHA);
+  await expect(page.locator('#ij-list > li')).toHaveCount(1);
+  await expect(page.locator('#ij-list .thumb-ph', { hasText: '확인 중' })).toHaveCount(0);
+  await page.locator('#ij-run').click();
+  await expect(page.locator('#ij-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await expect(group(page).getByRole('button')).toHaveText(['사진 용량 줄이기', '사진 PDF 변환']);
+  const name = await offered(page, '#ij-download');
+  await group(page).getByRole('button', { name: '사진 용량 줄이기' }).click();
+  await expect(page).toHaveURL(/\/photo-compress\/$/);
+  // Playwright WebKit on Windows has no OffscreenCanvas: the tool is off there and drops the photo (X1 test above).
+  await expect(page.locator('#ph-notice, #ph-unsupported').filter({ visible: true })).toHaveCount(1);
+  if (await page.locator('#ph-unsupported').isVisible()) {
+    await expect.poll(() => stored(page)).toBe(0);
+    return;
+  }
+  await expect(page.locator('#ph-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#ph-list > li .name')).toHaveText([name]);
+  expect(await stored(page)).toBe(0);
+});
+
+test('photo-compress (one photo) → jpg-to-pdf', async ({ page }) => {
+  await gotoReady(page, '/photo-compress/');
+  test.skip(!(await canDraw(page)), 'This browser has no OffscreenCanvas (Playwright WebKit on Windows).');
+  await page.setInputFiles('#ph-input', PORTRAIT);
+  await expect(page.locator('#ph-list .info', { hasText: '확인 중' })).toHaveCount(0);
+  await page.locator('#ph-run').click();
+  await expect(page.locator('#photo-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await expect(group(page).getByRole('button')).toHaveText(['사진 PDF 변환']);
+  const name = (await page.locator('#ph-list a[data-role="download"]').getAttribute('download'))!;
+  await group(page).getByRole('button', { name: '사진 PDF 변환' }).click();
+  await expect(page).toHaveURL(/\/jpg-to-pdf\/$/);
+  await expect(page.locator('#jp-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#jp-list > li .name')).toHaveText([name]);
+  expect(await stored(page)).toBe(0);
+});
+
+test('id-photo → jpg-to-pdf: the saved photo arrives', async ({ page }) => {
+  test.setTimeout(150_000);
+  await gotoReady(page, '/id-photo/');
+  await page.setInputFiles('#idp-input', PORTRAIT);
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', /^(adjust|blocked)$/, { timeout: 90_000 });
+  await page.locator('#idp-confirm').check();
+  await page.locator('#idp-save').click();
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await expect(group(page).getByRole('button')).toHaveText(['사진 PDF 변환']);
+  const name = await offered(page, '#idp-download');
+  await group(page).getByRole('button', { name: '사진 PDF 변환' }).click();
+  await expect(page).toHaveURL(/\/jpg-to-pdf\/$/);
+  // Playwright WebKit on Windows has no OffscreenCanvas: 사진 PDF 변환 shows its unsupported line and the photo is dropped.
+  // Either the arrival notice or that line shows; wait for one before looking.
+  await expect(page.locator('#jp-notice, #jp-unsupported').filter({ visible: true })).toHaveCount(1);
+  if (await page.locator('#jp-unsupported').isVisible()) {
+    await expect.poll(() => stored(page)).toBe(0);
+    return;
+  }
+  await expect(page.locator('#jp-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#jp-list > li .name')).toHaveText([name]);
+  expect(await stored(page)).toBe(0);
+});
+
+test('every new sender page sweeps a file nobody took once it is older than 10 minutes, then clears the flag', async ({ page }) => {
+  for (const path of ['/pdf-merge/', '/hwp-to-pdf/', '/image-to-jpg/', '/id-photo/']) {
+    await gotoReady(page, '/');
+    await putRecord(page, { key: 'd'.repeat(32), to: 'pdf-sign', ageMs: 11 * 60 * 1000 });
+    await page.evaluate((k) => localStorage.setItem(k, '1'), SWEEP_FLAG);
+    await gotoReady(page, path);
+    await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), SWEEP_FLAG), { message: path }).toBeNull();
+    expect(await stored(page), path).toBe(0);
+  }
 });

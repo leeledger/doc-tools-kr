@@ -6,6 +6,7 @@ import { takeCrash } from '../../lib/bgremove/guard';
 import { sessionStore } from '../../lib/face/guard';
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { sweepIfDue } from '../../lib/ui/handoff-marker';
 import { startUsage, track } from '../../lib/ui/usage';
 import { COPY } from './copy';
 
@@ -52,4 +53,6 @@ if (root && drop) {
   for (const ev of EVENTS) root.addEventListener(ev, start, { passive: true });
   drop.addEventListener('dragover', onDragOver);
   drop.addEventListener('drop', onDrop);
+  // This page sends files (이어서 하기): a file stored earlier and never taken is deleted once older than 10 minutes.
+  sweepIfDue();
 }

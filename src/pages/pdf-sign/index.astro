@@ -135,6 +135,7 @@ const where = [
             <button type="button" class="btn ghost" id="sg-again">다시 편집하기</button>
             <button type="button" class="btn ghost" id="sg-reset">다른 파일 처리하기</button>
           </div>
+          <div id="sg-chain" class="next-steps" role="group" aria-labelledby="sg-chain-label" hidden></div>
           <p class="save-name" id="sg-save-name"></p>
           <Share name={tool.name} text={sharePreview('/pdf-sign/', Astro.site!).description} id="sg-share" />
           <p class="related-line">여러 PDF를 하나로 묶으려면 <a href="/pdf-merge/">PDF 합치기</a>를, 암호를 다시 걸려면 <a href="/pdf-password/">PDF 암호 해제·설정</a>을 쓰세요.</p>

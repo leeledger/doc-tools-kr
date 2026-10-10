@@ -4,6 +4,7 @@
 // that cannot load shows the shared engine panel.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { sweepIfDue } from '../../lib/ui/handoff-marker';
 import { startUsage, track } from '../../lib/ui/usage';
 
 type Api = { add(files: File[]): void } | null;
@@ -45,4 +46,6 @@ if (root) {
   for (const ev of EVENTS) root.addEventListener(ev, start, { passive: true });
   root.addEventListener('dragover', onDragOver);
   root.addEventListener('drop', onDrop);
+  // This page sends files (이어서 하기): a file stored earlier and never taken is deleted once older than 10 minutes.
+  sweepIfDue();
 }

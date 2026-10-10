@@ -14,6 +14,7 @@ import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize, safeFileName } from '../../lib/ui/format';
 import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
 import { josa } from '../../lib/ui/josa';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { startUsage, track, type UsagePhase } from '../../lib/ui/usage';
 import { bucketKB } from '../../../scripts/lib/usage.mjs';
@@ -118,6 +119,7 @@ export function initPhotoTool(): void {
   const headline = must<HTMLParagraphElement>('ph-headline');
   const againBtn = must<HTMLButtonElement>('ph-again');
   const resetBtn = must<HTMLButtonElement>('ph-reset');
+  const nextSlot = must<HTMLDivElement>('ph-next');
   const compareRoot = must<HTMLElement>('ph-compare');
   const formatSummary = must<HTMLElement>('ph-format-summary');
   const fast = must<HTMLInputElement>('ph-fast');
@@ -147,6 +149,8 @@ export function initPhotoTool(): void {
   let runTarget: { kb: number | null; parsed: Extract<Parsed, { ok: true }> } | null = null;
   let compareId: number | null = null;
   let zipUrl: string | null = null;
+  /** The row whose photo the 이어서 하기 buttons hand over, or null. */
+  let nextRow: Row | null = null;
   let device: Device = detectDevice();
 
   const announce = (msg: string): void => live('status', msg, root);
@@ -259,6 +263,24 @@ export function initPhotoTool(): void {
     }
     update();
     for (const r of rows) renderRow(r);
+    updateNext();
+  }
+
+  /** 이어서 하기: offered while the done list holds exactly one photo to download (the ZIP rule's other side). */
+  function updateNext(): void {
+    const out = state === 'done' ? rows.filter((r) => r.result || r.kept) : [];
+    const one = out.length === 1 ? out[0]! : null;
+    if (one === nextRow) return;
+    nextRow = one;
+    if (!one) {
+      hideNextSteps(nextSlot);
+      return;
+    }
+    const res = one.result;
+    const file = res
+      ? { blob: new Blob([res.bytes as Uint8Array<ArrayBuffer>], { type: res.report.format === 'webp' ? 'image/webp' : 'image/jpeg' }), name: res.name }
+      : { blob: one.file, name: one.file.name };
+    showNextSteps(nextSlot, 'photo-compress', [file]);
   }
 
   // ---------- rows ----------

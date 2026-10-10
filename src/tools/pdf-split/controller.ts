@@ -15,6 +15,7 @@ import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatPages, formatSize } from '../../lib/ui/format';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { bindPasswordToggle } from '../../lib/ui/password';
 import { isPdfFile } from '../../lib/ui/pdf-pick';
 import { startRowDrag } from '../../lib/ui/reorder';
@@ -157,6 +158,7 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): Promise<v
   const againBtn = must<HTMLButtonElement>('ps-again');
   const resetBtn = must<HTMLButtonElement>('ps-reset');
   const saveName = must<HTMLParagraphElement>('ps-save-name');
+  const nextSlot = must<HTMLDivElement>('ps-next');
   const modeRadios = Array.from(root.querySelectorAll<HTMLInputElement>('input[name="ps-mode"]'));
 
   let state: State = 'empty';
@@ -234,6 +236,7 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): Promise<v
     runBtn.hidden = next !== 'ready';
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
+    if (next !== 'done') hideNextSteps(nextSlot);
     confirmBox.hidden = true;
     list.querySelectorAll('button, input').forEach((b) => {
       (b as HTMLButtonElement | HTMLInputElement).disabled = busy || (b as HTMLElement).dataset.off === '1';
@@ -811,6 +814,8 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): Promise<v
     notes.hidden = !lines.length;
     saveName.textContent = `저장될 이름: ${download.download}`;
     setState('done');
+    // 이어서 하기: only 쪽 편집 and 새 PDF로 만들기 make one PDF on purpose (brief decision 5).
+    if (!many && (m === 'edit' || m === 'extract')) showNextSteps(nextSlot, 'pdf-split', [{ blob: out, name: download.download }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
     status(`${headline.textContent}. ${summary.textContent}.${lines.length ? ` ${lines.join(' ')}` : ''}`);

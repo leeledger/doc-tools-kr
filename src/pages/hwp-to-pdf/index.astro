@@ -63,6 +63,7 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
             <p><a id="hw-again" download>다시 내려받기</a> · <a href="/pdf-compress/">저장한 PDF가 크면 PDF 용량 줄이기</a></p>
             <Share name={tool.name} text={sharePreview('/hwp-to-pdf/', Astro.site!).description} id="hw-share" />
           </div>
+          <div id="hw-next" class="next-steps" role="group" aria-labelledby="hw-next-label" hidden></div>
           <div class="hw-preview" id="hw-preview" tabindex="0" role="region" aria-label="문서 미리보기"></div>
         </div>
 

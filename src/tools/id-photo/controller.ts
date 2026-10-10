@@ -20,6 +20,7 @@ import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { formatSize } from '../../lib/ui/format';
 import { josa } from '../../lib/ui/josa';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { checkDims, checkFileBytes, WORKING_LONG_EDGE } from './limits';
 import { INITIAL, canSave, reduce, saveReason, type Phase, type SaveAction, type SaveModel } from './model';
 import { drawOverlay } from './overlay';
@@ -134,6 +135,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
   const zoom2 = must<HTMLInputElement>('idp-zoom2');
   const againBtn = must<HTMLButtonElement>('idp-again');
   const newBtn = must<HTMLButtonElement>('idp-new');
+  const nextSlot = must<HTMLElement>('idp-next');
 
   let model: SaveModel = INITIAL;
   let preset: IdPreset = getPreset(DEFAULT_PRESET)!;
@@ -163,6 +165,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     adjust.hidden = p !== 'adjust' && p !== 'blocked';
     exporting.hidden = p !== 'exporting';
     done.hidden = p !== 'done';
+    if (p !== 'done') hideNextSteps(nextSlot);
     drop.hidden = p !== 'empty' && p !== 'error';
   }
 
@@ -623,7 +626,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
 
   function showDone(p: IdPreset, bytes: Uint8Array, fallback: boolean): void {
     if (resultUrl) URL.revokeObjectURL(resultUrl);
-    resultUrl = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }));
+    const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' });
+    resultUrl = URL.createObjectURL(blob);
     const name = outputName(p);
     track({ e: 'success', t: 'id-photo' });
     download.href = resultUrl;
@@ -654,6 +658,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     printNote.textContent = print;
     hideError();
     setPhase('done');
+    showNextSteps(nextSlot, 'id-photo', [{ blob, name }]);
     say(COPY.exported(name));
     // The headline, the chips and 내려받기 sit fully below the sticky header (UX-AUDIT-2 P1-1): the box scrolls to
     // the html scroll-padding-top (global.css), then the headline takes focus without a second scroll.
