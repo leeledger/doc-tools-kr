@@ -1,3 +1,31 @@
+# Review Request — CI fix round 2
+Date: 2026-10-10
+Ready for Review: YES
+Status: DONE. Not committed, not pushed. Follows CI run 38015775584 on 8e02171 (checks, chromium, firefox, webkit and mobile-safari green; mobile-chrome 2 failed after retries).
+
+## Failure → root cause → fix
+
+**(1) mobile-chrome pdf-sign.spec.ts:387 axe target-size on #sg-next ("partially obscured, 121 × 14.4 px"; spacing 23.4 px) — layout bug**
+- Root cause: /pdf-sign/ has the sticky phone actions bar (`.merge-actions`, #sg-actions) but was missing from the `scroll-padding-bottom` rule, which named only #merge-tool and #ps-tool. Focus and scroll-into-view therefore took no account of the bar. Probe on Linux mobile-chrome after 「쪽 범위」 + fill: the focused #sg-range sat at y 758–802 under the bar at 770–839 (WCAG 2.4.11 focus obscured). The page then stopped wherever that left it. On CI that put #sg-next mostly under the sticky header (14.4 px visible), which is what axe reported. This was not caused by 8e02171: the rule never covered /pdf-sign/, and the scroll position varies with layout.
+- Fix: src/styles/app.css:239-240 replaces the per-tool list with `html:has(.merge-actions:not([hidden])) { scroll-padding-bottom: 96px; }`. It applies whenever any tool shows its bar (merge, split, sign, image-to-jpg, jpg-to-pdf, pdf-password, pdf-to-jpg); the bar is 69 px tall. Probe after the fix: #sg-range at 700–744, clear of the bar (mobile-safari: 524–568 against a bar at 595).
+- Test: tests/e2e/pdf-sign.spec.ts:396-398 now also asserts that the filled field is not under #sg-actions. Against the old CSS (dist-noauto, pre-fix) it fails (field bottom 882 > 771); with the fix it passes.
+
+**(2) mobile-chrome polish.spec.ts:606 focused merge row covered by the bar (778.5 > 771) — test race, not 8e02171**
+- Root cause (trace): the test calls `scrollIntoView({ block: 'start' })` on #merge-list, which runs smoothly because of the site's `scroll-behavior: smooth`. It calls `focus()` on row 7 only 40 ms later (227595 → 227635 ms). The smooth scroll still running then overrides the focus scroll and ends with the list at the top, the row under the bar (last screencast frame). The tools-menu change in 8e02171 has no effect here: the panel is `hidden`, and the built CSS still has the merge scroll-padding rule. Local runs pass because the animation finishes first.
+- Fix: tests/e2e/polish.spec.ts:618-620 scrolls with `behavior: 'instant'`, like the `scrollTo` two lines above. The assertion is unchanged.
+
+## Verification (Linux WSL, Playwright 1.63, retries 0)
+- Build dist (AUTOFRAME=1): check-dist OK. No unit test reads this CSS rule.
+- mobile-chrome, pdf-sign + polish `--repeat-each=5`, 4 workers: first run 294 passed / 25 skipped / 1 failed. The failure was pdf-sign:307 ("round 3"): the #sg-run click did not start the save, and the state stayed ready for 60 s. Not reproduced since: pdf-sign:307 ×15 15/15; pdf-sign ×5 55/55; pdf-sign + polish ×5 295 passed / 25 skipped / 0 failed (both with the new field assertion).
+- chromium + webkit + mobile-safari, pdf-sign + polish: 175 passed / 17 skipped. pdf-sign again with the new assertion on chromium + webkit + mobile-safari + firefox: 47 passed / 1 skipped.
+- mobile-chrome + mobile-safari, every spec with a sticky bar (pdf-merge, pdf-split, image-to-jpg, jpg-to-pdf, pdf-password, pdf-to-jpg): 110 passed / 6 skipped.
+
+## Open Questions
+- The single pdf-sign:307 lost #sg-run click (1 of 320 runs, under load) is unexplained. It never failed in CI. Logged.
+- The CSS minifier drops the `100vh` fallback of the tools-menu max-height and keeps only `100dvh` (supported by every target browser). Left as is.
+
+---
+
 # Review Request — CI fix after TOOLS5
 Date: 2026-10-10
 Ready for Review: YES

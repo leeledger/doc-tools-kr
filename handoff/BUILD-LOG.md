@@ -2633,3 +2633,11 @@ Details, line ranges and proofs: handoff/REVIEW-REQUEST.md ("CI fix after TOOLS5
 
 **CI fix after TOOLS5 — deploy gate (2026-10-10)**
 - Richard: clear, 0 Must Fix. Pushed; orchestrator watches this CI run to green before starting HWPX2HWP (lesson: TOOLS5 steps were pushed on review-clear without waiting for CI, which stayed red for six commits).
+
+
+## CI fix round 2 (Bob, 2026-10-10; CI run 38015775584 on 8e02171, mobile-chrome) — status DONE
+- pdf-sign.spec:387 axe target-size #sg-next: /pdf-sign/'s sticky phone actions bar had no scroll-padding-bottom (the rule named only merge and split), so the focused 쪽 범위 field sat under the bar (probe 758–802 against bar 770–839) and the page stopped where CI's #sg-next ended up under the sticky header. app.css now uses `html:has(.merge-actions:not([hidden])) { scroll-padding-bottom: 96px; }` for every tool's bar. New assertion in the axe test: field not under #sg-actions (fails on the old CSS: 882 > 771).
+- polish.spec:606: test race. A smooth `scrollIntoView` was still animating when `focus()` ran 40 ms later and overrode the focus scroll (trace). The test now scrolls instantly. Not caused by 8e02171's menu change.
+- Gates: dist check-dist OK; mobile-chrome pdf-sign + polish ×5 295/0 failed (first run had 1 lost #sg-run click on pdf-sign:307, not reproduced in 85 later runs); chromium + webkit + mobile-safari pdf-sign + polish 175 passed; sticky-bar specs on both phones 110 passed.
+- Known Gaps: pdf-sign:307 lost click once under load (unexplained); tools-menu `100vh` fallback dropped by the minifier (dvh only).
+- CI fix round 2 (2026-10-10): scroll-padding-bottom now applies to every tool with the phone sticky actions bar (html:has(.merge-actions:not([hidden]))) — /pdf-sign/ was missing, so a focused 쪽 범위 input sat under the bar (WCAG 2.4.11); polish:606 test race fixed with instant scroll. Small CSS + tests; orchestrator pushed without a separate review round and watches CI.

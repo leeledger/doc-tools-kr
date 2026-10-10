@@ -236,7 +236,8 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
     position: sticky; bottom: 0; z-index: 4; background: var(--bg); margin-top: 8px;
     padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line);
   }
-  html:has(#merge-tool[data-state="listing"]), html:has(#merge-tool[data-state="error"]), html:has(#ps-tool[data-state="ready"]) { scroll-padding-bottom: 96px; }
+  /* Whenever a tool shows its bar (every tool using .merge-actions, /pdf-sign/'s 쪽 범위 field included). */
+  html:has(.merge-actions:not([hidden])) { scroll-padding-bottom: 96px; }
 }
 .check { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: var(--brand); }

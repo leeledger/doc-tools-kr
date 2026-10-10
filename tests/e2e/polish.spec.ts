@@ -615,7 +615,9 @@ test.describe('merge list (P.16)', () => {
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     expect(await page.evaluate(() => document.querySelector('#merge-list')!.getBoundingClientRect().bottom > innerHeight)).toBe(true);
     await expect(bar).toBeInViewport({ ratio: 1 });
-    await page.evaluate(() => document.querySelector('#merge-list')!.scrollIntoView({ block: 'start' }));
+    // Instant: a smooth scroll (the site's scroll-behavior) still running at the focus() below overrides the focus
+    // scroll and leaves the row under the bar (CI mobile-chrome, focus 40 ms after this call).
+    await page.evaluate(() => document.querySelector('#merge-list')!.scrollIntoView({ block: 'start', behavior: 'instant' }));
     await expect(bar).toBeInViewport({ ratio: 1 });
     await expect(bar.getByRole('button', { name: 'PDF 8개 합치기' })).toBeVisible();
     const vh = page.viewportSize()!.height;

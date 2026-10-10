@@ -393,6 +393,9 @@ test('axe: the editor with a picture and the result have no serious or critical 
   await pickImage(page);
   await page.locator('label.chip', { hasText: '쪽 범위' }).click();
   await page.locator('#sg-range').fill('9');
+  // The focused field is not under the actions bar (sticky at phone widths; scroll-padding-bottom keeps it clear).
+  const field = (await page.locator('#sg-range').boundingBox())!;
+  expect(field.y + field.height).toBeLessThanOrEqual((await page.locator('#sg-actions').boundingBox())!.y + 1);
   expect(await serious()).toEqual([]);
   await page.locator('#sg-range').fill('1');
   await save(page);
