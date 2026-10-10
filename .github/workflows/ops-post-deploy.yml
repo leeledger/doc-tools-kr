@@ -29,11 +29,11 @@ env:
 jobs:
   verify:
     name: A-1 live check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -79,7 +79,7 @@ jobs:
           node scripts/ops/issue.mjs open --label ops:deploy --title "배포 후 점검 실패: ${GITHUB_SHA::12}" --body-file fail.md $DRY
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: live-smoke
@@ -91,22 +91,22 @@ jobs:
   indexnow:
     name: A-2 IndexNow
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
       # The sitemap of the last successful ping; a new key per run, the newest one is restored.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: .ops-state/sitemap.xml
           key: indexnow-sitemap-${{ github.run_id }}
           restore-keys: indexnow-sitemap-
       - name: Ping the changed URLs
         run: node scripts/ops/indexnow-diff.mjs --state .ops-state/sitemap.xml --url "$SITE" $DRY
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: success() && !inputs.dry_run
         with:
           path: .ops-state/sitemap.xml

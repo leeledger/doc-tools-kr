@@ -1,35 +1,24 @@
-# Review Feedback — TOOLS5 U3 (/pdf-sign/)
-Date: 2026-10-08
+# Review Feedback — CI fix after TOOLS5
+Date: 2026-10-10
 Ready for Builder: YES
 
 ## Must Fix
 None.
 
 ## Should Fix
-- src/tools/pdf-sign/controller.ts:402 (confidence: 8/10) — `p.box = clampBox(p.box, info.width, info.height);` inside drawBoxes writes the current page's clamp back into the shared placement. A 모든 쪽 / 쪽 범위 placement on a mixed-size PDF (A4 + a smaller or landscape page) is permanently pulled in or shrunk just by paging past the smaller page, so the saved positions on the other pages depend on which pages the person looked at. toPdfRect (place.ts:120) already clamps per page at save time, so the stored box need not be mutated on view. Fix: keep the clamped box local for display (boxStyle with a clamped copy); write back only on an actual move/resize/key (setBox). Add a unit/e2e case: an 'all' placement on a two-size PDF keeps its page-1 position after viewing page 2.
-- src/tools/pdf-sign/place.ts:87-90 (confidence: 7/10) — `const h = (w * box.h) / box.w;` then clampBox computes `aspect = box.h / box.w`. A corner drag that lands exactly on `start.w + dx === 0` (controller.ts:471) gives h = 0, aspect = NaN, and the NaN box sticks (Math.min/max propagate NaN) and reaches drawImage on save. Rare, but cheap: in resizeBox take the aspect from the input box and floor `w` at MIN_EDGE (or a small positive) before computing h; one unit case for w = 0 and w < 0.
-- tests/unit/pdf-sign.test.ts:279-281 (confidence: 7/10) — the "unbalanced cm" test only asserts `Contents` has ≥ 3 streams; it would pass if the wrap were in the wrong order or the picture were drawn inside the leaking state. I verified the behaviour itself in pdf-lib (PDFPageLeaf.normalize → wrapContentStreams when autoNormalizeCTM, default on load), so this is a test-strength gap, not a bug. Assert the first stream is `q`, the original is second, a `Q` stream precedes the picture's stream, or render and check the picture's pixel position as the e2e does.
+- tests/e2e/pdf-sign.spec.ts:232-248 (confidence: 4/10, appendix) — measuring the drag relative to `#sg-stage` can no longer see the window scrolling during a drag. A user would not notice a 1 px shift like that, and x stayed exact on every try, so I accept the change. If CI still shows -119 after this, Bob's own note applies: the drag itself is off. Do not loosen the check any further.
 
 ## Escalate to Architect
-- /stamp-signature/ related list now has four links (index.astro:219: pdf-sign, photo-compress, hwp-to-pdf, pdf-merge); every other tool has three. Brief says only "gains pdf-sign". Keep four, or drop one?
-- Placement model (one shared box per placement + 넣을 쪽 [이 쪽만 | 쪽 범위 | 모든 쪽]): it satisfies "같은 자리에 모든 쪽 / range" in decision 10. Per-page copies are not in the brief. Product call; I see no code reason to change it.
-- CLAUDE.md line 3 still needs "PDF 서명·도장 넣기" (orchestrator-owned).
+None. Open question (c2): reducedMotion on WebKit only is the right call. The site already honours it (app.css:448, global.css:141). Chromium and Firefox still run with smooth scrolling, and a lost click while the page is still scrolling is a harness artifact, not something a user does. Open question (d): a menu that scrolls inside itself when it is taller than the window is a plain bug fix, not a product decision.
+
+## Verified
+- (a) ga.test.ts:227-231: `existsSync` and `ROOT` are already imported or defined (lines 5, 17). The `birefnet-lite-512` directory name matches copy-vendor.mjs:149/156. `bgRemoveOn` accepts only '1' (scripts/lib/bgremove.mjs:11-13), so the explicit '0' is a correct "off". Root cause holds: check-dist.mjs:297 fails any flag-off build that carries birefnet/onnxruntime files.
+- (b) id-photo.spec.ts:658: the expectation now matches the shortened description. Test-only change.
+- (c1) controller.ts:542-549: `rangeBox` (183) and `whereRadios` (201) are in scope. The guard acts only if a 넣을 쪽 radio still has focus and the range box is shown. Chromium, Firefox and keyboard-arrow paths already have focus in the field, so the timeout does nothing there. iOS/macOS Safari do not mouse-focus radios, so it does nothing there either. No regression.
+- (c2) playwright.config.ts: all five WebKit projects are covered. For the cloud projects, `defaultBrowserType === 'webkit'` picks up Desktop Safari and iPhone 14. No product code branches on reduced motion; it is CSS only.
+- (d) app.css:36-38: on desktop the header is 61 px and the panel starts at about 58 px, so it ends about 18 px above the bottom of the window. On a phone the sheet hangs from the sticky `.top` (top 100% = 61 px) and ends about 15 px above the bottom. The 100vh fallback comes before dvh. Focus outlines (3 px + 2 px offset) fit inside the panel padding (6 px; on a phone 8/12 px), so overflow does not clip them. polish.spec.ts:655-660 now asserts the click point is on screen instead of clicking blind.
+- (f) pdf-sign.spec.ts:285-289: reading box and stage in one evaluate on the stable `#sg-stage` is correct. The old version could resolve a box that had already been replaced.
+- Workflows: the tags exist (`gh api`): checkout v7.0.1, setup-node v7.1.0, upload-artifact v7.0.2, cache v6.1.0. All run on node24. The inputs used (node-version-file, cache, name/path/include-hidden-files/retention-days, path/key/restore-keys) are unchanged. upload-artifact `archive` defaults to true, so uploading directories still works. setup-node's automatic package-manager cache does not apply, because package.json has no `packageManager` field. checkout v7's new block on fork PR checkout covers only pull_request_target/workflow_run; ci.yml uses pull_request. ops-weekly's `git push` relies on the persisted credentials (default on), with contents: write.
 
 ## Cleared
-I reviewed the placement maths (toPdfRect through convertToPdfPoint on both corners, rotate = /Rotate counter-clockwise, CropBox origin, clamp; unit-tested against real pdf.js viewports at 0/90/180/270 × crop 0/36 and checked by pixels in e2e) and signPdf (one embedPng, drawImage per stamp, q/Q wrap confirmed in @cantoo/pdf-lib, the PDF/A-1 retry thrown before any mutation in save() so it is safe, page index checked, producer, encrypted input saved without a password, hasSignature taken before drawing). The merge.worker `sign` branch returns before the merge path, and the pdf-merge/pdf-split consumers only match 'done'/'error'/'progress', so they are unaffected. The sessionStorage hand-over is same-origin and tab-scoped, read once and removed even when invalid, strictly parsed as a PNG data URL and re-sniffed/decoded, and QuotaExceeded or blocked storage gives the brief's message without leaving the page. Keyboard and drag work (buttons, arrows 1/10 pt, Delete, slider with aria-valuetext). The honest "그림 서명" copy is first in 알아 두면 좋아요 and the FAQ. The signature warning and the no-password note with its link appear before 내려받기. Usage events carry only place/fail codes. Lazy controller and check-dist budget are fine. The test-only change is fine: fulfilling the stub with the real response's headers (CSP included) makes the e2e stricter, not looser.
-
----
-
-# Review Feedback — TOOLS5 U3 round 2
-Date: 2026-10-08
-Ready for Builder: YES
-
-## Must Fix
-None.
-
-## Should Fix
-- tests/e2e/pdf-sign.spec.ts:258-267 (confidence: 7/10) — likely cause of the unexplained failure, and a real CI flake risk. `open()` returns once `data-state` is `ready`, but the controller sets `ready` (controller.ts `setState('ready')` in openWith) *before* `showPage(0)` has rendered. `stage.style.width/height` are set only after `page.render` finishes. `pickImage()` waits only for `.sign-box` count 1, and the box can be drawn while the stage is still unsized, so `before = await rel()` can be taken against the container width rather than the page picture. The later `expect.poll(rel).toEqual(before)` then compares against a stale baseline and fails. A cold pdf.js load right after a rebuild fits that timing. Fix: before measuring `before`, wait until the page picture is drawn, e.g. `await expect(page.locator('#sg-stage canvas.sign-page')).toHaveCount(1)` and poll `rel` until two reads agree. Check whether other tests that measure the box right after `open` + `pickImage` need the same wait.
-- src/tools/pdf-sign/controller.ts:496 (confidence: 8/10) — the arrow keys still start from the unclamped shared box: `setBox(p, moveBox(p.box, move[0], move[1], info.width, info.height));`. On a page where the box is shown clamped (e.g. x 414 on a 200-wide page), the first ArrowLeft computes x 413, clamps back to the same spot, and writes it, so the press does nothing visible and the keyboard behaves differently from the drag you fixed at :458. Fix: `moveBox(clampBox(p.box, info.width, info.height), …)`. The size slider at :942 (`resizeBox(p.box, …)`) has the same issue, less visibly; use the same shown box there.
-
-## Cleared
-Round 1 items 1–3 are fixed. drawBoxes now passes a display-only clamped copy (:403). The shared box changes only on an explicit move or resize. A drag starts from the box as shown (:458). 그림 바꾸기 reshapes without clamping (:581, place.ts:101-104). `edge()`/`aspectOf()` keep clampBox and resizeBox finite and at least MIN_EDGE, so a 0/negative/NaN/∞ width can no longer reach drawImage (place.ts:59-61,67-76,91-98), and the new unit cases cover it. The cm test now checks operator order and the exact CTM at paintImageXObject. On the flake: one failure in 14 runs is not noise to wave away, and the race above explains it. Fix the wait before this goes to CI.
+I reviewed all fourteen changed files of the CI fix: two product fixes, the test-only changes, the Playwright config and five workflows. Every root cause is convincing, no test change hides a real bug, and the action upgrades are real releases with the inputs we use unchanged.

@@ -539,7 +539,14 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): void } | n
     if (w === 'range' && !p.range.trim()) p.range = String(cur + 1);
     drawBoxes();
     updateUi();
-    if (w === 'range') rangeInput.focus();
+    if (w === 'range') {
+      rangeInput.focus();
+      // WebKit focuses a clicked label's radio after its change event (GTK/WPE make radios mouse-focusable), which
+      // takes focus back from the field; hand it over again once that default action is done.
+      setTimeout(() => {
+        if (!rangeBox.hidden && whereRadios.includes(document.activeElement as HTMLInputElement)) rangeInput.focus();
+      }, 0);
+    }
   }
 
   // ---------- the picture ----------

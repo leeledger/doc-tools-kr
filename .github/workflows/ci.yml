@@ -17,11 +17,11 @@ concurrency:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -47,19 +47,19 @@ jobs:
         run: npm run regress:bgremove -- --fixtures-only --backend wasm
       - name: Lighthouse CI
         run: npm run lhci
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: reports-checks
           path: .lighthouseci/
-          # upload-artifact v4 skips dot-folders by default; without this the Lighthouse reports never upload.
+          # upload-artifact (v4 and later) skips dot-folders by default; without this the Lighthouse reports never upload.
           include-hidden-files: true
           retention-days: 7
 
   # One job per Playwright project, run in parallel. The full 5-project suite in a
   # single job ran past the 30-minute limit.
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # 60, not 45 (G2 A1): on 2026-10-01 the webkit job's `playwright install --with-deps` spent 34 min on slow
     # azure.archive.ubuntu.com downloads (5 min on ci-green the same day), twice in a row; the tests take ~13 min.
     timeout-minutes: 60
@@ -68,8 +68,8 @@ jobs:
       matrix:
         project: [chromium, firefox, webkit, mobile-chrome, mobile-safari]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -125,7 +125,7 @@ jobs:
           else
             npx playwright test --project=${{ matrix.project }} --project=cloud-${{ matrix.project }}
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: reports-${{ matrix.project }}

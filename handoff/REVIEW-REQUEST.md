@@ -1,3 +1,119 @@
+# Review Request — CI fix after TOOLS5
+Date: 2026-10-10
+Ready for Review: YES
+Status: DONE (item (e) DONE_WITH_CONCERNS). Not committed, not pushed.
+
+CI on main has been red since TOOLS5 U0+U1 (runs 37753444973, 37758454475, 37769093648, 37774521048, 37787285839).
+I read the logs and the uploaded traces for each failure, and kept first tries apart from retries.
+
+## Failure → root cause → fix
+
+**(a) checks: tests/unit/ga.test.ts "GA-on build … check-dist passes" (every run since GA4)**
+- Root cause: the CI checks job builds with `PUBLIC_BG_REMOVE=1`, so copy-vendor leaves the 배경 지우기 engine in
+  public/vendor/ (birefnet, onnxruntime) and gen-brand leaves brand/og-remove-background.png. The test's own GA-on
+  `astro build` ran with the flag unset. Astro copies public/ as is, so check-dist failed that flag-off build for
+  carrying 15 배경 지우기 files. It passed locally only because public/ was in the flag-off state (the GA4 BUILD-LOG
+  notes "ga.test needs public/ in the no-flag state").
+- Fix: tests/unit/ga.test.ts:227-231 builds with `PUBLIC_BG_REMOVE` set to match public/vendor ('1' when birefnet is
+  there).
+- Proof: after `PUBLIC_BG_REMOVE=1 npm run build` (the checks job), the old test fails with exactly the CI list and
+  the new one passes. Full suite: 58 files, 1,252 passed.
+
+**(b) all browsers: id-photo.spec.ts:654 SEO (since SEO-LENGTH, 3/3 tries)**
+- Root cause: SEO-LENGTH shortened the /id-photo/ description in tools.ts on purpose (40–80 chars). The spec kept the
+  old literal.
+- Fix: tests/e2e/id-photo.spec.ts:658 expects the current description.
+
+**(c1) webkit + mobile-safari: pdf-sign.spec.ts:182 `#sg-range` not focused (since U3, 2/2 tries on both) — product bug**
+- Root cause: WebKit's label default action first dispatches the simulated click (→ change → `setWhere` →
+  `rangeInput.focus()`). Only after that does it focus the radio, when the radio is mouse-focusable (GTK/WPE: yes),
+  which takes focus back. Confirmed with a focusin probe on Linux WebKit: `sg-range, range (radio), sg-range` with the
+  fix. Chromium and Firefox give `range, sg-range`.
+- Fix: src/tools/pdf-sign/controller.ts:542-549 gives focus back to the field after a 0 ms timeout. It does so only if
+  a 넣을 쪽 radio still has focus and the range box is shown. The unchanged spec is the regression test: it failed in
+  CI and passes on Linux WebKit.
+
+**(c2) webkit + mobile-safari lost clicks: id-photo:206 / :280, image-to-jpg:81 / 174 / 191 / 224, jpg-to-pdf:99,
+pdf-compress:52 / 75, pdf-split:99 / 251, usage:166 (cloud), sw:38 (flaky or hard, depending on the run)**
+- Root cause: `html { scroll-behavior: smooth }`. On WebKit, Playwright's scroll-into-view before a click animates.
+  The actionability check passes mid-animation, and the click lands on whatever is under the point by then. The
+  traces show the pattern: the target is scrolled under the sticky header ("header intercepts pointer events"), then
+  "not stable", then a click reported "done" with no effect (no download, no 삭제, one 돌리기 of two). The tools
+  scroll their result into view smoothly just before the 내려받기 click, so the result specs hit this most.
+- Reproduced on Linux WebKit (WSL Ubuntu 24.04, browser deps extracted without sudo). image-to-jpg + jpg-to-pdf +
+  pdf-split + pdf-compress ×3, 2 workers, retries 0: 6 of 111 failed (5 image-to-jpg, pdf-compress:75). With the fix:
+  0 of 111, in 3.7 min instead of 7.0. The errors and traces of image-to-jpg, jpg-to-pdf, usage, pdf-split:99 and id-photo:206
+  show the lost click directly. pdf-split:251 (axe target-size "partially obscured", measured mid-scroll), sw:38 and
+  id-photo:280 (a nudge click with no effect) match the pattern but were not reproduced one by one.
+- Fix: playwright.config.ts:33-41, 69, 71, 83, 92. The WebKit projects (webkit, mobile-safari, bg-mobile-safari,
+  cloud-webkit, cloud-mobile-safari) run with `reducedMotion: 'reduce'`, which the site already honours (global.css,
+  app.css). hwp-viewer.spec.ts has done the same since its review. No assertion changes: Chromium and Firefox still
+  run with smooth scrolling, and the product's own result scrolls that matter (photo-compress, id-photo) are already
+  instant.
+
+**(d) firefox: polish.spec.ts:635 header menu outside click (since U3, 3/3) — product bug**
+- Root cause: with /pdf-sign/ the menu lists 13 tools. The panel bottom reached y = 701 in a 720 px window, and the
+  test clicked at y = 721 (trace: `mouseClick {"x":5,"y":721}`), outside the viewport, which Firefox drops. On a
+  phone the sheet was taller than the window (13 × 48 px plus the header), so its last links were out of reach under
+  the sticky header.
+- Fix: src/styles/app.css:36-38 limits the panel to the window height (`max-height: calc(100dvh - 76px)`, with a
+  100vh fallback) and lets it scroll. tests/e2e/polish.spec.ts:655-660 clicks 8 px below the panel and asserts that
+  the point is on screen.
+
+**(e) firefox: pdf-sign.spec.ts:225 drag `r1.y - r0.y` = -119, expected -120 (U3, 3/3) — DONE_WITH_CONCERNS**
+- Analysis: x was exact (-80) on all tries. The controller moves the box by pointer delta / scale with no rounding,
+  and Playwright's start and end points have the same fraction. So a vertical-only 1 px means the stage moved in the
+  window, not that the drag was off. Not reproduced: Linux Firefox ×4 (2 workers) and the full Firefox job pass. The
+  CI layout was 1 px different (box at y 639.33 against 640.33 locally, fonts).
+- Fix: tests/e2e/pdf-sign.spec.ts:232-248 measures the move relative to `#sg-stage` (still exactly -80 / -120). If
+  CI still fails, the drag itself is off and this assertion will show it.
+
+**(f) chromium: pdf-sign.spec.ts:272 flaky, `parentElement` of null**
+- Root cause: `locator('.sign-box').evaluate` resolved a box that a redraw then replaced (detached, no parent).
+- Fix: tests/e2e/pdf-sign.spec.ts:285-289 reads box and stage in a single evaluate on `#sg-stage`, which is never
+  replaced.
+
+**(g) firefox goto timeouts (pdf-split:207 / 287 / 251 and about 13 others per run) — known harness race, not changed**
+- Every one is `page.goto: Timeout 20000ms` in gotoReady, and the trace shows every page request answered 200
+  (ci-green BUILD-LOG: Playwright-Firefox drops the navigation event under load). Reproduced locally: 16 flaky, all
+  goto, all passed on retry. The Firefox projects keep their 2 CI retries. Logged as a Known Gap.
+
+## Workflows (Ubuntu 26 on 2026-10-19, Node 20 actions)
+- .github/workflows/{ci,ops-health,ops-post-deploy,ops-source-watch,ops-weekly}.yml: `runs-on: ubuntu-24.04`;
+  actions/checkout@v7 (latest v7.0.1) and actions/setup-node@v7 (v7.1.0). I also moved actions/upload-artifact@v4 to
+  v7 (v7.0.2) and actions/cache/{restore,save}@v4 to v6 (v6.1.0), because v4 of both still runs on node20. All four
+  run on node24 (action.yml checked). Breaking-change notes I read:
+  - setup-node v6 limits automatic caching to npm; we set `cache: npm`.
+  - checkout v6 keeps credentials in a separate file; ops-weekly's `git push` still works through the includeIf config.
+  - upload-artifact v7 and cache v6 are ESM-only internally; no input changes.
+- ci.yml:55 comment updated ("v4 and later" skip dot-folders; include-hidden-files kept).
+
+## Verification
+- astro check: 0 errors. Unit (after the CI checks build, PUBLIC_BG_REMOVE=1): 58 files, 1,252 passed.
+- Builds with check-dist OK: dist-noauto (AUTOFRAME=0), dist-bg, dist-bgcloud (cloud + usage + GA test ID), dist
+  (AUTOFRAME=1), and the checks build (BG on).
+- e2e on Linux (WSL Ubuntu 24.04, Playwright 1.63, CI=1 so CI retries apply, 4 workers), split like the CI jobs:
+  - chromium (+ manual, bg, cloud): 391 passed / 27 skipped, 0 flaky.
+  - mobile-chrome (+ cloud): 349 passed / 25 skipped.
+  - webkit (+ cloud): 341 passed, 1 flaky (goto), 6 failed. All 6 are test timeouts in hwp-viewer (5) and
+    jpg-to-pdf:144 (40 photos); each of these tests took 3–7 min in WSL with 4 WebKit workers on 7.6 GB. Re-run with
+    1 worker, retries 0: hwp-viewer + jpg-to-pdf 26 passed / 4 skipped, 0 failed.
+  - mobile-safari (+ bg, cloud): 338 passed, 2 flaky (hwp-viewer timeouts), 1 failed (hubs axe over all guides,
+    timeout). Re-run with 1 worker, retries 0: hubs + hwp-viewer 28 passed / 1 skipped, 0 failed.
+  - firefox (+ manual, cloud): 357 passed, 16 flaky (all goto, see (g)), 0 failed.
+
+## Open Questions
+- (c2) is a harness setting, not a product change. If you would rather keep smooth scrolling on WebKit, the
+  alternative is a settle-and-retry helper around every click that follows a scroll. pdf-sign and pdf-split already
+  wait with `settled()`, which did not cover Playwright's own scroll.
+- (d) changes what a user sees only when the menu is taller than the window; it then scrolls inside.
+
+## Out of Scope (logged in BUILD-LOG)
+- Firefox goto harness race (g).
+- WSL WebKit is too slow for hwp-viewer at 4 workers; CI is fine.
+
+---
+
 # Review Request — TOOLS5 U3 round 3
 Date: 2026-10-08
 Ready for Review: YES

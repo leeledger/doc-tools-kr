@@ -2607,3 +2607,29 @@ Files and line ranges: handoff/REVIEW-REQUEST.md (TOOLS5 U3). Not committed.
 
 **TOOLS5 U4 spike — HWPX→HWP (2026-10-08, DONE_WITH_CONCERNS)**
 - rhwp 0.8.6 exportHwpWithReport on the 4 HWPX fixtures (Node + Chromium desktop/phone emulation, byte-identical): verify recovered true, content-loss 0, pages equal, text recall 1.0 (rhwp reload and an independent record walk), tables/pictures/equations/headers/footers counts equal; export ≤ 56 ms, whole flow < 1 s, wasm heap ≤ 14 MiB; +0 wasm bytes; MIT. Gating: owner's 한글 check on 3 files (O4) still open; 5 public HWPX downloads were blocked by permissions (URLs listed). Report: handoff/SPIKE-HWPX-TO-HWP.md; code: scripts/spike/ (not shipped). Effort if go: 2–3 days.
+
+
+## CI fix after TOOLS5 (Bob, 2026-10-10) — status DONE (one item DONE_WITH_CONCERNS)
+Details, line ranges and proofs: handoff/REVIEW-REQUEST.md ("CI fix after TOOLS5"). Not committed.
+
+**Failures → root cause → fix**
+- checks, ga.test GA-on build: the checks job builds with PUBLIC_BG_REMOVE=1, so public/vendor holds the 배경 지우기 engine; the test's own astro build (flag unset) copied it and check-dist refused it. The test now builds with the flag that matches public/vendor. Reproduced (old test fails with the CI list after a BG-on build), fixed.
+- id-photo.spec:654 (all browsers): SEO-LENGTH changed the description on purpose; spec literal updated.
+- pdf-sign.spec:182 (webkit, mobile-safari), product: WebKit focuses a clicked label's radio after its change event (GTK/WPE radios are mouse-focusable), taking focus from 쪽 범위's field. `setWhere` gives it back after a 0 ms timeout when a 넣을 쪽 radio still holds focus. Focus-order probe on Linux WebKit confirms.
+- WebKit lost clicks (image-to-jpg, jpg-to-pdf, pdf-compress, pdf-split, id-photo, usage, sw): `html { scroll-behavior: smooth }` makes Playwright's scroll-into-view animate on WebKit; the click lands mid-animation. WebKit projects now run with `reducedMotion: 'reduce'` (playwright.config.ts WEBKIT_MOTION; the site honours it; hwp-viewer.spec already did). Linux WebKit ×3: 6/111 failed before, 0/111 after.
+- polish.spec:635 (firefox), product: with 13 tools the menu panel reached the window bottom (test clicked at y 721 of 720; on phones the last links were unreachable under the sticky header). Panel capped at the window and scrolls; test clicks 8 px below it and asserts the point is on screen.
+- pdf-sign.spec:225 (firefox, 3/3 -119 vs -120, x exact): measured relative to #sg-stage. DONE_WITH_CONCERNS: not reproduced locally (Linux Firefox ×4 and full job pass).
+- pdf-sign.spec:272 (chromium flaky): box and stage read in one evaluate on #sg-stage (a redraw detached the resolved box).
+- Firefox goto timeouts (pdf-split:207/287/251 and others): the known Playwright-Firefox navigation-event race (all requests 200 in traces); unchanged, 2 CI retries stay.
+
+**Workflows:** all five on `runs-on: ubuntu-24.04` (Ubuntu 26 becomes ubuntu-latest on 2026-10-19); actions/checkout@v7, actions/setup-node@v7, and also upload-artifact@v7 and cache/{restore,save}@v6 (their v4 still run on node20). All node24.
+
+**Gates:** astro check 0 errors; unit 58 files 1,252 passed (after the CI checks build, BG on); builds dist-noauto / dist-bg / dist-bgcloud / dist (AUTOFRAME=1) / checks (BG on) check-dist OK. e2e Linux (WSL Ubuntu 24.04, CI=1, 4 workers), CI job split: chromium 391 passed; mobile-chrome 349 passed; webkit 341 passed, 1 flaky, 6 failed (WSL timeouts in hwp-viewer and jpg-to-pdf:144; 1 worker, retries 0: 26 passed); mobile-safari 338 passed, 2 flaky, 1 failed (hubs axe timeout; 1 worker, retries 0: 28 passed); firefox 357 passed, 16 flaky (all goto), 0 failed.
+
+**Known Gaps:**
+- Firefox goto harness race still costs ~15 retries per CI run (accepted since ci-green; root cause in Playwright's Firefox driver, not the site).
+- pdf-sign drag: the 1 px vertical shift of the stage on CI Firefox is unexplained; the test now ignores where the stage sits in the window.
+- Local Linux browser runner (WSL, no sudo): deps extracted to ~/wkroot, wrapper ~/pw.sh; the WebKit MiniBrowser wrapper was patched locally to keep LD_LIBRARY_PATH. Heavy WebKit specs need 1–2 workers there.
+
+**CI fix after TOOLS5 — deploy gate (2026-10-10)**
+- Richard: clear, 0 Must Fix. Pushed; orchestrator watches this CI run to green before starting HWPX2HWP (lesson: TOOLS5 steps were pushed on review-clear without waiting for CI, which stayed red for six commits).

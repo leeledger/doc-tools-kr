@@ -23,14 +23,14 @@ concurrency:
 
 jobs:
   health:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       GITHUB_TOKEN: ${{ github.token }}
       DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
       - name: Check the live site

@@ -30,6 +30,15 @@ const CLOUD_PORT = Number(process.env.E2E_CLOUD_PORT ?? 4183);
 const CLOUD = existsSync('dist-bgcloud/remove-background/index.html');
 const CLOUD_SPEC = /(remove-background\.cloud|usage|ga\.cloud)\.spec\.ts$/;
 const CLOUD_DEVICES = { chromium: 'Desktop Chrome', firefox: 'Desktop Firefox', webkit: 'Desktop Safari', 'mobile-chrome': 'Pixel 7', 'mobile-safari': 'iPhone 14' } as const;
+/**
+ * WebKit projects run with prefers-reduced-motion, which turns the site's `html { scroll-behavior: smooth }` off
+ * (global.css, app.css). With it on, Playwright's scroll-into-view before a click animates on WebKit, its stability
+ * check passes mid-animation and the click lands on whatever is under the point by then: lost clicks on 내려받기, 삭제,
+ * 저장 and 고른 쪽 돌리기 after a result scrolled into view (CI flakes since TOOLS5). Linux WebKit, image-to-jpg +
+ * jpg-to-pdf + pdf-split + pdf-compress × 3, 2 workers: 6 of 111 failed without it, 0 with it. hwp-viewer.spec.ts
+ * already did the same for the same reason.
+ */
+const WEBKIT_MOTION = { reducedMotion: 'reduce' } as const;
 
 export default defineConfig<{ ga: boolean }>({
   testDir: 'tests/e2e',
@@ -58,9 +67,9 @@ export default defineConfig<{ ga: boolean }>({
     // Firefox on CI: Playwright's Firefox driver sometimes drops navigation events under load, so page.goto times out
     // at 20 s although the page has loaded (ci-green BUILD-LOG). One extra retry on CI only; real failures still fail 3x.
     { name: 'firefox', retries: process.env.CI ? 2 : 1, use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'], ...WEBKIT_MOTION } },
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
-    { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
+    { name: 'mobile-safari', use: { ...devices['iPhone 14'], ...WEBKIT_MOTION } },
     ...(MANUAL
       ? [
           { name: 'manual-chromium', testMatch: /id-photo\.spec\.ts$/, use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MANUAL_PORT}` } },
@@ -72,7 +81,7 @@ export default defineConfig<{ ga: boolean }>({
     ...(BG
       ? [
           { name: 'bg-chromium', testIgnore: [], testMatch: BG_SPEC, use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${BG_PORT}` } },
-          { name: 'bg-mobile-safari', testIgnore: [], testMatch: BG_SPEC, use: { ...devices['iPhone 14'], baseURL: `http://127.0.0.1:${BG_PORT}` } },
+          { name: 'bg-mobile-safari', testIgnore: [], testMatch: BG_SPEC, use: { ...devices['iPhone 14'], ...WEBKIT_MOTION, baseURL: `http://127.0.0.1:${BG_PORT}` } },
         ]
       : []),
     ...(CLOUD
@@ -81,7 +90,7 @@ export default defineConfig<{ ga: boolean }>({
           testIgnore: [],
           testMatch: CLOUD_SPEC,
           ...(name === 'firefox' ? { retries: process.env.CI ? 2 : 1 } : {}),
-          use: { ...devices[device], baseURL: `http://127.0.0.1:${CLOUD_PORT}`, ga: true },
+          use: { ...devices[device], ...(devices[device].defaultBrowserType === 'webkit' ? WEBKIT_MOTION : {}), baseURL: `http://127.0.0.1:${CLOUD_PORT}`, ga: true },
         }))
       : []),
   ],

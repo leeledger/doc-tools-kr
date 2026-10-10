@@ -229,15 +229,24 @@ test('pointer drag moves the picture; the corner handle and the size slider resi
   const b = page.locator('.sign-box');
   // The mouse does not scroll: the stage must be on screen, with room above the picture for the drag.
   await page.locator('#sg-stage').evaluate((e) => e.scrollIntoView({ block: 'end', behavior: 'instant' }));
+  // The move is measured on the page preview, not the window. CI Firefox read r1.y - r0.y = -119 on all three tries
+  // while x was exact: a vertical-only 1 px shift of the whole stage in the window, not the drag, whose offset is
+  // pointer delta / scale (not reproduced on Windows or WSL Firefox).
+  const onStage = async () => {
+    const [box, stage] = await Promise.all([b.boundingBox(), page.locator('#sg-stage').boundingBox()]);
+    return { x: box!.x - stage!.x, y: box!.y - stage!.y };
+  };
   const r0 = (await b.boundingBox())!;
+  const s0 = await onStage();
   await page.mouse.move(r0.x + r0.width / 2, r0.y + r0.height / 2);
   await page.mouse.down();
   await page.mouse.move(r0.x + r0.width / 2 - 80, r0.y + r0.height / 2 - 120, { steps: 6 });
   await page.mouse.up();
   await expect(page.locator('#sg-status')).toHaveText('그림을 옮겼습니다.');
+  const s1 = await onStage();
+  expect(Math.round(s1.x - s0.x)).toBe(-80);
+  expect(Math.round(s1.y - s0.y)).toBe(-120);
   const r1 = (await b.boundingBox())!;
-  expect(Math.round(r1.x - r0.x)).toBe(-80);
-  expect(Math.round(r1.y - r0.y)).toBe(-120);
   const h = (await page.locator('.sign-handle').boundingBox())!;
   await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
   await page.mouse.down();
@@ -273,10 +282,11 @@ test('mixed page sizes: looking at a smaller page never moves a 모든 쪽 pictu
   await open(page, MIXED);
   await pickImage(page);
   await page.locator('label.chip', { hasText: '모든 쪽' }).click();
-  // Position and size relative to the page picture (the preview scale may change when a scroll bar appears).
-  const rel = () => page.locator('.sign-box').evaluate((b) => {
-    const s = b.parentElement!.getBoundingClientRect();
-    const r = b.getBoundingClientRect();
+  // Position and size relative to the page picture (the preview scale may change when a scroll bar appears). Read from
+  // the stage in one step: a redraw replaces the box, and a box resolved before it has no parent (CI chromium flake).
+  const rel = () => page.locator('#sg-stage').evaluate((stage) => {
+    const s = stage.getBoundingClientRect();
+    const r = stage.querySelector('.sign-box')!.getBoundingClientRect();
     return [r.left - s.left, r.top - s.top, r.width].map((v) => Math.round((v / s.width) * 1000));
   });
   await stageReady(page);

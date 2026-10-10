@@ -33,6 +33,9 @@ button.menu-toggle[aria-expanded="true"]::after { transform: translateY(2px) rot
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 6; min-width: 260px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px;
   box-shadow: 0 12px 32px rgb(0 0 0 / .14);
+  /* Thirteen tools outgrow a short window (720 px PC, a phone): the panel scrolls instead of running past the
+     bottom, where the sticky header would keep its last links out of reach. */
+  max-height: calc(100vh - 76px); max-height: calc(100dvh - 76px); overflow-y: auto; overscroll-behavior: contain;
 }
 .menu-panel ul { list-style: none; margin: 0; padding: 0; }
 .menu-panel a {

@@ -224,7 +224,11 @@ describe('GA-off dist (the build under test)', () => {
 
 describe('GA-on build (PUBLIC_GA_ID=G-TEST000000)', { timeout: 300_000 }, () => {
   const out = join(tmp, 'ga-build');
-  const env = { ...process.env, PUBLIC_GA_ID: ID };
+  // astro build copies public/ as is, and public/vendor/ holds the 배경 지우기 engine only after a PUBLIC_BG_REMOVE=1
+  // copy-vendor (the CI checks job). Build with the flag that matches it, or check-dist fails the flag-off build for
+  // carrying those files.
+  const bgVendored = existsSync(join(ROOT, 'public', 'vendor', 'birefnet-lite-512'));
+  const env = { ...process.env, PUBLIC_GA_ID: ID, PUBLIC_BG_REMOVE: bgVendored ? '1' : '0' };
   const node = (script: string, extra: NodeJS.ProcessEnv = env) => spawnSync(process.execPath, [join(ROOT, 'scripts', script), '--dist', out], { cwd: ROOT, env: extra, encoding: 'utf8' });
   let built = false;
   const build = () => {

@@ -652,9 +652,12 @@ test.describe('header tools menu (P.9)', () => {
     await expect(btn).toBeFocused();
 
     await btn.click();
-    // Outside the panel: below it (with five tools the mobile sheet reaches past y = 400).
+    // Outside the panel: just below it. The panel never runs past the window (it scrolls; thirteen tools are taller
+    // than 720 px), so that point is on screen; Firefox drops a click outside the viewport.
     const sheet = (await panel.boundingBox())!;
-    await page.mouse.click(5, Math.max(400, sheet.y + sheet.height + 20));
+    const below = sheet.y + sheet.height + 8;
+    expect(below).toBeLessThan(page.viewportSize()!.height);
+    await page.mouse.click(5, below);
     await expect(panel).toBeHidden();
 
     await btn.focus();
