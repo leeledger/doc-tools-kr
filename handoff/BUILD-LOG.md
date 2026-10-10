@@ -2675,3 +2675,18 @@ Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP").
 
 **HWPX2HWP — deploy gate (2026-10-10)**
 - Richard: clear, 0 Must Fix. Orchestrator applied both Should Fix (benign file-entry manifest → null; Firefox-only extra Tab stop). Decisions: keep the three 해요체 error lines (brief wording, COPY.md exception); keep the scrolling tools menu (Firefox tab stop is acceptable, a two-column menu can come with a later design pass); distribution-protected HWPX from Hangul possibly reading as 'password' — check when a real sample appears. CLAUDE.md line 3 updated. Pushed; CI watched to green.
+
+**INTERNAL-TRAFFIC — automation sends no analytics (2026-10-10)** — DONE_WITH_CONCERNS
+- New scripts/lib/no-analytics.mjs: `isAnalyticsUrl` + `blockAnalytics(context)` (Playwright route abort: CF beacon + /cdn-cgi/rum, gtag.js, *.google-analytics.com, *.analytics.google.com, any /api/usage). Wired into the A-1 live smoke (no-upload fixture option `noAnalytics`, on in playwright.live.config.ts; aborted analytics excluded from the guard and from console errors) and qa:visual newContext. Site unchanged.
+- tests/unit/no-analytics.test.ts: URL matrix, fake-context test, grep checks (every browser launcher blocks or is LOCAL_ONLY; live config/fixture wiring; workflows; fetch checks import no browser/jsdom). docs/OPS-RUNBOOK.md §9 (data 2026-10-07 → 10-10 includes automation).
+- Verified: probe with/without block (POST /api/usage and 3 off-site hits gone, all ERR_BLOCKED_BY_CLIENT); live smoke vs local dist 5/5; vs dist-bgcloud no analytics requests left; vitest 1327/1327; astro check 0 errors.
+- Known Gaps (escalated): (1) ops-post-deploy.yml `| tee` without pipefail masks failures: live smoke 5 failed and smoke:assets 55 problems on run 38020029020 reported success. (2) Live CSP includes GA + cloudflareinsights connect-src; no-upload guard and smoke-assets require `connect-src 'self'` only, so the live checks cannot pass until that is decided. (3) smoke-assets rewrites off-origin refs onto our origin. (4) User-level visual-qa skill can drive live without blocking.
+
+**INTERNAL-TRAFFIC round 2 (2026-10-10)** — DONE
+- ops-post-deploy.yml: `set -o pipefail;` on the three `| tee` steps. New scripts/lib/csp-connect.mjs: designed connect-src values computed from withAnalyticsCsp/withGaCsp (no hard-coded hosts); used by smoke:assets and by the no-upload guard (`designedCsp`, fixture option `liveCsp`, on only in playwright.live.config.ts). smoke:assets follows same-origin refs only (beacon no longer rewritten to docttak.com/beacon.min.js); og:image still checked on the deploy.
+- Run 38020029020: smoke:assets 55 = 54 CSP-check false positives + 1 beacon rewrite 404; live smoke 5 × 2 = all "network activity" (analytics requests + CSP mismatch) after the tools had finished; nothing real.
+- Production (read-only, analytics blocked): smoke:assets OK 2472 URLs; live smoke 5/5 first try. vitest 1332/1332, astro check 0 errors.
+- Known Gaps: user-level visual-qa skill unblocked; ops health beacon allowance separate.
+
+**INTERNAL-TRAFFIC — deploy gate (2026-10-10)**
+- Richard: clear, 0 Must Fix. Orchestrator applied Should Fix 1 (block /cdn-cgi/rum on our own origin and www.google.com/g/collect; tests) and 2 (REVENUE-MODEL timeline now follows the R1/R2 triggers: R1 ≈ Feb 2027, R2 ≈ Aug 2027 in the base case). Decision: keep allowing the four designed CSP variants in live checks. Production re-check: smoke:assets 2,472 URLs OK; live smoke 5/5 first try — the earlier A-1 "failures" were analytics/CSP check mismatches hidden by a missing pipefail. Pushed; CI and the first honest A-1 watched.

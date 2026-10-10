@@ -1,4 +1,4 @@
-# Review Feedback — Step HWPX2HWP
+# Review Feedback — INTERNAL-TRAFFIC (rounds 1–2) + REVENUE-MODEL doc edit
 Date: 2026-10-10
 Ready for Builder: YES
 
@@ -6,33 +6,18 @@ Ready for Builder: YES
 None.
 
 ## Should Fix
-- tests/unit/hwp-features.test.ts:66-70 (confidence: 6/10) — the only negative case is an empty self-closing manifest
-  (`<odf:manifest .../>`). A plain HWPX whose manifest lists `<odf:file-entry ...>` parts without encryption is not
-  covered, which is exactly the shape a non-rhwp writer would produce. The matcher (`ByteCounter(':encryption-data')`,
-  `ByteCounter('<encryption-data')`, features.ts:246-247) looks correct, but pin it — add a manifest with two
-  `file-entry` elements and no `encryption-data` and expect `null`. Two minutes.
-- tests/e2e/polish.spec.ts:672 (confidence: 6/10) — `i <= items + 1` grants the extra tab stop to every project, not
-  just Firefox. A future extra stop in Chromium/WebKit would now pass silently. Gate the `+ 1` on
-  `browserName === 'firefox'`.
+- scripts/lib/no-analytics.mjs:20 (confidence: 5/10, verify this) — `return u.pathname === USAGE_PATH;` is the only path rule that applies on any origin. A same-origin `/cdn-cgi/rum` (the endpoint Cloudflare uses when the zone itself injects RUM) and `https://www.google.com/g/collect` (allowed by GA_CONNECT_SRC `https://*.google.com`) are not matched. Today this leaks nothing, because the only senders (beacon.min.js on static.cloudflareinsights.com, gtag.js on www.googletagmanager.com) are blocked before they can run. Recommendation: for defence in depth, also match `/cdn-cgi/rum` on any origin and `/g/collect` on `*.google.com`, and add both to the block matrix in tests/unit/no-analytics.test.ts. Under 5 minutes.
+- docs/REVENUE-MODEL.md, "수익화 시점 검증" → 단계 (confidence: 8/10) — "2027-01~03 증명사진 결과 화면 맥락형 제휴 시험(R2)" contradicts the R2 trigger in the §1 table: "R1 승인 이후, 월 5만 PV 이상". The doc's own base scenario (1,400 PV, +40%/month) reaches about 5,000–11,000 PV/month by Jan–Mar 2027. The R1 date is optimistic too: "2026-12~2027-01 애드센스 신청" needs about 100 real visits a day, but about 30/day at +40% only gets there around Feb 2027 (late Dec only in the +60% case). The "(R1 충족 시)" qualifier covers R1 but not R2. Recommendation: label R2 as an early trial outside the table trigger, or move it to "R1 승인 + 월 5만 PV" (base case about Aug–Sep 2027). Everything else checks out: 190+51+22+4=267; (267−146)/4 days ≈ 30/day; 372/267 ≈ 1.39 PV per visit → about 1,400 PV/month; ₩100k = 25k–50k PV and ₩300k = 75k–150k PV at RPM 2,000–4,000; 18–107× rounds to "20~100배"; each scenario's dates match compound growth.
 
 ## Escalate to Architect
-- 해요체 ERRORS lines (messages.ts:33-36) in a 합니다체 file, with the COPY.md exception — brief wording, Bob flagged
-  it; a copy-style call, not code.
-- Desktop 도구 menu now scrolls at 1280 × 720 (43 px). On the a11y question: Firefox's tab stop on a scrollable
-  panel is UA behaviour that helps keyboard users scroll, the global `:focus-visible` outline (global.css:55)
-  makes it visible, and it is not a WCAG failure. No product fix needed for a11y; a layout change (two columns,
-  fewer rows) is a design decision for later.
-- (confidence: 4/10, verify) 배포용 HWPX: if Hancom writes `encryption-data` in the manifest for distribution
-  HWPX too, those files now say 비밀번호 instead of 손상 on all three HWP pages. Not worse than before, and the
-  brief lists 배포용 HWPX as out of scope, but worth checking against a real 한글-made 배포용 HWPX when one turns up.
+None. (The four designed CSP variants are accepted on live, as the orchestrator decided.)
 
 ## Cleared
-I reviewed and passed: the export/reload gate in export-hwp.ts (the order matches the brief and frees the source
-on every path; it re-opens the exact shipped bytes, checks CFB magic and pages > 0 with an equal count, and an
-unreadable loss report counts as 1, never 0), the worker message addition (an additive union with no second
-wasm init; existing tools never send it, and the transfer only happens on a JS-owned buffer), password-HWPX
-detection before the engine with regression e2e on /hwp-viewer/ and /hwp-to-pdf/, .hwp → already-hwp with
-links and no worker, the controller run token/terminate/revoke paths, the application/x-hwp blob with a
-`.hwpx`-only strip, the usage events (codes and phases only, no file data, whitelist and labels updated),
-title 38 / description 62, HOME_DESC_ORDER after hwp-to-pdf, the check-dist laziness and budget block, and
-font/budget numbers as reported.
+Reviewed:
+- **Analytics blocking:** blockAnalytics/isAnalyticsUrl cover the CF beacon, cloudflareinsights.com/cdn-cgi/rum, gtag, *.google-analytics.com, *.analytics.google.com and /api/usage on any origin (sendBeacon goes to the exact USAGE_PATH, src/lib/ui/usage.ts:143).
+- **Grep test:** it is meaningful. LAUNCHES finds every launcher under scripts/ and tests/. LOCAL_ONLY files are barred from --url, LIVE_URL and docttak goto. visual.mjs has exactly one context factory, which blocks. The live config sets noAnalytics and liveCsp; playwright.config.ts sets neither.
+- **CI e2e:** keeps the strict SELF_ONLY / SELF_AND_GA check (designedCsp defaults to false).
+- **csp-connect:** derives the four values from withAnalyticsCsp/withGaCsp (no hard-coded hosts), uses an exact match, and rejects extra hosts, reordering and wildcards.
+- **smoke:assets:** same-origin only. dist has no absolute asset refs other than og:image (now onDeploy) and rel=canonical, which is not crawled, so no coverage is lost.
+- **pipefail:** correct for all three tee steps. The default `bash -e {0}` lacks pipefail, and no defaults/shell override exists. The failure() step reports skipped outcomes correctly.
+- **Tests:** no-analytics and postbuild pass (97 tests).

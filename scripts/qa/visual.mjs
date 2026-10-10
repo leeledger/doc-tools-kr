@@ -9,6 +9,7 @@ import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { makeRuntimeFixtures, makeScanMultiFixture } from '../../tests/fixtures/build.mjs';
+import { blockAnalytics, isAnalyticsUrl } from '../lib/no-analytics.mjs';
 
 const args = process.argv.slice(2);
 const arg = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
@@ -95,10 +96,14 @@ async function inputs() {
 
 // ---------- instrumentation ----------
 
-/** Records every request of the context; flags anything that could carry file data (P.20 hard failure). */
+/**
+ * Records every request of the context; flags anything that could carry file data (P.20 hard failure). Analytics
+ * requests are aborted by blockAnalytics (newContext) and never leave the browser, so they are not counted.
+ */
 function recorder(context, label) {
   context.on('request', (r) => {
     const url = r.url();
+    if (isAnalyticsUrl(url)) return;
     const scheme = url.slice(0, url.indexOf(':') + 1);
     const problems = [];
     if (!['GET', 'HEAD'].includes(r.method())) problems.push(`${r.method()} ${url}`);
@@ -148,6 +153,8 @@ async function newContext(browser, vp, scheme, extra = {}) {
     serviceWorkers: 'block',
     ...extra,
   });
+  // INTERNAL-TRAFFIC: the deploy gate runs this against the live site; no visit, GA hit or usage event from it.
+  await blockAnalytics(ctx);
   await ctx.addInitScript(CLS_INIT);
   return ctx;
 }

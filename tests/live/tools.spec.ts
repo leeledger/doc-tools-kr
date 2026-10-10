@@ -6,17 +6,21 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Download, Page } from '@playwright/test';
 import { sniffImage } from '../../src/lib/image/sniff';
+import { isAnalyticsUrl } from '../../scripts/lib/no-analytics.mjs';
 import { openPdf, pageText } from '../../scripts/regress/lib.mjs';
 import { pageCount, pageTexts } from '../helpers/pdf';
 import { expect, gotoReady, test as base } from '../e2e/no-upload';
 import { fixturePath, photoFixture } from '../e2e/paths';
+
+/** INTERNAL-TRAFFIC: Chromium logs each analytics request blockAnalytics aborted; those are ours, not the page's. */
+const blockedByUs = (text: string, url: string): boolean => text.startsWith('Failed to load resource: net::ERR_BLOCKED_BY_CLIENT') && isAnalyticsUrl(url);
 
 const test = base.extend<{ consoleErrors: string[] }>({
   consoleErrors: [
     async ({ page }, use) => {
       const errors: string[] = [];
       page.on('console', (m) => {
-        if (m.type() === 'error') errors.push(`console: ${m.text()}`);
+        if (m.type() === 'error' && !blockedByUs(m.text(), m.location().url)) errors.push(`console: ${m.text()}`);
       });
       page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
       await page.addInitScript(() => {

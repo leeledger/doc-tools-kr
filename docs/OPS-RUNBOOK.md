@@ -8,7 +8,7 @@
 
 | ID | 워크플로 | 언제 | 하는 일 | 이슈 라벨 |
 |---|---|---|---|---|
-| A-1 | `ops-post-deploy.yml` (job `verify`) | main 푸시마다 | 라이브 `<meta name="build-id">`가 커밋 SHA 앞 12자리와 같아질 때까지 20초 간격으로 최대 20분 기다린다. 그다음 `npm run smoke:assets -- https://docttak.com`, 그리고 라이브 Playwright 스모크(도구 5개를 저장소의 픽스처로 실제 처리하고 결과 파일을 검사, 사이트 밖 요청 0, 요청 본문 0, 모든 응답에 CSP `connect-src 'self'`, 콘솔 오류·페이지 오류·CSP 위반 0). | `ops:deploy` — 실패 시 열기/갱신(단계별 결과와 로그 끝 60줄), 통과 시 자동 닫기 |
+| A-1 | `ops-post-deploy.yml` (job `verify`) | main 푸시마다 | 라이브 `<meta name="build-id">`가 커밋 SHA 앞 12자리와 같아질 때까지 20초 간격으로 최대 20분 기다린다. 그다음 `npm run smoke:assets -- https://docttak.com`, 그리고 라이브 Playwright 스모크(도구 5개를 저장소의 픽스처로 실제 처리하고 결과 파일을 검사, 사이트 밖 요청 0, 요청 본문 0, 모든 응답에 설계된 CSP `connect-src`(`'self'`, 방문 분석·GA가 켜져 있으면 `scripts/lib/analytics.mjs`·`ga.mjs`의 호스트만 더함, `scripts/lib/csp-connect.mjs`), 분석 요청은 차단(9절), 콘솔 오류·페이지 오류·CSP 위반 0). | `ops:deploy` — 실패 시 열기/갱신(단계별 결과와 로그 끝 60줄), 통과 시 자동 닫기 |
 | A-2 | `ops-post-deploy.yml` (job `indexnow`) | A-1 통과 직후 | 라이브 sitemap을 지난번 성공한 핑 때의 sitemap(Actions 캐시 `indexnow-sitemap-*`)과 비교해 새 URL·lastmod가 바뀐 URL만 `scripts/indexnow.mjs`로 보낸다. 캐시가 없으면(첫 실행, 7일 미사용으로 만료) 전체를 한 번 보낸다(재제출은 무해). 핑이 실패하면 캐시를 갱신하지 않아 다음 배포 때 다시 보낸다. | `ops:deploy` — 핑 실패 시 |
 | A-3 | `ops-source-watch.yml` | 매주 수요일 08:41 KST | 안내 페이지 frontmatter의 `sources`(url+quote)와 공식 증명사진 프리셋(`src/data/id-photo-presets.ts`의 `sourceUrls`+`quote`)을 모아, 출처 URL마다 한 번씩 차례로 가져온다(식별 UA `docttak-ops/1.0`, 요청 사이 1.5초, 429·5xx·네트워크 오류는 2·5·10초 뒤 재시도, EUC-KR 페이지도 디코딩). 인용 문구(“…”로 생략된 부분과 프리셋의 “ / ”로 이은 문장은 조각별로)가 페이지 텍스트에 그대로 있는지 본다. 비교는 공백·태그·HTML 엔티티·가운뎃점(·ㆍ)·물결표·대시·×를 무시한다. | `ops:source-changed` — 페이지, 출처 URL, 우리가 인용한 문구, 현재 페이지에서 가장 비슷한 부분. 가져오지 못한 출처도 같이 적는다. 사람이 고친 뒤 닫는다(다음 주에 모두 일치하면 그렇다고 댓글을 단다). |
 | A-4 | `ops-health.yml` | 매일 07:17 KST | sitemap의 모든 URL을 브라우저와 같은 헤더로 요청한다(Cloudflare는 브라우저로 보이는 응답에만 스크립트를 삽입한다). 200, canonical(자기 주소), `og:title`·`og:description`·`og:image`·`og:url`, JSON-LD(파싱 가능; 법적 고지 3쪽은 원래 없음), 사이트 밖 `<script src>`와 Cloudflare 삽입 스크립트(`/cdn-cgi/`, Web Analytics 비컨, Rocket Loader, Email Obfuscation), 내부 링크 전부 200, 응답 시작 시간(TTFB) 2초 이하(두 번 중 나은 값). | `ops:health` — 실패 시 열기/갱신, 깨끗해지면 자동 닫기 |
@@ -99,3 +99,15 @@ Actions에서는 각 워크플로의 **Run workflow**에 “Dry run” 체크박
 - **끄기:** `PUBLIC_USAGE_STATS`를 지우고 다시 배포합니다(통계 코드가 사이트에서 빠집니다). 쌓인 기록은 3개월 안에 지워집니다.
 - **요청 한도:** `/api/usage`와 배경 지우기(`/api/remove-bg`), `/admin/`은 Workers 무료 한도(하루 10만 요청)를 함께 씁니다. 방문이 늘어 한도에 가까워지면 `PUBLIC_USAGE_SAMPLE`을 낮춥니다(예: 0.2). Analytics Engine은 하루 기록 10만 건·조회 1만 건까지 포함입니다.
 - **표가 비어 있을 때:** 1번 바인딩이 빠지면 `/api/usage`가 503을 돌려주고 아무것도 쌓이지 않습니다. `/admin/`에 "통계를 불러오지 못했어요 (HTTP 403)"이 보이면 토큰 권한이나 Account ID를 확인합니다.
+
+## 9. 자동화 트래픽 제외 (2026-10-10, INTERNAL-TRAFFIC)
+
+우리 자동화가 라이브 사이트(https://docttak.com)를 실제 브라우저로 열 때는 **Cloudflare Web Analytics(방문 수), Google 애널리틱스, 익명 사용 통계(`/api/usage`)에 아무것도 보내지 않는다.** 사이트 자체는 바뀌지 않았고, 브라우저 쪽에서 막는다.
+
+- 공용 도구: `scripts/lib/no-analytics.mjs`의 `blockAnalytics(context)`. 첫 페이지를 열기 전에 Playwright 브라우저 컨텍스트에서 `static.cloudflareinsights.com`, `cloudflareinsights.com`(`/cdn-cgi/rum`), `www.googletagmanager.com`, `*.google-analytics.com`, `*.analytics.google.com`, 그리고 어느 주소든 `/api/usage`로 가는 요청(sendBeacon 포함)을 중단시킨다. 서비스 워커는 막아 둔 채로 쓴다(`serviceWorkers: 'block'`).
+- 쓰는 곳: A-1 라이브 도구 스모크(`playwright.live.config.ts`의 `noAnalytics: true` → `tests/e2e/no-upload.ts` 픽스처), `npm run qa:visual -- --url https://docttak.com`(배포 게이트). 막힌 분석 요청은 브라우저 밖으로 나가지 않으므로 업로드 검사와 콘솔 오류 검사에서 빼고 센다.
+- 브라우저를 쓰지 않는 점검(`smoke:assets`, A-4 건강 점검, 배포 대기, IndexNow, 주간 성장)은 HTML과 파일을 `fetch`로 받기만 하고 페이지 스크립트를 실행하지 않으므로 비컨이 나가지 않는다. Lighthouse(`npm run lhci`)는 로컬 dist만 잰다.
+- 지키는 장치: `tests/unit/no-analytics.test.ts`가 `scripts/`·`tests/`에서 브라우저를 띄우는 모든 파일이 `blockAnalytics`를 쓰거나 로컬 전용 목록(127.0.0.1·file://·가짜 주소만 여는 회귀·스파이크 스크립트)에 있는지, 라이브 설정이 `noAnalytics: true`인지, 워크플로가 라이브 대상 Playwright를 `playwright.live.config.ts`로만 돌리는지 검사한다. 새 라이브 브라우저 스크립트를 만들면 `blockAnalytics`를 부르거나, 로컬 전용이면 그 목록에 이유와 함께 넣는다.
+- **이전 데이터 주의:** 2026-10-07(방문 분석 시작)부터 이 변경이 배포된 2026-10-10까지의 방문 수·GA·사용 통계에는 자동화(GitHub Actions 미국 러너의 배포 후 스모크, 재시도 포함)가 섞여 있다. 미국 방문과 배포가 많았던 날의 급증이 그 흔적이다. 수익화 판단은 2026-10-11 이후 데이터로 하거나, 그 이전 기간은 국가를 KR로 걸러 본다.
+- 로그를 `tee`로 남기는 A-1 단계는 `set -o pipefail`로 돈다. 2026-10-10 이전에는 이것이 없어 라이브 스모크·자산 스모크가 실패해도 작업이 통과로 표시됐다(실행 38020029020: 실패 원인은 위 CSP 검사 불일치와 분석 요청이었고, 도구 처리 자체는 성공).
+- 운영자 본인의 방문(브라우저로 사이트 확인)은 제외되지 않는다.

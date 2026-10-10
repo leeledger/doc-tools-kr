@@ -1,5 +1,6 @@
 // The no-upload rule as a pure check (tests/e2e/no-upload.ts runs it after every e2e test; tests/unit/bgcloud.test.ts
 // covers it under "no-upload allowlist"). No Playwright import here, so the unit tests can load it.
+import { isDesignedConnectSrc } from '../../scripts/lib/csp-connect.mjs';
 import { GA_CONNECT_SRC, GTAG_ORIGIN } from '../../scripts/lib/ga.mjs';
 
 /**
@@ -60,8 +61,12 @@ export function isGaRequest(method: string, url: string): boolean {
 const SELF_ONLY = /(^|;)\s*connect-src 'self'\s*(;|$)/;
 const SELF_AND_GA = new RegExp(`(^|;)\\s*connect-src 'self' ${GA_CONNECT_SRC.replace(/[.*]/g, (c: string) => `\\${c}`)}\\s*(;|$)`);
 
-/** Everything in the log that could have carried file data off the device (empty = clean). */
-export function uploadProblems(log: GuardLog, baseURL: string, allow: readonly AllowedUpload[] = [], ga = false): string[] {
+/**
+ * Everything in the log that could have carried file data off the device (empty = clean). `designedCsp` (the A-1 live
+ * smoke only, INTERNAL-TRAFFIC round 2): the deployed site may send any designed connect-src, i.e. 'self' plus exactly
+ * the Web Analytics and GA hosts gen-headers adds (scripts/lib/csp-connect.mjs); any other host still fails.
+ */
+export function uploadProblems(log: GuardLog, baseURL: string, allow: readonly AllowedUpload[] = [], ga = false, designedCsp = false): string[] {
   const origin = new URL(baseURL).origin;
   const problems: string[] = [];
   for (const r of log.requests) {
@@ -79,7 +84,7 @@ export function uploadProblems(log: GuardLog, baseURL: string, allow: readonly A
     // The allowed endpoint answers with an image or JSON, never a document (Pages Functions get no _headers).
     if (isAllowedUpload(r.request().method(), url, origin, allow)) continue;
     const csp = r.headers()['content-security-policy'] ?? '';
-    if (!SELF_ONLY.test(csp) && !(ga && SELF_AND_GA.test(csp))) problems.push(`no CSP connect-src 'self' on ${url}`);
+    if (!SELF_ONLY.test(csp) && !(ga && SELF_AND_GA.test(csp)) && !(designedCsp && isDesignedConnectSrc(csp))) problems.push(`no CSP connect-src 'self' on ${url}`);
   }
   return problems;
 }

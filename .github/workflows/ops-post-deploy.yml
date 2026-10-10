@@ -26,6 +26,8 @@ env:
   SITE: https://docttak.com
   DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
 
+# Steps that tee their log run with `set -o pipefail`: the default `bash -e` would take tee's exit code and report a
+# failed check as passed (INTERNAL-TRAFFIC round 2: run 38020029020 showed both smokes failing under a green job).
 jobs:
   verify:
     name: A-1 live check
@@ -40,17 +42,17 @@ jobs:
       - run: npm ci
       - name: Wait for the live build of this commit (20 min max)
         id: wait
-        run: node scripts/ops/wait-deploy.mjs --sha "$GITHUB_SHA" --url "$SITE" --timeout 1200 2>&1 | tee wait.log
+        run: set -o pipefail; node scripts/ops/wait-deploy.mjs --sha "$GITHUB_SHA" --url "$SITE" --timeout 1200 2>&1 | tee wait.log
       - name: Asset smoke (smoke:assets)
         id: assets
-        run: npm run smoke:assets -- "$SITE" 2>&1 | tee assets.log
+        run: set -o pipefail; npm run smoke:assets -- "$SITE" 2>&1 | tee assets.log
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Live tool smoke (5 tools, no off-site request, no console error)
         id: smoke
         env:
           LIVE_URL: ${{ env.SITE }}
-        run: npx playwright test -c playwright.live.config.ts 2>&1 | tee smoke.log
+        run: set -o pipefail; npx playwright test -c playwright.live.config.ts 2>&1 | tee smoke.log
       - name: Close the deploy issue (recovered)
         if: success()
         run: |

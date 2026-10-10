@@ -12,6 +12,8 @@ import { reservedNameProblems } from '../../scripts/font-rename.mjs';
 import { buildIco, ogDomain, renderBrand } from '../../scripts/gen-brand.mjs';
 import { domainHeaders } from '../../scripts/gen-headers.mjs';
 import { NOT_FILES, smokeAssets } from '../../scripts/smoke-assets.mjs';
+import { BEACON_CONNECT } from '../../scripts/lib/analytics.mjs';
+import { GA_CONNECT_SRC } from '../../scripts/lib/ga.mjs';
 import { startServer } from '../e2e/serve.mjs';
 import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
 import { parse as parseYaml } from 'yaml';
@@ -265,6 +267,36 @@ describe('smoke-assets (P.3)', () => {
       expect(problems).toContain('/_astro/w.wasm content-type "application/octet-stream", expected application/wasm');
       expect(problems).toContain('/_astro/gone.js HTTP 404');
       expect(problems.some((p: string) => p.includes('ancient'))).toBe(false);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('INTERNAL-TRAFFIC r2: off-site references are not fetched; og:image is checked on the deploy; only a designed CSP passes', async () => {
+    const beacon = '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-site-analytics></script>';
+    const dir = site({ 'index.html': page(beacon), 'tool/index.html': page(beacon) });
+    await carryAssets({ dist: dir, enabled: false, source: '', log: quiet });
+    const server = await startServer({ root: dir, port: 0 });
+    const seen: string[] = [];
+    // The deploy sends the CSP production sends with both analytics on; /tool/ gets one extra host.
+    const csp = (extra: string) =>
+      (async (url: string, init?: RequestInit) => {
+        seen.push(url);
+        const res = await fetch(url, init);
+        if (!/text\/html/.test(res.headers.get('content-type') ?? '')) return res;
+        const h = new Headers(res.headers);
+        const tail = new URL(url).pathname === '/tool/' ? extra : '';
+        h.set('content-security-policy', (h.get('content-security-policy') ?? '').replace("connect-src 'self'", `connect-src 'self' ${GA_CONNECT_SRC} ${BEACON_CONNECT}${tail}`));
+        return new Response(await res.arrayBuffer(), { status: res.status, headers: h });
+      }) as typeof fetch;
+    try {
+      const ok = await smokeAssets(server.url, { fetchImpl: csp('') });
+      expect(ok.failures).toEqual([]);
+      expect(seen.some((u) => /beacon\.min\.js/.test(u))).toBe(false);
+      expect(seen.every((u) => u.startsWith(server.url))).toBe(true);
+      expect(seen.map((u) => new URL(u).pathname)).toContain('/brand/og.png');
+      const bad = await smokeAssets(server.url, { fetchImpl: csp(' https://evil.example') });
+      expect(bad.failures.map((f: { url: string; problem: string }) => new URL(f.url).pathname)).toEqual(['/tool/']);
     } finally {
       await server.close();
     }

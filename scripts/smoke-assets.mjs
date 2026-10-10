@@ -4,11 +4,14 @@
 // Pages: the sitemap URLs, /privacy/, /terms/, /licenses/, /offline/ and a random missing path (must be 404).
 // References: HTML script/link/og:image; JS import(), static imports, new URL(…, import.meta.url) and
 // "/_astro|vendor|fonts|brand/…" string literals, recursively; CSS url(…); manifest icons; and every entry
-// of /deploy-manifest.json. Every same-origin reference must return 200 with the right type. /_astro/* must
-// be immutable, /sw.js no-cache, and every HTML response must carry the CSP with connect-src 'self'.
+// of /deploy-manifest.json. Every same-origin reference must return 200 with the right type; off-site references
+// (the analytics beacon) are not ours and are not fetched; og:image names the canonical host and is checked on the
+// deploy under test. /_astro/* must be immutable, /sw.js no-cache, and every HTML response must carry a designed
+// CSP connect-src: 'self', plus exactly the analytics and GA hosts when those are on (scripts/lib/csp-connect.mjs).
 // --previous: every file of an earlier manifest with gen ≥ current gen − 2 must still return 200.
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { isDesignedConnectSrc } from './lib/csp-connect.mjs';
 
 const PARALLEL = 8;
 /**
@@ -32,7 +35,7 @@ const TYPE_RULES = [
   [/\.ico$/, (t) => /^image\//.test(t), 'an image/* type'],
 ];
 
-/** References in an HTML page (attribute values as written). */
+/** References in an HTML page (attribute values as written), og:image excluded (ogImageRefs). */
 export function htmlRefs(html) {
   const refs = [];
   for (const m of html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)) refs.push(m[1]);
@@ -41,8 +44,12 @@ export function htmlRefs(html) {
     const href = tag[0].match(/\bhref="([^"]+)"/)?.[1];
     if (href && /(^|\s)(stylesheet|modulepreload|preload|icon|manifest|apple-touch-icon)(\s|$)/.test(rel)) refs.push(href);
   }
-  for (const m of html.matchAll(/<meta\b[^>]*property="og:image"[^>]*content="([^"]+)"/g)) refs.push(m[1]);
   return refs;
+}
+
+/** The og:image URLs of an HTML page: absolute, on the canonical host (which may not be the deploy under test). */
+export function ogImageRefs(html) {
+  return [...html.matchAll(/<meta\b[^>]*property="og:image"[^>]*content="([^"]+)"/g)].map((m) => m[1]);
 }
 
 /** References in a JS module. */
@@ -66,10 +73,15 @@ export async function smokeAssets(baseUrl, { previous = null, fetchImpl = fetch,
   const failures = [];
   const fail = (url, problem) => failures.push({ url, problem });
   const seen = new Map();
+  // Same-origin references only: an off-site URL (the Cloudflare beacon) is not a file of this deploy.
   const toUrl = (ref, from) => {
     const u = new URL(ref, from);
-    // Absolute links to the canonical host (og:image) are checked on the deploy under test.
-    return u.origin === origin || /^https?:$/.test(u.protocol) ? new URL(u.pathname + u.search, origin).href : null;
+    return u.origin === origin ? new URL(u.pathname + u.search, origin).href : null;
+  };
+  // og:image is written with the canonical host; its path is checked on the deploy under test.
+  const onDeploy = (ref, from) => {
+    const u = new URL(ref, from);
+    return /^https?:$/.test(u.protocol) ? new URL(u.pathname + u.search, origin).href : null;
   };
 
   async function get(url) {
@@ -92,7 +104,7 @@ export async function smokeAssets(baseUrl, { previous = null, fetchImpl = fetch,
     for (const [re, ok, want] of TYPE_RULES) if (re.test(path) && !ok(r.type)) fail(url, `content-type "${r.type}", expected ${want}`);
     if (path.startsWith('/_astro/') && !/immutable/.test(r.cache)) fail(url, `cache-control "${r.cache}" is not immutable`);
     if (path === '/sw.js' && !/no-cache/.test(r.cache)) fail(url, `cache-control "${r.cache}" is not no-cache`);
-    if (/^text\/html/.test(r.type) && !/(^|;)\s*connect-src 'self'\s*(;|$)/.test(r.csp)) fail(url, "HTML without the CSP connect-src 'self'");
+    if (/^text\/html/.test(r.type) && !isDesignedConnectSrc(r.csp)) fail(url, "HTML without a designed CSP connect-src ('self', plus only the analytics and GA hosts)");
   }
 
   const queue = [];
@@ -111,7 +123,11 @@ export async function smokeAssets(baseUrl, { previous = null, fetchImpl = fetch,
     }
     checkHeaders(url, r);
     const path = new URL(url).pathname;
-    if (kind === 'html') for (const ref of htmlRefs(r.body.toString('utf8'))) enqueue(toUrl(ref, url), 'asset');
+    if (kind === 'html') {
+      const html = r.body.toString('utf8');
+      for (const ref of htmlRefs(html)) enqueue(toUrl(ref, url), 'asset');
+      for (const ref of ogImageRefs(html)) enqueue(onDeploy(ref, url), 'asset');
+    }
     else if (/\.m?js$/.test(path)) for (const ref of jsRefs(r.body.toString('utf8'))) enqueue(toUrl(ref, url), 'asset');
     else if (/\.css$/.test(path)) for (const ref of cssRefs(r.body.toString('utf8'))) enqueue(toUrl(ref, url), 'asset');
     else if (/\.webmanifest$/.test(path)) {
