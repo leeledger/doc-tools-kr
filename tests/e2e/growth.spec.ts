@@ -138,6 +138,20 @@ test.describe('guides (G.1, G.2)', () => {
     await expect(page.locator('#idp-preset')).toHaveValue('gosi');
   });
 
+  // TOOL-GUIDES Part A: each tool's how-to guide opens, its CTA reaches the tool, and the tool's 관련 안내 lists it first.
+  test('the five tool how-to guides: CTA reaches the tool, whose 관련 안내 starts with the guide', async ({ page }) => {
+    for (const tool of ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp']) {
+      await gotoReady(page, `/guide/${tool}/`);
+      await expect(page.locator('.guide-answer'), tool).toBeVisible();
+      await page.locator('.guide-cta a').click();
+      await page.waitForURL(new RegExp(`/${tool}/$`));
+      await page.waitForFunction(() => document.readyState === 'complete');
+      await expect(page.locator(`a[href="/guide/${tool}/"]`).first(), tool).toBeVisible();
+      const first = await page.locator('a[href^="/guide/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')).find((h) => h !== '/guide/'));
+      expect(first, tool).toBe(`/guide/${tool}/`);
+    }
+  });
+
   test('the header, footer and home link to the guides', async ({ page }) => {
     await gotoReady(page, '/');
     await expect(page.locator('header').getByRole('link', { name: '안내', exact: true })).toHaveAttribute('href', '/guide/');

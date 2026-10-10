@@ -17,7 +17,7 @@ import { GA_CONNECT_SRC } from '../../scripts/lib/ga.mjs';
 import { startServer } from '../e2e/serve.mjs';
 import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
 import { parse as parseYaml } from 'yaml';
-import { MAX_SOURCE_AGE_DAYS, publishedGuideSchema } from '../../src/data/guide-schema';
+import { MAX_SOURCE_AGE_DAYS, isVisibleGuide, publishedGuideSchema } from '../../src/data/guide-schema';
 import { resolveSources, unsourcedFacts } from '../../src/data/guide-facts';
 import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { parseHref } from '../../src/lib/ui/deeplink';
@@ -886,7 +886,10 @@ describe('built output', () => {
         const fm = /^---\n([\s\S]*?)\n---/.exec(raw)![1]!;
         return { slug: f.replace(/\.md$/, ''), data: parseYaml(fm) as Record<string, unknown> };
       });
-  const publishedGuides = () => guideSources().filter((g) => g.data.draft !== true).map((g) => ({ slug: g.slug, data: publishedGuideSchema.parse(g.data) }));
+  // TOOL-GUIDES Part B: the guides this build shows (a requires: bg-remove guide only in a PUBLIC_BG_REMOVE build).
+  const bgBuilt = () => existsSync(join(DIST, 'remove-background'));
+  const allPublished = () => guideSources().filter((g) => g.data.draft !== true).map((g) => ({ slug: g.slug, data: publishedGuideSchema.parse(g.data) }));
+  const publishedGuides = () => allPublished().filter((g) => isVisibleGuide(g.data, bgBuilt()));
   const draftSlugs = () => guideSources().filter((g) => g.data.draft === true).map((g) => g.slug);
   const pageOf = (path: string) => readFileSync(join(DIST, ...path.split('/').filter(Boolean), 'index.html'), 'utf8');
   const jsonLdOf = (html: string): Record<string, unknown>[] =>
@@ -1110,6 +1113,28 @@ describe('built output', () => {
     for (const d of draftSlugs()) expect(existsSync(join(DIST, 'guide', d)), d).toBe(false);
   });
 
+  const firstGuide = (tool: string) => /href="\/guide\/([a-z0-9-]+)\/"/.exec(pageOf(`/${tool}/`).split('관련 안내')[1] ?? '')?.[1];
+
+  it('TOOL-GUIDES: each tool page with its own how-to guide lists that guide first under 관련 안내', () => {
+    need();
+    for (const tool of ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp']) expect(firstGuide(tool), tool).toBe(tool);
+  });
+
+  it('TOOL-GUIDES Part B: the 배경 지우기 guide ships only with PUBLIC_BG_REMOVE (page, sitemap, /guide/, RSS, llms.txt, share image)', () => {
+    need();
+    expect(allPublished().find((g) => g.data.requires === 'bg-remove')?.slug).toBe('remove-background');
+    const where = [readFileSync(join(DIST, 'sitemap.xml'), 'utf8'), pageOf('/guide/'), readFileSync(join(DIST, 'guide', 'rss.xml'), 'utf8'), readFileSync(join(DIST, 'llms.txt'), 'utf8')];
+    if (bgBuilt()) {
+      expect(existsSync(join(DIST, 'guide', 'remove-background', 'index.html'))).toBe(true);
+      for (const text of where) expect(text).toContain('/guide/remove-background/');
+      expect(firstGuide('remove-background')).toBe('remove-background');
+    } else {
+      expect(existsSync(join(DIST, 'guide', 'remove-background'))).toBe(false);
+      expect(existsSync(join(DIST, 'og', 'guide', 'remove-background.png'))).toBe(false);
+      for (const text of where) expect(text).not.toContain('remove-background');
+    }
+  });
+
   it('Growth T12: plain language also in the RSS text, llms.txt and the share-image alt texts; the check catches 업로드', () => {
     need();
     const hits = (s: string) => [...s.replace(/픽셀\(px\)/g, '').matchAll(JARGON)].map((m) => m[0]);
@@ -1158,7 +1183,10 @@ describe('built output', () => {
       const links = linksOf(pageOf(`/guide/${h}/`));
       for (const g of guides.filter((x) => x.data.spec.some((r) => r.kind === HUB_KIND[h]))) expect(links.has(g.slug), `${h} → ${g.slug}`).toBe(true);
     }
-    for (const g of guides) expect(inLinks.get(g.slug)?.size ?? 0, `${g.slug}: links from other guides or hubs`).toBeGreaterThanOrEqual(1);
+    // TOOL-GUIDES Part B: a guide behind a release flag may not be linked from a guide shown in every build (the schema
+    // forbids it: the link would break with the flag off); its in-link besides /guide/ is its tool page's 관련 안내.
+    for (const g of guides.filter((x) => !x.data.requires)) expect(inLinks.get(g.slug)?.size ?? 0, `${g.slug}: links from other guides or hubs`).toBeGreaterThanOrEqual(1);
+    for (const g of guides.filter((x) => x.data.requires)) expect(pageOf(`/${g.data.tools[0]}/`), `${g.slug}: linked from its tool page`).toContain(`href="/guide/${g.slug}/"`);
   });
 
   it('G2 A1: no ad slot is rendered on a guide or hub while ads are off; no two articles are near-duplicates (max pair reported)', () => {

@@ -73,6 +73,21 @@ export const specRowSchema = z
   })
   .strict();
 
+/**
+ * TOOL-GUIDES Part B: a guide about a tool that ships only behind a release flag. `requires: bg-remove` lets the guide
+ * name 사진 배경 지우기 (tools, cta) and hides it everywhere while PUBLIC_BG_REMOVE is off (isVisibleGuide).
+ */
+const requiresFlag = z.literal('bg-remove').optional();
+export type GuideRequires = z.infer<typeof requiresFlag>;
+
+/** The tool each release flag adds. */
+const FLAG_TOOLS: Readonly<Record<NonNullable<GuideRequires>, string>> = { 'bg-remove': 'remove-background' };
+
+/** Shown (page, sitemap, RSS, llms.txt, share image, /guide/, 관련 안내): published, and its release flag on if it has one. */
+export function isVisibleGuide(data: { draft: boolean; requires?: GuideRequires }, bgRemoveOn: boolean): boolean {
+  return data.draft === false && (!data.requires || bgRemoveOn);
+}
+
 export const publishedGuideSchema = z
   .object({
     title: pageTitle,
@@ -93,6 +108,7 @@ export const publishedGuideSchema = z
     faq: z.array(z.object({ q: len(4, 80), a: len(10, 400) }).strict()).min(3).max(6),
     og: z.object({ title: len(2, 14), line: len(4, 34) }).strict(),
     season: z.object({ peak: z.string(), refresh: z.array(isoDate) }).strict().optional(),
+    requires: requiresFlag,
     draft: z.literal(false).default(false),
   })
   .strict()
@@ -111,6 +127,7 @@ export const draftGuideSchema = z
     query: z.string().min(2),
     blockedBy: z.string().min(4),
     publishBy: isoDate.optional(),
+    requires: requiresFlag,
     tried: z.array(z.object({ url: z.string().regex(/^https:\/\//, 'https URL'), result: z.string().min(2), date: isoDate }).strict()).default([]),
   })
   .strict();
@@ -122,7 +139,7 @@ export type DraftGuideData = z.infer<typeof draftGuideSchema>;
 
 /** Rules across fields (also run by the unit test). Empty when the guide is valid. */
 export function guideProblems(
-  g: Pick<GuideData, 'title' | 'answer' | 'published' | 'updated' | 'tools' | 'cta' | 'sources' | 'toolFacts'> & Partial<Pick<GuideData, 'spec'>>,
+  g: Pick<GuideData, 'title' | 'answer' | 'published' | 'updated' | 'tools' | 'cta' | 'sources' | 'toolFacts'> & Partial<Pick<GuideData, 'spec' | 'related' | 'requires'>>,
   now: Date = new Date(),
 ): string[] {
   const e: string[] = [];
@@ -135,7 +152,15 @@ export function guideProblems(
   // One sentence ending in 다 or 요 (optionally followed by a full stop).
   if (!/[다요]\.?$/.test(g.answer)) e.push('answer must end in 다 or 요');
   if (/[.?!]\s+\S/.test(g.answer)) e.push('answer must be one sentence');
-  const live = LIVE_TOOLS.map((t) => t.slug);
+  // A flagged tool counts as live for a guide that requires its flag (that guide is hidden while the flag is off).
+  const flagTool = g.requires ? FLAG_TOOLS[g.requires] : undefined;
+  const live = [...new Set([...LIVE_TOOLS.map((t) => t.slug), ...(flagTool ? [flagTool] : [])])];
+  // A guide shown in every build may not name a flagged tool or its guide: the link would break with the flag off.
+  for (const [flag, slug] of Object.entries(FLAG_TOOLS)) {
+    if (g.requires === flag) continue;
+    const ctaTool = g.cta.href.split(/[?#]/)[0]!.split('/')[1];
+    if (g.tools.includes(slug) || ctaTool === slug || (g.related ?? []).includes(slug)) e.push(`names "${slug}" without requires: ${flag} (needs requires: ${flag})`);
+  }
   for (const t of g.tools) if (!live.includes(t)) e.push(`tool "${t}" is not a live tool`);
   if (!parseHref(g.cta.href, live)) e.push(`cta href "${g.cta.href}" is not a live tool link with a valid deep link`);
   let linked = 0;

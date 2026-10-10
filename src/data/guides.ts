@@ -1,7 +1,7 @@
 // Published guides (Growth G.1): drafts are never rendered, linked, listed or submitted. Hubs (G2 A1) live in
 // their own collection and are listed with the guides wherever all /guide/ pages are (sitemap, RSS, llms.txt).
 import { getCollection, type CollectionEntry } from 'astro:content';
-import { TOPICS, type GuideData, type Topic } from './guide-schema';
+import { TOPICS, isVisibleGuide, type GuideData, type Topic } from './guide-schema';
 import type { HubData } from './hub-schema';
 import { orderToolGuides } from './tool-guide-order';
 
@@ -9,11 +9,12 @@ import { orderToolGuides } from './tool-guide-order';
 export type Guide = Omit<CollectionEntry<'guides'>, 'data'> & { data: GuideData };
 export type Hub = Omit<CollectionEntry<'hubs'>, 'data'> & { data: HubData };
 
-const isPublished = (e: CollectionEntry<'guides'>): e is Guide => e.data.draft === false;
+/** Published and, for a guide that requires a release flag (TOOL-GUIDES Part B), built with that flag on. */
+const isPublished = (e: CollectionEntry<'guides'>): e is Guide => isVisibleGuide(e.data, __BG_REMOVE__);
 
 export const guidePath = (slug: string): string => `/guide/${slug}/`;
 
-/** Every published guide, in a stable order (category, then title). */
+/** Every published guide shown in this build, in a stable order (category, then title). */
 export async function publishedGuides(): Promise<Guide[]> {
   const all = (await getCollection('guides')).filter(isPublished);
   return all.sort((a, b) => a.data.category.localeCompare(b.data.category, 'ko') || a.data.title.localeCompare(b.data.title, 'ko'));

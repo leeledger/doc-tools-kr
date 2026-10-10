@@ -58,8 +58,9 @@ export const QUALIFIER_AFTER = 80;
 /**
  * Files whose claims are about one tool that never sends anything: the other tools' pages and the guide pages
  * (each about such tools). A new tool page is not listed until someone adds it here, so its claims get checked.
+ * The 배경 지우기 guide (guide/remove-background/, TOOL-GUIDES Part B) is about the tool that may send, so it is checked.
  */
-export const LOCAL_SCOPE_RE = /^(pdf-merge|pdf-compress|jpg-to-pdf|pdf-to-jpg|pdf-password|pdf-split|pdf-sign|image-to-jpg|photo-compress|id-photo|stamp-signature|hwp-to-pdf|hwp-viewer|hwpx-to-hwp)\/|^guide\/[^/]+\/index\.html$/;
+export const LOCAL_SCOPE_RE = /^(pdf-merge|pdf-compress|jpg-to-pdf|pdf-to-jpg|pdf-password|pdf-split|pdf-sign|image-to-jpg|photo-compress|id-photo|stamp-signature|hwp-to-pdf|hwp-viewer|hwpx-to-hwp)\/|^guide\/(?!remove-background\/)[^/]+\/index\.html$/;
 /** Text files checked for claims: pages, llms.txt, the sitemap, the manifest and any JSON. */
 export const CLAIM_FILE_RE = /\.(html|txt|xml|json|webmanifest)$/;
 

@@ -10,7 +10,7 @@ category: 한글파일
 topic: 한글파일
 tools: [hwp-viewer, hwp-to-pdf]
 cta: { href: '/hwp-viewer/', label: 'HWP·HWPX 파일 보기' }
-related: [hwp-on-phone, what-is-hwpx, hwp-to-pdf]
+related: [hwp-on-phone, what-is-hwpx, hwp-to-pdf, hwpx-to-hwp]
 sources:
   - url: https://www.hancom.com/support/downloadCenter/download
     title: 한컴 다운로드 센터 — 제품 설치·업데이트 파일

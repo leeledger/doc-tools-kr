@@ -10,7 +10,7 @@ category: 사진
 topic: 사진 보내기
 tools: [image-to-jpg]
 cta: { href: '/image-to-jpg/', label: '사진 JPG 변환' }
-related: [kakao-photo, photo-kb, univ-docs-upload]
+related: [kakao-photo, photo-kb, univ-docs-upload, jpg-to-pdf]
 sources:
   - url: https://support.apple.com/ko-kr/116944
     title: Apple 지원 — Apple 기기에서 HEIF 또는 HEVC 미디어 사용하기

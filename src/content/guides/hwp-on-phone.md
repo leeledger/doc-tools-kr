@@ -10,7 +10,7 @@ category: 한글파일
 topic: 한글파일
 tools: [hwp-viewer, hwp-to-pdf]
 cta: { href: '/hwp-viewer/', label: 'HWP·HWPX 파일 보기' }
-related: [open-hwp-without-hangul, what-is-hwpx]
+related: [open-hwp-without-hangul, what-is-hwpx, hwpx-to-hwp]
 sources:
   - url: https://support.apple.com/ko-kr/guide/iphone/iph7fe7a50a7/ios
     title: Apple 지원 — iPhone의 Mail 앱에서 이메일 첨부 파일 다운로드하기

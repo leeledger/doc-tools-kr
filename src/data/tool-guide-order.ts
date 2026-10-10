@@ -8,6 +8,14 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   'id-photo': ['passport-photo', 'photo-kb'],
   'pdf-merge': ['pdf-merge'],
   'pdf-compress': ['pdf-compress'],
+  // TOOL-GUIDES: each of these tools pins its own how-to guide (slug = tool slug).
+  'jpg-to-pdf': ['jpg-to-pdf'],
+  'pdf-to-jpg': ['pdf-to-jpg'],
+  'pdf-split': ['pdf-split'],
+  'pdf-sign': ['pdf-sign'],
+  'hwpx-to-hwp': ['hwpx-to-hwp'],
+  // Part B: shown only in builds with PUBLIC_BG_REMOVE on (the guide requires bg-remove; the tool page exists only then).
+  'remove-background': ['remove-background'],
 };
 
 /** `guides` (already in the stable order) with the tool's pinned slugs moved to the front, in pin order. */

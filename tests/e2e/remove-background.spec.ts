@@ -278,3 +278,16 @@ test('@model the real model on the WASM engine: IoU ≥ 0.99 against the stored 
   }
   expect(inter / union).toBeGreaterThanOrEqual(0.99);
 });
+
+// TOOL-GUIDES Part B: the guide that requires bg-remove ships with the page; its CTA reaches the tool, which lists it first.
+test('the 누끼 guide: listed on /guide/, CTA reaches /remove-background/, whose 관련 안내 starts with it', async ({ page }) => {
+  await gotoReady(page, '/guide/');
+  await expect(page.locator('a[href="/guide/remove-background/"]').first()).toBeVisible();
+  await gotoReady(page, '/guide/remove-background/');
+  await expect(page.locator('.guide-answer')).toBeVisible();
+  await page.locator('.guide-cta a').click();
+  await page.waitForURL(/\/remove-background\/$/);
+  await page.waitForFunction(() => document.readyState === 'complete');
+  const first = await page.locator('a[href^="/guide/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')).find((h) => h !== '/guide/'));
+  expect(first).toBe('/guide/remove-background/');
+});

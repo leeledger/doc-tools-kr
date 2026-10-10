@@ -10,7 +10,7 @@ category: 서류
 topic: 서명·도장
 tools: [stamp-signature]
 cta: { href: '/stamp-signature/', label: '전자서명·도장 이미지 만들기' }
-related: [e-signature-law, hwp-to-pdf, pdf-merge]
+related: [e-signature-law, hwp-to-pdf, pdf-merge, pdf-sign]
 sources:
   - url: https://support.microsoft.com/ko-kr/office/%EA%B7%B8%EB%A6%BC-%EC%82%BD%EC%9E%85-3c51edf4-22e1-460a-b372-9329a8724344
     title: Microsoft 지원 — 그림 삽입

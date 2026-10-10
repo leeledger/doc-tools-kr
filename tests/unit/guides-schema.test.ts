@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { describe, expect, it } from 'vitest';
-import { guideProblems, guideSchema, publishedGuideSchema, MAX_SOURCE_AGE_DAYS } from '../../src/data/guide-schema';
+import { guideProblems, guideSchema, isVisibleGuide, publishedGuideSchema, MAX_SOURCE_AGE_DAYS } from '../../src/data/guide-schema';
 import { allowedFacts, numberUnits, resolveSources, unsourcedFacts } from '../../src/data/guide-facts';
 import { GMAIL_LIMIT, fitKb, presetLimit, quickLinks } from '../../src/data/quicklinks';
 import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
@@ -16,6 +16,7 @@ import { hubSchema } from '../../src/data/hub-schema';
 import { HUB_KIND, HUB_SLUGS, hubRows, quotedLimit } from '../../src/data/hubs';
 import { ID_PHOTO_LINK_MAX, ID_PHOTO_LINK_ORDER } from '../../src/data/quicklinks';
 import { TOOL_GUIDE_PINS, orderToolGuides } from '../../src/data/tool-guide-order';
+import { BG_REMOVE_TOOL, getTool } from '../../src/data/tools';
 import { GUARD_PAGES, LIMITS as HWP_LIMITS, MB_DEC } from '../../src/lib/hwp/limits';
 
 const DIR = join(__dirname, '..', '..', 'src', 'content', 'guides');
@@ -360,6 +361,74 @@ describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
       // Without the pin the tool's own guide falls below the 4 shown (Hangul titles sort before "PDF …").
       expect(own.slice(0, 4).map((g) => g.id), tool).not.toContain(tool);
       expect(orderToolGuides(tool, own)[0]!.id, tool).toBe(tool);
+    }
+  });
+});
+
+describe('TOOL-GUIDES: one how-to guide per tool', () => {
+  const OWN = ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp'] as const;
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+
+  it("each tool's 관련 안내 starts with its own guide (TOOL_GUIDE_PINS)", () => {
+    for (const tool of OWN) {
+      expect(TOOL_GUIDE_PINS[tool], tool).toEqual([tool]);
+      const own = published
+        .filter((g) => g.parsed.tools.includes(tool))
+        .sort((a, b) => a.parsed.category.localeCompare(b.parsed.category, 'ko') || a.parsed.title.localeCompare(b.parsed.title, 'ko'))
+        .map((g) => ({ id: g.slug }));
+      expect(orderToolGuides(tool, own)[0]?.id, tool).toBe(tool);
+    }
+  });
+
+  it('a guide named after a tool targets another query: its title differs from the tool title, its query from the tool h1', () => {
+    for (const tool of OWN) {
+      const g = published.find((x) => x.slug === tool)!.parsed;
+      const t = getTool(tool);
+      expect(norm(g.title), tool).not.toBe(norm(t.title.replace(/ \| 문서딱$/, '')));
+      expect(norm(g.query), tool).not.toBe(norm(t.h1));
+      expect(g.tools[0], tool).toBe(tool);
+      expect(g.cta.href, tool).toBe(`/${tool}/`);
+    }
+  });
+});
+
+describe('TOOL-GUIDES Part B: a guide behind the 배경 지우기 release flag', () => {
+  const bg = published.find((g) => g.slug === 'remove-background');
+  const base = () => publishedGuideSchema.parse(published.find((g) => g.slug === 'pdf-sign')!.data);
+
+  it('the requires: bg-remove guide parses with the flag off (vitest) and is visible only with it on', () => {
+    expect(bg, 'src/content/guides/remove-background.md').toBeDefined();
+    expect(bg!.parsed.requires).toBe('bg-remove');
+    expect(guideProblems(bg!.parsed)).toEqual([]);
+    expect(isVisibleGuide(bg!.parsed, false)).toBe(false);
+    expect(isVisibleGuide(bg!.parsed, true)).toBe(true);
+    expect(isVisibleGuide(base(), false)).toBe(true);
+    expect(isVisibleGuide({ draft: true, requires: 'bg-remove' }, true)).toBe(false);
+    expect(TOOL_GUIDE_PINS['remove-background']).toEqual(['remove-background']);
+    const t = BG_REMOVE_TOOL;
+    expect(bg!.parsed.title).not.toBe(t.title.replace(/ \| 문서딱$/, ''));
+    expect(bg!.parsed.query.toLowerCase()).not.toBe(t.h1.toLowerCase());
+  });
+
+  it('a guide without requires that names remove-background (tools, cta, related) fails; with requires it passes', () => {
+    const g = base();
+    const msg = 'needs requires: bg-remove';
+    expect(guideProblems({ ...g, tools: ['pdf-sign', 'remove-background'] }).join()).toContain(msg);
+    expect(guideProblems({ ...g, cta: { href: '/remove-background/', label: 'x' } }).join()).toContain(msg);
+    expect(guideProblems({ ...g, related: ['stamp-image', 'remove-background'] }).join()).toContain(msg);
+    expect(guideProblems({ ...g, requires: 'bg-remove', tools: ['remove-background'], cta: { href: '/remove-background/', label: 'x' } })).toEqual([]);
+    // Without the flag (vitest) remove-background is no live tool, so a guide that does not require it cannot name it at all.
+    expect(guideProblems({ ...g, tools: ['remove-background'] }).join()).toContain('not a live tool');
+  });
+
+  it('no guide shown with the flag off links the 배경 지우기 tool or guide; every related guide is shown in both flag states', () => {
+    for (const g of published.filter((x) => !x.parsed.requires)) {
+      expect(g.body, g.slug).not.toMatch(/\/remove-background\//);
+      for (const f of g.parsed.faq) expect(f.a, g.slug).not.toMatch(/remove-background/);
+    }
+    for (const bgOn of [false, true]) {
+      const shown = new Set(published.filter((g) => isVisibleGuide(g.parsed, bgOn)).map((g) => g.slug));
+      for (const g of published.filter((x) => shown.has(x.slug))) for (const r of g.parsed.related) expect(shown.has(r), `${bgOn ? 'on' : 'off'}: ${g.slug} → ${r}`).toBe(true);
     }
   });
 });

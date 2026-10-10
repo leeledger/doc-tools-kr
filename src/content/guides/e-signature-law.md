@@ -10,7 +10,7 @@ category: 서류
 topic: 서명·도장
 tools: [stamp-signature]
 cta: { href: '/stamp-signature/', label: '전자서명·도장 이미지 만들기' }
-related: [stamp-image, hwp-to-pdf]
+related: [stamp-image, hwp-to-pdf, pdf-sign]
 sources:
   - url: https://www.law.go.kr/LSW/lsInfoR.do?lsiSeq=236201&chrClsCd=010202&urlMode=lsInfoP&efYd=20221020&ancYnChk=0
     title: 국가법령정보센터 — 전자서명법 제2조(정의)

@@ -10,7 +10,7 @@ category: 한글파일
 topic: 한글파일
 tools: [hwp-viewer, hwp-to-pdf, hwpx-to-hwp]
 cta: { href: '/hwp-viewer/', label: 'HWP·HWPX 파일 보기' }
-related: [open-hwp-without-hangul, hwp-on-phone]
+related: [open-hwp-without-hangul, hwp-on-phone, hwpx-to-hwp]
 sources:
   - url: https://tech.hancom.com/hwpxformat/
     title: 한컴테크 — 한/글 문서 파일 형식 HWPX 포맷 구조 살펴보기
@@ -70,4 +70,4 @@ og: { title: 'HWPX가 뭔가요', line: '한글 문서의 개방형 형식, 여�
 
 한글 프로그램이 있다면 한컴 지원센터 안내대로 도구 > 환경설정 > 파일 탭의 「다음 형식으로 파일 저장」에서 HWP나 HWPX를 고를 수 있어요.
 
-HWP 파일로 내야 하면 [HWPX HWP 변환](/hwpx-to-hwp/)에서 바꿀 수 있어요.
+HWP 파일로 내야 하면 [HWPX HWP 변환](/hwpx-to-hwp/)에서 바꿀 수 있어요. 한글 프로그램 없이 바꾸는 법과 한글에서 다른 이름으로 저장하는 법은 [HWPX 파일 HWP로 바꾸는 법](/guide/hwpx-to-hwp/)에 정리했어요.

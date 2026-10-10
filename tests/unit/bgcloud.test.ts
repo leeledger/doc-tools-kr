@@ -422,6 +422,9 @@ describe('site-wide "files never leave" claims with the cloud path on (round 2, 
   it('scope: the other tools and the guides are local; home, 404, offline, privacy, terms, llms.txt and 배경 지우기 are not', () => {
     for (const p of ['pdf-merge/index.html', 'jpg-to-pdf/index.html', 'pdf-to-jpg/index.html', 'pdf-password/index.html', 'image-to-jpg/index.html', 'pdf-split/index.html', 'pdf-sign/index.html', 'hwp-viewer/index.html', 'hwpx-to-hwp/index.html', 'guide/passport-photo/index.html', 'guide/photo-sizes/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(true);
     for (const p of ['index.html', '404.html', 'offline/index.html', 'privacy/index.html', 'terms/index.html', 'guide/index.html', 'llms.txt', 'sitemap.xml', 'remove-background/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(false);
+    // TOOL-GUIDES Part B: the 배경 지우기 guide is about the tool that may send, so the claim check scans it; other guides stay local.
+    expect(LOCAL_SCOPE_RE.test('guide/remove-background/index.html')).toBe(false);
+    for (const p of ['guide/pdf-sign/index.html', 'guide/remove-background-tips/index.html', 'guide/stamp-image/index.html']) expect(LOCAL_SCOPE_RE.test(p), p).toBe(true);
   });
   it('og.json: share texts and image lines make no "files never leave" claim, so none needs the exception (owner 2026-10-05)', () => {
     const pages = og.pages as Record<string, { image: string; description: string }>;

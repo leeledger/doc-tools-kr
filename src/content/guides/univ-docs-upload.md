@@ -10,7 +10,7 @@ category: 서류
 topic: 입시·장학
 tools: [pdf-compress, pdf-merge]
 cta: { href: '/pdf-compress/', label: 'PDF 서류 용량 줄이기' }
-related: [admission-photo, kosaf-docs, pdf-compress]
+related: [admission-photo, kosaf-docs, pdf-compress, jpg-to-pdf]
 sources:
   - url: https://www.uwayapply.com/board/faq.htm
     title: 유웨이 어플라이 도움말 FAQ
