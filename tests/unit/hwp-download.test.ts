@@ -2,7 +2,7 @@
 // The PDF file name and the in-page download (SPIKE-HWP-DIRECT §6.2, §6.4 "File name").
 import { describe, expect, it, vi } from 'vitest';
 import { MAX_FILE_NAME } from '../../src/lib/ui/format';
-import { pdfName, triggerDownload } from '../../src/tools/hwp-shared/download';
+import { pdfName, triggerDownload, withExt } from '../../src/tools/hwp-shared/download';
 
 describe('pdfName', () => {
   it('the original name with .pdf', () => {
@@ -19,6 +19,25 @@ describe('pdfName', () => {
     const long = pdfName(`${'가'.repeat(255)}.hwp`);
     expect([...long].length).toBe(MAX_FILE_NAME);
     expect(long.endsWith('.pdf')).toBe(true);
+  });
+});
+
+describe('withExt (HWPX2HWP H0)', () => {
+  const HWPX = /\.hwpx$/i;
+  it('strips a trailing .hwpx (any case) and adds .hwp; other names keep their dots and get .hwp appended', () => {
+    expect(withExt('adm14.hwpx', '.hwp', HWPX)).toBe('adm14.hwp');
+    expect(withExt('ADM14.HWPX', '.hwp', HWPX)).toBe('ADM14.hwp');
+    expect(withExt('보고서', '.hwp', HWPX)).toBe('보고서.hwp');
+    expect(withExt('a.b.c.hwpx', '.hwp', HWPX)).toBe('a.b.c.hwp');
+    expect(withExt('report.v2', '.hwp', HWPX)).toBe('report.v2.hwp');
+    expect(withExt('x.hwpx.zip', '.hwp', HWPX)).toBe('x.hwpx.zip.hwp');
+    expect(withExt('.hwpx', '.hwp', HWPX)).toBe('문서.hwp');
+    expect(withExt('a:b?.hwpx', '.hwp', HWPX)).toBe('ab.hwp');
+  });
+
+  it('default strip is the last extension (what pdfName uses)', () => {
+    expect(withExt('a.b.hwpx', '.pdf')).toBe('a.b.pdf');
+    expect(withExt('law05.hwp', '.pdf')).toBe(pdfName('law05.hwp'));
   });
 });
 

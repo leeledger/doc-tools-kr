@@ -561,6 +561,24 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
     budget('hwp-viewer controls (ui*.js)', [...new Set(ui.flatMap((f) => staticClosure(dist, f)))].filter((f) => !viewer.includes(f)), 20 * KB);
   }
 }
+// HWPX HWP 변환 (HWPX2HWP decision 16): the controller (the controller*.js chunk that owns #hx-loss-list, and what
+// only it imports) loads after the first paint or on the first interaction, never with the page; no initial script
+// names the HWP worker, the rhwp glue, the viewer chunk or the PDF export chunk (no preview, no fonts, no render)
+// (controller 5.4 KB gzip measured, budget + 20 %).
+{
+  const html = pageHtml.get('hwpx-to-hwp/index.html');
+  if (!html) errors.push('hwpx-to-hwp/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('hx-loss-list'));
+    if (controller.length !== 1) errors.push(`hwpx-to-hwp controller: ${controller.length} chunk(s) name #hx-loss-list, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /hwpx-to-hwp/ controller loads with the page');
+    for (const f of initial) if (/hwp\.worker|rhwp_bg|HwpDocument|__wbindgen|createViewer|exportPdf/.test(read(f).toString('utf8'))) errors.push(`${f}: the HWP worker, the rhwp glue, the viewer or the PDF export in the /hwpx-to-hwp/ initial JS`);
+    const closure = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))];
+    if (closure.some((f) => /^_astro\/(lazy|export-chunk)[.-]/.test(f))) errors.push('the /hwpx-to-hwp/ controller imports the HWP viewer or PDF export chunk');
+    budget('hwpx-to-hwp controller (lazy)', closure.filter((f) => !initial.has(f)), 6.5 * KB);
+  }
+}
 count(/(^|\/)rhwp_bg[^/]*\.wasm$/, 1, 'rhwp_bg*.wasm');
 budget('vendor/rhwp/*/rhwp_bg.wasm', match(/^vendor\/rhwp\/[^/]+\/rhwp_bg\.wasm$/), 10.5 * 1024 * KB, raw, 'raw');
 // Quality 5 (about what a CDN uses on the fly; q11 takes a minute on 10 MB). q9 is 2.9 MiB, q4 3.3 MiB.

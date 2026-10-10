@@ -59,7 +59,7 @@ function whenIdle(fn: () => void): void {
 }
 
 /** `tool`: the page, for the usage statistics (the session reports the rest; a controller that cannot load fails here). */
-export function bootHwpTool(rootId: string, load: () => Promise<BootInit>, tool?: 'hwp-to-pdf' | 'hwp-viewer'): void {
+export function bootHwpTool(rootId: string, load: () => Promise<BootInit>, tool?: 'hwp-to-pdf' | 'hwp-viewer' | 'hwpx-to-hwp'): void {
   const root = document.getElementById(rootId);
   if (!root) return;
   if (tool) startUsage(tool);

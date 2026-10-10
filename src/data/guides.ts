@@ -51,11 +51,13 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
  * PDF 암호 해제·설정 → PDF 합치기, PDF 용량 줄이기, 연말정산 PDF (TOOLS4 T4; its own guide comes first by `tools`);
  * 사진 JPG 변환 → 사진 용량 맞추기 (HEIC가 안 열릴 때 포함), 대학 원서 서류 (파일 형식이 안 맞을 때), 큐넷 사진 (JPG만 받는 곳) (TOOLS5 U1);
  * PDF 나누기·쪽 편집 → 대학 원서 서류 (서류마다 PDF 하나), PDF 합치기, 메일 첨부 용량 (나눠 보내기) (TOOLS5 U2);
- * PDF 서명·도장 넣기 → 전자서명법 (그림 서명을 받는지), 도장·서명 이미지 만들기, PDF 암호 해제·설정 (저장 뒤 암호 다시 걸기) (TOOLS5 U3).
+ * PDF 서명·도장 넣기 → 전자서명법 (그림 서명을 받는지), 도장·서명 이미지 만들기, PDF 암호 해제·설정 (저장 뒤 암호 다시 걸기) (TOOLS5 U3);
+ * HWPX HWP 변환 → HWPX란, 한글 없이 HWP 열기, 휴대폰에서 HWP (HWPX2HWP).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
   'hwp-viewer': ['open-hwp-without-hangul', 'hwp-on-phone', 'what-is-hwpx'],
+  'hwpx-to-hwp': ['what-is-hwpx', 'open-hwp-without-hangul', 'hwp-on-phone'],
   'pdf-merge': ['univ-docs-upload'],
   'stamp-signature': ['stamp-image', 'e-signature-law'],
   'jpg-to-pdf': ['univ-docs-upload', 'pdf-merge', 'pdf-compress'],

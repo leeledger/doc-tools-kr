@@ -5,10 +5,10 @@ ogDescription: HWPX는 한글 문서의 개방형 형식이에요. HWP와 다른
 query: hwpx 열기
 answer: HWPX는 한글 문서를 XML 파일로 저장하는 개방형 문서 형식이고, 문서딱 HWP·HWPX 파일 보기에서 HWP와 같은 방법으로 설치 없이 열 수 있어요.
 published: '2026-10-01'
-updated: '2026-10-01'
+updated: '2026-10-10'
 category: 한글파일
 topic: 한글파일
-tools: [hwp-viewer, hwp-to-pdf]
+tools: [hwp-viewer, hwp-to-pdf, hwpx-to-hwp]
 cta: { href: '/hwp-viewer/', label: 'HWP·HWPX 파일 보기' }
 related: [open-hwp-without-hangul, hwp-on-phone]
 sources:
@@ -69,3 +69,5 @@ og: { title: 'HWPX가 뭔가요', line: '한글 문서의 개방형 형식, 여�
 ## 저장 형식을 바꾸는 법
 
 한글 프로그램이 있다면 한컴 지원센터 안내대로 도구 > 환경설정 > 파일 탭의 「다음 형식으로 파일 저장」에서 HWP나 HWPX를 고를 수 있어요.
+
+HWP 파일로 내야 하면 [HWPX HWP 변환](/hwpx-to-hwp/)에서 바꿀 수 있어요.

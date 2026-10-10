@@ -14,6 +14,7 @@
 // Every rhwp upgrade re-runs this harness on the full corpus before merge.
 // Output: regress-out/hwp.json and regress-out/hwp.md.
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -337,6 +338,22 @@ for (const key of keys) {
   }
   writeFileSync(join(root, 'regress-out', mobileMode ? 'hwp-mobile.json' : 'hwp.json'), JSON.stringify(results, null, 1));
 }
+// HWPX HWP 변환 (HWPX2HWP): every HWPX fixture through the production worker's export-hwp (reload gate). The bytes
+// must be an HWP 5 CFB; losses are reported (and fail the run: the fixtures had 0 in the spike).
+const hwpxRows = [];
+if (!mobileMode) {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.goto(`${base}index.html`);
+  await page.waitForFunction(() => window.READY);
+  for (const key of keys.filter((k) => inputs.get(k).fixture && inputs.get(k).path.toLowerCase().endsWith('.hwpx'))) {
+    const res = await page.evaluate((u) => window.RUN_HWP(u), fsUrl(inputs.get(key).path));
+    const hwp = res.hwp ? Buffer.from(res.hwp, 'base64') : null;
+    const cfb = !!hwp && hwp.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
+    hwpxRows.push({ key, ok: res.ok && cfb, error: res.error, pagesIn: res.pagesIn, losses: res.losses, bytes: hwp?.length, sha: hwp ? createHash('sha256').update(hwp).digest('hex').slice(0, 12) : null, ms: res.ms });
+  }
+  await ctx.close().catch(() => undefined);
+}
 await B.close();
 await server.close();
 
@@ -470,6 +487,12 @@ const fallbackTotal = rows.reduce((a, r) => a + (r.fallbackPages ?? 0), 0);
 out(`Fallback pages: ${fallbackTotal} of ${rows.reduce((a, r) => a + (r.ok ? r.pages : 0), 0)} (${rows.filter((r) => r.fallbackPages > 0).map((r) => `${r.key} ${r.fallbackPages}`).join(', ') || 'none'})`);
 const mems = rows.filter((r) => r.memDeltaMB != null);
 if (mems.length) out(`Memory (browser tree working set, peak − idle): max ${Math.round(Math.max(...mems.map((r) => r.memDeltaMB)))} MB (${mems.reduce((a, r) => (r.memDeltaMB > a.memDeltaMB ? r : a)).key})${results.adm16?.memDeltaMB != null ? `; adm16 ${Math.round(results.adm16.memDeltaMB)} MB (budget 1,536 MB)` : ''}`);
+out('');
+for (const r of hwpxRows) {
+  if (!r.ok) fails.push(`hwpx-to-hwp: ${r.key} did not pass the reload gate (${r.error ?? 'not a CFB'})`);
+  else if (r.losses > 0) fails.push(`hwpx-to-hwp: ${r.key} ${r.losses} loss(es) reported`);
+}
+if (hwpxRows.length) out(`HWPX → HWP (export-hwp, reload gate): ${hwpxRows.map((r) => (r.ok ? `${r.key} ${r.pagesIn}쪽 losses ${r.losses} ${r.bytes.toLocaleString('en-US')} B sha ${r.sha} ${Math.round(r.ms)} ms` : `${r.key} FAIL ${r.error ?? 'not a CFB'}`)).join('; ')}`);
 out('');
 out(`Pass rules: ${fails.length ? 'FAIL' : 'all pass'}`);
 for (const f of fails) out(`- ${f}`);

@@ -1,12 +1,12 @@
 // Hancom's HWP spec licence (G2 A0 "Legal"): the exact notice is the first-line comment of every source file
-// under src/tools/hwp-shared/ and src/tools/hwp-viewer/, and the page constant is the same text.
+// under src/tools/hwp-shared/, src/tools/hwp-viewer/ and src/tools/hwpx-to-hwp/ (HWPX2HWP), and the page constant is the same text.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { HANCOM_NOTICE } from '../../src/tools/hwp-shared/messages';
 
 const NOTICE = '본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.';
-const DIRS = ['src/tools/hwp-shared', 'src/tools/hwp-viewer'];
+const DIRS = ['src/tools/hwp-shared', 'src/tools/hwp-viewer', 'src/tools/hwpx-to-hwp'];
 
 function files(dir: string): string[] {
   if (!existsSync(dir)) return [];

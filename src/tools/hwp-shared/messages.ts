@@ -30,6 +30,10 @@ export const ERRORS: Record<Exclude<HwpErrorCode, 'too-large' | 'engine'>, strin
   corrupt: '문서가 손상되었거나 끝까지 내려받아지지 않았습니다. 파일을 다시 내려받은 뒤 시도해 주세요.',
   oom: '이 기기에서 열기에는 문서가 너무 큽니다. 컴퓨터에서 열거나 Chrome·삼성 인터넷 등 다른 앱으로 열어 주세요.',
   timeout: '문서를 여는 데 너무 오래 걸려 멈췄습니다. 컴퓨터에서 열거나 Chrome·삼성 인터넷 등 다른 앱으로 열어 주세요.',
+  // HWPX HWP 변환 only (HWPX2HWP brief: its in-tool lines are written as the brief gives them, 해요체).
+  'already-hwp': '이미 HWP 파일이에요. 바꾸지 않아도 되고, 아래에서 열어 보거나 PDF로 바꿀 수 있어요.',
+  unverified: '바꾼 파일을 다시 열어 확인하지 못해 내려받지 않았어요. 아래에서 원본을 열어 보거나 PDF로 바꿀 수 있어요.',
+  export: '이 문서는 HWP로 바꾸지 못했어요. 아래에서 열어 보거나 PDF로 바꿀 수 있어요.',
 };
 
 export function tooLargeMessage(device: Device, fileBytes: number, limit: number): string {

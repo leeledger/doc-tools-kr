@@ -17,6 +17,7 @@
     "remove-background": { "title": "사진 배경 지우기 (누끼)", "line": "투명한 PNG로 — 무료, 가입 없이" },
     "hwp-to-pdf": { "title": "HWP PDF 변환", "line": "한글 프로그램 없이 — 무료, 가입 없이" },
     "hwp-viewer": { "title": "HWP·HWPX 파일 보기", "line": "설치 없이 바로 열기 — 무료, 가입 없이" },
+    "hwpx-to-hwp": { "title": "HWPX HWP 변환", "line": "한글 프로그램 없이 — 무료, 가입 없이" },
     "default": { "title": "문서·사진, 규격에 딱", "line": "PDF·사진·여권사진·HWP — 무료, 가입 없이" }
   },
   "pages": {
@@ -35,6 +36,7 @@
     "/remove-background/": { "image": "remove-background", "description": "사진의 배경을 지워 투명한 PNG나 흰색·파란색 배경으로 저장해요. 무료, 가입 없이 바로 써요." },
     "/hwp-to-pdf/": { "image": "hwp-to-pdf", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 저장해요. 무료." },
     "/hwp-viewer/": { "image": "hwp-viewer", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 쪽을 넘겨 보고 글자도 찾아요. 무료." },
+    "/hwpx-to-hwp/": { "image": "hwpx-to-hwp", "description": "한글 프로그램 없이 HWPX 파일을 HWP 파일로 바꿔 내려받아요. 가입 없이 무료." },
     "/privacy/": { "image": "default", "description": "문서딱은 가입이 없고 개인정보를 받지 않아요. 고른 파일을 어떻게 다루는지 알려 드려요." },
     "/terms/": { "image": "default", "description": "문서딱 이용약관: 무료로 쓰는 문서·사진 도구의 이용 조건과 책임의 범위를 알려 드려요." },
     "/guide/": { "image": "default", "description": "여권사진·증명사진 규격과 사진·PDF 용량 제한을 기관 안내로 확인해 정리했어요. 확인일과 원문 링크 포함." },

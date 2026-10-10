@@ -4,9 +4,20 @@
 // reset or replacement, never on a timer (the visible 「다시 내려받기」 link keeps using it).
 import { safeFileName } from '../../lib/ui/format';
 
+/** Any last extension (`a.b.hwpx` → `a.b`). */
+const LAST_EXT = /\.[^./\\]+$/;
+
+/**
+ * `fileName` without the part `strip` matches, plus `ext`, made safe: nothing usable → `문서` + ext. `strip`
+ * defaults to the last extension; HWPX HWP 변환 strips only a trailing `.hwpx` (`a.b` → `a.b.hwp`).
+ */
+export function withExt(fileName: string, ext: string, strip: RegExp = LAST_EXT): string {
+  return safeFileName(fileName.replace(strip, ''), ext);
+}
+
 /** The original name with .pdf: `law05.hwp` → `law05.pdf`, `a.b.hwpx` → `a.b.pdf`, nothing usable → `문서.pdf`. */
 export function pdfName(fileName: string): string {
-  return safeFileName(fileName.replace(/\.[^./\\]+$/, ''), '.pdf');
+  return withExt(fileName, '.pdf');
 }
 
 export function triggerDownload(url: string, name: string, doc: Document = document): void {

@@ -5,7 +5,9 @@
 // - HWP 5: FileHeader flags; each BodyText/Section* is raw-inflated when compressed (a stream that fails to
 //   inflate sets decodeError and is skipped); record walk; equations = tag 88 + ctrl 'eqed';
 //   textboxes = shape components '$rec' + '$ell' + '$pol'; imageBytes = sum of the BinData stream sizes.
-// - HWPX: mimetype must be application/hwp+zip; section XML regexes; imageBytes = BinData uncompressed sizes.
+// - HWPX: mimetype must be application/hwp+zip; a META-INF/manifest.xml that declares encryption (ODF
+//   <encryption-data>, what rhwp's exportHwpxWithPassword writes; HWPX2HWP) is password; section XML regexes;
+//   imageBytes = BinData uncompressed sizes.
 // - HWP 3.0: format only.
 // Everything inflated is walked as it streams out of the inflater and is never held whole: the total output
 // of a file is capped (512 MB desktop, 128 MB phone; Arch, Step 5 round 3) and a zip bomb is stopped at the
@@ -44,6 +46,7 @@ const TAG_SHAPE_COMPONENT = 76;
 const TAG_EQEDIT = 88;
 const TEXTBOX_IDS = new Set(['$rec', '$ell', '$pol']);
 const HWPX_MIME = 'application/hwp+zip';
+const HWPX_MANIFEST = 'META-INF/manifest.xml';
 
 /** features.py `cid()`: a u32 read little-endian, written out as 4 chars from its most significant byte. */
 export function cid(v: number): string {
@@ -237,6 +240,19 @@ function hwpx(bytes: Uint8Array, budget: Budget): Features {
   if (!mime) throw new HwpError('not-hwp', 'zip without a mimetype entry');
   const mimeText = utf8.decode(readEntry(bytes, mime, 1024)).trim();
   if (mimeText !== HWPX_MIME) throw new HwpError('not-hwp', `zip mimetype ${mimeText.slice(0, 40)}`);
+  const manifest = entries.find((e) => e.name === HWPX_MANIFEST);
+  if (manifest) {
+    // ODF manifest encryption: an <encryption-data> element per encrypted part, with or without a prefix.
+    const prefixed = new ByteCounter(':encryption-data');
+    const bare = new ByteCounter('<encryption-data');
+    budget.left -= streamEntry(bytes, manifest, budget.left, (chunk) => {
+      prefixed.push(chunk);
+      bare.push(chunk);
+    });
+    prefixed.end();
+    bare.end();
+    if (prefixed.count + bare.count > 0) throw new HwpError('password', 'the HWPX manifest declares encryption');
+  }
   let equations = 0;
   let textboxes = 0;
   for (const e of entries) {

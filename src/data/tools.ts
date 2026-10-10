@@ -9,7 +9,7 @@ import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
 import { LIMITS as PDF_SPLIT_LIMITS } from '../tools/pdf-split/limits';
 import { LIMITS as PDF_SIGN_LIMITS } from '../tools/pdf-sign/limits';
 
-/** HWP numbers in the /hwp-viewer/ FAQ, read from the limits the tool uses (MB = 1,000,000 bytes). */
+/** HWP numbers in the /hwp-viewer/ and /hwpx-to-hwp/ FAQs, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
 const HWP_FAQ = {
   openPhone: hwpMb(HWP_LIMITS.mobile.hardBytes),
@@ -704,6 +704,45 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['hwp 뷰어', 'hwpx 열기', '한글파일 열기', '한글 없이 hwp 열기', '휴대폰 hwp 열기', '아이폰 hwp 열기'],
+  },
+  {
+    // HWPX2HWP (owner O4 2026-10-10): HWPX → HWP only; HWP → HWPX is a later page.
+    slug: 'hwpx-to-hwp',
+    name: 'HWPX HWP 변환',
+    title: 'HWPX HWP 변환 — 한글 없이 hwp로 바꾸기, 무료 | 문서딱',
+    description: 'hwpx 파일을 한글 프로그램 없이 hwp로 바꿔요. hwp 파일만 받는 곳에 낼 때 쓰세요. 가입 없이 무료.',
+    h1: 'HWPX HWP 변환',
+    summary: '한글 프로그램 없이 HWPX 파일을 HWP 파일로 바꿔 내려받으세요.',
+    icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6l-2-2M15 17H9l2 2"/>',
+    status: 'live',
+    updated: '2026-10-10',
+    faq: [
+      {
+        q: '한글 프로그램 없이 되나요?',
+        a: '네. 한글 프로그램을 설치하지 않아도 이 페이지에서 HWPX 파일을 HWP 파일로 바꿔 내려받을 수 있습니다.',
+      },
+      {
+        q: '원본과 모양이 똑같나요?',
+        a: '만든 HWP 파일을 다시 열어 쪽 수가 같은지 확인한 뒤에 내려받을 수 있습니다. 다만 줄바꿈이나 표 모양이 조금 다를 수 있으니 내기 전에 한글 프로그램에서 한 번 열어 확인하세요. HWP로 옮기지 못한 내용이 있으면 내려받기 전에 알려 드립니다.',
+      },
+      {
+        q: '휴대폰에서도 되나요?',
+        a: `네. 휴대폰의 「파일」 앱이나 다운로드 폴더에서 HWPX 파일을 고르세요. 휴대폰은 PC보다 한 번에 처리할 수 있는 양이 적어 ${HWP_FAQ.openPhone}가 넘는 파일은 바꿀 수 없습니다. PC에서는 ${HWP_FAQ.openPc}까지 바꿀 수 있습니다.`,
+      },
+      {
+        q: '제 문서가 어디로 보내지나요?',
+        a: '어디로도 보내지 않습니다. 문서는 이 기기 안에서만 처리됩니다.',
+      },
+      {
+        q: '비밀번호가 걸린 문서나 배포용 문서는요?',
+        a: '비밀번호가 걸린 문서는 바꿀 수 없습니다. 한글 프로그램에서 암호를 해제한 뒤 다시 시도해 주세요. 배포용 문서도 바뀌지 않을 수 있습니다.',
+      },
+      {
+        q: 'HWP 파일은 어디에 저장되나요?',
+        a: '휴대폰·PC의 「다운로드」 폴더에 원래 파일 이름 그대로(확장자만 .hwp) 저장됩니다.',
+      },
+    ],
+    keywords: ['hwpx hwp 변환', 'hwpx를 hwp로', 'hwpx 파일 hwp 변환', '한글 hwpx hwp', 'hwpx hwp 바꾸기'],
   },
 ];
 

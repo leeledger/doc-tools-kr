@@ -463,6 +463,9 @@ describe('live-only description (P.6)', () => {
     expect(slugs.has('image-to-jpg')).toBe(true);
     expect(slugs.has('pdf-split')).toBe(true);
     expect(slugs.has('pdf-sign')).toBe(true);
+    // HWPX2HWP decision 14: right after HWP PDF 변환, before HWP 파일 보기 (searches 1.5만 > 3,560 a month).
+    expect(HOME_DESC_ORDER.indexOf('hwpx-to-hwp')).toBe(HOME_DESC_ORDER.indexOf('hwp-to-pdf') + 1);
+    expect(HOME_DESC_ORDER.indexOf('hwp-viewer')).toBe(HOME_DESC_ORDER.indexOf('hwpx-to-hwp') + 1);
     expect(HOME_DESC_ORDER.filter((s) => !slugs.has(s))).toEqual([]);
     expect(new Set(HOME_DESC_ORDER).size).toBe(HOME_DESC_ORDER.length);
     for (const s of slugs) expect(HOME_DESC_ORDER, s).toContain(s);
@@ -514,7 +517,7 @@ describe('brand and titles (Polish Q)', () => {
   it('every tool title carries real search terms, ends with " | 문서딱" and stays ≤ 40 chars; the H1 is the menu name', () => {
     const KEYWORDS: Record<string, RegExp> = {
       'pdf-merge': /PDF 합치기.*병합/, 'pdf-compress': /PDF 용량 줄이기/, 'photo-compress': /사진 용량 줄이기/,
-      'id-photo': /증명사진.*사이즈|사이즈.*규격/, 'hwp-to-pdf': /한글파일.*PDF/,
+      'id-photo': /증명사진.*사이즈|사이즈.*규격/, 'hwp-to-pdf': /한글파일.*PDF/, 'hwpx-to-hwp': /HWPX HWP 변환.*hwp로/,
     };
     for (const t of TOOLS) {
       expect(t.title.endsWith(TITLE_SUFFIX)).toBe(true);
@@ -651,7 +654,7 @@ describe('service worker (P.11)', () => {
 
   it('C2 round 2 + TOOLS4 T4 round 2: legal pages and the non-precached tool pages are stored when visited; offline they come from the cache', async () => {
     const cache = new FakeCache();
-    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/']) {
+    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/']) {
       const ev = event(req(path, 'GET', 'navigate'));
       handleFetch(ev.e, envWith(async () => new Response(`page ${path}`), cache));
       await ev.responded;

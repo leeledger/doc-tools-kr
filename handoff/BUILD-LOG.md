@@ -2641,3 +2641,37 @@ Details, line ranges and proofs: handoff/REVIEW-REQUEST.md ("CI fix after TOOLS5
 - Gates: dist check-dist OK; mobile-chrome pdf-sign + polish ×5 295/0 failed (first run had 1 lost #sg-run click on pdf-sign:307, not reproduced in 85 later runs); chromium + webkit + mobile-safari pdf-sign + polish 175 passed; sticky-bar specs on both phones 110 passed.
 - Known Gaps: pdf-sign:307 lost click once under load (unexplained); tools-menu `100vh` fallback dropped by the minifier (dvh only).
 - CI fix round 2 (2026-10-10): scroll-padding-bottom now applies to every tool with the phone sticky actions bar (html:has(.merge-actions:not([hidden]))) — /pdf-sign/ was missing, so a focused 쪽 범위 input sat under the bar (WCAG 2.4.11); polish:606 test race fixed with instant scroll. Small CSS + tests; orchestrator pushed without a separate review round and watches CI.
+
+
+## HWPX2HWP — brief (copied by Bob at H0 start, 2026-10-10)
+- O4 go (2026-10-10, 3/3 opened in 한글). Slug /hwpx-to-hwp/ 「HWPX HWP 변환」. No preview; existing worker + one message;
+  reload gate on shipped bytes; losses shown, download allowed; RhwpHwpxOrigin kept (no engine option, no CFB writer);
+  password HWPX rejected via manifest check (also viewer / PDF); .hwp input redirected; limits = hardBytes only;
+  HOME_DESC_ORDER after hwp-to-pdf; NOT_PRECACHED + RUNTIME_PAGES; viewer 「HWP로 저장」 and HWP→HWPX deferred.
+
+## HWPX2HWP — Bob (2026-10-10) — status DONE
+Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP"). Not committed (H0 = download.ts withExt, boot.ts and usage.ts unions; can go first).
+
+**Built:** /hwpx-to-hwp/ 「HWPX HWP 변환」: page + light controller (no preview, fonts or render), pure src/lib/hwp/export-hwp.ts (export → losses → bytes → free → reload gate: CFB magic, pages equal and > 0), one `export-hwp` message on the existing worker, new codes already-hwp / unverified / export, HWPX manifest encryption → password (also /hwp-viewer/ and /hwp-to-pdf/), .hwp input redirected with links, loss warning + 「기타 N곳」 above the button (download allowed), registration per decision 18 (tools.ts, page, og.json + OG image, JSON-LD, sitemap/llms via generators, guides NEXT_GUIDES + what-is-hwpx sentence, related links both ways, HOME_DESC_ORDER after hwp-to-pdf, usage TOOLS/label/fail labels, NOT_PRECACHED + RUNTIME_PAGES, bgcloud scope, lighthouserc, qa:visual list, check-dist block, regress:hwp line, COPY.md exception).
+
+**Key decisions:** losses as a count (rhwp documents no loss kinds: all 「기타」); a malformed or unreadable report = 1 loss; reload OOM → oom, other reload failures → unverified; tool card after hwp-viewer; reset focuses the file input; blob type application/x-hwp (WebKit e2e downloads it).
+
+**Probes:** encrypted HWPX = ODF `<odf:encryption-data>` per part in META-INF/manifest.xml (before: scan passed, rhwp threw "비밀번호가 필요한 암호 문서입니다" → corrupt). Timing verify/gate (Node ms): adm02 55/59, adm14 22/27, adm19 154/83, adm28 221/208; whole flow in Chromium adm28 809 ms. Loss schema: undocumented (count only).
+
+**UI font:** new core characters: none (607 → 607; two drafts with 꾼 and 뀝 were rephrased); late 38 → 38. Faces unchanged, tripwire untouched.
+
+**Gates:** unit 61 files 1,292 passed (Linux, after the checks build, BG on); astro check 0 errors; check:licenses OK; five Linux builds check-dist OK (precache 431.5–437.8 KB / 450); /hwpx-to-hwp/ initial JS 8.0 KB, controller 5.4 / 6.5 KB; Lighthouse local /hwpx-to-hwp/ LCP median 1,670 ms, perf 1.00, a11y 1.00; regress:hwp --fixtures-only all pass. E2E Linux CI split: chromium 410 / mobile-chrome 370 (2 failed each: polish LIVE list, fixed), firefox 377 + 16 flaky (1 failed: polish:637 Tab-out, Firefox tab stop on the now-scrolling menu panel, test fixed), webkit 365 + 2 flaky (2 failed: hwp-viewer WSL WebKit load; 1 worker re-run 20/20), mobile-safari 364 / 0 failed. Re-run polish × 5: 239 passed, 3 flaky, 0 failed.
+
+**Known Gaps:**
+- CLAUDE.md line 3 tool list needs 「HWPX HWP 변환」 (orchestrator; not edited by rule).
+- HWP→HWPX page (rhwp exportHwpxWithReport) needs its own owner 한글 check; viewer 「HWP로 저장」 deferred (shared session risk).
+- 배포용 HWPX is detected only through rhwp's open failure (→ corrupt copy); password HWPX is rejected, never decrypted.
+- RhwpHwpxOrigin 1-byte stream kept (pinned by a unit test; optional upstream issue); PrvText near-empty (cosmetic).
+- rhwp loss codes exist in the wasm (binaryContentEmptied, controlOmitted, metadataReduced) but are undocumented: shown as 「기타」.
+- session.ts reset() focuses the picker label, which cannot take focus (/hwp-to-pdf/, /hwp-viewer/); not changed (flag: do not touch session.ts).
+- With 14 tools the desktop 도구 menu scrolls at 720 px height (Firefox adds a tab stop on it).
+- scripts/ops/opportunities.mjs maps every hwp/hwpx query to /hwp-to-pdf/.
+- tests/live/tools.spec.ts has no /hwpx-to-hwp/ check; qa:visual not run; optional law.go.kr probe not run.
+
+**HWPX2HWP — deploy gate (2026-10-10)**
+- Richard: clear, 0 Must Fix. Orchestrator applied both Should Fix (benign file-entry manifest → null; Firefox-only extra Tab stop). Decisions: keep the three 해요체 error lines (brief wording, COPY.md exception); keep the scrolling tools menu (Firefox tab stop is acceptable, a two-column menu can come with a later design pass); distribution-protected HWPX from Hangul possibly reading as 'password' — check when a real sample appears. CLAUDE.md line 3 updated. Pushed; CI watched to green.

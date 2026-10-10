@@ -38,6 +38,7 @@ const PAGES = [
   ['photo', '/photo-compress/'],
   ['hwp', '/hwp-to-pdf/'],
   ['hwpview', '/hwp-viewer/'],
+  ['hwpx', '/hwpx-to-hwp/'],
   ['idphoto', '/id-photo/'],
   ['stamp', '/stamp-signature/'],
   ['privacy', '/privacy/'],

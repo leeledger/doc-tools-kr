@@ -7,6 +7,7 @@ import { HwpError } from '../../src/lib/hwp/errors';
 import { cid, scanFeatures, walkRecords } from '../../src/lib/hwp/features';
 import { writeCfb } from '../helpers/cfb-writer';
 import { DISTRIBUTION_BIT, HWP_CORPUS, PASSWORD_BIT, docxLikeZip, hwpFixture, patchHwpFlags } from '../helpers/hwp';
+import { passwordHwpx } from '../helpers/rhwp-node';
 
 interface Expected {
   format: string;
@@ -50,6 +51,28 @@ describe('features: flags and errors', () => {
   it('a password-patched law05 is `password` (rhwp is never reached)', () => {
     expect(code(() => scanFeatures(patchHwpFlags(hwpFixture('law05.hwp'), PASSWORD_BIT)))).toBe('password');
   });
+
+  it('a password HWPX made by rhwp (ODF <odf:encryption-data> in META-INF/manifest.xml) is `password`, before rhwp (HWPX2HWP)', async () => {
+    const locked = await passwordHwpx();
+    expect(code(() => scanFeatures(locked))).toBe('password');
+    // Unprefixed ODF manifest elements count too; an empty manifest (every fixture) does not.
+    const bare = zipSync({
+      mimetype: [strToU8('application/hwp+zip'), { level: 0 }],
+      'META-INF/manifest.xml': strToU8('<manifest xmlns="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"><file-entry full-path="Contents/section0.xml"><encryption-data checksum="x"/></file-entry></manifest>'),
+    });
+    expect(code(() => scanFeatures(bare))).toBe('password');
+    const plain = zipSync({
+      mimetype: [strToU8('application/hwp+zip'), { level: 0 }],
+      'META-INF/manifest.xml': strToU8('<?xml version="1.0"?><odf:manifest xmlns:odf="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"/>'),
+    });
+    expect(code(() => scanFeatures(plain))).toBeNull();
+    // A manifest that lists files but carries no encryption-data is a normal document (Review HWPX2HWP).
+    const listed = zipSync({
+      mimetype: [strToU8('application/hwp+zip'), { level: 0 }],
+      'META-INF/manifest.xml': strToU8('<odf:manifest xmlns:odf="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"><odf:file-entry odf:full-path="Contents/section0.xml" odf:media-type="application/xml"/></odf:manifest>'),
+    });
+    expect(code(() => scanFeatures(listed))).toBeNull();
+  }, 60_000);
 
   it('a distribution-patched law05 scans with distribution = true (rhwp decides)', () => {
     const f = scanFeatures(patchHwpFlags(hwpFixture('law05.hwp'), DISTRIBUTION_BIT));

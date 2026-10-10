@@ -17,6 +17,7 @@
         "http://127.0.0.1:4173/photo-compress/",
         "http://127.0.0.1:4173/hwp-to-pdf/",
         "http://127.0.0.1:4173/hwp-viewer/",
+        "http://127.0.0.1:4173/hwpx-to-hwp/",
         "http://127.0.0.1:4173/id-photo/",
         "http://127.0.0.1:4173/stamp-signature/",
         "http://127.0.0.1:4173/remove-background/",

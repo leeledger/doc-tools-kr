@@ -35,7 +35,7 @@ export function classifyParseError(err: unknown, features: Pick<Features, 'distr
   return features.distribution ? 'distribution' : 'corrupt';
 }
 
-export function openDocument(Ctor: RhwpDocumentCtor, bytes: Uint8Array, features: Pick<Features, 'distribution'>): RhwpDocument {
+export function openDocument<D extends RhwpDocument = RhwpDocument>(Ctor: new (bytes: Uint8Array) => D, bytes: Uint8Array, features: Pick<Features, 'distribution'>): D {
   try {
     return new Ctor(bytes);
   } catch (err) {

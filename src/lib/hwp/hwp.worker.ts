@@ -4,19 +4,21 @@
 //      {type:'render', i}    (one page; the page drives the order, so a cancel is a run token, not a restart)
 //      {type:'text', i}      (one page's drawn text for the viewer's search: rendered, read, discarded)
 //      {type:'close'}        (doc.free())
+//      {type:'export-hwp'}   (after open: HWPX → HWP with the reload gate, ./export-hwp; the document is freed)
 //      {type:'warm'}         (preload: answers at once; loading this script was the point, never the 10 MB wasm)
-// Out: progress | scanned | parsed | page | text | error {code} | warm-done
+// Out: progress | scanned | parsed | page | text | hwp {bytes, losses, pagesIn} | error {code} | warm-done
 // The scan runs before the engine loads, so a non-HWP, password or damaged file never downloads the wasm.
 import init, { HwpDocument } from '@rhwp/core';
 import { HwpError, type HwpErrorCode } from './errors';
-import { openDocument, pageInfos, renderPage, type PageInfo, type RhwpDocument } from './engine';
+import { openDocument, pageInfos, renderPage, type PageInfo } from './engine';
+import { exportHwp } from './export-hwp';
 import { glyphText } from './svg-string';
 import { scanFeatures, type Features } from './features';
 import type { TextRun } from './svg-dom';
 import { withEngineRetry } from '../ui/engine-load';
 import { loadRhwpModule } from './wasm-browser';
 
-export type HwpRequest = { type: 'open'; bytes: ArrayBuffer; inflateCap?: number } | { type: 'render'; i: number } | { type: 'text'; i: number } | { type: 'close' } | { type: 'warm' };
+export type HwpRequest = { type: 'open'; bytes: ArrayBuffer; inflateCap?: number } | { type: 'render'; i: number } | { type: 'text'; i: number } | { type: 'close' } | { type: 'warm' } | { type: 'export-hwp' };
 
 export type HwpResponse =
   | { type: 'progress'; phase: 'engine'; loaded: number; total: number }
@@ -25,6 +27,7 @@ export type HwpResponse =
   | { type: 'parsed'; pages: number; pageInfos: PageInfo[]; wasmBytes: number; measureCalls: number }
   | { type: 'page'; i: number; svg: string; runs: TextRun[]; failed: boolean; measureCalls: number; ms: number }
   | { type: 'text'; i: number; text: string; failed: boolean }
+  | { type: 'hwp'; bytes: ArrayBuffer; losses: number; pagesIn: number }
   | { type: 'error'; code: HwpErrorCode }
   | { type: 'warm-done' };
 
@@ -65,7 +68,7 @@ const isWide = (cp: number): boolean => WIDE.some(([a, b]) => cp >= a && cp <= b
 };
 
 let wasmMemory: WebAssembly.Memory | null = null;
-let doc: RhwpDocument | null = null;
+let doc: HwpDocument | null = null;
 
 const post = (msg: HwpResponse, transfer: Transferable[] = []): void => self.postMessage(msg, transfer);
 
@@ -111,6 +114,16 @@ function text(i: number): void {
   }
 }
 
+/** HWPX HWP 변환: the open document as HWP bytes, checked by reopening them (./export-hwp). */
+function exportOpenDocument(): void {
+  if (!doc) throw new HwpError('export', 'no open document');
+  const source = doc;
+  doc = null;
+  const r = exportHwp(source, HwpDocument);
+  const buffer = r.bytes.byteOffset === 0 && r.bytes.byteLength === r.bytes.buffer.byteLength ? (r.bytes.buffer as ArrayBuffer) : r.bytes.slice().buffer;
+  post({ type: 'hwp', bytes: buffer, losses: r.losses, pagesIn: r.pagesIn }, [buffer]);
+}
+
 function codeOf(err: unknown): HwpErrorCode {
   if (err instanceof HwpError) return err.code;
   if ((err as { code?: unknown } | null)?.code === 'engine') return 'engine';
@@ -129,6 +142,8 @@ self.onmessage = async (ev: MessageEvent<HwpRequest>) => {
       render(msg.i);
     } else if (msg.type === 'text') {
       text(msg.i);
+    } else if (msg.type === 'export-hwp') {
+      exportOpenDocument();
     } else if (msg.type === 'close') {
       doc?.free();
       doc = null;

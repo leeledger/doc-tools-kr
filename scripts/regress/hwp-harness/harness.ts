@@ -142,5 +142,33 @@ async function run(url: string): Promise<Result> {
   }
 }
 
+/** HWPX HWP 변환 (HWPX2HWP): the production worker's open → export-hwp (export, reload gate) on one file. */
+async function runHwp(url: string): Promise<{ ok: boolean; error?: string; pagesIn?: number; losses?: number; hwp?: string; ms?: number }> {
+  const bytes = await (await fetch(url)).arrayBuffer();
+  const t0 = performance.now();
+  const w = new Worker(new URL('../../../src/lib/hwp/hwp.worker.ts', import.meta.url), { type: 'module' });
+  try {
+    const msg = await new Promise<Msg>((resolve, reject) => {
+      w.onerror = (e) => {
+        e.preventDefault();
+        reject(new Error(e.message || 'worker error'));
+      };
+      w.onmessage = (e: MessageEvent<Msg>) => {
+        if (e.data.type === 'parsed') w.postMessage({ type: 'export-hwp' });
+        else if (e.data.type === 'hwp' || e.data.type === 'error') resolve(e.data);
+      };
+      w.postMessage({ type: 'open', bytes }, [bytes]);
+    });
+    if (msg.type === 'error') return { ok: false, error: `worker error ${msg.code}` };
+    if (msg.type !== 'hwp') return { ok: false, error: `unexpected ${msg.type}` };
+    return { ok: true, pagesIn: msg.pagesIn, losses: msg.losses, hwp: b64(new Uint8Array(msg.bytes)), ms: performance.now() - t0 };
+  } catch (err) {
+    return { ok: false, error: String(err instanceof Error ? err.message : err).slice(0, 300) };
+  } finally {
+    w.terminate();
+  }
+}
+
 (window as unknown as { RUN: typeof run; READY: boolean }).RUN = run;
+(window as unknown as { RUN_HWP: typeof runHwp }).RUN_HWP = runHwp;
 (window as unknown as { READY: boolean }).READY = true;

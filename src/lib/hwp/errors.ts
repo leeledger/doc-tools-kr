@@ -9,9 +9,12 @@ export type HwpErrorCode =
   | 'too-large'
   | 'oom'
   | 'timeout'
-  | 'engine';
+  | 'engine'
+  | 'already-hwp'
+  | 'unverified'
+  | 'export';
 
-export const HWP_ERROR_CODES: readonly HwpErrorCode[] = ['not-hwp', 'unsupported', 'password', 'distribution', 'corrupt', 'too-large', 'oom', 'timeout', 'engine'];
+export const HWP_ERROR_CODES: readonly HwpErrorCode[] = ['not-hwp', 'unsupported', 'password', 'distribution', 'corrupt', 'too-large', 'oom', 'timeout', 'engine', 'already-hwp', 'unverified', 'export'];
 
 /** A file problem (or a device limit) with its user-facing code. */
 export class HwpError extends Error {

@@ -40,7 +40,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -270,6 +270,7 @@ export const TOOL_LABELS = {
   'image-to-jpg': '사진 JPG 변환',
   'pdf-split': 'PDF 나누기·쪽 편집',
   'pdf-sign': 'PDF 서명·도장 넣기',
+  'hwpx-to-hwp': 'HWPX HWP 변환',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**
@@ -319,6 +320,9 @@ export const FAIL_LABELS = {
   'cloud-busy': '서버가 바쁨',
   'cloud-quota': '서버 사용 한도 넘음',
   'cloud-failed': '서버 처리 실패',
+  'already-hwp': '이미 HWP 파일',
+  unverified: '바꾼 파일 다시 열기 확인 실패',
+  export: 'HWP로 바꾸기 실패',
 };
 const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽' };
 export const VALUE_LABELS = {

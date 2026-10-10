@@ -4,6 +4,7 @@
 // exactly one allowed request, POST /api/usage (no query); the default (flag-off) projects keep the strict rule, which
 // is the "off sends nothing" regression test.
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Page, Request } from '@playwright/test';
 import { validate } from '../../scripts/lib/usage.mjs';
 import { expect, gotoReady, test } from './no-upload';
@@ -224,6 +225,27 @@ test('PDF 서명·도장 넣기 (TOOLS5 U3): 모든 쪽 = pick, start (o=place, 
     expect(b.ev).toMatchObject({ t: 'pdf-sign', via: 'direct', w: 1 });
     expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
     expect(b.body).not.toMatch(new RegExp(`gen_links_outline|${PORTRAIT_NAME}|쪽|서명`));
+  }
+});
+
+test('HWPX HWP 변환 (HWPX2HWP): pick, start, success, download, in order; an .hwp is fail c=already-hwp p=parse; no file name, size, page count or loss in any body', async ({ page }) => {
+  test.setTimeout(180_000);
+  const beacons = await record(page);
+  await gotoReady(page, '/hwpx-to-hwp/');
+  await page.setInputFiles('#hx-input', join(process.cwd(), 'tests', 'corpus', 'hwp', 'adm14.hwpx'));
+  await expect(page.locator('#hwp-tool')).toHaveAttribute('data-state', 'done', { timeout: 150_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#hx-save').click()]);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'start', 'success', 'download']);
+  await page.locator('#hx-reset').click();
+  await page.setInputFiles('#hx-input', join(process.cwd(), 'tests', 'corpus', 'hwp', 'law05.hwp'));
+  await expect(page.locator('#hwp-tool')).toHaveAttribute('data-state', 'error');
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'start', 'success', 'download', 'pick', 'fail']);
+  expectClean(beacons);
+  expect(beacons[5]!.ev).toMatchObject({ e: 'fail', t: 'hwpx-to-hwp', c: 'already-hwp', p: 'parse' });
+  for (const b of beacons) {
+    expect(b.ev).toMatchObject({ t: 'hwpx-to-hwp', via: 'direct', w: 1 });
+    expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
+    expect(b.body).not.toMatch(/adm14|law05|\.hwpx?\b|쪽|loss|기타/);
   }
 });
 

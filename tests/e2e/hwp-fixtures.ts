@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DISTRIBUTION_BIT, PASSWORD_BIT, docxLikeZip, hwpFixture, padHwp, padHwpxBinData, patchHwpFlags } from '../helpers/hwp';
+import { passwordHwpx } from '../helpers/rhwp-node';
 import { RUNTIME_DIR } from './paths';
 
 export const HWP_RUNTIME_DIR = join(RUNTIME_DIR, 'hwp');
@@ -27,4 +28,23 @@ export function makeHwpRuntimeFixtures(dir: string = HWP_RUNTIME_DIR): void {
     if (!existsSync(p)) writeFileSync(p, make());
   }
   writeFileSync(join(dir, 'notes.txt'), '회의 메모: 한글 문서가 아닙니다.\n');
+}
+
+/**
+ * HWPX HWP 변환 (HWPX2HWP): a password HWPX written by rhwp itself (exportHwpxWithPassword, the ODF manifest marker
+ * the scan rejects) and 64 KB of deterministic noise. Async: the first needs the rhwp engine in Node.
+ */
+export async function makeHwpxRuntimeFixtures(dir: string = HWP_RUNTIME_DIR): Promise<void> {
+  mkdirSync(dir, { recursive: true });
+  const locked = join(dir, 'adm14-password.hwpx');
+  if (!existsSync(locked)) writeFileSync(locked, await passwordHwpx('adm14.hwpx'));
+  const noise = new Uint8Array(65_536);
+  let x = 0x2545f491;
+  for (let i = 0; i < noise.length; i++) {
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    noise[i] = x & 255;
+  }
+  writeFileSync(join(dir, 'noise.hwpx'), noise);
 }

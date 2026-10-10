@@ -1,0 +1,139 @@
+---
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { particle } from '../../lib/ui/josa';
+import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
+// The tool styles are inlined, as on the other HWP pages (G2 A0/V0: a second render-blocking stylesheet held back LCP).
+import hwpCss from '../../tools/hwp-shared/hwp.css?inline';
+
+const tool = getTool('hwpx-to-hwp');
+const viewer = getTool('hwp-viewer');
+const toPdf = getTool('hwp-to-pdf');
+const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
+const accept = '.hwpx,application/vnd.hancom.hwpx,application/hwp+zip';
+// HWPX2HWP decision 12: on the page and in the result, never a page count as 한글's.
+const EXPECT = '줄바꿈이나 표 모양이 조금 다를 수 있어요. 내기 전에 한글에서 한 번 열어 확인하세요.';
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={hwpCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">한글 프로그램 없이 HWPX 파일을 HWP 파일로 바꿉니다. HWP 파일만 받는 곳에 낼 때 쓰세요. 파일을 고르면 바로 바꾸고, 다시 열어 확인한 뒤 내려받을 수 있습니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="HWPX HWP 변환 도구">
+    <div class="wrap narrow">
+      <div id="hwp-tool" class="hwp" data-state="empty">
+        <div class="drop" id="hx-drop">
+          <input id="hx-input" class="file-input" type="file" accept={accept}>
+          <label class="btn primary" for="hx-input" id="hx-pick">HWPX 파일 선택</label>
+          <p class="drop-hint">또는 여기에 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱이나 다운로드 폴더에서 고를 수 있습니다.</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 보내지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <div class="progress-box" id="hx-progress" hidden>
+          <p id="hx-progress-text">파일을 확인하는 중</p>
+          <progress id="hx-progress-bar" aria-labelledby="hx-progress-text"></progress>
+          <button type="button" class="btn ghost" id="hx-cancel">취소</button>
+        </div>
+
+        <EngineError />
+        <p class="error-box" id="hx-error" role="alert" data-live="alert" tabindex="-1" hidden></p>
+        <p class="hint" id="hx-error-links" hidden><a href="/hwp-viewer/">{viewer.name}</a> · <a href="/hwp-to-pdf/">{toPdf.name}</a></p>
+
+        <div class="hw-result" id="hx-result" hidden>
+          <p class="result-title" id="hx-file-name" tabindex="-1"></p>
+          <div class="notice warn" id="hx-loss" hidden>
+            <p id="hx-loss-text"></p>
+            <ul id="hx-loss-list"></ul>
+          </div>
+          <p class="hint">{EXPECT}</p>
+          <div class="row hw-actions">
+            <button type="button" class="btn primary" id="hx-save">HWP 내려받기</button>
+            <button type="button" class="btn ghost" id="hx-reset">다른 파일 바꾸기</button>
+          </div>
+          <div class="notice hw-done" id="hx-done" hidden>
+            <p id="hx-done-text"></p>
+            <Share name={tool.name} text={sharePreview('/hwpx-to-hwp/', Astro.site!).description} id="hx-share" />
+          </div>
+        </div>
+
+        <p class="visually-hidden" id="hx-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <AdSlot id="hwpx-to-hwp-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>HWPX 파일 고르기</strong><span>HWPX 파일을 고르거나 여기에 끌어다 놓습니다.</span></li>
+        <li><strong>HWP로 바꾸기</strong><span>고르면 바로 HWP 파일로 바꾸고, 다시 열어 확인합니다.</span></li>
+        <li><strong>HWP 내려받기</strong><span>버튼을 누르면 HWP 파일이 「다운로드」 폴더에 저장됩니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>모양이 조금 다를 수 있습니다</strong><span>{EXPECT}</span></li>
+        <li><strong>설치하지 않습니다</strong><span>한글 프로그램이나 다른 프로그램을 설치하지 않아도 됩니다.</span></li>
+        <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="help" aria-labelledby="help-title">
+    <div class="wrap narrow">
+      <h2 id="help-title">도움말</h2>
+      <h3>HWP 파일을 고르면</h3>
+      <p>이미 HWP 파일이면 바꿀 필요가 없습니다. 열어 보려면 <a href="/hwp-viewer/">{viewer.name}</a>, PDF가 필요하면 <a href="/hwp-to-pdf/">{toPdf.name}</a>{particle(toPdf.name, '을/를')} 쓰세요.</p>
+      <h3>한글(HWP) 문서 관련 고지</h3>
+      <p>{HANCOM_NOTICE}</p>
+      <p>{TRADEMARK_NOTICE}</p>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['hwp-viewer', 'hwp-to-pdf']} />
+  <div class="wrap narrow"><AdSlot id="hwpx-to-hwp-footer" size="leaderboard" /></div>
+  <aside class="tool-legal" aria-label="한글(HWP) 문서 관련 고지">
+    <div class="wrap narrow">
+      <p>{HANCOM_NOTICE}</p>
+      <p>{TRADEMARK_NOTICE}</p>
+    </div>
+  </aside>
+</Base>
+
+
+<script>
+  import { bootHwpTool } from '../../tools/hwp-shared/boot';
+  bootHwpTool('hwp-tool', () => import('../../tools/hwpx-to-hwp/controller').then((m) => m.initHwpxTool), 'hwpx-to-hwp');
+</script>

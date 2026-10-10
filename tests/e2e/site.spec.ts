@@ -39,7 +39,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   expect(await serious()).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/privacy/', '/terms/', '/licenses/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -71,6 +71,7 @@ for (const [path, name] of [
   ['/photo-compress/', '사진 용량 줄이기'],
   ['/hwp-to-pdf/', 'HWP PDF 변환'],
   ['/hwp-viewer/', 'hwp 뷰어'],
+  ['/hwpx-to-hwp/', 'hwp로 바꿔요'],
   ['/stamp-signature/', '도장 이미지 만들기'],
 ] as const) {
   test(`tool page JSON-LD, title and description on ${path}`, async ({ page }) => {
@@ -107,11 +108,14 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     ['/id-photo/', '여권·증명사진 규격 맞추기'],
     ['/hwp-to-pdf/', 'HWP PDF 변환'],
     ['/hwp-viewer/', 'HWP·HWPX 파일 보기'],
+    ['/hwpx-to-hwp/', 'HWPX HWP 변환'],
     ['/stamp-signature/', '전자서명·도장 이미지 만들기'],
   ] as const;
   const related: Record<string, string[]> = {
-    '/hwp-to-pdf/': ['/hwp-viewer/', '/pdf-merge/', '/pdf-compress/'],
-    '/hwp-viewer/': ['/hwp-to-pdf/', '/pdf-compress/'],
+    '/hwp-to-pdf/': ['/hwp-viewer/', '/hwpx-to-hwp/', '/pdf-merge/', '/pdf-compress/'],
+    '/hwp-viewer/': ['/hwp-to-pdf/', '/hwpx-to-hwp/', '/pdf-compress/'],
+    // HWPX2HWP (decision 13).
+    '/hwpx-to-hwp/': ['/hwp-viewer/', '/hwp-to-pdf/'],
     // Sprint C (C1): where a signature or 도장 image goes next.
     '/stamp-signature/': ['/pdf-sign/', '/photo-compress/', '/hwp-to-pdf/', '/pdf-merge/'],
     // TOOLS4 T2 (brief decision 9).
@@ -141,7 +145,7 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
   const pages = locs.filter((p) => !p.startsWith('/guide/'));
-  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/'].sort());
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/'].sort());
   // Growth G: /guide/ and every published guide (drafts never). G2 A1: hwp-to-pdf is published; both hubs are in.
   const guides = locs.filter((p) => p.startsWith('/guide/'));
   expect(guides).toContain('/guide/');
@@ -175,7 +179,7 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(13);
+  await expect(cards).toHaveCount(14);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 PDF 변환' })).toHaveAttribute('href', '/jpg-to-pdf/');
@@ -188,9 +192,10 @@ test('landing page: live cards link to their tools, soon tools are names only, f
   await expect(cards.getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
   await expect(cards.getByRole('link', { name: 'HWP PDF 변환' })).toHaveAttribute('href', '/hwp-to-pdf/');
   await expect(cards.getByRole('link', { name: 'HWP·HWPX 파일 보기' })).toHaveAttribute('href', '/hwp-viewer/');
+  await expect(cards.getByRole('link', { name: 'HWPX HWP 변환' })).toHaveAttribute('href', '/hwpx-to-hwp/');
   await expect(cards.getByRole('link', { name: '전자서명·도장 이미지 만들기' })).toHaveAttribute('href', '/stamp-signature/');
-  await expect(cards.locator('.status')).toHaveText(Array(13).fill('사용하기'));
-  await expect(page.locator('.card')).toHaveCount(13);
+  await expect(cards.locator('.status')).toHaveText(Array(14).fill('사용하기'));
+  await expect(page.locator('.card')).toHaveCount(14);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
   // Every tool is live: the 준비 중 block is not rendered at all.
   await expect(page.locator('.soon')).toHaveCount(0);
@@ -220,7 +225,7 @@ test('licenses page lists the shipped packages and their texts', async ({ page }
 test.describe('mobile layout', () => {
   test.use({ viewport: { width: 360, height: 780 } });
 
-  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/privacy/', '/terms/', '/licenses/']) {
+  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/privacy/', '/terms/', '/licenses/']) {
     test(`no horizontal scroll at 360 px on ${path}`, async ({ page }) => {
       await gotoReady(page, path);
       const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
