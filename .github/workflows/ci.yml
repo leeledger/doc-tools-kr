@@ -18,7 +18,7 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 50 # Lighthouse alone takes ~26 min for 27 URLs × 5 runs (2026-10-10); assertions unchanged
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
