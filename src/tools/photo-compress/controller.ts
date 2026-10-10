@@ -12,6 +12,7 @@ import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize, safeFileName } from '../../lib/ui/format';
+import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
 import { josa } from '../../lib/ui/josa';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { startUsage, track, type UsagePhase } from '../../lib/ui/usage';
@@ -835,5 +836,28 @@ export function initPhotoTool(): void {
     must<HTMLParagraphElement>('ph-unsupported').hidden = false;
     input.disabled = true;
     addInput.disabled = true;
+    // This browser cannot use the tool: a photo handed over anyway is taken and dropped, so it does not stay stored.
+    if (pendingHandoff('photo-compress')) {
+      void import('../../lib/ui/handoff').then(({ takeHandoff }) => takeHandoff('photo-compress')).catch(() => undefined);
+    } else if (sweepDue()) {
+      void import('../../lib/ui/handoff').then(({ sweepLingering }) => sweepLingering()).catch(() => undefined);
+    }
+  } else if (pendingHandoff('photo-compress')) {
+    // A photo handed over by another tool (이어서 하기): added as if picked. This page reports pick problems in its
+    // notice (its alert region belongs to the ZIP bar).
+    void import('../../lib/ui/handoff')
+      .then(({ receiveHandoff }) =>
+        receiveHandoff('photo-compress', root, (f) => addFiles([f]), {
+          notice,
+          fail: (msg) => {
+            showNotice(msg);
+            announce(msg);
+          },
+        }),
+      )
+      .catch(() => void showEngineError());
+  } else if (sweepDue()) {
+    // A file stored earlier may never have been taken: delete it once it is older than 10 minutes.
+    void import('../../lib/ui/handoff').then(({ sweepLingering }) => sweepLingering()).catch(() => undefined);
   }
 }

@@ -6,12 +6,13 @@
 // of page loads that report, a number in [0.01, 1] (default 1); every event carries the weight 1/share.
 //
 // Payload (client -> server): JSON text of at most 512 bytes with these short keys only (an unknown key is rejected):
-//   e   event       pick | start | success | fail | download | arrive
+//   e   event       pick | start | success | fail | download | arrive | next
 //   t   tool        one of TOOLS
 //   c   fail code   fail only, ^[a-z-]{1,24}$
 //   p   phase       fail only, load | parse | process | save
 //   br  browser     fail only, family and major version ("chrome 131")
-//   o/v setting     start only, a key of SETTINGS and one of its values (exact numbers are bucketed client-side)
+//   o/v setting     start: a key of SETTINGS and one of its values (exact numbers are bucketed client-side)
+//                   next (CHAIN 이어서 하기, required): o = "next", v = the tool the result was handed to (one of TOOLS)
 //   g   guide slug  arrive only
 //   dl  deep link   arrive only, "0" | "1"
 //   via             every event, guide | direct
@@ -39,7 +40,7 @@ export const DEFAULT_DAYS = 7;
 /** Periods the admin page compares with the period before (90 days: the one before is past the 3-month retention). */
 export const COMPARE_PERIODS = [1, 7, 30];
 
-export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive'];
+export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next'];
 export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct'];
@@ -75,8 +76,10 @@ export const DATASET_RE = /^[a-z0-9_]{1,64}$/;
 /** Keys in Analytics Engine blob order (blob1 .. blob12). */
 export const BLOB_KEYS = ['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b'];
 const KEYS = new Set([...BLOB_KEYS, 'w']);
-/** Keys allowed on one event type only. */
-const ONLY = { c: 'fail', p: 'fail', br: 'fail', o: 'start', v: 'start', g: 'arrive', dl: 'arrive' };
+/** Keys allowed on the listed event types only. */
+const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'next'], v: ['start', 'next'], g: ['arrive'], dl: ['arrive'] };
+/** The o of a next event (its v is a tool). */
+export const NEXT_KEY = 'next';
 
 /** PUBLIC_USAGE_STATS: on only for "1" (after trimming). */
 export function usageOn(value) {
@@ -128,7 +131,7 @@ const VALUE_CHECKS = {
   t: (x) => TOOLS.includes(x),
   c: (x) => CODE_RE.test(x),
   p: (x) => PHASES.includes(x),
-  o: (x) => Object.hasOwn(SETTINGS, x),
+  o: (x) => Object.hasOwn(SETTINGS, x) || x === NEXT_KEY,
   v: () => true, // checked against o below
   g: (x) => GUIDE_RE.test(x),
   dl: (x) => x === '0' || x === '1',
@@ -159,12 +162,14 @@ export function validate(text) {
   for (const k of BLOB_KEYS) {
     if (!Object.hasOwn(o, k)) continue;
     if (!isStr(o[k]) || !VALUE_CHECKS[k](o[k])) return null;
-    if (ONLY[k] && ONLY[k] !== o.e) return null;
+    if (ONLY[k] && !ONLY[k].includes(o.e)) return null;
   }
   if (o.e === 'fail' && !(Object.hasOwn(o, 'c') && Object.hasOwn(o, 'p'))) return null;
   if (o.e === 'arrive' && !(Object.hasOwn(o, 'g') && Object.hasOwn(o, 'dl'))) return null;
   if (Object.hasOwn(o, 'o') !== Object.hasOwn(o, 'v')) return null;
-  if (Object.hasOwn(o, 'o') && !SETTINGS[o.o].includes(o.v)) return null;
+  if (o.e === 'next') {
+    if (o.o !== NEXT_KEY || !TOOLS.includes(o.v)) return null;
+  } else if (Object.hasOwn(o, 'o') && (o.o === NEXT_KEY || !SETTINGS[o.o].includes(o.v))) return null;
   const ev = { w: o.w };
   for (const k of BLOB_KEYS) ev[k] = Object.hasOwn(o, k) ? o[k] : '';
   return ev;
@@ -398,7 +403,8 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
   let arrive = 0;
   for (const r of events) {
     if (TOOLS.includes(r.tool) && r.event === 'arrive') arrive += num(r.n);
-    if (!TOOLS.includes(r.tool) || !EVENTS.includes(r.event) || r.event === 'arrive') continue;
+    // next (CHAIN) has no column on the admin page or in the weekly report yet (BUILD-LOG Known Gap).
+    if (!TOOLS.includes(r.tool) || !EVENTS.includes(r.event) || r.event === 'arrive' || r.event === 'next') continue;
     const c = cell(r.tool);
     const n = num(r.n);
     c[r.event] += n;

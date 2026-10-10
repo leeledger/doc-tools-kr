@@ -13,6 +13,8 @@ import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatPages, formatSize } from '../../lib/ui/format';
+import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { bindPasswordToggle } from '../../lib/ui/password';
 import { nonPdfMessage, splitPdfFiles } from '../../lib/ui/pdf-pick';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
@@ -88,6 +90,7 @@ export function initCompressTool(): void {
   const pick = must<HTMLLabelElement>('cmp-pick');
   const drop = must<HTMLDivElement>('cmp-drop');
   const notice = must<HTMLParagraphElement>('cmp-notice');
+  const nextSlot = must<HTMLDivElement>('cmp-next');
   const card = must<HTMLDivElement>('cmp-file');
   const thumb = must<HTMLDivElement>('cmp-thumb');
   const nameEl = must<HTMLParagraphElement>('cmp-name');
@@ -263,6 +266,7 @@ export function initCompressTool(): void {
     controls.hidden = !file || next === 'working' || next === 'done' || next === 'kept' || (next === 'error' && !usable);
     progressBox.hidden = next !== 'working';
     result.hidden = next !== 'done';
+    if (next !== 'done') hideNextSteps(nextSlot);
     kept.hidden = next !== 'kept';
     confirmBox.hidden = true;
     for (const r of [...radios, ...modeRadios, ...targetRadios]) r.disabled = next === 'working';
@@ -687,6 +691,7 @@ export function initCompressTool(): void {
     if (report.ownerRestrictionRemoved) n.push('보안 설정(편집 제한)을 해제한 사본입니다.');
     notes.replaceChildren(...n.map((t) => el('li', undefined, t)));
     setState('done');
+    showNextSteps(nextSlot, 'pdf-compress', [{ blob, name: download.download }]);
     reveal(result, headline);
     const extra = [chip.hidden ? '' : chip.textContent, missBox.hidden ? '' : missBox.textContent, report.signed ? signedBox.textContent?.trim() : '', ...n]
       .filter(Boolean)
@@ -869,4 +874,13 @@ export function initCompressTool(): void {
   if (deep) applyDeep(deep);
   updateMode();
   setState('empty');
+  // A result handed over by another tool (이어서 하기): opened as if picked.
+  if (pendingHandoff('pdf-compress')) {
+    void import('../../lib/ui/handoff')
+      .then(({ receiveHandoff }) => receiveHandoff('pdf-compress', root, (f) => pickFile(f), { notice }))
+      .catch(() => engineFailure('load'));
+  } else if (sweepDue()) {
+    // A file stored earlier may never have been taken: delete it once it is older than 10 minutes.
+    void import('../../lib/ui/handoff').then(({ sweepLingering }) => sweepLingering()).catch(() => undefined);
+  }
 }

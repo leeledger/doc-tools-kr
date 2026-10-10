@@ -11,7 +11,7 @@ import { withAnalyticsCsp } from '../../scripts/lib/analytics.mjs';
 import { GA_CONNECT_SRC, GA_COOKIE_EXPIRES, GA_ID_RE, GA_IMG_SRC, GA_SCRIPT_SRC, gaId, loaderSource, withGaCsp } from '../../scripts/lib/ga.mjs';
 import { precacheList } from '../../scripts/gen-sw.mjs';
 import { route } from '../../src/sw/sw';
-import { PRIVACY_GA, PRIVACY_REVISED } from '../../src/data/legal';
+import { PRIVACY_CHAIN, PRIVACY_GA, PRIVACY_REVISED } from '../../src/data/legal';
 import { isGaRequest, uploadProblems, type RequestLike, type ResponseLike } from '../e2e/upload-guard';
 
 const ROOT = join(import.meta.dirname, '..', '..');
@@ -284,12 +284,12 @@ describe('GA-on build (PUBLIC_GA_ID=G-TEST000000)', { timeout: 300_000 }, () => 
       '보유·이용 기간: Google 애널리틱스에 2개월 보관 후 삭제 (쿠키는 최대 13개월)',
       'Google 신호와 광고 개인화는 꺼 두었고, 광고에 쓰지 않아요.',
       '막아도 모든 도구를 그대로 쓸 수 있어요.',
-      `시행일: ${PRIVACY_GA}`,
+      `시행일: ${PRIVACY_CHAIN}`,
       `${PRIVACY_GA}: Google 애널리틱스(방문 분석, 쿠키)와 국외 이전 내용을 더함`,
     ]) expect(text, s).toContain(s);
     expect(html).toContain('href="https://support.google.com/policies/contact/general_privacy_form?hl=ko"');
     expect(html).toContain('href="https://tools.google.com/dlpage/gaoptout?hl=ko"');
-    expect(page('sitemap.xml')).toMatch(/<loc>[^<]*\/privacy\/<\/loc><lastmod>2026-10-08<\/lastmod>/);
+    expect(page('sitemap.xml')).toMatch(/<loc>[^<]*\/privacy\/<\/loc><lastmod>2026-10-11<\/lastmod>/);
   });
 
   it('check-dist: an invalid ID, a missing or altered ga.js, or the ID unset on this build fail', () => {

@@ -12,6 +12,7 @@ import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatPages, formatSize, safeFileName } from '../../lib/ui/format';
+import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { startRowDrag } from '../../lib/ui/reorder';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { ACCEPTED_FORMATS, type SizeOption } from './embed';
@@ -118,6 +119,7 @@ export function initJpgToPdf(pending?: File[]): { add(files: File[]): void } | n
   const saveName = must<HTMLParagraphElement>('jp-save-name');
   const download = must<HTMLAnchorElement>('jp-download');
   const resetBtn = must<HTMLButtonElement>('jp-reset');
+  const nextSlot = must<HTMLDivElement>('jp-next');
 
   let state: State = 'empty';
   let entries: Entry[] = [];
@@ -174,6 +176,7 @@ export function initJpgToPdf(pending?: File[]): { add(files: File[]): void } | n
     actions.hidden = !has || busy || next === 'done';
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
+    if (next !== 'done') hideNextSteps(nextSlot);
     list.querySelectorAll('button').forEach((b) => {
       b.disabled = busy;
     });
@@ -507,6 +510,7 @@ export function initJpgToPdf(pending?: File[]): { add(files: File[]): void } | n
     summary.textContent = `${formatPages(pages)} · ${formatSize(blob.size)}`;
     saveName.textContent = `저장될 이름: ${download.download}`;
     setState('done');
+    showNextSteps(nextSlot, 'jpg-to-pdf', [{ blob, name: download.download }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
     status(`PDF를 만들었습니다. ${summary.textContent}.`);

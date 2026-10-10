@@ -111,7 +111,7 @@ class RunFailure extends Error {
   }
 }
 
-export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | null {
+export function initPdfSplit(pending?: File[]): { open(files: File[]): Promise<void> } | null {
   const found = document.getElementById('ps-tool');
   if (!found) return null;
   const root: HTMLElement = found;
@@ -918,5 +918,5 @@ export function initPdfSplit(pending?: File[]): { open(files: File[]): void } | 
   const first = pending ?? Array.from(input.files ?? []);
   input.value = '';
   if (first.length) void openFiles(first);
-  return { open: (files) => void openFiles(files) };
+  return { open: (files) => openFiles(files) };
 }

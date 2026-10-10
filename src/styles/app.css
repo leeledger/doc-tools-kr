@@ -252,6 +252,8 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .result-title { margin: 0; font-weight: 800; font-size: 19px; }
 .result-summary { margin: 4px 0 8px; color: var(--muted); }
 .save-name { margin: 10px 0 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; font-feature-settings: "calt" 0; }
+.next-steps { margin: 14px 0 0; }
+.next-steps-label { margin: 0 0 8px; font-weight: 800; }
 /* calt off: the UI font turns "413x531" into "413×531"; a file name must show the characters it has. */
 .meta .name, .ph-meta .name { font-feature-settings: "calt" 0; }
 .target-chip {

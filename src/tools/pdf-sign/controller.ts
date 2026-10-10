@@ -150,7 +150,7 @@ async function toPng(file: Blob): Promise<{ png: Blob; width: number; height: nu
   }
 }
 
-export function initPdfSign(pending?: File[]): { open(files: File[]): void } | null {
+export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<void> } | null {
   const found = document.getElementById('sg-tool');
   if (!found) return null;
   const root: HTMLElement = found;
@@ -1001,5 +1001,5 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): void } | n
   const first = pending ?? Array.from(input.files ?? []);
   input.value = '';
   if (first.length) void openFiles(first);
-  return { open: (files) => void openFiles(files) };
+  return { open: (files) => openFiles(files) };
 }

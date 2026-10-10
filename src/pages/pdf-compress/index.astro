@@ -131,6 +131,7 @@ const targets = TARGET_CHIPS;
             <button type="button" class="btn ghost" id="cmp-reset">다른 파일 처리하기</button>
             <button type="button" class="btn ghost" id="cmp-again">다른 단계로 다시 줄이기</button>
           </div>
+          <div id="cmp-next" class="next-steps" role="group" aria-labelledby="cmp-next-label" hidden></div>
           <p class="save-name" id="cmp-save-name"></p>
           <Share name={tool.name} text={sharePreview('/pdf-compress/', Astro.site!).description} id="cmp-share" />
           <div class="warn-box" id="cmp-miss" role="note" hidden></div>

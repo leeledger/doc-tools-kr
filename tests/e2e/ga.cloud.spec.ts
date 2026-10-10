@@ -11,6 +11,7 @@ const ID = 'G-TEST000000';
 const GA_CSP = /Content-Security-Policy: ([^\r\n]*)/.exec(withGaCsp(readFileSync('public/_headers', 'utf8')))![1]!;
 /** legal.ts reads build-time constants, so the date is read from its source here. */
 const PRIVACY_GA = /PRIVACY_GA = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_CHAIN = /PRIVACY_CHAIN = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const SECRET = '비밀-파일명.pdf';
 
 // The same build has the anonymous usage statistics on: using a tool sends its one allowed POST (usage.spec.ts covers it).
@@ -91,7 +92,8 @@ test('/privacy/ in this build (cloud + usage + GA): section 1 names the cookies,
   await expect(page.locator('#ga')).toHaveText('5. Google 애널리틱스(방문 분석)');
   await expect(page.locator('#usage')).toHaveText('7. 익명 사용 통계');
   await expect(page.locator('h2')).toHaveText([/^1\. /, /^2\. /, /^3\. /, /^4\. 사이트를 여는 기록$/, /^5\. Google/, /^6\. 광고$/, /^7\. 익명/, /^8\. 개인정보 보호책임자$/, /^9\. 변경 이력$/]);
-  await expect(main).toContainText(`시행일: ${PRIVACY_GA}`);
+  // 이어서 하기 (CHAIN, 2026-10-11) is newer than Google Analytics and in every build.
+  await expect(main).toContainText(`시행일: ${PRIVACY_CHAIN}`);
   await expect(main).toContainText(`${PRIVACY_GA}: Google 애널리틱스(방문 분석, 쿠키)와 국외 이전 내용을 더함`);
   await expect(main.locator('a[href="https://tools.google.com/dlpage/gaoptout?hl=ko"]')).toHaveCount(1);
 });

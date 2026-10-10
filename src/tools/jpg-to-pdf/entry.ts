@@ -4,6 +4,7 @@
 // that cannot load shows the shared engine panel.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
 import { startUsage, track } from '../../lib/ui/usage';
 
 type Api = { add(files: File[]): void } | null;
@@ -45,4 +46,22 @@ if (root) {
   for (const ev of EVENTS) root.addEventListener(ev, start, { passive: true });
   root.addEventListener('dragover', onDragOver);
   root.addEventListener('drop', onDrop);
+  const notice = document.getElementById('jp-notice');
+  if (notice && pendingHandoff('jpg-to-pdf')) {
+    // A photo handed over by another tool (이어서 하기): start at once and add it as if picked.
+    const ready = load();
+    void import('../../lib/ui/handoff')
+      .then(({ receiveHandoff }) =>
+        receiveHandoff('jpg-to-pdf', root, async (f) => {
+          const api = await ready;
+          if (!api) return false;
+          api.add([f]);
+          return true;
+        }, { notice }),
+      )
+      .catch(() => void showEngineError());
+  } else if (sweepDue()) {
+    // A file stored earlier may never have been taken: delete it once it is older than 10 minutes.
+    void import('../../lib/ui/handoff').then(({ sweepLingering }) => sweepLingering()).catch(() => undefined);
+  }
 }

@@ -83,6 +83,7 @@ const groups = [
             <a class="btn primary" id="jp-download" download tabindex="0">내려받기</a>
             <button type="button" class="btn ghost" id="jp-reset">다른 사진 처리하기</button>
           </div>
+          <div id="jp-next" class="next-steps" role="group" aria-labelledby="jp-next-label" hidden></div>
           <p class="save-name" id="jp-save-name"></p>
           <Share name={tool.name} text={sharePreview('/jpg-to-pdf/', Astro.site!).description} id="jp-share" />
           <p class="related-line">PDF 용량이 크다면 <a href="/pdf-compress/">PDF 용량 줄이기</a>에서 줄이고, 다른 PDF와 묶으려면 <a href="/pdf-merge/">PDF 합치기</a>를 쓰세요.</p>

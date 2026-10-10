@@ -29,6 +29,8 @@ export type UsageSetting =
 export type UsageEvent =
   | { e: 'pick' | 'success' | 'download'; t: UsageTool }
   | ({ e: 'start'; t: UsageTool } & (UsageSetting | { o?: undefined; v?: undefined }))
+  /** 이어서 하기 (CHAIN): the result of `t` was handed to the tool `v`. */
+  | { e: 'next'; t: UsageTool; o: 'next'; v: UsageTool }
   | { e: 'fail'; t: UsageTool; c: string; p: UsagePhase };
 
 type Via = 'guide' | 'direct';
@@ -66,7 +68,7 @@ export function buildPayload(ev: UsageEvent | Arrive, ctx: PayloadContext): Reco
     p.c = CODE_RE.test(ev.c) ? ev.c : 'unknown';
     p.p = ev.p;
     p.br = browserFamily(ctx.ua);
-  } else if (ev.e === 'start') {
+  } else if (ev.e === 'start' || ev.e === 'next') {
     if (ev.o !== undefined && ev.v !== undefined) {
       p.o = ev.o;
       p.v = ev.v;

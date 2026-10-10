@@ -18,6 +18,7 @@ const PORTRAIT_NAME = 'portrait_pd';
 const PORTRAIT_SIZE = String(readFileSync(PORTRAIT).length);
 /** legal.ts reads build-time constants, so the date is read from its source here. */
 const PRIVACY_USAGE = /PRIVACY_USAGE = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_CHAIN = /PRIVACY_CHAIN = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'w']);
 
 interface Beacon {
@@ -260,6 +261,24 @@ test('PDF 용량 줄이기 with a file that is not a PDF: fail with code not-pdf
   expect(typeof beacons[1]!.ev.br).toBe('string');
 });
 
+test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/pdf-compress/');
+  await page.setInputFiles('#cmp-input', fixturePath('gen_scan_a6.pdf'));
+  await expect(page.locator('#cmp-info')).toContainText('1쪽');
+  await page.locator('#cmp-run').click();
+  await expect(page.locator('#compress-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await page.getByRole('group', { name: '이 파일로 이어서 하기' }).getByRole('button', { name: 'PDF 서명·도장 넣기' }).click();
+  await expect(page).toHaveURL(/\/pdf-sign\/$/);
+  await expect(page.locator('#sg-notice')).toHaveText('방금 만든 파일을 가져왔습니다.');
+  await expect.poll(() => beacons.map((b) => `${b.ev.e} ${b.ev.t}`)).toContain('next pdf-compress');
+  expectClean(beacons);
+  const next = beacons.filter((b) => b.ev.e === 'next');
+  expect(next).toHaveLength(1);
+  expect(next[0]!.ev).toMatchObject({ e: 'next', t: 'pdf-compress', o: 'next', v: 'pdf-sign' });
+  expect(next[0]!.body).not.toContain('gen_scan');
+});
+
 test('guide -> tool: the guide CTA sends one arrive (g, dl=1) and later events say via=guide; a direct open sends no arrive', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/guide/photo-kb/');
@@ -289,10 +308,11 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   await expect(page.locator('#usage')).toContainText('익명 사용 통계');
   await expect(main).toContainText('보내지 않는 것: 파일 이름, 크기, 내용, IP 주소, 쿠키, 나를 알아볼 수 있는 값.');
   await expect(main).toContainText(`${PRIVACY_USAGE}: 익명 사용 통계를 더함`);
-  // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence and later date win then
-  // (ga.cloud.spec.ts checks them); without it, the cookieless sentence and the usage date.
+  await expect(main).toContainText('이어서 하기(보낸 도구·받을 도구 이름)');
+  await expect(main).toContainText(`시행일: ${PRIVACY_CHAIN}`);
+  // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence wins then (ga.cloud.spec.ts
+  // checks it); without it, the cookieless sentence. The date is 이어서 하기's (CHAIN) in both.
   if ((await page.locator('#ga').count()) === 0) {
     await expect(main).toContainText('쿠키도 쓰지 않아요.');
-    await expect(main).toContainText(`시행일: ${PRIVACY_USAGE}`);
   }
 });

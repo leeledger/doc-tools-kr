@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   BLOB_KEYS,
+  EVENTS,
   FAIL_LABELS,
   LEVEL_IDS,
   MAX_BODY,
@@ -851,5 +852,35 @@ describe('PDF 암호 해제·설정: the password never reaches a payload (TOOLS
     const p = buildPayload({ e: 'start', t: 'pdf-password', o: 'action', v: 'lock', password: '문서딱암호12', pw: '1234', name: '등본.pdf', pages: 7 } as never, ctx);
     expect(p).toEqual({ e: 'start', t: 'pdf-password', o: 'action', v: 'lock', via: 'direct', d: 'desktop', b: 'dev', w: 1 });
     expect(JSON.stringify(p)).not.toMatch(/문서딱암호12|1234|등본|7/);
+  });
+});
+
+describe('이어서 하기 next event (CHAIN decision 9)', () => {
+  it('accepts o=next with a tool as v, only on next', () => {
+    expect(EVENTS).toContain('next');
+    for (const v of TOOLS) expect(validate(body({ ...BASE, t: 'jpg-to-pdf', e: 'next', o: 'next', v })), v).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'jpg-to-pdf', e: 'next', o: 'next', v: 'pdf-compress' }))).toMatchObject({ e: 'next', o: 'next', v: 'pdf-compress' });
+  });
+
+  it('rejects next without o/v, with another o, an unknown v, and o=next on other events', () => {
+    for (const [why, b] of [
+      ['no o/v', body({ ...BASE, e: 'next' })],
+      ['o without v', body({ ...BASE, e: 'next', o: 'next' })],
+      ['another o', body({ ...BASE, e: 'next', o: 'level', v: 'pdf-compress' })],
+      ['a setting value', body({ ...BASE, e: 'next', o: 'next', v: 'high' })],
+      ['unknown tool', body({ ...BASE, e: 'next', o: 'next', v: 'pdf-rotate' })],
+      ['o=next on start', body({ ...BASE, e: 'start', o: 'next', v: 'pdf-compress' })],
+      ['o/v on pick', body({ ...BASE, e: 'pick', o: 'next', v: 'pdf-compress' })],
+      ['o/v on success', body({ ...BASE, e: 'success', o: 'level', v: 'high' })],
+      ['g on next', body({ ...BASE, e: 'next', o: 'next', v: 'pdf-compress', g: 'x' })],
+    ] as const) expect(validate(b), why).toBeNull();
+  });
+
+  it('buildPayload keeps o/v of next; the admin tables ignore next rows', () => {
+    const ctx = { via: 'direct' as const, ua: '', device: 'desktop' as const, build: 'dev', w: 1 };
+    expect(buildPayload({ e: 'next', t: 'jpg-to-pdf', o: 'next', v: 'pdf-compress' }, ctx)).toEqual({ e: 'next', t: 'jpg-to-pdf', o: 'next', v: 'pdf-compress', via: 'direct', d: 'desktop', b: 'dev', w: 1 });
+    const shaped = shapeUsage({ events: [{ tool: 'jpg-to-pdf', event: 'next', via: 'direct', n: 3 }, { tool: 'jpg-to-pdf', event: 'success', via: 'direct', n: 2 }] });
+    expect(shaped.tools[0]).toMatchObject({ tool: 'jpg-to-pdf', success: 2, start: 0 });
+    expect(JSON.stringify(shaped)).not.toContain('NaN');
   });
 });

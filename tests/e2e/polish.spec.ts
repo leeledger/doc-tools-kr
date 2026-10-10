@@ -167,6 +167,11 @@ test('privacy: a short plain statement (owner, Polish Q): no sign-up, no persona
   await expect(main).toContainText('고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요.');
   await expect(main).toContainText('사이트를 여는 기록(접속 기록: IP 주소, 쓰는 기기와 앱의 종류 등)은 Cloudflare가 보안과 운영을 위해 잠시 보관할 수 있어요.');
   await expect(main).toContainText('시행일:');
+  // 이어서 하기 (CHAIN): the brief storage sentence and its history line; the usage item only with usage statistics on.
+  await expect(main).toContainText('이어서 하기를 누르면 파일이 내 폰·컴퓨터 안에 잠시 저장되고, 다음 도구가 열리면 바로 지워져요. 다음 도구가 열리지 않았다면, 10분이 지난 뒤 이어서 하기를 쓰는 도구를 다시 열 때 지워져요.');
+  await expect(main).toContainText('2026년 10월 11일: 이어서 하기(파일을 다음 도구로 넘기기) 내용을 더함');
+  await expect(main).toContainText('시행일: 2026년 10월 11일');
+  await expect(main).not.toContainText('보낸 도구·받을 도구');
   for (const gone of ['보호책임자', '문의', '준비 중', '사이티드', '운영자:']) await expect(main).not.toContainText(gone);
   // Usage statistics are off (brief USAGE; they replaced the error beacon): no 익명 사용 통계 section, the plain cookie line.
   await expect(main).not.toContainText('익명 사용 통계');

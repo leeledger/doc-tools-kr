@@ -43,7 +43,7 @@ const createWorker = (): Worker => new Worker(new URL('../../lib/pdf/password.wo
 /** Thrown when a result fails the pdf.js check: no file is offered. */
 class VerifyError extends Error {}
 
-export function initPdfPassword(pending?: File[]): { open(files: File[]): void } | null {
+export function initPdfPassword(pending?: File[]): { open(files: File[]): Promise<void> } | null {
   const found = document.getElementById('pp-tool');
   if (!found) return null;
   const root: HTMLElement = found;
@@ -487,5 +487,5 @@ export function initPdfPassword(pending?: File[]): { open(files: File[]): void }
   const first = pending ?? Array.from(input.files ?? []);
   input.value = '';
   if (first.length) void openFiles(first);
-  return { open: (files) => void openFiles(files) };
+  return { open: (files) => openFiles(files) };
 }
