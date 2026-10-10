@@ -722,7 +722,7 @@ export function initCompressTool(): void {
     status(lines.join(' '));
   }
 
-  /** Scrolls the panel to the top (below the sticky header, scroll-margin-top) and focuses its headline. */
+  /** Scrolls the panel to the top (below the sticky header: html scroll-padding-top) and focuses its headline. */
   function reveal(panel: HTMLElement, target: HTMLElement): void {
     panel.scrollIntoView({ block: 'start' });
     target.focus({ preventScroll: true });

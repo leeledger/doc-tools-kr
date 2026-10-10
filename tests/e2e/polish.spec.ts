@@ -717,3 +717,27 @@ test('copy: the compress page reads ppi (never dpi) and the drop hint changes on
     await expect(touch).toBeHidden();
   }
 });
+
+// STICKY-HEADER (CI 38043135267): html scroll-padding-top keeps in-page anchors and scrollIntoView targets clear of
+// the sticky header (WCAG 2.4.11), on every page (the header is in Base).
+for (const [path, link, target] of [
+  ['/', '.hero-cta a[href="#tools"]', '#tools'],
+  ['/', null, '#faq'],
+  ['/guide/', '.guide-topics a[href="#topic-2"]', '#topic-2'],
+] as const) {
+  test(`sticky header: ${target} on ${path} lands below the header`, async ({ page }) => {
+    await gotoReady(page, path);
+    if (link) await page.locator(link).click();
+    else await page.evaluate((t) => (location.hash = t), target);
+    // Gap between the header's bottom edge and the target; a target near the page end may stop lower (page bottom).
+    const gap = () =>
+      page.evaluate((t) => {
+        const head = document.querySelector('header.top')!.getBoundingClientRect().bottom;
+        const bottom = Math.ceil(scrollY + innerHeight) >= document.documentElement.scrollHeight - 1;
+        const g = Math.round(document.querySelector(t)!.getBoundingClientRect().top - head);
+        return g >= 0 && (g <= 16 || bottom) ? 'clear' : `gap ${g}`;
+      }, target);
+    // Smooth scroll: wait until it settles 0–16 px under the header (scroll-padding = header + 16 px air).
+    await expect.poll(gap, { timeout: 5_000 }).toBe('clear');
+  });
+}

@@ -1,30 +1,31 @@
-# Review Request — FOOTER-BLOGS
+# Review Request — STICKY-HEADER
 Date: 2026-10-10
 Ready for Review: YES
 Status: DONE
 
-Owner request (2026-10-10, reverses the earlier "no blog link" choice): our two blogs in the footer of every page and
-in the home Organization JSON-LD `sameAs`.
+CI run 38043135267 (after FOOTER-BLOGS, ce07a21): mobile-chrome pdf-split.spec.ts:251 axe target-size. After
+`#ps-list.scrollIntoView({block:'start'})` the sticky site header covered the first row (「1쪽 빼기」 44×14.7 px visible).
+Root cause: nothing reserved the sticky header's height for scrolling; only four result panels had a hard-coded
+`scroll-margin-top: 76px`, so any other scrollIntoView, focus scroll or in-page anchor ended under the header.
 
 ## Files Changed
-- src/data/site.ts:13-21 — `BLOGS` (name, accessible label, URL) for 네이버 https://blog.naver.com/robohelio and 티스토리 https://docttak.tistory.com; single source for footer and JSON-LD.
-- src/layouts/Base.astro:5,148 — new footer line `<p class="foot-blog">블로그: 네이버 · 티스토리</p>` between the legal nav and the copyright; links `rel="noopener"`, no nofollow, no target (same tab, as the site's other non-tool external links: privacy, licenses); `aria-label` "네이버 블로그" / "티스토리 블로그" (visible text is contained, label-in-name OK).
-- src/styles/app.css:18,22 — `.foot-blog a` shares the `.foot-op a` rule (muted, inline-block, min-height 24 px target) and the hover colour.
-- src/pages/index.astro:4,31 — Organization gains `sameAs: BLOGS.map((b) => b.url)`.
-- tests/e2e/growth.spec.ts (end) — new test: every sitemap page plus /offline/ and the 404 has both links in the footer HTML with rel="noopener", no nofollow, no target; home footer links by accessible name; home Organization `sameAs` equals both URLs.
-- tests/e2e/polish.spec.ts:126-150 — footer test checks the `.foot-blog` text and includes its line in the one-left-edge check (measured at the paragraph, since the line starts with plain text).
-- tests/unit/postbuild.test.ts:745-749 — brand rule ("docttak" only as a domain) also strips https://docttak.tistory.com; it failed on every page before.
+- src/styles/global.css:12-15 — `--top-h: 60px` (header height) and `--top-clear: calc(var(--top-h) + 16px)` (= the old 76 px: header + 1 px border + 15 px air).
+- src/styles/global.css:35-37 — `html { scroll-padding-top: var(--top-clear) }` with the reason; anchors, focus scrolls and scrollIntoView all clear the header on every Base page (only Base has the sticky header; /admin/ has its own layout).
+- src/styles/global.css:68 — `.top-inner` height now `var(--top-h)`, so header and padding can't drift.
+- src/styles/app.css:38 — header menu sheet max-height uses `var(--top-clear)` instead of 76 px.
+- src/styles/app.css (old 295-296, 333, 401) — removed `scroll-margin-top: 76px` from #cmp-result/#cmp-kept/#merge-result/#idp-headline, .ph-done-bar and .idp-done: margin adds to padding (would have been 152 px); the html padding gives the same 76 px.
+- src/pages/guide/index.astro:76 — removed `section h2 { scroll-margin-top: 16px }` for the same reason (it used to put topic headings 45 px under the header).
+- src/tools/id-photo/controller.ts:659, src/tools/pdf-compress/controller.ts:725 — comments only (scroll-margin → html scroll-padding-top).
+- tests/e2e/polish.spec.ts (end) — new tests: home 「도구 둘러보기」 → #tools, home #faq (hash), /guide/ topic chip → #topic-2 each settle 0–16 px under the header (or at page bottom). They fail without the fix (target top = header top, gap ≈ -61 px). The existing scroll-padding-bottom rule is unchanged; pdf-split axe test not touched.
 
 ## Verification
-- UI font: 티, 토 were new core glyphs (603 → 605). Core 400 44,860 → 44,800 B, 800 48,024 → 48,148 B; preloaded 90.8 KB default / 90.9 KB cloud vs tripwire 92.66 KB (headroom ~1.8 KB left). No wording fallback needed.
-- vitest 1,341/1,341 (after the postbuild fix); astro check 0 errors.
-- Default build and cloud build (BG_REMOVE+BG_CLOUD+officer+contact+usage+GA test id → dist-bgcloud) both check-dist OK.
-- E2E site + polish + growth × chromium/mobile-chrome/webkit: 352 passed, 1 webkit share (G.7) flake passed on retry; the footer tests failed on a test-measurement bug (fixed, see polish hunk) and then passed 60/60 on all three projects. Axe (site.spec) clean on all pages.
-- Screenshots 360 px light/dark of a guide footer: one line "블로그: 네이버 · 티스토리", aligned with the other lines, underlined muted links readable in both schemes.
+- Default build (and the AUTOFRAME=1 build) check-dist OK; preloaded fonts unchanged 90.8 KB.
+- pdf-split + pdf-sign + polish + growth, mobile-chrome --repeat-each=3: 258 passed, 0 flaky, 0 failed.
+- Same four specs, chromium + webkit + mobile-safari once: 256 passed, 2 flaky (passed on retry): chromium pdf-split:271 pointer drag (one slot off) — pre-existing: at HEAD without this change it failed 1/16 too; mobile-safari polish:503 merge-list inspection timeout ("2쪽" not yet shown), unrelated to scrolling.
+- Extra (panels that lost scroll-margin): pdf-compress, photo-compress, image-to-jpg, jpg-to-pdf, site on mobile-chrome 126/126; id-photo on mobile-chrome + chromium (AUTOFRAME=1 build) 68 passed, 1 flaky (adjust test, then 6/6 on repeat).
 
 ## Open Questions
-- Wording "블로그: 네이버 · 티스토리" vs a link-only line; chosen for brevity at 360 px.
-- `sameAs` only on the home Organization (brief); the guide Article publisher Organization (src/data/jsonld.ts) is unchanged.
+- 16 px of air kept (same as the old 76 px panels). A smaller value (e.g. 8 px) would show more content but changes where result panels land.
 
 ## Out of Scope (logged in BUILD-LOG)
-- None.
+- pdf-split.spec.ts:271 pointer-drag flake on chromium (~1/16 at HEAD).

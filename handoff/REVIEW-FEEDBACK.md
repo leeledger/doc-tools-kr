@@ -1,4 +1,4 @@
-# Review Feedback — TOOL-GUIDES Part A + B
+# Review Feedback — STICKY-HEADER
 Date: 2026-10-10
 Ready for Builder: YES
 
@@ -6,24 +6,18 @@ Ready for Builder: YES
 None.
 
 ## Should Fix
-- src/content/guides/jpg-to-pdf.md:87-88 (confidence: 6/10) — Steps 2-3 say 「인쇄」를 눌러요 and 프린터 자리에서 「PDF로 저장」. Neither step has a stored quote. The stored quotes stop at 「공유를 탭합니다」 and jump to 「PDF로 저장을 탭합니다」. I fetched the Google page myself and it does say 「인쇄 를 탭합니다」 and 「상단에서 프린터를 선택합니다」, so the steps are true. They are just not covered by check:quotes, and bar 1 says "each step backed by a quoted official source". Fix: add one sources[] entry with the verbatim 인쇄/프린터 sentence (check it passes --exact), or drop "프린터 자리에서". Not blocking because the source does support the text.
-- src/content/guides/remove-background.md:63 (confidence: 5/10) — 「테두리가 나타나면」 is not in a stored quote. The Apple page does say 「대상체 주위에 테두리가 나타날 경우」 (fetched). Same fix if you want full coverage. Optional.
+None.
 
 ## Escalate to Architect
-- Link-graph rule vs Part B (Bob's deviation 1). Before: every guide needed an in-link from another guide or a hub. Now `requires` guides are exempt from that rule and must instead be linked from their tool page (postbuild.test.ts:1186-1189). The brief forbids any always-shown guide from linking remove-background, so the old rule could not be met without a conditional hub/guide link. I recommend accepting the change. It is narrow: it only applies to guides with `requires`, and it still asserts a real in-link. Arch to confirm, because it changes an existing G2 A1 rule.
-- jpg-to-pdf.related has a 4th slug, pdf-to-jpg (Bob's deviation 2). It stays within the max of 4, the topic is relevant, and it keeps pdf-to-jpg from having no guide linking to it. I recommend accepting.
+None. 16 px clearance kept per orchestrator decision.
 
 ## Cleared
-I reviewed the six guides, the eight reverse related edits, the what-is-hwpx sentence, the pins, and the Part B gating code and tests. Everything passed:
-- check:quotes ran clean: 178 quotes verbatim.
-- Every 안 될 때 message matches the real copy of its tool, word for word, including templated messages. HWP sizes use MB_DEC consistently with toolFacts.
-- Every UI label and behaviour the guides mention exists in the source. Checked: ZIP only for 2+ pages, 오른쪽 90°, 화살표 키, 누끼.png, 원본과 비교.
-- No guide FAQ repeats or paraphrases its tool FAQ in tools.ts.
-- The Hancom save-as steps and the 97-format warning match the fetched help page. The 파일 형식 label is on that page too.
-- The passport line reflects its quote without overstating it.
-- The BG guide makes no claim about where photos are processed. Its 안 될 때 lines hold in both cloud and device mode.
-- isVisibleGuide gates every consumer: getCollection('guides') is only called in guides.ts. guideProblems blocks remove-background in tools, cta and related unless the guide has `requires`.
-- LOCAL_SCOPE_RE now leaves only guide/remove-background/ unmatched. Other guides and a look-alike slug still match.
-- Meta lengths: descriptions are 69-76 characters, titles 20-28 before the suffix.
-- Copy is 해요체 and follows the COPY.md words (쪽 그림, 빼기, 돌리기, 그림).
-- guides-schema, bgcloud and meta-length tests pass (97/97).
+Verified the work. `--top-h` controls both `.top-inner` height (global.css:70) and, through `--top-clear`, `html scroll-padding-top` (global.css:37) and the menu-panel max-height (app.css:38), so the values can't drift apart. The only sticky header is Base.astro:105, and only Base imports global.css.
+
+Result panels land in the same place as before: each removed `scroll-margin-top: 76px` (#cmp-result, #cmp-kept, #merge-result, #idp-headline, .ph-done-bar, .idp-done) gave 76 px with 0 padding, and now it is 0 margin with 76 px padding. No `scroll-margin-top` is left anywhere in src, so nothing adds on top of the padding. The guide topic headings move from 16 px to 76 px, which was the intended fix.
+
+The phone sticky-bar `scroll-padding-bottom: 96px` (app.css:240) is a separate longhand and still applies. No JS works out header offsets by hand (reorder.ts autoscroll only uses the window edges).
+
+The new polish tests check gap >= 0 in every case, including the page-bottom escape, so they fail at HEAD (about -61 px) and they test the real behaviour.
+
+This is CSS scroll-snap/padding only, with no layout or header-geometry change, so LCP and CLS are unaffected.

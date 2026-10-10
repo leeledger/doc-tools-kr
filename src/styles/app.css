@@ -35,7 +35,7 @@ button.menu-toggle[aria-expanded="true"]::after { transform: translateY(2px) rot
   box-shadow: 0 12px 32px rgb(0 0 0 / .14);
   /* Thirteen tools outgrow a short window (720 px PC, a phone): the panel scrolls instead of running past the
      bottom, where the sticky header would keep its last links out of reach. */
-  max-height: calc(100vh - 76px); max-height: calc(100dvh - 76px); overflow-y: auto; overscroll-behavior: contain;
+  max-height: calc(100vh - var(--top-clear)); max-height: calc(100dvh - var(--top-clear)); overflow-y: auto; overscroll-behavior: contain;
 }
 .menu-panel ul { list-style: none; margin: 0; padding: 0; }
 .menu-panel a {
@@ -292,8 +292,6 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .pv-box { width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .pv-box canvas { display: block; width: 100%; height: auto; }
 .pv figcaption { color: var(--muted); font-size: 14.5px; text-align: center; }
-/* Result panels are scrolled into view below the sticky header (60 px + border). */
-#cmp-result, #cmp-kept, #merge-result, #idp-headline { scroll-margin-top: 76px; }
 .kept { margin-top: 20px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
 .kept p { margin: 0 0 8px; }
 .kept .row { margin-top: 12px; }
@@ -330,7 +328,7 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
 .photo-row[data-state="error"], .photo-row[data-state="invalid"] { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 .ph-add-row { margin-top: 12px; }
 .ph-add-row label.btn { cursor: pointer; }
-.ph-done-bar { margin-top: 20px; display: grid; gap: 12px; scroll-margin-top: 76px; }
+.ph-done-bar { margin-top: 20px; display: grid; gap: 12px; }
 .ph-done-bar .result-title { margin: 0; }
 .file-input:disabled + label.btn { opacity: .45; cursor: not-allowed; }
 .ph-controls { margin-top: 20px; display: grid; gap: 14px; }
@@ -398,7 +396,7 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .idp-confirm-label { align-items: flex-start; }
 .idp-confirm-label input { flex: none; margin-top: 2px; }
 .idp-save-row { margin: 0; }
-.idp-done { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--brand-soft); scroll-margin-top: 76px; }
+.idp-done { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--brand-soft); }
 .idp-done .row { margin: 0; }
 .idp-done .level-desc { margin: 0; }
 .idp-result-box { margin: 0; display: grid; gap: 6px; justify-items: start; overflow-x: auto; }

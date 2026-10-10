@@ -9,6 +9,10 @@
   --brand-soft: #e6f3f1;
   --radius: 14px;
   --wrap: 1080px;
+  /* Sticky header (.top-inner) height, and how far below its top edge anything scrolled into view lands:
+     header + 1 px border + 15 px air (STICKY-HEADER; was the hard-coded 76 px of the result panels). */
+  --top-h: 60px;
+  --top-clear: calc(var(--top-h) + 16px);
   color-scheme: light;
 }
 
@@ -28,7 +32,9 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+/* scroll-padding-top: in-page anchors (#tools, #faq), focus moves and scrollIntoView never end under the sticky
+   header (WCAG 2.4.11). Element scroll-margin would add to it, so no rule sets scroll-margin-top. */
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-padding-top: var(--top-clear); }
 
 body {
   margin: 0;
@@ -61,7 +67,7 @@ a { color: inherit; }
   backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--line);
 }
-.top-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+.top-inner { display: flex; align-items: center; justify-content: space-between; height: var(--top-h); }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; font-size: 19px; color: var(--brand); }
 .brand span { color: var(--text); }
 .top-nav { display: flex; gap: 4px; align-items: center; }

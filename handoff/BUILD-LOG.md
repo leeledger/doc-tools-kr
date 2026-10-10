@@ -2709,3 +2709,10 @@ Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP").
 
 **FOOTER-BLOGS — deploy gate (2026-10-10)**
 - Orchestrator decisions: wording 「블로그: 네이버 · 티스토리」 accepted; sameAs on the home Organization only (guide publisher unchanged). Small, test-covered change; pushed without a separate review round and CI watched. Also on 2026-10-10 the orchestrator added a Cloudflare redirect rule www.docttak.com → https://docttak.com (301, path + query kept), verified live.
+
+**STICKY-HEADER — scroll-padding-top for the sticky header (2026-10-10)** — DONE (not committed)
+- CI 38043135267 mobile-chrome pdf-split:251 axe target-size: scrollIntoView left the first page row under the sticky header. Root cause: no scroll offset for the header except four hard-coded `scroll-margin-top: 76px` panels.
+- Fix: `--top-h` (60 px, also drives .top-inner height) and `--top-clear` (+16 px) in global.css; `html { scroll-padding-top: var(--top-clear) }`; removed every element `scroll-margin-top` (76 px panels, guide hub h2 16 px) since margin adds to padding; menu sheet max-height uses the variable. scroll-padding-bottom rule unchanged; test not loosened.
+- New polish tests: #tools, #faq, /guide/ #topic-2 land 0–16 px under the header. mobile-chrome ×3 (pdf-split, pdf-sign, polish, growth) 258/258; chromium/webkit/mobile-safari 256 passed + 2 retry-flakes; default build check-dist OK.
+- Known Gap: pdf-split.spec.ts:271 pointer drag flakes on chromium (~1/16) also at HEAD without this change; not fixed (scope).
+- STICKY-HEADER (2026-10-10): Richard clear (0/0). Header height, html scroll-padding-top and the tools-menu max-height all come from --top-h; per-element scroll-margins removed. 16px clearance kept (orchestrator). Pushed; CI watched.

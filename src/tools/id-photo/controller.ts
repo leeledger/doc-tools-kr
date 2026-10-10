@@ -656,7 +656,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     setPhase('done');
     say(COPY.exported(name));
     // The headline, the chips and 내려받기 sit fully below the sticky header (UX-AUDIT-2 P1-1): the box scrolls to
-    // its scroll-margin-top, then the headline takes focus without a second scroll.
+    // the html scroll-padding-top (global.css), then the headline takes focus without a second scroll.
     done.scrollIntoView({ block: 'start', behavior: 'instant' });
     headline.focus({ preventScroll: true });
   }
