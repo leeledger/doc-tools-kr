@@ -440,7 +440,6 @@ test('이어서 하기: the transparent cut-out → 사진 PDF 변환 arrives; i
   // transparent the paper shows, never black (a transparent picture flattened onto black would leave black there).
   const doc = await openPdf(new Uint8Array(readFileSync((await download.path())!)));
   const { rgba } = await renderRgba(doc, 0, 1);
-  doc.close();
   let red = 0;
   let dark = 0;
   for (let i = 0; i < rgba.length; i += 4) {
