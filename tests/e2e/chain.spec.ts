@@ -395,7 +395,8 @@ test('pdf-password: 다른 파일 처리하기 while the 이어서 하기 code i
   const response = page.waitForResponse(NEXT_LAZY_CHUNK);
   release();
   const chunkUrl = (await response).url();
-  // Importing the same module settles after it ran; the controller's own callback was queued before this one.
+  // The held request is Vite's modulepreload of the chunk, so the controller's callback is not guaranteed to be
+  // queued before this import; the two frames give it time to run. A slow run can only pass falsely, never flake red.
   await page.evaluate(async (url) => {
     await import(url);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
