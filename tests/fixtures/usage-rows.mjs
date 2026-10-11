@@ -1,5 +1,5 @@
 // Analytics Engine rows for the /admin/ page and the weekly report (brief handoff/ARCHITECT-BRIEF-ADMIN-UI.md, step 0).
-// FULL: one period of the four queries (6+ tools; success rates hitting good / warn / bad / few / none; fails with an
+// FULL: one period of the five queries (6+ tools; success rates hitting good / warn / bad / few / none; fails with an
 // unknown code; settings; guides with dl 0 and 1; arrive events). PREV: the previous-period "AS kind" query.
 // XSS: markup in every free-text column. Used by tests/unit and scripts/qa/admin-preview.mjs.
 
@@ -78,6 +78,15 @@ export const FULL = {
     { guide: 'pdf-under-5mb', tool: 'pdf-compress', dl: '1', n: 10 },
     { guide: 'resume-photo', tool: 'photo-compress', dl: '0', n: 5 },
   ],
+  // 이어서 하기 (CHAIN-ADMIN): a duplicate pair (summed), a tie broken by TOOLS order, two rows outside TOOLS (dropped).
+  chains: [
+    { tool: 'photo-compress', dest: 'jpg-to-pdf', n: 12 },
+    { tool: 'pdf-merge', dest: 'pdf-compress', n: 8 },
+    { tool: 'pdf-merge', dest: 'pdf-compress', n: 4 },
+    { tool: 'pdf-compress', dest: 'pdf-merge', n: 3 },
+    { tool: 'pdf-rotate', dest: 'pdf-merge', n: 9 },
+    { tool: 'pdf-merge', dest: 'gone-tool', n: 5 },
+  ],
 };
 
 /** The previous period ("AS kind" query): pick / download / unknown kinds are ignored by fetchPrevTotals. */
@@ -107,6 +116,10 @@ export const XSS = {
   ],
   settings: [{ tool: 'pdf-merge', setting: XSS_TEXT, value: XSS_IMG, n: 2 }],
   guides: [{ guide: XSS_IMG, tool: XSS_TEXT, dl: '1', n: 1 }],
+  chains: [
+    { tool: XSS_TEXT, dest: 'pdf-merge', n: 2 },
+    { tool: 'pdf-merge', dest: XSS_IMG, n: 1 },
+  ],
 };
 
-export const EMPTY = { events: [], fails: [], settings: [], guides: [] };
+export const EMPTY = { events: [], fails: [], settings: [], guides: [], chains: [] };

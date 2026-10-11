@@ -1,4 +1,4 @@
-# Review Feedback — Step CHAIN X2 (+ X1 CI fix)
+# Review Feedback — Step CHAIN-ADMIN
 Date: 2026-10-11
 Ready for Builder: YES
 
@@ -6,28 +6,17 @@ Ready for Builder: YES
 None.
 
 ## Should Fix
-- tests/e2e/chain.spec.ts:235-436 (confidence: 7/10) — No X2 test shows a group and then checks that it goes away. Every test only checks a group that was never shown (ranges mode, lock result, several photos). In the code, every sender hides the slot whenever it leaves done: `if (next !== 'done') hideNextSteps(nextSlot)` in the setState of pdf-merge, pdf-split, pdf-sign, image-to-jpg and pdf-password; `dropResult()` in hwp session.ts; `if (phase !== 'done') hideNext()` in bg.ts; `setPhase` in id-photo. So no bug today. But no test would catch a regression. — Add one e2e: get a group showing on one sender (pdf-merge or pdf-sign is cheapest), press reset / 다시 편집하기, then assert `#<slot>` is hidden and has 0 buttons.
-- tests/e2e/chain.spec.ts (photo-compress) (confidence: 7/10) — For photo-compress, only one photo → jpg-to-pdf is tested. Not tested: (a) two done photos → no group (brief test map: "multi-photo → no buttons"; it is tested only for image-to-jpg); (b) removing one of two done rows → group appears. Case (b) is the special path `updateNext()` was written for (controller.ts:266-283, removeRow → setState(state)). — Add both checks to the photo-compress test.
-- src/tools/pdf-password/controller.ts:348-353 (confidence: 5/10, verify) — The guard `state === 'done' && blobUrl === shown` is right, but no test covers it. A reset while the lazy chunk is still loading is hard to time in e2e. If it is cheap, a unit test is enough. Otherwise leave it.
+- tests/e2e/chain.spec.ts:398 (confidence: 7/10) — The comment "the controller's own callback was queued before this one" does not hold for the shipped build. dist/_astro/controller.DceYiJKz.js wraps the import in Vite's preload helper: `f(async()=>{let{showNextStepsLater:e}=await import(`./next-steps-lazy.C1MD-Bxo.js`);...},__vite__mapDeps([2,3,1])).then(...)`. So the held request is the modulepreload link, and the controller's own `import()` only runs after the preload promise settles. That can happen after the test's `import(url)` resolves. The two rAFs cover the gap, and your positive control (no reset, so the group is visible) shows it on chromium. Because the final assertions are negative, a slow runner turns into a vacuous pass, not a red flake. Fix: reword the comment to say what really happens (preload, then import, then `.then`; the rAFs are the margin and the positive control is the proof). No code change needed.
 
 ## Escalate to Architect
-- None new. The orchestrator already decided the three open questions Bob lists (remove-background takes the choice at click time; photo-compress offers a kept original; next-steps-lazy). One item to carry: cloud precache is 446.8 / 450 KB, so the next step that adds JS on the cloud build has about 3 KB of room.
+None.
 
 ## Cleared
-I checked:
-- **X1 CI fix.** It is a real timing fix. `settled()` (pdf-sign.spec.ts:104-108) waits until scrollY holds steady across two animation frames. The smooth focus-scroll has already started when the wait begins. The WCAG 2.4.11 assertion (`field bottom <= bar top + 1`) is unchanged.
-- **Privacy sentence (sweep flag).** All 11 senders run the flag check:
-  - 6 receivers: `sweepDue` else-branch.
-  - pdf-merge and hwp-to-pdf: controller init.
-  - image-to-jpg, id-photo, remove-background: entry.
-  - e2e covers 4 of them, and the cloud spec covers remove-background.
-- **Button visibility on done/reset.** Correct on every sender.
-- **Locked PDFs.**
-  - A pdf-password lock result never loads next-steps.
-  - pdf-merge, pdf-split and pdf-sign write unencrypted output. Their notes say so: "합친 파일에는 비밀번호가 걸려 있지 않습니다" and NO_PASSWORD_NOTE.
-- **Single-file rule.**
-  - pdf-split: `!many && (edit|extract)`.
-  - image-to-jpg: `count === made.length === 1`.
-  - photo-compress: exactly one result or kept row.
-- **NextMaker.** null, a throw and over 200 MB all go to the alert. Unit tests cover each.
-- **Test adequacy.** Adequate apart from the Should Fix gaps above.
+Reviewed and passed:
+- **chains SQL:** unchanged guards (DATASET_RE, PERIODS). No new input reaches SQL. Alias `dest`. Exact SQL is pinned. fetchUsage runs 5 queries in Promise.all.
+- **shapeUsage:** the TOOLS whitelist applies to both ends (`TOOLS.includes(r.tool) && TOOLS.includes(r.dest)`), so labels come only from TOOL_LABELS. Pair and perTool sorts and ties are right (stable sort over perChain in TOOLS order). Tables are appended at [5] and [6]. `next` is still skipped in the events loop.
+- **admin-view:** the `note` arg is escaped (`esc(note)`), cells go through shapedSection `esc`, the sections come after s-via, and isEmpty treats chain-only data as non-empty.
+- **Weekly report:** the md snapshot gains the two tables with correct ordering.
+- **Unit tests:** genuine. The empty-block string matches emptyBlock(), and the XSS fixtures hit both ends.
+- **e2e:** pdf-merge reset, photo-compress 2→1, and pdf-password fast reset are all genuine. In the pdf-password test the route counter is asserted (0 after the lock flow, >0 after unlock) and SWs are blocked in config.
+- **Flake risk:** low. CI runs one project per job (ci.yml:120-126) at default workers on a small runner, retries 1 (firefox 2). photo-compress skips without OffscreenCanvas. The new tests use the same waits as the neighbouring stable tests.

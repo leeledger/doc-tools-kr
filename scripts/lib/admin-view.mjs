@@ -85,9 +85,12 @@ function pill(success, fail) {
 
 const EMPTY_SECTION = '<p class="muted">이 기간에는 기록이 없어요.</p>';
 
-/** A titled section with one table inside a horizontal scroll region (or the empty message). */
-function section(id, title, head, rows, numCols) {
-  const h = `<h2 id="${id}">${esc(title)}</h2>`;
+/**
+ * A titled section with one table inside a horizontal scroll region (or the empty message). `note`: optional plain
+ * text shown muted under the title (escaped here).
+ */
+function section(id, title, head, rows, numCols, note = '') {
+  const h = `<h2 id="${id}">${esc(title)}</h2>${note ? `\n<p class="muted kpi-note">${esc(note)}</p>` : ''}`;
   if (!rows.length) return `<section aria-labelledby="${id}">\n${h}\n${EMPTY_SECTION}\n</section>`;
   const cls = (i) => (numCols.includes(i) ? ' class="num"' : '');
   const thead = `<tr>${head.map((x, i) => `<th scope="col"${cls(i)}>${esc(x)}</th>`).join('')}</tr>`;
@@ -155,7 +158,9 @@ function failSection(failRows) {
 }
 
 /** A shaped string table (shapeUsage tables) with the given numeric columns. */
-const shapedSection = (id, table, numCols) => section(id, table.title, table.head, table.rows.map((r) => r.map(esc)), numCols);
+const shapedSection = (id, table, numCols, note = '') => section(id, table.title, table.head, table.rows.map((r) => r.map(esc)), numCols, note);
+
+export const CHAIN_NOTE = '이어서 하기 버튼을 누른 횟수예요. 파일이 다음 도구에서 열렸는지는 따로 세지 않아요.';
 
 function viaSection(tools) {
   const rows = tools.map((t) => [esc(t.label), pill(t.guide.success, t.guide.fail), pill(t.direct.success, t.direct.fail)]);
@@ -322,8 +327,17 @@ export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = 
   if (!usageOk) body = `<p class="notice" role="status">도구 사용 통계를 불러오지 못했어요 (${esc(notice ?? '')}).</p>`;
   else if (isEmpty(shaped)) body = emptyBlock(days);
   else {
-    const [, , settings, guides] = shaped.tables;
-    body = [kpis(shaped.kpi, prev, days), toolsSection(shaped.tools), failSection(shaped.failRows), shapedSection('s-settings', settings, [3]), shapedSection('s-guides', guides, [2, 3]), viaSection(shaped.tools)].join('\n');
+    const [, , settings, guides, , chainPairs, chainTools] = shaped.tables;
+    body = [
+      kpis(shaped.kpi, prev, days),
+      toolsSection(shaped.tools),
+      failSection(shaped.failRows),
+      shapedSection('s-settings', settings, [3]),
+      shapedSection('s-guides', guides, [2, 3]),
+      viaSection(shaped.tools),
+      shapedSection('s-chain', chainPairs, [2], CHAIN_NOTE),
+      shapedSection('s-chain-tools', chainTools, [1, 2]),
+    ].join('\n');
   }
   const hasVisits = visits !== undefined || visitsNotice !== undefined;
   const visitsHtml = hasVisits ? `${visitsBlock({ visits, visitsNotice, kpi: usageOk ? shaped.kpi : null, prevUsage: usageOk ? prev : null, days })}\n` : '';

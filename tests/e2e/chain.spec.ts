@@ -239,6 +239,9 @@ const ALPHA = photoFixture('alpha.png');
 const PLAIN = fixturePath('gen_links_outline.pdf');
 const LAW05 = join(process.cwd(), 'tests', 'corpus', 'hwp', 'law05.hwp');
 const SWEEP_FLAG = 'docttak:handoff-sweep';
+const EXIF = photoFixture('exif6_gps.jpg');
+/** The dynamic chunk /pdf-password/ loads for 이어서 하기 (src/lib/ui/next-steps-lazy.ts; dist: next-steps-lazy.<hash>.js). */
+const NEXT_LAZY_CHUNK = /\/_astro\/next-steps-lazy\.[^/]+\.js$/;
 const group = (page: Page) => page.getByRole('group', { name: GROUP });
 
 /** The download name the result offers. */
@@ -258,6 +261,20 @@ test('pdf-merge → pdf-password: the merged PDF opens in 암호 걸기', async 
   await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'ask');
   await expect(page.locator('#pp-name')).toHaveText(name);
   expect(await stored(page)).toBe(0);
+});
+
+test('pdf-merge: 다른 파일 처리하기 hides the group and empties it', async ({ page }) => {
+  await gotoReady(page, '/pdf-merge/');
+  await page.setInputFiles('#merge-input', [SCAN, PLAIN]);
+  await expect(page.locator('#merge-list > li .info', { hasText: '쪽' })).toHaveCount(2);
+  await page.getByRole('button', { name: /^PDF \d+개 합치기$/ }).click();
+  await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect(page.locator('#merge-next')).toBeVisible();
+  await expect(page.locator('#merge-next button')).not.toHaveCount(0);
+  await page.locator('#merge-reset').click();
+  await expect(page.locator('#merge-tool')).not.toHaveAttribute('data-state', 'done');
+  await expect(page.locator('#merge-next')).toBeHidden();
+  await expect(page.locator('#merge-next button')).toHaveCount(0);
 });
 
 test('pdf-split: 범위대로 나누기 offers nothing; 고른 쪽만 새 PDF로 → pdf-sign → pdf-compress (pdf-sign sends too)', async ({ page }) => {
@@ -337,6 +354,56 @@ test('pdf-password: a 암호 걸기 result offers nothing; the 암호 풀기 res
   expect(await stored(page)).toBe(0);
 });
 
+test('pdf-password: 다른 파일 처리하기 while the 이어서 하기 code is still loading leaves the group hidden and empty', async ({ page }) => {
+  // The playwright config blocks service workers, so the chunk request reaches page.route (asserted by the counter).
+  let hits = 0;
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(NEXT_LAZY_CHUNK, async (route) => {
+    hits += 1;
+    await held;
+    await route.continue();
+  });
+
+  // A locked file to unlock (암호 걸기 results load no 이어서 하기 code).
+  await gotoReady(page, '/pdf-password/');
+  await page.locator('label.chip', { hasText: '암호 걸기' }).click();
+  await page.setInputFiles('#pp-input', SCAN);
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'ask');
+  await page.locator('#pp-new').fill('문서딱암호12');
+  await page.locator('#pp-again').fill('문서딱암호12');
+  await page.getByRole('button', { name: '암호 걸기', exact: true }).click();
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: '내려받기' }).click()]);
+  const d = download as Download;
+  const locked = { name: d.suggestedFilename(), mimeType: 'application/pdf', buffer: readFileSync(await d.path()) };
+  await page.locator('#pp-reset').click();
+  expect(hits).toBe(0);
+
+  await page.locator('label.chip', { hasText: '암호 풀기' }).click();
+  await page.setInputFiles('#pp-input', locked);
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'ask');
+  await page.locator('#pp-pw').fill('문서딱암호12');
+  await page.getByRole('button', { name: '암호 풀기', exact: true }).click();
+  await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect.poll(() => hits).toBeGreaterThan(0);
+
+  await page.locator('#pp-reset').click();
+  await expect(page.locator('#pp-tool')).not.toHaveAttribute('data-state', 'done');
+  const response = page.waitForResponse(NEXT_LAZY_CHUNK);
+  release();
+  const chunkUrl = (await response).url();
+  // Importing the same module settles after it ran; the controller's own callback was queued before this one.
+  await page.evaluate(async (url) => {
+    await import(url);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }, chunkUrl);
+  await expect(page.locator('#pp-next')).toBeHidden();
+  await expect(page.locator('#pp-next button')).toHaveCount(0);
+});
+
 test('hwp-to-pdf → pdf-compress: the saved PDF opens without a second pick', async ({ page }) => {
   test.setTimeout(240_000);
   await gotoReady(page, '/hwp-to-pdf/');
@@ -391,6 +458,29 @@ test('photo-compress (one photo) → jpg-to-pdf', async ({ page }) => {
   await expect(page.locator('#ph-list .info', { hasText: '확인 중' })).toHaveCount(0);
   await page.locator('#ph-run').click();
   await expect(page.locator('#photo-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await expect(group(page).getByRole('button')).toHaveText(['사진 PDF 변환']);
+  const name = (await page.locator('#ph-list a[data-role="download"]').getAttribute('download'))!;
+  await group(page).getByRole('button', { name: '사진 PDF 변환' }).click();
+  await expect(page).toHaveURL(/\/jpg-to-pdf\/$/);
+  await expect(page.locator('#jp-notice')).toHaveText(ARRIVED);
+  await expect(page.locator('#jp-list > li .name')).toHaveText([name]);
+  expect(await stored(page)).toBe(0);
+});
+
+test('photo-compress: two results offer nothing; removing one shows the group, which still hands over', async ({ page }) => {
+  await gotoReady(page, '/photo-compress/');
+  test.skip(!(await canDraw(page)), 'This browser has no OffscreenCanvas (Playwright WebKit on Windows).');
+  await page.setInputFiles('#ph-input', [PORTRAIT, EXIF]);
+  await expect(page.locator('#ph-list > li')).toHaveCount(2);
+  await expect(page.locator('#ph-list .info', { hasText: '확인 중' })).toHaveCount(0);
+  await page.locator('#ph-run').click();
+  await expect(page.locator('#photo-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await expect(page.locator('#ph-next')).toBeHidden();
+  await expect(page.locator('#ph-next button')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'exif6_gps.jpg 삭제' }).click();
+  await expect(page.locator('#ph-list > li')).toHaveCount(1);
+  await expect(page.locator('#photo-tool')).toHaveAttribute('data-state', 'done');
   await expect(group(page).getByRole('button')).toHaveText(['사진 PDF 변환']);
   const name = (await page.locator('#ph-list a[data-role="download"]').getAttribute('download'))!;
   await group(page).getByRole('button', { name: '사진 PDF 변환' }).click();

@@ -184,7 +184,7 @@ export function toDataPoint(ev) {
 
 const N = 'SUM(_sample_interval * double1)';
 
-/** The four queries of the admin page and the weekly report. Throws on a period or dataset outside the whitelist. */
+/** The five queries of the admin page and the weekly report (chains: 이어서 하기, blob2 sender -> blob6 receiver). Throws on a period or dataset outside the whitelist. */
 export function usageSql(dataset, days) {
   if (!DATASET_RE.test(dataset ?? '')) throw new Error('usage: invalid dataset name');
   if (!PERIODS.includes(days)) throw new Error('usage: invalid period');
@@ -194,11 +194,12 @@ export function usageSql(dataset, days) {
     fails: `SELECT blob2 AS tool, blob3 AS code, blob4 AS phase, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'fail' GROUP BY blob2, blob3, blob4 ORDER BY n DESC LIMIT 20 FORMAT JSON`,
     settings: `SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'start' AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
     guides: `SELECT blob7 AS guide, blob2 AS tool, blob8 AS dl, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'arrive' GROUP BY blob7, blob2, blob8 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
+    chains: `SELECT blob2 AS tool, blob6 AS dest, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'next' GROUP BY blob2, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
   };
 }
 
 /**
- * The admin page's fifth query: event totals of the period before the current one (days 2N..N ago). Alias "kind",
+ * The admin page's sixth query: event totals of the period before the current one (days 2N..N ago). Alias "kind",
  * not "event", so the two are told apart. Throws on a period outside COMPARE_PERIODS or a bad dataset name.
  */
 export function usagePrevSql(dataset, days) {
@@ -237,14 +238,14 @@ async function runSql({ accountId, token, fetch: f }, q) {
 }
 
 /**
- * Runs the four queries against the Analytics Engine SQL API. `fetch` is injectable for tests.
- * Resolves to { events, fails, settings, guides } (arrays of rows); rejects with UsageApiError (status 0: network).
+ * Runs the five queries against the Analytics Engine SQL API. `fetch` is injectable for tests.
+ * Resolves to { events, fails, settings, guides, chains } (arrays of rows); rejects with UsageApiError (status 0: network).
  */
 export async function fetchUsage({ accountId, token, dataset, days, fetch: f = fetch }) {
   const sql = usageSql(dataset, days);
   const api = { accountId, token, fetch: f };
-  const [events, fails, settings, guides] = await Promise.all([runSql(api, sql.events), runSql(api, sql.fails), runSql(api, sql.settings), runSql(api, sql.guides)]);
-  return { events, fails, settings, guides };
+  const [events, fails, settings, guides, chains] = await Promise.all([runSql(api, sql.events), runSql(api, sql.fails), runSql(api, sql.settings), runSql(api, sql.guides), runSql(api, sql.chains)]);
+  return { events, fails, settings, guides, chains };
 }
 
 /**
@@ -391,10 +392,11 @@ const rate = (part, whole) => (whole > 0 ? `${Math.round((part / whole) * 100)}%
 /**
  * Query rows -> display tables (strings only, not yet escaped) for the weekly report (markdown), the totals for its
  * summary, and raw numbers for the admin page (scripts/lib/admin-view.mjs): kpi (rate in percent, null without
- * attempts), tools (TOOLS order) and failRows (codeLabel null for a code outside FAIL_LABELS).
- * @param {{ events?: Array<Record<string, any>>, fails?: Array<Record<string, any>>, settings?: Array<Record<string, any>>, guides?: Array<Record<string, any>> }} rows
+ * attempts), tools (TOOLS order), failRows (codeLabel null for a code outside FAIL_LABELS) and chains (이어서 하기:
+ * total, pairs sender -> receiver, perTool sent/received; rows with a tool outside TOOLS are dropped).
+ * @param {{ events?: Array<Record<string, any>>, fails?: Array<Record<string, any>>, settings?: Array<Record<string, any>>, guides?: Array<Record<string, any>>, chains?: Array<Record<string, any>> }} rows
  */
-export function shapeUsage({ events = [], fails = [], settings = [], guides = [] }) {
+export function shapeUsage({ events = [], fails = [], settings = [], guides = [], chains = [] }) {
   const per = new Map();
   const cell = (tool) => {
     if (!per.has(tool)) per.set(tool, { pick: 0, start: 0, success: 0, fail: 0, download: 0, guide: { success: 0, fail: 0 }, direct: { success: 0, fail: 0 } });
@@ -403,7 +405,7 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
   let arrive = 0;
   for (const r of events) {
     if (TOOLS.includes(r.tool) && r.event === 'arrive') arrive += num(r.n);
-    // next (CHAIN) has no column on the admin page or in the weekly report yet (BUILD-LOG Known Gap).
+    // next is counted from the chains query.
     if (!TOOLS.includes(r.tool) || !EVENTS.includes(r.event) || r.event === 'arrive' || r.event === 'next') continue;
     const c = cell(r.tool);
     const n = num(r.n);
@@ -441,6 +443,25 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
     arrivals.set(key, a);
   }
 
+  const pairMap = new Map();
+  for (const r of chains) {
+    if (!TOOLS.includes(r.tool) || !TOOLS.includes(r.dest)) continue;
+    const key = `${r.tool}\u0000${r.dest}`;
+    const p = pairMap.get(key) ?? { from: r.tool, fromLabel: TOOL_LABELS[r.tool], to: r.dest, toLabel: TOOL_LABELS[r.dest], n: 0 };
+    p.n += num(r.n);
+    pairMap.set(key, p);
+  }
+  const pairs = [...pairMap.values()].sort((a, b) => b.n - a.n || TOOLS.indexOf(a.from) - TOOLS.indexOf(b.from) || TOOLS.indexOf(a.to) - TOOLS.indexOf(b.to));
+  const perChain = new Map(TOOLS.map((t) => [t, { tool: t, label: TOOL_LABELS[t], sent: 0, received: 0 }]));
+  let chainTotal = 0;
+  for (const p of pairs) {
+    chainTotal += p.n;
+    perChain.get(p.from).sent += p.n;
+    perChain.get(p.to).received += p.n;
+  }
+  // Array.prototype.sort is stable, so ties keep TOOLS order.
+  const perTool = [...perChain.values()].filter((c) => c.sent > 0 || c.received > 0).sort((a, b) => b.sent + b.received - (a.sent + a.received));
+
   return {
     totals: { success, fail, rate: rate(success, success + fail) },
     kpi: { start, success, fail, rate: success + fail > 0 ? (success / (success + fail)) * 100 : null, arrive },
@@ -452,6 +473,7 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
       const code = String(r.code ?? '');
       return { tool: String(r.tool ?? ''), toolLabel: label(TOOL_LABELS, r.tool), code, codeLabel: Object.hasOwn(FAIL_LABELS, code) ? FAIL_LABELS[code] : null, phaseLabel: label(PHASE_LABELS, r.phase), n: num(r.n) };
     }),
+    chains: { total: chainTotal, pairs, perTool },
     tables: [
       {
         title: '도구별',
@@ -480,6 +502,8 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
           return [label(TOOL_LABELS, t), rate(c.guide.success, c.guide.success + c.guide.fail), rate(c.direct.success, c.direct.success + c.direct.fail)];
         }),
       },
+      { title: '이어서 하기 (보낸 도구 → 받은 도구)', head: ['보낸 도구', '받은 도구', '횟수'], rows: pairs.map((p) => [p.fromLabel, p.toLabel, count(p.n)]) },
+      { title: '이어서 하기 도구별 합계', head: ['도구', '보냄', '받음'], rows: perTool.map((c) => [c.label, count(c.sent), count(c.received)]) },
     ],
   };
 }

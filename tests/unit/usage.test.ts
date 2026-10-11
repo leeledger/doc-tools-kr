@@ -164,12 +164,13 @@ describe('whitelist (scripts/lib/usage.mjs)', () => {
 });
 
 describe('SQL builders and table shaping', () => {
-  it('the four queries (snapshot)', () => {
+  it('the five queries (snapshot)', () => {
     expect(usageSql('docttak_usage', 7)).toEqual({
       events: "SELECT blob2 AS tool, blob1 AS event, blob9 AS via, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY GROUP BY blob2, blob1, blob9 FORMAT JSON",
       fails: "SELECT blob2 AS tool, blob3 AS code, blob4 AS phase, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'fail' GROUP BY blob2, blob3, blob4 ORDER BY n DESC LIMIT 20 FORMAT JSON",
       settings: "SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'start' AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
       guides: "SELECT blob7 AS guide, blob2 AS tool, blob8 AS dl, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'arrive' GROUP BY blob7, blob2, blob8 ORDER BY n DESC LIMIT 500 FORMAT JSON",
+      chains: "SELECT blob2 AS tool, blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'next' GROUP BY blob2, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
     });
     expect(() => usageSql('docttak_usage', 365)).toThrow();
     expect(() => usageSql('x; DROP TABLE y', 7)).toThrow();
@@ -221,6 +222,56 @@ describe('SQL builders and table shaping', () => {
       ['HWP 파일 보기', '-', '-'],
     ]);
     expect(shapeUsage({}).totals).toEqual({ success: 0, fail: 0, rate: '-' });
+  });
+
+  it('shapes 이어서 하기 rows: pairs summed and sorted (ties by TOOLS order), whitelist drop, per-tool sent/received', () => {
+    const shaped = shapeUsage({
+      chains: [
+        { tool: 'pdf-compress', dest: 'pdf-merge', n: 5 },
+        { tool: 'pdf-merge', dest: 'pdf-split', n: 2 },
+        { tool: 'pdf-merge', dest: 'pdf-compress', n: 3 },
+        { tool: 'pdf-merge', dest: 'pdf-compress', n: 2 },
+        { tool: 'pdf-merge', dest: 'pdf-password', n: 2 },
+        { tool: 'pdf-rotate', dest: 'pdf-merge', n: 50 },
+        { tool: 'pdf-merge', dest: '<img src=x onerror=alert(1)>', n: 40 },
+        { tool: '<script>alert(1)</script>', dest: 'pdf-merge', n: 30 },
+      ],
+    });
+    expect(shaped.chains.total).toBe(14);
+    expect(shaped.chains.pairs.map((p) => [p.from, p.to, p.n])).toEqual([
+      ['pdf-merge', 'pdf-compress', 5],
+      ['pdf-compress', 'pdf-merge', 5],
+      ['pdf-merge', 'pdf-password', 2],
+      ['pdf-merge', 'pdf-split', 2],
+    ]);
+    expect(shaped.chains.pairs[0]).toEqual({ from: 'pdf-merge', fromLabel: 'PDF 합치기', to: 'pdf-compress', toLabel: 'PDF 용량 줄이기', n: 5 });
+    expect(shaped.chains.perTool).toEqual([
+      { tool: 'pdf-merge', label: 'PDF 합치기', sent: 9, received: 5 },
+      { tool: 'pdf-compress', label: 'PDF 용량 줄이기', sent: 5, received: 5 },
+      { tool: 'pdf-password', label: 'PDF 암호 해제·설정', sent: 0, received: 2 },
+      { tool: 'pdf-split', label: 'PDF 나누기·쪽 편집', sent: 0, received: 2 },
+    ]);
+    const [, , , , , pairs, perTool] = shaped.tables;
+    expect(pairs).toEqual({
+      title: '이어서 하기 (보낸 도구 → 받은 도구)',
+      head: ['보낸 도구', '받은 도구', '횟수'],
+      rows: [
+        ['PDF 합치기', 'PDF 용량 줄이기', '5'],
+        ['PDF 용량 줄이기', 'PDF 합치기', '5'],
+        ['PDF 합치기', 'PDF 암호 해제·설정', '2'],
+        ['PDF 합치기', 'PDF 나누기·쪽 편집', '2'],
+      ],
+    });
+    expect(perTool!.head).toEqual(['도구', '보냄', '받음']);
+    expect(perTool!.rows[0]).toEqual(['PDF 합치기', '9', '5']);
+    expect(JSON.stringify(shaped)).not.toMatch(/script|onerror|pdf-rotate/);
+    // chain rows do not touch the other tables or KPIs
+    expect(shaped.tools).toEqual([]);
+    expect(shaped.tables.slice(0, 5).every((t) => !t.rows.length)).toBe(true);
+    const empty = shapeUsage({});
+    expect(empty.chains).toEqual({ total: 0, pairs: [], perTool: [] });
+    expect(empty.tables).toHaveLength(7);
+    expect(empty.tables.slice(5).every((t) => !t.rows.length)).toBe(true);
   });
 
   it('renders markdown and HTML from the same rows; HTML escapes every value', () => {
@@ -299,7 +350,24 @@ describe('SQL builders and table shaping', () => {
       | 사진 용량 줄이기 | 98% | 96% |
       | 증명사진 규격 맞추기 | - | 80% |
       | HWP PDF 변환 | - | 96% |
-      | 사진 PDF 변환 | - | - |"
+      | 사진 PDF 변환 | - | - |
+
+      ### 이어서 하기 (보낸 도구 → 받은 도구)
+
+      | 보낸 도구 | 받은 도구 | 횟수 |
+      | --- | --- | --- |
+      | PDF 합치기 | PDF 용량 줄이기 | 12 |
+      | 사진 용량 줄이기 | 사진 PDF 변환 | 12 |
+      | PDF 용량 줄이기 | PDF 합치기 | 3 |
+
+      ### 이어서 하기 도구별 합계
+
+      | 도구 | 보냄 | 받음 |
+      | --- | --- | --- |
+      | PDF 합치기 | 12 | 3 |
+      | PDF 용량 줄이기 | 3 | 12 |
+      | 사진 용량 줄이기 | 12 | 0 |
+      | 사진 PDF 변환 | 0 | 12 |"
     `);
   });
 
@@ -311,7 +379,9 @@ describe('SQL builders and table shaping', () => {
     });
     const r = await fetchUsage({ accountId: 'acc/1', token: 't0k', dataset: 'docttak_usage', days: 30, fetch: ok as never });
     expect(r.events).toHaveLength(1);
-    expect(calls).toHaveLength(4);
+    expect(r.chains).toHaveLength(1);
+    expect(calls).toHaveLength(5);
+    expect(calls.some((c) => String(c.init.body).includes("blob1 = 'next'"))).toBe(true);
     for (const c of calls) {
       expect(c.url).toBe('https://api.cloudflare.com/client/v4/accounts/acc%2F1/analytics_engine/sql');
       expect(c.init.method).toBe('POST');

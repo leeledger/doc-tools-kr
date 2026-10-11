@@ -2787,3 +2787,30 @@ Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP").
 
 **CHAIN X2 + X1 CI fix — deploy gate (2026-10-11)**
 - Richard: clear (0 Must Fix). Orchestrator decisions: remove-background hands over the background/format chosen at click time; photo-compress shows the buttons for an unchanged single original; next-steps-lazy.ts instead of raising budgets. Should Fix (tests only, deferred): reset-hides-buttons, photo-compress two-photo, pdf-password fast-reset. Cloud precache 446.8/450 KB — next JS addition needs precache work first. Pushed; CI watched.
+
+**CHAIN-ADMIN — brief written (2026-10-11)**: handoff/ARCHITECT-BRIEF-CHAIN-ADMIN.md. Decisions: new `chains` SQL (blob1='next', blob2 → blob6, alias `dest`) in the same fetchUsage; two tables appended to shaped.tables (pairs; per-tool sent/received), so the weekly report gets them automatically; admin sections s-chain / s-chain-tools with a "button pressed, not file arrived" note; usage whitelist and privacy text untouched. /admin/ is rendered by Functions with system fonts → no precache or font budget impact (verified: no src/pages/admin, no @font-face). X2 test gaps: pdf-merge reset hides the group, photo-compress 2 → none / remove 1 → shows, pdf-password fast reset via a held route on the next-steps-lazy chunk (e2e).
+
+**CHAIN-ADMIN — built (2026-10-11) — Status: DONE**
+- Part A (admin + weekly report, read-only):
+  - usage.mjs: `usageSql().chains` (blob1='next', blob2 AS tool, blob6 AS dest; same guards). `fetchUsage` runs 5 queries in one Promise.all and returns `chains`.
+  - `shapeUsage`: `shaped.chains = { total, pairs, perTool }` with a TOOLS whitelist on both ends. Duplicate pairs are summed. Pairs sort by n desc, ties by TOOLS index of from, then to. perTool sorts by sent+received desc; ties keep TOOLS order (stable sort).
+  - Two tables are appended as tables[5] and tables[6]; the weekly report gets them through renderTables. The `next` skip in the events loop stays; its comment now says "next is counted from the chains query".
+  - admin-view.mjs: `section()`/`shapedSection()` take an optional `note` (escaped, `muted kpi-note`). New sections `s-chain` (with CHAIN_NOTE) and `s-chain-tools` come after `s-via`.
+  - Not touched: functions/admin, the whitelist, the privacy text.
+- Part B: three tests in tests/e2e/chain.spec.ts, all tests-only:
+  - pdf-merge: reset hides the group.
+  - photo-compress: two photos show no group; removing one shows the group and the handover works.
+  - pdf-password fast reset: a held `page.route` on `/_astro/next-steps-lazy.<hash>.js` plus a hit counter.
+  - Non-vacuous check: with the reset click removed, the pdf-password test fails ("Received: visible").
+- Gates:
+  - vitest 1,383/1,383; astro check 0 errors.
+  - Default build check-dist OK: core 605/38, precache 440.5.
+  - Cloud build (CI env): check-dist OK, precache 446.8, core 606 (same as HEAD cloud).
+  - e2e chain.spec, chromium + mobile-chrome: 36 passed, 2 skipped. pdf-password fast-reset ×3 on both: 6/6.
+  - e2e chain.spec, firefox + webkit at --workers=2: 34 passed, 4 skipped.
+- Known Gaps:
+  - At default worker count, firefox/webkit failed 6 tests under load: 3 already existing (store failure, pdf-compress → pdf-password, pdf-password 암호 걸기) and 3 runs of new tests (pdf-merge reset on firefox and webkit, photo-compress on webkit). All 6 passed with --workers=1/2. This looks like load flakiness on local Windows, not a test defect.
+  - ga.test "GA-on build" failed once before a fresh `npm run build`, then passed. Probably stale prebuild output in public/; not related to this change.
+
+**CHAIN-ADMIN — deploy gate (2026-10-11)**
+- Richard: clear (0 Must Fix). Should Fix applied by the orchestrator: chain.spec pdf-password fast-reset comment corrected (held request is Vite's modulepreload; two rAFs cover the gap; a slow run can only pass falsely). Pushed; CI watched.

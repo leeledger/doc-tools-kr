@@ -2,7 +2,7 @@
 // admin fields of shapeUsage, fail-code labels and the HTML of scripts/lib/admin-view.mjs.
 import { describe, expect, it, vi } from 'vitest';
 import { FAIL_LABELS, UsageApiError, fetchPrevTotals, shapeUsage, usagePrevSql } from '../../scripts/lib/usage.mjs';
-import { barPct, delta, formatKst, rateLevel, renderAdminPage, sampleShareOf } from '../../scripts/lib/admin-view.mjs';
+import { CHAIN_NOTE, barPct, delta, formatKst, rateLevel, renderAdminPage, sampleShareOf } from '../../scripts/lib/admin-view.mjs';
 import { EMPTY, FULL, PREV, XSS } from '../fixtures/usage-rows.mjs';
 
 const NOW = new Date('2026-10-07T05:03:00Z');
@@ -117,8 +117,8 @@ describe('renderAdminPage', () => {
     expect(count(html, /<a [^>]*aria-current="page"/g)).toBe(1);
     expect(html).toContain(`<a href="?days=${days}" aria-current="page">${days}일</a>`);
     const tables = count(html, /<table/g);
-    expect(tables).toBe(5);
-    expect(count(html, /<table aria-labelledby="s-[a-z]+">/g)).toBe(tables);
+    expect(tables).toBe(7);
+    expect(count(html, /<table aria-labelledby="s-[a-z-]+">/g)).toBe(tables);
     expect(count(html, /<th(?=[\s>])(?! scope="col")/g)).toBe(0);
     expect(count(html, /role="region" aria-label="[^"]+" tabindex="0"/g)).toBe(tables);
     expect(html).not.toContain('<script');
@@ -177,7 +177,35 @@ describe('renderAdminPage', () => {
     expect(page(90, EMPTY)).not.toContain('보기</a>');
     const noFails = page(7, { ...FULL, fails: [] });
     expect(noFails).toMatch(/<h2 id="s-fails">실패 이유<\/h2>\n<p class="muted">이 기간에는 기록이 없어요.<\/p>/);
-    expect(count(noFails, /<table/g)).toBe(4);
+    expect(count(noFails, /<table/g)).toBe(6);
+  });
+
+  it('이어서 하기: two sections after s-via, escaped labels, right-aligned numbers, the note; chain-only data is not empty', () => {
+    const html = page(7);
+    const via = html.indexOf('<h2 id="s-via">');
+    const pairs = html.indexOf('<h2 id="s-chain">이어서 하기 (보낸 도구 → 받은 도구)</h2>');
+    const tools = html.indexOf('<h2 id="s-chain-tools">이어서 하기 도구별 합계</h2>');
+    expect(via).toBeGreaterThan(0);
+    expect(pairs).toBeGreaterThan(via);
+    expect(tools).toBeGreaterThan(pairs);
+    expect(CHAIN_NOTE).toBe('이어서 하기 버튼을 누른 횟수예요. 파일이 다음 도구에서 열렸는지는 따로 세지 않아요.');
+    expect(html).toContain(`<h2 id="s-chain">이어서 하기 (보낸 도구 → 받은 도구)</h2>\n<p class="muted kpi-note">${CHAIN_NOTE}</p>`);
+    expect(count(html, /kpi-note">이어서 하기/g)).toBe(1);
+    expect(html).toContain('<tr><th scope="col">보낸 도구</th><th scope="col">받은 도구</th><th scope="col" class="num">횟수</th></tr>');
+    expect(html).toContain('<tr><td>PDF 합치기</td><td>PDF 용량 줄이기</td><td class="num">12</td></tr>');
+    expect(html).toContain('<tr><th scope="col">도구</th><th scope="col" class="num">보냄</th><th scope="col" class="num">받음</th></tr>');
+    expect(html).toContain('<tr><td>사진 PDF 변환</td><td class="num">0</td><td class="num">12</td></tr>');
+    expect(html).not.toMatch(/pdf-rotate|gone-tool/);
+    // chain-only data: the page is not the empty block; noindex stays
+    const only = page(7, { ...EMPTY, chains: [{ tool: 'pdf-merge', dest: 'pdf-compress', n: 2 }] });
+    expect(only).not.toContain('이 기간에는 아직 기록이 없어요');
+    expect(only).toContain('<tr><td>PDF 합치기</td><td>PDF 용량 줄이기</td><td class="num">2</td></tr>');
+    expect(only).toContain('<meta name="robots" content="noindex,nofollow">');
+    // hostile tool names never reach the page (dropped by the TOOLS whitelist)
+    const hostile = page(7, XSS);
+    expect(hostile).toMatch(/<h2 id="s-chain">[^<]+<\/h2>\n<p class="muted kpi-note">[^<]+<\/p>\n<p class="muted">이 기간에는 기록이 없어요.<\/p>/);
+    const noChains = page(7, { ...FULL, chains: [] });
+    expect(noChains).toMatch(/<h2 id="s-chain-tools">이어서 하기 도구별 합계<\/h2>\n<p class="muted">이 기간에는 기록이 없어요.<\/p>/);
   });
 
   it('error notice: exact text with role="status" inside the shell with the tabs', () => {
