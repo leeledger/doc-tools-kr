@@ -121,7 +121,9 @@ test.describe('share (G.7)', () => {
 
 test.describe('guides (G.1, G.2)', () => {
   test('/guide/ and a guide have no serious or critical axe findings', async ({ page }) => {
-    // GROWTH3 G3: one new photo guide and one new PDF/서류 guide join the axe check.
+    // GROWTH3 G3: one new photo guide and one new PDF/서류 guide join the axe check. Four axe passes take ~30 s on
+    // firefox/webkit with five workers; a loaded machine pushed some runs past the 60 s default.
+    test.setTimeout(120_000);
     for (const path of ['/guide/', '/guide/passport-photo/', '/guide/hanja-exam-photo/', '/guide/gov24-pdf-save/']) {
       await gotoReady(page, path);
       const r = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
