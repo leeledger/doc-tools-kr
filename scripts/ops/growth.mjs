@@ -7,12 +7,14 @@
 // "(오류 있음)" in the summary issue title. Writes reports/growth/YYYY-WW.md (ISO week of the run; the workflow
 // commits it), the full data for A-6 to --out-json, and a summary issue labelled ops:growth (last week's is
 // closed). --dry-run prints the report and the issue, commits no report and sends nothing (--out-json is still
-// written: it is scratch data for A-6).
+// written: it is scratch data for A-6). The report ends with the 11-10 search indicators (lib/indicators.mjs,
+// GROWTH3 G4), which its growth-data line also stores for next week's comparison.
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { BOT_UA, ROOT, SITE, addDays, fetchText, isMain, isoDate, parseArgs, today } from './lib/common.mjs';
 import { fetchTraffic, zoneId } from './lib/cloudflare.mjs';
 import { createGitHub } from './lib/github.mjs';
+import { clusterPaths, computeIndicators, renderIndicators, storedIndicators, toolSlugs, withIndicators } from './lib/indicators.mjs';
 import { PROPERTY, accessToken, fetchGrowth, gscClient, parseServiceAccount } from './lib/gsc.mjs';
 import { sitemapEntries } from './lib/html.mjs';
 import { isoWeek, parseReportData, r1Status, renderReport } from './lib/report.mjs';
@@ -125,7 +127,10 @@ export async function run(argv, io = {}) {
   const current = { week, generated: isoDate(now), sitemapCount: c.sitemapCount, gsc: c.gsc, cf: c.cf, usage: c.usage };
   const r1 = r1Status(c.sitemapCount, [...previous, current]);
   const data = { ...current, notes: c.notes, r1 };
-  const md = renderReport(data);
+  // GROWTH3 G4: the 11-10 search indicators, compared with the latest earlier report that has them.
+  const indicators = c.gsc ? computeIndicators(c.gsc, { paths: clusterPaths(io.root), tools: toolSlugs(io.root) }) : null;
+  const before = [...previous].reverse().find((d) => d.indicators)?.indicators ?? null;
+  const md = withIndicators(renderReport(data), renderIndicators(indicators, before, c.gsc?.range28), storedIndicators(indicators));
   const file = `reports/growth/${week}.md`;
   const title = `성장 리포트 ${week}${c.failed ? ' (오류 있음)' : ''}`;
   const body = summaryBody({ ...data, visits: c.visits }, file, c.failed);

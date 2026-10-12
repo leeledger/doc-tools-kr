@@ -59,21 +59,25 @@ const metrics = (r) => ({ clicks: r?.clicks ?? 0, impressions: r?.impressions ??
 
 /**
  * The growth numbers: totals for the last 7 and 28 days (ending `end`, Search Console data lags ~3 days), top
- * queries (28 days, up to 500 for A-6; 7 days, top 25) and top pages (28 days).
+ * queries (28 days, up to 500 for A-6; 7 days, top 25), top pages (28 days, up to 250: the report prints 25, the
+ * 11-10 indicators sum them all) and page × query rows (28 days, up to 1000, GROWTH3 G4). A page × query error
+ * does not fail the rest: `pageQueries28` is null and `pageQueriesError` says why.
  */
 export async function fetchGrowth(query, end) {
   const day = (n) => new Date(end.getTime() - n * 86_400_000).toISOString().slice(0, 10);
   const endDate = day(0);
   const r7 = { startDate: day(6), endDate };
   const r28 = { startDate: day(27), endDate };
-  const [t7, t28, q28, q7, p28] = await Promise.all([
+  const [t7, t28, q28, q7, p28, pq28] = await Promise.all([
     query({ ...r7 }),
     query({ ...r28 }),
     query({ ...r28, dimensions: ['query'], rowLimit: 500 }),
     query({ ...r7, dimensions: ['query'], rowLimit: 25 }),
-    query({ ...r28, dimensions: ['page'], rowLimit: 25 }),
+    query({ ...r28, dimensions: ['page'], rowLimit: 250 }),
+    query({ ...r28, dimensions: ['page', 'query'], rowLimit: 1000 }).catch((err) => ({ error: err instanceof Error ? err.message : String(err) })),
   ]);
   const rows = (list) => list.map((r) => ({ key: r.keys[0], ...metrics(r) }));
+  const pqOk = Array.isArray(pq28);
   return {
     range7: r7,
     range28: r28,
@@ -82,5 +86,7 @@ export async function fetchGrowth(query, end) {
     queries28: rows(q28),
     queries7: rows(q7),
     pages28: rows(p28),
+    pageQueries28: pqOk ? pq28.map((r) => ({ page: r.keys[0], query: r.keys[1], ...metrics(r) })) : null,
+    ...(pqOk ? {} : { pageQueriesError: pq28.error }),
   };
 }

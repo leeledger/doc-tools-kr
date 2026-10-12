@@ -13,7 +13,8 @@ export const LABEL = 'ops:opportunity';
 export const LOW_CTR = { minImpressions: 50, maxCtr: 0.02 };
 export const UNCOVERED = { minImpressions: 10 };
 const MAX_ROWS = 20;
-const BRAND = /문서딱|docttak|독딱/i;
+/** Brand queries (문서딱 and its spellings); also the brand-search indicator of the weekly report (GROWTH3 G4). */
+export const BRAND = /문서딱|docttak|독딱/i;
 
 const squash = (s) => s.normalize('NFKC').toLowerCase().replace(/[\s\-_·]+/g, '');
 
