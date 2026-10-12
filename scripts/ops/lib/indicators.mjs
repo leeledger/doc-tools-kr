@@ -16,8 +16,9 @@ export const TOP_QUERIES = 3;
 /** "Top 5" in the indicator: an average position of 5 or better. */
 export const TOP_POSITION = 5;
 
-/** A Search Console page URL as a site path ("https://docttak.com/guide/x/" → "/guide/x/"). */
-export const pathOf = (url) => String(url).replace(/^https?:\/\/[^/]+/, '') || '/';
+/** A Search Console page URL as a site path ("https://docttak.com/guide/x/" → "/guide/x/"); a deep link's query or
+ * hash is dropped, so /id-photo/?preset=… counts as /id-photo/. */
+export const pathOf = (url) => String(url).replace(/^https?:\/\/[^/]+/, '').replace(/[?#].*$/, '') || '/';
 
 /** The `tools: [a, b]` list of a guide's frontmatter (the one-line form every guide uses). */
 export function toolsOf(md) {

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { run as growth } from '../../scripts/ops/growth.mjs';
 import { fetchGrowth } from '../../scripts/ops/lib/gsc.mjs';
-import { CLUSTER_FIXED, clusterPaths, computeIndicators, renderIndicators, storedIndicators, sumRows, toolSlugs, toolsOf, withIndicators } from '../../scripts/ops/lib/indicators.mjs';
+import { CLUSTER_FIXED, clusterPaths, computeIndicators, pathOf, renderIndicators, storedIndicators, sumRows, toolSlugs, toolsOf, withIndicators } from '../../scripts/ops/lib/indicators.mjs';
 import { parseReportData, renderReport } from '../../scripts/ops/lib/report.mjs';
 
 const U = 'https://docttak.com';
@@ -74,6 +74,16 @@ describe('indicators: sums', () => {
     expect(ind.topPages!.map((p) => p.path)).toEqual(['/guide/id-card-photo/', '/id-photo/', '/guide/pdf-merge/', '/pdf-merge/', '/guide/police-exam-photo/', '/']);
     expect(ind.topPages![0]!.queries.map((q: { query: string }) => q.query)).toEqual(['주민등록증 사진 규격', '주민등록증 사진', '주민등록증 크기']);
     expect(ind.error).toBeNull();
+  });
+
+  it('a deep-link page key (?preset=…, #…) counts as its page', () => {
+    expect(pathOf(`${U}/id-photo/?preset=passport_online`)).toBe('/id-photo/');
+    expect(pathOf(`${U}/guide/x/#faq`)).toBe('/guide/x/');
+    expect(pathOf(`${U}?a=1`)).toBe('/');
+    const g = gscData({ pages28: [page('/id-photo/?preset=passport_online', 20, 1, 6), page('/id-photo/', 60, 3, 15)], pageQueries28: [pq('/id-photo/?preset=gosi', '공무원 사진', 5, 3)] });
+    const ind = computeIndicators(g, { paths: PATHS, tools: TOOLS });
+    expect(ind.cluster).toMatchObject({ impressions: 80, clicks: 4, top5: 1 });
+    expect(ind.tool).toMatchObject({ impressions: 80, clicks: 4 });
   });
 
   it('no brand query: zeros, and the row still renders', () => {
