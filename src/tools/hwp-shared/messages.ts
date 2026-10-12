@@ -1,4 +1,5 @@
 // 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
+/*! 본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다. */
 // Copy of HWP PDF 변환 (brief Step 5 §3.2; SPIKE-HWP-DIRECT §6.8 plain language; docs/COPY.md: 합니다체,
 // two-sentence errors, numbers with units, particles after a variable through josa()).
 import type { HwpErrorCode } from '../../lib/hwp/errors';
@@ -8,7 +9,8 @@ import type { Device } from '../../lib/ui/device';
 import { josa, particle } from '../../lib/ui/josa';
 
 export const HANCOM_NOTICE = '본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.';
-export const TRADEMARK_NOTICE = '한글, 한컴, HWP, HWPX는 한글과컴퓨터의 등록상표이며, 본 서비스는 한글과컴퓨터와 무관합니다.';
+// REV3 Decision 10: the trademark, product-licence and HWPX lines live in src/data (core font scope).
+export { HANCOM_NOTICE_PDF, HWPX_STANDARD, TRADEMARK_NOTICE } from '../../data/hwp-notice';
 
 /** `80 MB`, `10.5 MB`: the 1,000,000-byte MB of the limits, at most one decimal (so a file just over a cap
  * never reads as the cap itself). */

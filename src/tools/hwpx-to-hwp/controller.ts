@@ -1,4 +1,5 @@
 // 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
+/*! 본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다. */
 // HWPX HWP 변환 controller (HWPX2HWP brief "Flow"). No preview, no fonts, no rendering: pick → convert → result
 // card. States: empty → checking → engine → converting → done | error; 다른 파일 바꾸기 / 취소 / a new pick → empty
 // (worker terminated, run token bumped, so a stale worker message never lands).

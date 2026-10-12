@@ -5,12 +5,14 @@ import {
   BLOB_KEYS,
   EVENTS,
   FAIL_LABELS,
+  GUIDE_OUT,
   LEVEL_IDS,
   MAX_BODY,
   OUT_DESTS,
   OUT_KEY,
   PRESETS,
   TOOLS,
+  TOOL_OUT,
   bucketKB,
   bucketMB,
   datasetName,
@@ -173,7 +175,7 @@ describe('SQL builders and table shaping', () => {
       settings: "SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'start' AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
       guides: "SELECT blob7 AS guide, blob2 AS tool, blob8 AS dl, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'arrive' GROUP BY blob7, blob2, blob8 ORDER BY n DESC LIMIT 500 FORMAT JSON",
       chains: "SELECT blob2 AS tool, blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'next' GROUP BY blob2, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
-      outs: "SELECT blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'out' GROUP BY blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
+      outs: "SELECT blob2 AS tool, blob7 AS guide, blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'out' GROUP BY blob2, blob7, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
     });
     expect(() => usageSql('docttak_usage', 365)).toThrow();
     expect(() => usageSql('x; DROP TABLE y', 7)).toThrow();
@@ -372,7 +374,7 @@ describe('SQL builders and table shaping', () => {
       | 사진 용량 줄이기 | 12 | 0 |
       | 사진 PDF 변환 | 0 | 12 |
 
-      ### 증명사진 인화·사진관 링크
+      ### 상품·사진관 링크
 
       기록이 아직 없어요."
     `);
@@ -964,84 +966,124 @@ describe('이어서 하기 next event (CHAIN decision 9)', () => {
   });
 });
 
-describe('인화·사진관 링크 out event (REV2 decision 7)', () => {
+describe('링크 누름 out event (REV2 decision 7, REV3 decision 6)', () => {
   const OUT = { ...BASE, t: 'id-photo', e: 'out', o: 'out' };
 
-  it('accepts out for the four dests, only from id-photo', () => {
+  it('a result screen: each TOOL_OUT pair is accepted, without g', () => {
     expect(EVENTS).toContain('out');
     expect(OUT_KEY).toBe('out');
-    expect(OUT_DESTS).toEqual(['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop']);
-    for (const v of OUT_DESTS) expect(validate(body({ ...OUT, v })), v).toMatchObject({ e: 'out', t: 'id-photo', o: 'out', v });
-    expect(toDataPoint(validate(body({ ...OUT, v: 'cp-backdrop' }))!).blobs.slice(0, 6)).toEqual(['out', 'id-photo', '', '', 'out', 'cp-backdrop']);
+    expect(OUT_DESTS).toEqual(['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'cp-stamp', 'cp-hancom', 'cp-mfp', 'cp-scanner', 'cp-tripod']);
+    for (const [t, dests] of Object.entries(TOOL_OUT)) for (const v of dests) expect(validate(body({ ...OUT, t, v })), `${t} ${v}`).toMatchObject({ e: 'out', t, o: 'out', v, g: '' });
+    // REV2 id-photo outs stay valid.
+    for (const v of ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop']) expect(validate(body({ ...OUT, v }))).not.toBeNull();
+    expect(toDataPoint(validate(body({ ...OUT, v: 'cp-backdrop' }))!).blobs.slice(0, 7)).toEqual(['out', 'id-photo', '', '', 'out', 'cp-backdrop', '']);
+    for (const [t, v] of [['stamp-signature', 'cp-stamp'], ['pdf-sign', 'cp-stamp'], ['hwp-to-pdf', 'cp-hancom'], ['pdf-merge', 'cp-mfp'], ['jpg-to-pdf', 'cp-scanner'], ['remove-background', 'cp-backdrop']]) {
+      expect(validate(body({ ...OUT, t, v })), `${t} ${v}`).not.toBeNull();
+    }
   });
 
-  it('rejects a wrong tool, missing o/v, an unknown dest, another o, out carrying g/dl/c, and o=out on other events', () => {
+  it('a guide: each GUIDE_OUT pair is accepted with g (blob7), t = the guide\'s tools[0]', () => {
+    for (const [t, dests] of Object.entries(GUIDE_OUT)) for (const v of dests) expect(validate(body({ ...OUT, t, v, g: 'some-guide', via: 'guide' })), `${t} ${v}`).toMatchObject({ e: 'out', t, v, g: 'some-guide', via: 'guide' });
+    expect(toDataPoint(validate(body({ ...OUT, v: 'cp-tripod', g: 'passport-photo', via: 'guide' }))!).blobs.slice(0, 7)).toEqual(['out', 'id-photo', '', '', 'out', 'cp-tripod', 'passport-photo']);
+  });
+
+  it('rejects: a tool-only pair with g, a guide-only pair without g, a screen without a block, unknown dests, bad g, missing o/v, dl/c on out, o=out on other events', () => {
     for (const [why, b] of [
-      ['wrong tool', body({ ...OUT, t: 'pdf-merge', v: 'photo-studio' })],
+      ['photo-studio from a guide (tool-only pair with g)', body({ ...OUT, v: 'photo-studio', g: 'passport-photo' })],
+      ['cp-paper from a guide', body({ ...OUT, v: 'cp-paper', g: 'passport-photo' })],
+      ['cp-tripod on the id-photo result (guide-only pair without g)', body({ ...OUT, v: 'cp-tripod' })],
+      ['a screen without a block', body({ ...OUT, t: 'pdf-compress', v: 'cp-mfp' })],
+      ['a guide of a tool without a block', body({ ...OUT, t: 'photo-compress', v: 'cp-backdrop', g: 'kakao-photo' })],
+      ['a dest of another screen', body({ ...OUT, t: 'pdf-merge', v: 'cp-stamp' })],
+      ['scanner on pdf-merge', body({ ...OUT, t: 'pdf-merge', v: 'cp-scanner' })],
+      ['a prototype key as tool', body({ ...OUT, t: 'constructor', v: 'cp-mfp' })],
       ['no o/v', body({ ...BASE, t: 'id-photo', e: 'out' })],
       ['o without v', body({ ...BASE, t: 'id-photo', e: 'out', o: 'out' })],
       ['unknown dest', body({ ...OUT, v: 'https://map.naver.com/' })],
-      ['a placement not rendered yet', body({ ...OUT, v: 'cp-stamp' })],
-      ['cp-stamp from stamp-signature', body({ ...OUT, t: 'stamp-signature', v: 'cp-stamp' })],
       ['a tool as dest', body({ ...OUT, v: 'pdf-merge' })],
       ['another o', body({ ...OUT, o: 'next', v: 'photo-studio' })],
       ['a setting o', body({ ...OUT, o: 'preset', v: 'id_card' })],
-      ['g on out', body({ ...OUT, v: 'photo-studio', g: 'x' })],
+      ['a bad guide slug', body({ ...OUT, v: 'cp-tripod', g: 'Bad Slug' })],
       ['dl on out', body({ ...OUT, v: 'photo-studio', dl: '1' })],
       ['c on out', body({ ...OUT, v: 'photo-studio', c: 'x' })],
+      ['g on start', body({ ...BASE, t: 'id-photo', e: 'start', g: 'passport-photo' })],
       ['o=out on start', body({ ...BASE, t: 'id-photo', e: 'start', o: 'out', v: 'photo-studio' })],
       ['o=out on next', body({ ...BASE, t: 'id-photo', e: 'next', o: 'out', v: 'photo-studio' })],
       ['o=out on success', body({ ...BASE, t: 'id-photo', e: 'success', o: 'out', v: 'photo-studio' })],
     ] as const) expect(validate(b), why).toBeNull();
   });
 
-  it('buildPayload(out) carries only e, t, o, v, via, d, b, w', () => {
-    const ctx = { via: 'guide' as const, ua: 'Mozilla/5.0 Chrome/131.0', device: 'mobile' as const, build: 'abc1234', w: 2 };
-    const p = buildPayload({ e: 'out', t: 'id-photo', o: 'out', v: 'photo-studio' }, ctx);
+  it('buildPayload(out) carries only e, t, o, v, via, d, b, w; with g also g and via=guide', () => {
+    const ctx = { via: 'direct' as const, ua: 'Mozilla/5.0 Chrome/131.0', device: 'mobile' as const, build: 'abc1234', w: 2 };
+    const p = buildPayload({ e: 'out', t: 'id-photo', o: 'out', v: 'photo-studio' }, { ...ctx, via: 'guide' });
     expect(p).toEqual({ e: 'out', t: 'id-photo', o: 'out', v: 'photo-studio', via: 'guide', d: 'mobile', b: 'abc1234', w: 2 });
     expect(validate(JSON.stringify(p))).not.toBeNull();
+    const g = buildPayload({ e: 'out', t: 'id-photo', o: 'out', v: 'cp-backdrop', g: 'passport-photo' }, ctx);
+    expect(g).toEqual({ e: 'out', t: 'id-photo', o: 'out', v: 'cp-backdrop', g: 'passport-photo', via: 'guide', d: 'mobile', b: 'abc1234', w: 2 });
+    expect(validate(JSON.stringify(g))).not.toBeNull();
+    expect(buildPayload({ e: 'out', t: 'pdf-sign', o: 'out', v: 'cp-stamp' }, ctx)).toEqual({ e: 'out', t: 'pdf-sign', o: 'out', v: 'cp-stamp', via: 'direct', d: 'mobile', b: 'abc1234', w: 2 });
   });
 
-  it('outs query; shaping: dest whitelist, n desc with ties in OUT_DESTS order, share of id-photo successes, events loop skips out', () => {
+  it('outs query; shaping: tool rows with the share of that tool\'s successes, then guide rows summed with "-"; pairs outside the maps dropped', () => {
     expect(usageSql('docttak_usage', 30).outs).toBe(
-      "SELECT blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '30' DAY AND blob1 = 'out' GROUP BY blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
+      "SELECT blob2 AS tool, blob7 AS guide, blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '30' DAY AND blob1 = 'out' GROUP BY blob2, blob7, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
     );
     const shaped = shapeUsage({
       events: [
         { tool: 'id-photo', event: 'success', via: 'direct', n: 200 },
+        { tool: 'pdf-merge', event: 'success', via: 'direct', n: 50 },
         { tool: 'id-photo', event: 'out', via: 'direct', n: 9 },
       ],
       outs: [
-        { dest: 'cp-backdrop', n: 3 },
-        { dest: 'photo-studio', n: 6 },
-        { dest: 'cp-paper', n: 3 },
-        { dest: '<script>', n: 50 },
-        { dest: 'photo-studio', n: 1 },
+        { tool: 'id-photo', guide: '', dest: 'cp-backdrop', n: 3 },
+        { tool: 'id-photo', guide: '', dest: 'photo-studio', n: 6 },
+        { tool: 'id-photo', guide: '', dest: 'cp-paper', n: 3 },
+        { tool: 'id-photo', guide: '', dest: '<script>', n: 50 },
+        { tool: 'id-photo', guide: '', dest: 'photo-studio', n: 1 },
+        { tool: 'pdf-merge', guide: '', dest: 'cp-mfp', n: 5 },
+        { tool: 'pdf-sign', guide: '', dest: 'cp-stamp', n: 2 },
+        { tool: 'id-photo', guide: 'passport-photo', dest: 'cp-tripod', n: 4 },
+        { tool: 'id-photo', guide: 'gosi-photo', dest: 'cp-tripod', n: 2 },
+        { tool: 'hwp-viewer', guide: 'hwp-on-phone', dest: 'cp-hancom', n: 1 },
+        // dropped: a guide-only pair without a guide, a tool-only pair from a guide, a screen without a block
+        { tool: 'id-photo', guide: '', dest: 'cp-tripod', n: 70 },
+        { tool: 'id-photo', guide: 'passport-photo', dest: 'photo-studio', n: 70 },
+        { tool: 'pdf-compress', guide: '', dest: 'cp-mfp', n: 70 },
       ],
     });
-    expect(shaped.tools).toEqual([expect.objectContaining({ tool: 'id-photo', success: 200, start: 0, download: 0 })]);
-    expect(shaped.outs.total).toBe(13);
-    expect(shaped.outs.rows.map((r) => [r.dest, r.n, r.share])).toEqual([
-      ['photo-studio', 7, '4%'],
-      ['cp-paper', 3, '2%'],
-      ['cp-backdrop', 3, '2%'],
+    expect(shaped.tools.map((t) => t.tool)).toEqual(['pdf-merge', 'id-photo']);
+    expect(shaped.outs.total).toBe(27);
+    expect(shaped.outs.rows.map((r) => [r.tool, r.dest, r.n, r.share])).toEqual([
+      ['id-photo', 'photo-studio', 7, '4%'],
+      ['pdf-merge', 'cp-mfp', 5, '10%'],
+      ['id-photo', 'cp-paper', 3, '2%'],
+      ['id-photo', 'cp-backdrop', 3, '2%'],
+      ['pdf-sign', 'cp-stamp', 2, '-'],
+      [null, 'cp-tripod', 6, '-'],
+      [null, 'cp-hancom', 1, '-'],
     ]);
     const table = shaped.tables[7]!;
     expect(shaped.tables).toHaveLength(8);
     expect(table).toEqual({
-      title: '증명사진 인화·사진관 링크',
-      head: ['링크', '누른 횟수', '증명사진 저장 성공 대비(%)'],
+      title: '상품·사진관 링크',
+      head: ['자리', '링크', '누른 횟수', '저장 성공 대비(%)'],
       rows: [
-        ['사진관 찾기(네이버 지도)', '7', '4%'],
-        ['인화지(쿠팡 광고)', '3', '2%'],
-        ['흰색 배경천(쿠팡 광고)', '3', '2%'],
+        ['증명사진 규격 맞추기', '사진관 찾기(네이버 지도)', '7', '4%'],
+        ['PDF 합치기', '가정용 복합기(쿠팡 광고)', '5', '10%'],
+        ['증명사진 규격 맞추기', '인화지(쿠팡 광고)', '3', '2%'],
+        ['증명사진 규격 맞추기', '흰색 배경천(쿠팡 광고)', '3', '2%'],
+        ['PDF 서명·도장 넣기', '인감도장(쿠팡 광고)', '2', '-'],
+        ['안내 글', '스마트폰 삼각대(쿠팡 광고)', '6', '-'],
+        ['안내 글', '한컴오피스(쿠팡 광고)', '1', '-'],
       ],
     });
     // the existing tables keep their order
     expect(shaped.tables.map((t) => t.title).slice(0, 7)).toEqual(['도구별', '실패 이유', '많이 쓴 설정', '안내 글에서 도구로', '도구별 성공률 (안내에서 온 경우와 바로 온 경우)', '이어서 하기 (보낸 도구 → 받은 도구)', '이어서 하기 도구별 합계']);
     expect(JSON.stringify(shaped)).not.toContain('script');
-    // zero id-photo successes: the share is "-"
-    expect(shapeUsage({ outs: [{ dest: 'photo-studio', n: 2 }] }).tables[7]!.rows).toEqual([['사진관 찾기(네이버 지도)', '2', '-']]);
+    // zero id-photo successes: the share is "-"; a row without a tool (pre-REV3 shape) is dropped
+    expect(shapeUsage({ outs: [{ tool: 'id-photo', guide: '', dest: 'photo-studio', n: 2 }] }).tables[7]!.rows).toEqual([['증명사진 규격 맞추기', '사진관 찾기(네이버 지도)', '2', '-']]);
+    expect(shapeUsage({ outs: [{ dest: 'photo-studio', n: 2 }] }).outs).toEqual({ total: 0, rows: [] });
+    expect(shapeUsage({ outs: [{ tool: '__proto__', guide: 'x', dest: 'cp-mfp', n: 2 }] }).outs).toEqual({ total: 0, rows: [] });
     expect(shapeUsage({}).outs).toEqual({ total: 0, rows: [] });
   });
 });

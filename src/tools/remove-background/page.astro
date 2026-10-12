@@ -8,6 +8,8 @@ import AdSlot from '../../components/AdSlot.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
 import EngineError from '../../components/EngineError.astro';
 import Share from '../../components/Share.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { affBlock, affOn } from '../../data/affiliate';
 import QuickLinks from '../../components/QuickLinks.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
@@ -18,6 +20,8 @@ import { aboutMB, CLOUD, COPY, FIT_LINE, NOT_FOR_ID, NOT_FOR_ID_SOURCE, STAMP_LI
 import bgCss from './bg.css?inline';
 
 const tool = getTool('remove-background');
+// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+const aff = affBlock('tool', 'remove-background', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const stamp = getTool('stamp-signature');
 const jsonLd = toolJsonLd(tool, Astro.site);
 const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
@@ -141,6 +145,7 @@ const limits = [
             <button type="button" class="btn ghost" id="bg-compare" aria-pressed="false">원본과 비교</button>
             <button type="button" class="btn ghost" id="bg-new">다른 사진 고르기</button>
           </div>
+          <OutLinks block={aff} />
           <div id="bg-next" class="next-steps" role="group" aria-labelledby="bg-next-label" hidden></div>
           <p class="save-name" id="bg-save-name"></p>
           <Share name={tool.name} text={sharePreview('/remove-background/', Astro.site!).description} id="bg-share" />

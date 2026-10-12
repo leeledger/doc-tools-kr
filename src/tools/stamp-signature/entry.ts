@@ -6,11 +6,13 @@
 // for it (BUILD-LOG C1); after a first use it comes from the runtime cache like every other lazy chunk.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
-import { startUsage, track } from '../../lib/ui/usage';
+import { startUsage, track, trackOut } from '../../lib/ui/usage';
 
 type Api = { open(file: File): void } | null;
 
 startUsage('stamp-signature');
+// 제휴 링크 (REV3): count presses of the result block's links (link kind only).
+trackOut(document.getElementById('ss-work'), 'stamp-signature');
 const loadFailed = (): void => track({ e: 'fail', t: 'stamp-signature', c: 'engine', p: 'load' });
 
 const tabs = [...document.querySelectorAll<HTMLButtonElement>('#ss-tabs [role="tab"]')];

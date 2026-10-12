@@ -6,6 +6,9 @@ import Base from './Base.astro';
 import '../styles/guide.css';
 import Share from '../components/Share.astro';
 import AdSlot from '../components/AdSlot.astro';
+import OutLinks from '../components/OutLinks.astro';
+import GuideOutTracker from '../components/GuideOutTracker.astro';
+import { AFF_COPY, affBlock, affOn } from '../data/affiliate';
 import { SITE } from '../data/site';
 import { LIVE_TOOLS } from '../data/tools';
 import { guideJsonLd, guideOgUrl } from '../data/jsonld';
@@ -28,6 +31,10 @@ const jsonLd = guideJsonLd(
   Astro.site,
 );
 const ext = { rel: 'noopener noreferrer', target: '_blank' };
+// 제휴 링크 (REV3 Decision 5): with PUBLIC_AFF_COUPANG=1 a guide whose tools[0] has a block (src/data/affiliate.ts
+// GUIDE_AFF) gets the first-part line under the H1 and the block first in the aside; the click counter only with
+// PUBLIC_USAGE_STATS=1. Never in the meta description, og or JSON-LD.
+const aff = affBlock('guide', g.tools[0] ?? '', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 // Ad placeholders (G2 A1, Phase-0 §2): guide-mid at the end of the second H2 section, guide-end after the FAQ.
 // AdSlot renders nothing while ADS_ENABLED is false, so the page is byte-equal to one without them.
 const body = await Astro.slots.render('default');
@@ -48,6 +55,7 @@ const cut = h2At[2] ?? body.length;
     <article class="guide wrap narrow" aria-labelledby="guide-title">
       <p class="guide-crumbs"><a href="/guide/">안내</a> · {g.category}</p>
       <h1 id="guide-title">{g.title}</h1>
+      {aff && <p class="guide-aff-top">{AFF_COPY.top}</p>}
       <div class="guide-answer-box">
         <p class="guide-answer">{g.answer}</p>
         <p class="guide-source">출처: <a href={first.url} {...ext}>{first.title}</a> · 확인일 <time datetime={first.retrieved}>{first.retrieved}</time></p>
@@ -71,6 +79,11 @@ const cut = h2At[2] ?? body.length;
       <AdSlot id="guide-end" size="leaderboard" />
     </article>
     <aside class="guide-more wrap narrow" aria-label="더 보기">
+      {aff && (
+        <section aria-labelledby="guide-out-title">
+          <OutLinks block={aff} guide={slug} tool={g.tools[0]} />
+        </section>
+      )}
       {related.length > 0 && (
         <section aria-labelledby="guide-related-title">
           <h2 id="guide-related-title">함께 보면 좋은 안내</h2>
@@ -102,4 +115,5 @@ const cut = h2At[2] ?? body.length;
       </section>
     </aside>
   </div>
+  {aff && __USAGE_STATS__ && <GuideOutTracker />}
 </Base>

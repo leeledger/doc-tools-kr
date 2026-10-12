@@ -10,13 +10,13 @@ import { BEACON_SRC, analyticsToken } from './lib/analytics.mjs';
 import { GA_LOADER, gaId, loaderSource } from './lib/ga.mjs';
 import { API_PATH as CLOUD_API, CLAIM_FILE_RE, EXCEPTION_PAGES, EXCEPTION_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, bgCloudOn, claimText, privacyGate, unqualifiedClaims } from './lib/bgcloud.mjs';
 import { bgRemoveOn } from './lib/bgremove.mjs';
-import { USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
+import { GUIDE_OUT, TOOL_OUT, USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
 import { headMeta, metaLen, metaProblems } from './lib/meta-length.mjs';
 import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fontcover.mjs';
-import { coupangProblems, disclosureStrings, sponsoredProblems } from './lib/print-links-check.mjs';
+import { coupangProblems, disclosureStrings, sponsoredProblems } from './lib/out-links-check.mjs';
 
 const dist = distDir();
 const KB = 1024;
@@ -402,10 +402,11 @@ else {
   const age = Math.floor((Date.now() - Date.parse(`${retrieved}T00:00:00Z`)) / 86_400_000);
   if (age > 180) warnings.push(`id-photo presets were last checked ${retrieved} (${age} days ago): re-verify every source`);
 }
-// 인화·사진관 links (REV2): sponsored links only on /id-photo/, after their disclosure, new tab, labelled 광고.
+// Link blocks (REV2, REV3 R3.6): sponsored links only on the screens of the placement map, inside .out-links after their
+// disclosure, new tab, labelled 광고; a guide with one shows AFF_COPY.top first; none at all while PUBLIC_AFF_COUPANG is off.
 const disclosures = disclosureStrings(readFileSync(join(import.meta.dirname, '..', 'src', 'data', 'affiliate.ts'), 'utf8'));
-if (!disclosures) errors.push('src/data/affiliate.ts: AFF_COPY.ad or COUPANG_DISCLOSURE not found');
-else errors.push(...sponsoredProblems(pageHtml, disclosures));
+if (!disclosures) errors.push('src/data/affiliate.ts: AFF_COPY.ad, AFF_COPY.top or COUPANG_DISCLOSURE not found');
+else errors.push(...sponsoredProblems(pageHtml, disclosures, { TOOL_OUT, GUIDE_OUT }));
 errors.push(...coupangProblems(pageHtml, env.PUBLIC_AFF_COUPANG?.trim() === '1'));
 
 // UI fonts (Polish P.12; 600 dropped in G2 ci-green; core + late split in the LCP fix after TOOLS4; 700 retired in

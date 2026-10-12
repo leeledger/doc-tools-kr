@@ -23,8 +23,8 @@ export function stripComments(s) {
     .replace(/\bkeywords:\s*\[[^\]]*\]/g, '')
     // G2 A1: the guide topic names render only on /guide/, in the system font (src/pages/guide/index.astro).
     .replace(/\bTOPICS\s*=\s*\[[^\]]*\]/g, '')
-    // REV2: the 인화·사진관 and affiliate link blocks render in the system font (.print-links; src/data/print-links.ts,
-    // src/data/affiliate.ts).
+    // REV2/REV3: the 인화·사진관 and affiliate link blocks and the guides' affiliate line render in the system font
+    // (.out-links, .guide-page; src/data/print-links.ts, src/data/affiliate.ts: every visible string is in the constants below).
     .replace(/\b(?:PRINT_COPY|AFF_COPY)\s*=\s*\{[^}]*\}/g, '')
     .replace(/\bAFF_LINKS\b[^=\n]*=\s*\[[^\]]*\]/g, '')
     .replace(/\bCOUPANG_DISCLOSURE\s*=\s*'(?:[^'\\\n]|\\.)*'/g, '');

@@ -8,13 +8,17 @@ import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { affBlock, affOn } from '../../data/affiliate';
 import QuickLinks from '../../components/QuickLinks.astro';
 import { particle } from '../../lib/ui/josa';
-import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
+import { HANCOM_NOTICE, HWPX_STANDARD, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
 // The tool styles are inlined, as on the other HWP pages (G2 A0/V0: a second render-blocking stylesheet held back LCP).
 import hwpCss from '../../tools/hwp-shared/hwp.css?inline';
 
 const tool = getTool('hwpx-to-hwp');
+// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+const aff = affBlock('tool', 'hwpx-to-hwp', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const viewer = getTool('hwp-viewer');
 const toPdf = getTool('hwp-to-pdf');
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
@@ -68,6 +72,7 @@ const EXPECT = '줄바꿈이나 표 모양이 조금 다를 수 있어요. 내�
             <p id="hx-done-text"></p>
             <Share name={tool.name} text={sharePreview('/hwpx-to-hwp/', Astro.site!).description} id="hx-share" />
           </div>
+          <OutLinks block={aff} />
         </div>
 
         <p class="visually-hidden" id="hx-status" aria-live="polite" data-live="status"></p>
@@ -103,6 +108,7 @@ const EXPECT = '줄바꿈이나 표 모양이 조금 다를 수 있어요. 내�
   <section class="help" aria-labelledby="help-title">
     <div class="wrap narrow">
       <h2 id="help-title">도움말</h2>
+      <p>{HWPX_STANDARD}</p>
       <h3>HWP 파일을 고르면</h3>
       <p>이미 HWP 파일이면 바꿀 필요가 없습니다. 열어 보려면 <a href="/hwp-viewer/">{viewer.name}</a>, PDF가 필요하면 <a href="/hwp-to-pdf/">{toPdf.name}</a>{particle(toPdf.name, '을/를')} 쓰세요.</p>
       <h3>한글(HWP) 문서 관련 고지</h3>

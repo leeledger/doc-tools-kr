@@ -9,7 +9,7 @@ import { route } from '../../src/lib/hwp/route';
 import { pick, rewriteFonts, scopeIds } from '../../src/lib/hwp/svg-string';
 import { LIVE_TOOLS, getTool } from '../../src/data/tools';
 import { faqJsonLd } from '../../src/data/jsonld';
-import { COPY, ERRORS, HANCOM_NOTICE, TRADEMARK_NOTICE, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from '../../src/tools/hwp-shared/messages';
+import { COPY, ERRORS, HANCOM_NOTICE, HANCOM_NOTICE_PDF, HWPX_STANDARD, TRADEMARK_NOTICE, tooLargeMessage, viewerFirstMessage, viewerOnlyMessage } from '../../src/tools/hwp-shared/messages';
 import { createWatchdog, WATCHDOG_MS } from '../../src/tools/hwp-shared/watchdog';
 import { HWP_CORPUS } from '../helpers/hwp';
 
@@ -81,7 +81,11 @@ describe('svg-string: scopeIds', () => {
 describe('copy', () => {
   it('verbatim notices', () => {
     expect(HANCOM_NOTICE).toBe('본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.');
-    expect(TRADEMARK_NOTICE).toBe('한글, 한컴, HWP, HWPX는 한글과컴퓨터의 등록상표이며, 본 서비스는 한글과컴퓨터와 무관합니다.');
+    // REV3 Decision 10 (report 「HWP 뷰어 한컴 저작권 검토」 L39-42).
+    expect(TRADEMARK_NOTICE).toBe('한글, 한컴, HWP, HWPX는 (주)한컴(옛 한글과컴퓨터)의 상표입니다. 문서딱은 한컴과 제휴·후원·승인 관계가 없습니다.');
+    expect(HANCOM_NOTICE_PDF).toBe('본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.');
+    expect(HWPX_STANDARD).toBe('HWPX는 국가표준 KS X 6101(OWPML)을 따르는 한글 문서 형식입니다.');
+    for (const s of [TRADEMARK_NOTICE, HANCOM_NOTICE_PDF, HWPX_STANDARD]) expect(s).not.toMatch(/공식|정품 인증|한컴 제공/);
   });
 
   it('error copy per code; password verbatim', () => {

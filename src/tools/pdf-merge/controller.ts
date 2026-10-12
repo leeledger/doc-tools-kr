@@ -5,7 +5,7 @@ import type { PdfErrorCode } from '../../lib/pdf/errors';
 import type { MergeReport } from '../../lib/pdf/mergePlus';
 import type { MergeRequest, MergeResponse, WorkerFile } from '../../lib/pdf/merge.worker';
 import { announce, clearAlert } from '../../lib/ui/announce';
-import { startUsage, track, type UsagePhase } from '../../lib/ui/usage';
+import { startUsage, track, trackOut, type UsagePhase } from '../../lib/ui/usage';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
@@ -730,6 +730,8 @@ export function initMergeTool(): void {
   download.addEventListener('click', () => track({ e: 'download', t: 'pdf-merge' }));
 
   startUsage('pdf-merge');
+  // 제휴 링크 (REV3): count presses of the result block's links (link kind only).
+  trackOut(document.getElementById('merge-result'), 'pdf-merge');
   setState('empty');
   sweepIfDue();
 }

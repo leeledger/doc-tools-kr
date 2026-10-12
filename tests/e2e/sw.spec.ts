@@ -11,6 +11,7 @@ test.use({ serviceWorkers: 'allow' });
 
 const LAW = fixturePath('kr_law_form.pdf');
 const FW9 = fixturePath('irs_fw9.pdf');
+const HWP = join(process.cwd(), 'tests', 'corpus', 'hwp', 'law05.hwp');
 
 /** Waits until the SW controls the page; skips with the verbatim reason when this browser cannot register it. */
 async function controlled(page: Page): Promise<void> {
@@ -76,6 +77,33 @@ test('offline: after one merge the page and the merge engine work with the netwo
     expect(fixtureSizes.has(e.size), `${e.url} is not a user file`).toBe(false);
   }
 });
+test('REV3 R3.0: /hwp-to-pdf/ is not precached, but after one online visit it opens and converts offline (runtime cache, like /hwp-viewer/)', async ({ page, context, ownServer, browserName, isMobile }) => {
+  test.skip(browserName === 'webkit' && isMobile, 'mobile-safari runs the same WebKit service worker as the webkit project.');
+  test.setTimeout(240_000);
+  const root = ownServer.copyDist();
+  ownServer.setRoot(root);
+  const precache = JSON.parse(/__PRECACHE__\s*=\s*(\[[^\]]*\])/.exec(readFileSync(join(root, 'sw.js'), 'utf8'))?.[1] ?? 'null') as string[] | null;
+  if (precache) expect(precache).not.toContain('/hwp-to-pdf/');
+  await page.goto('/hwp-to-pdf/');
+  await controlled(page);
+  // The first load ran before the worker controlled the page: one controlled load stores the page and its scripts.
+  await page.reload();
+  const convert = async (): Promise<void> => {
+    await page.setInputFiles('#hw-input', HWP);
+    await expect(page.locator('#hwp-tool')).toHaveAttribute('data-state', 'convert', { timeout: 150_000 });
+    await expect(page.locator('#hw-preview .page').first()).toBeVisible();
+  };
+  await convert();
+  const harnessOffline = browserName !== 'webkit';
+  if (harnessOffline) await context.setOffline(true);
+  else ownServer.setDown(true);
+  await page.reload();
+  await expect(page.locator('h1')).toHaveText('HWP PDF 변환');
+  await convert();
+  if (harnessOffline) await context.setOffline(false);
+  else ownServer.setDown(false);
+});
+
 
 test('update: a waiting worker shows the bar only when the page is not busy; 새로고침 loads the new build', async ({ page, ownServer, browserName, isMobile }) => {
   test.skip(browserName !== 'chromium' || isMobile, 'Update flow runs on chromium (brief Test map).');

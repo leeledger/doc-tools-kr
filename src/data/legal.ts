@@ -14,7 +14,12 @@ export const PRIVACY_GA = '2026년 10월 8일';
 /** 이어서 하기 (CHAIN): a handed-over file waits briefly in this browser. In every build (the feature has no flag). */
 export const PRIVACY_CHAIN = '2026년 10월 11일';
 /** 인화·사진관 링크 (REV2): the usage statistics also count which link of the id-photo result was pressed. Only in a build with PUBLIC_USAGE_STATS=1. */
-export const PRIVACY_OUT = '2026년 10월 12일';
+export const PRIVACY_OUT_ID_PHOTO = '2026년 10월 12일';
+/**
+ * 상품·사진관 링크 (REV3 Decision 7): the count covers every result screen's and guide's link block. Only in a build with
+ * PUBLIC_USAGE_STATS=1. The REV3 deploy date (re-confirmed at the deploy gate).
+ */
+export const PRIVACY_OUT = '2026년 10월 13일';
 /** The newest change in this build: the link counting in a usage-stats build, else 이어서 하기 (every build, newer than every other flagged section). */
 export const PRIVACY_REVISED = __USAGE_STATS__ ? PRIVACY_OUT : PRIVACY_CHAIN;
 export const TERMS_EFFECTIVE = __BG_CLOUD__ ? PRIVACY_CLOUD : '2026년 9월 30일';
@@ -23,6 +28,7 @@ export const LEGAL_UPDATED = '2026-09-30';
 /**
  * The sitemap lastmod of /privacy/ and /terms/: the 배경 지우기 wording (C2-cloud), plainer headings (2026-10-05), then
  * the anonymous usage statistics and visitor-count sections (turned on 2026-10-07), then Google Analytics (with PUBLIC_GA_ID),
- * then 이어서 하기 (CHAIN, every build), then the 인화·사진관 링크 count (REV2, with PUBLIC_USAGE_STATS).
+ * then 이어서 하기 (CHAIN, every build), then the 인화·사진관 링크 count (REV2, with PUBLIC_USAGE_STATS), then every link
+ * block counted (REV3, with PUBLIC_USAGE_STATS; PRIVACY_OUT).
  */
-export const PRIVACY_TERMS_UPDATED = '2026-10-12';
+export const PRIVACY_TERMS_UPDATED = '2026-10-13';

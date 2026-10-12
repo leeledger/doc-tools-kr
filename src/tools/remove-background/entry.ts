@@ -7,7 +7,7 @@ import { sessionStore } from '../../lib/face/guard';
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { sweepIfDue } from '../../lib/ui/handoff-marker';
-import { startUsage, track } from '../../lib/ui/usage';
+import { startUsage, track, trackOut } from '../../lib/ui/usage';
 import { COPY } from './copy';
 
 type Api = { open(file: File): void } | null;
@@ -21,6 +21,8 @@ if (crash && takeCrash(sessionStore())) {
 }
 if (root && drop) {
   startUsage('remove-background');
+  // 제휴 링크 (REV3): count presses of the result block's links (link kind only).
+  trackOut(document.getElementById('bg-result'), 'remove-background');
   let loading: Promise<Api> | null = null;
   const EVENTS = ['pointerdown', 'keydown', 'focusin', 'touchstart', 'change'] as const;
   const start = (): void => void load();

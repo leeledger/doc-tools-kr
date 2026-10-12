@@ -26,7 +26,8 @@ import { DUP_LIMIT, articleText, duplicatePairs, jaccard, shingles } from '../..
 import { CLAIM_FILE_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, claimText, unqualifiedClaims } from '../../scripts/lib/bgcloud.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from '../../scripts/lib/fontcover.mjs';
 import { CORE_PATHS, stripComments, uiCharSets } from '../../scripts/lib/ui-font-chars.mjs';
-import { PRINT_PAGE, coupangProblems, disclosureStrings, sponsoredProblems } from '../../scripts/lib/print-links-check.mjs';
+import { ID_PHOTO_PAGE, coupangProblems, disclosureStrings, placement, sponsoredProblems } from '../../scripts/lib/out-links-check.mjs';
+import { GUIDE_OUT, TOOL_OUT } from '../../scripts/lib/usage.mjs';
 import { PRINT_COPY } from '../../src/data/print-links';
 import { AFF_COPY, COUPANG_DISCLOSURE } from '../../src/data/affiliate';
 
@@ -521,72 +522,108 @@ describe('UI font coverage helpers (scripts/lib/fontcover.mjs)', () => {
   });
 });
 
-describe('check-dist: sponsored links (REV2 H, scripts/lib/print-links-check.mjs)', () => {
+describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-check.mjs)', () => {
   const d = disclosureStrings(readFileSync(join(ROOT, 'src', 'data', 'affiliate.ts'), 'utf8'))!;
+  const maps = { TOOL_OUT, GUIDE_OUT };
+  const full = `${AFF_COPY.ad} ${COUPANG_DISCLOSURE}`;
   const info = '<a href="https://map.naver.com/p/search/x" rel="noopener noreferrer" target="_blank" data-out="photo-studio">가까운 사진관 찾기 (네이버 지도, 새 창)</a>';
-  const print = '<a href="https://example.com/print" rel="sponsored noopener" target="_blank" data-out="cp-x">사진 인화 주문하기 (광고, 새 창)</a>';
+  const print = '<a href="https://example.com/print" rel="sponsored noopener" target="_blank" data-out="cp-paper">사진 인화 주문하기 (광고, 새 창)</a>';
   const coupang = '<a href="https://link.coupang.com/a/abc" rel="sponsored noopener" target="_blank" data-out="cp-printer">포토프린터 (쿠팡, 광고, 새 창)</a>';
-  const block = (inner: string) => `<div class="idp-done"><div class="print-links" id="idp-print-links"><p>${PRINT_COPY.lead}</p>${inner}</div><p>뒤</p></div>`;
-  const ad = (text: string, links: string) => `<div class="print-links-ad"><p class="hint">${text}</p><ul><li>${links}</li></ul></div>`;
-  const check = (html: string, extra: [string, string][] = []) => sponsoredProblems(new Map([[PRINT_PAGE, html], ...extra]), d);
+  const link = (dest: string) => `<a href="https://example.com/${dest}" rel="sponsored noopener" target="_blank" data-out="${dest}">물건 (광고, 새 창)</a>`;
+  /** The id-photo result: the outer .out-links with the info link, the OutLinks group nested in it. */
+  const block = (inner: string) => `<div class="idp-done"><div class="out-links" id="idp-print-links"><p>${PRINT_COPY.lead}</p>${inner}</div><p>뒤</p></div>`;
+  const ad = (text: string, links: string) => `<div class="out-links"><p>${text}</p><p>집에서 인화하려면</p><ul><li>${links}</li></ul></div>`;
+  const check = (html: string, extra: [string, string][] = []) => sponsoredProblems(new Map([[ID_PHOTO_PAGE, html], ...extra]), d, maps);
+  /** A guide page: <head> meta, H1, optional first-part line, an h2, the aside with the block and the tools list. */
+  const guide = (tool: string, { top = true, links = link('cp-tripod'), head = '' } = {}) =>
+    `<html><head><meta name="description" content="설명${head}"></head><body><h1>제목</h1>${top ? `<p class="guide-aff-top">${AFF_COPY.top}</p>` : ''}<h2>본문</h2><aside class="guide-more"><section>${links ? ad(full, links) : ''}</section><section aria-labelledby="guide-tools-title"><h2 id="guide-tools-title">바로 쓰는 도구</h2><ul class="related-list"><li><a href="/${tool}/">도구</a></li></ul></section></aside></body></html>`;
+  const page = (path: string, html: string) => sponsoredProblems(new Map([[path, html]]), d, maps);
 
   it('reads the disclosure strings from src/data/affiliate.ts', () => {
-    expect(d).toEqual({ generic: AFF_COPY.ad, coupang: COUPANG_DISCLOSURE });
+    expect(d).toEqual({ generic: AFF_COPY.ad, top: AFF_COPY.top, coupang: COUPANG_DISCLOSURE });
     expect(disclosureStrings('const x = 1;')).toBeNull();
+    expect(placement('pdf-merge/index.html', '')).toEqual({ kind: 'tool', key: 'pdf-merge' });
+    expect(placement('guide/passport-photo/index.html', guide('id-photo'))).toEqual({ kind: 'guide', key: 'id-photo' });
+    expect(placement('index.html', '')).toBeNull();
+    expect(placement('404.html', '')).toBeNull();
   });
 
-  it('passes: info link only; info + both affiliate links after the full disclosure', () => {
+  it('passes: info link only; info + affiliate links after the full disclosure; a tool page block; a guide with the line and block', () => {
     expect(check(block(`<ul><li>${info}</li></ul>`))).toEqual([]);
-    expect(check(block(`<ul><li>${info}</li></ul>${ad(`${AFF_COPY.ad} ${COUPANG_DISCLOSURE}`, print + coupang)}`))).toEqual([]);
+    expect(check(block(`<ul><li>${info}</li></ul>${ad(full, print + coupang)}`))).toEqual([]);
     expect(check(block(ad(AFF_COPY.ad, print)))).toEqual([]);
     expect(check('<p>no block</p>')).toEqual([]);
+    expect(page('pdf-merge/index.html', `<div class="result">${ad(full, link('cp-mfp'))}</div>`)).toEqual([]);
+    expect(page('jpg-to-pdf/index.html', ad(full, link('cp-mfp') + link('cp-scanner')))).toEqual([]);
+    expect(page('guide/passport-photo/index.html', guide('id-photo'))).toEqual([]);
+    expect(page('guide/hwp-on-phone/index.html', guide('hwp-viewer', { links: link('cp-hancom') }))).toEqual([]);
+    // A guide without a block has nothing to check.
+    expect(page('guide/kakao-photo/index.html', guide('photo-compress', { top: false, links: '' }))).toEqual([]);
   });
 
-  it('(a) a sponsored link on another page fails', () => {
-    expect(check(block(''), [['guide/x/index.html', `<p>${print}</p>`]])).toEqual(['guide/x/index.html: a sponsored link outside /id-photo/']);
+  it('(a) a sponsored link on a No-block page fails: home, 404, offline, legal pages, guide index, hubs, upload-size tools and their guides', () => {
+    for (const p of ['index.html', '404.html', 'offline/index.html', 'privacy/index.html', 'terms/index.html', 'licenses/index.html', 'guide/index.html', 'pdf-compress/index.html', 'photo-compress/index.html', 'image-to-jpg/index.html', 'pdf-to-jpg/index.html', 'pdf-password/index.html']) {
+      expect(page(p, ad(full, link('cp-mfp'))), p).toEqual([`${p}: a sponsored link on a page without a link block`]);
+    }
+    for (const p of ['guide/photo-sizes/index.html', 'guide/upload-limits/index.html']) expect(page(p, `<h1>허브</h1><p>${AFF_COPY.top}</p>${ad(full, link('cp-tripod'))}`), p).toEqual([`${p}: a sponsored link on a page without a link block`]);
+    expect(page('guide/kakao-photo/index.html', guide('photo-compress', { links: link('cp-backdrop') }))).toEqual(['guide/kakao-photo/index.html: a sponsored link on a page without a link block']);
+    expect(page('guide/pdf-compress/index.html', guide('pdf-compress', { links: link('cp-mfp') }))).toEqual(['guide/pdf-compress/index.html: a sponsored link on a page without a link block']);
+    // a dest that is not on this screen's block
+    expect(page('pdf-merge/index.html', ad(full, link('cp-stamp')))).toEqual(['pdf-merge/index.html: the sponsored link "cp-stamp" is not a dest of this page\'s block']);
+    expect(page('guide/passport-photo/index.html', guide('id-photo', { links: link('cp-paper') }))).toEqual(['guide/passport-photo/index.html: the sponsored link "cp-paper" is not a dest of this page\'s block']);
+    // rel is case-insensitive (Review REV2 r2 appendix)
+    expect(page('index.html', `<a href="https://example.com/x" rel="SPONSORED" target="_blank">광고</a>`)).toEqual(['index.html: a sponsored link on a page without a link block']);
   });
 
   it('(b) disclosure missing, after the link, coupang sentence missing, link outside the block, info link under the disclosure', () => {
-    expect(check(block(ad('', print)))).toEqual([`${PRINT_PAGE}: the sponsored link "cp-x" is not preceded by the disclosure`]);
-    expect(check(block(`<ul><li>${print}</li></ul><p>${AFF_COPY.ad}</p>`))).toEqual([`${PRINT_PAGE}: the sponsored link "cp-x" is not preceded by the disclosure`]);
-    expect(check(block(ad(AFF_COPY.ad, coupang)))).toEqual([`${PRINT_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`]);
-    expect(check(`${block(ad(AFF_COPY.ad, ''))}<p>${print}</p>`)).toEqual([`${PRINT_PAGE}: the sponsored link "cp-x" is outside .print-links`]);
-    expect(check(block(ad(AFF_COPY.ad, print + info)))).toEqual([`${PRINT_PAGE}: the link "photo-studio" follows the affiliate disclosure`]);
+    expect(check(block(ad('', print)))).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" is not preceded by the disclosure`]);
+    expect(check(block(`<ul><li>${print}</li></ul><p>${AFF_COPY.ad}</p>`))).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" is not preceded by the disclosure`]);
+    expect(check(block(ad(AFF_COPY.ad, coupang)))).toEqual([`${ID_PHOTO_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`]);
+    expect(check(`${block(ad(AFF_COPY.ad, ''))}<p>${print}</p>`)).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" is outside .out-links`]);
+    expect(check(block(ad(AFF_COPY.ad, print + info)))).toEqual([`${ID_PHOTO_PAGE}: the link "photo-studio" follows the affiliate disclosure`]);
+    // the disclosure must be in the link's own (innermost) block: one in an earlier sibling block does not count
+    expect(page('jpg-to-pdf/index.html', `${ad(full, '')}<div class="out-links"><ul><li>${link('cp-mfp')}</li></ul></div>`)).toEqual(['jpg-to-pdf/index.html: the sponsored link "cp-mfp" is not preceded by the disclosure']);
   });
 
   it('(c) a sponsored link without a new tab or without 광고 in its label fails', () => {
-    expect(check(block(ad(AFF_COPY.ad, print.replace(' target="_blank"', ''))))).toEqual([`${PRINT_PAGE}: the sponsored link "cp-x" does not open a new tab`]);
-    expect(check(block(ad(AFF_COPY.ad, print.replace('광고, ', ''))))).toEqual([`${PRINT_PAGE}: the label of the sponsored link "cp-x" does not say 광고`]);
+    expect(check(block(ad(AFF_COPY.ad, print.replace(' target="_blank"', ''))))).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" does not open a new tab`]);
+    expect(check(block(ad(AFF_COPY.ad, print.replace('광고, ', ''))))).toEqual([`${ID_PHOTO_PAGE}: the label of the sponsored link "cp-paper" does not say 광고`]);
   });
 
   it('(c) Review R2: a Coupang link without sponsored fails (and gets every sponsored check); "noopener sponsored" counts as sponsored', () => {
-    const full = `${AFF_COPY.ad} ${COUPANG_DISCLOSURE}`;
-    // dropped rel=sponsored, before the disclosure: not passed as an info link
     const bare = coupang.replace('rel="sponsored noopener"', 'rel="noopener noreferrer"').replace('광고, ', '');
     expect(check(block(`<ul><li>${bare}</li></ul>${ad(full, '')}`))).toEqual([
-      `${PRINT_PAGE}: the Coupang link "cp-printer" is not rel=sponsored`,
-      `${PRINT_PAGE}: the sponsored link "cp-printer" is not preceded by the disclosure`,
-      `${PRINT_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`,
-      `${PRINT_PAGE}: the label of the sponsored link "cp-printer" does not say 광고`,
+      `${ID_PHOTO_PAGE}: the Coupang link "cp-printer" is not rel=sponsored`,
+      `${ID_PHOTO_PAGE}: the sponsored link "cp-printer" is not preceded by the disclosure`,
+      `${ID_PHOTO_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`,
+      `${ID_PHOTO_PAGE}: the label of the sponsored link "cp-printer" does not say 광고`,
     ]);
-    // sponsored not first in rel: still a sponsored link with all its checks
     const late = coupang.replace('rel="sponsored noopener"', 'rel="noopener sponsored"');
     expect(check(block(ad(full, late)))).toEqual([]);
     expect(check(block(`<ul><li>${late}</li></ul>${ad(full, '')}`))).toEqual([
-      `${PRINT_PAGE}: the sponsored link "cp-printer" is not preceded by the disclosure`,
-      `${PRINT_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`,
+      `${ID_PHOTO_PAGE}: the sponsored link "cp-printer" is not preceded by the disclosure`,
+      `${ID_PHOTO_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`,
     ]);
-    expect(check(block(''), [['guide/x/index.html', `<p>${late}</p>`]])).toEqual(['guide/x/index.html: a sponsored link outside /id-photo/']);
+    expect(check(block(''), [['index.html', `<p>${late}</p>`]])).toEqual(['index.html: a sponsored link on a page without a link block']);
   });
 
-  it('PUBLIC_AFF_COUPANG: Coupang links on /id-photo/ exactly when on, nowhere else, never embedded (script src or inline, iframe, img, link, source, object, embed)', () => {
-    const on = block(ad(`${AFF_COPY.ad} ${COUPANG_DISCLOSURE}`, coupang));
+  it('(d) a guide with a sponsored link needs AFF_COPY.top before its first h2, never in <head>', () => {
+    expect(page('guide/passport-photo/index.html', guide('id-photo', { top: false }))).toEqual(['guide/passport-photo/index.html: a sponsored link without the first-part line (AFF_COPY.top) before the first h2']);
+    const late = guide('id-photo', { top: false }).replace('<h2>본문</h2>', `<h2>본문</h2><p>${AFF_COPY.top}</p>`);
+    expect(page('guide/passport-photo/index.html', late)).toEqual(['guide/passport-photo/index.html: a sponsored link without the first-part line (AFF_COPY.top) before the first h2']);
+    expect(page('guide/passport-photo/index.html', guide('id-photo', { head: AFF_COPY.top }))).toEqual(['guide/passport-photo/index.html: the first-part line (AFF_COPY.top) in <head>']);
+  });
+
+  it('(e) PUBLIC_AFF_COUPANG: off, no Coupang or sponsored link anywhere; on, /id-photo/ keeps its three; never embedded', () => {
+    const three = block(ad(full, coupang + coupang.replace('/abc', '/def') + coupang.replace('/abc', '/ghi')));
     const off = block(`<ul><li>${info}</li></ul>`);
-    expect(coupangProblems(new Map([[PRINT_PAGE, on]]), true)).toEqual([]);
-    expect(coupangProblems(new Map([[PRINT_PAGE, off]]), false)).toEqual([]);
-    expect(coupangProblems(new Map([[PRINT_PAGE, off]]), true)).toEqual([`${PRINT_PAGE}: no Coupang link although PUBLIC_AFF_COUPANG is on`]);
-    expect(coupangProblems(new Map([[PRINT_PAGE, on]]), false)).toEqual([`${PRINT_PAGE}: a Coupang link while PUBLIC_AFF_COUPANG is off`]);
-    expect(coupangProblems(new Map([[PRINT_PAGE, on], ['stamp-signature/index.html', `<p>${coupang.replace(' rel="sponsored noopener"', '')}</p>`]]), true)).toEqual(['stamp-signature/index.html: a Coupang link outside /id-photo/']);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three]]), true)).toEqual([]);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, off]]), false)).toEqual([]);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, off]]), true)).toEqual([`${ID_PHOTO_PAGE}: 0 Coupang link(s) although PUBLIC_AFF_COUPANG is on (expected 3)`]);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, block(ad(full, coupang))]]), true)).toEqual([`${ID_PHOTO_PAGE}: 1 Coupang link(s) although PUBLIC_AFF_COUPANG is on (expected 3)`]);
+    expect(coupangProblems(new Map([['index.html', '<p>홈</p>']]), true)).toEqual([`${ID_PHOTO_PAGE}: missing although PUBLIC_AFF_COUPANG is on`]);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three]]), false)).toEqual([`${ID_PHOTO_PAGE}: a Coupang link while PUBLIC_AFF_COUPANG is off`, `${ID_PHOTO_PAGE}: a sponsored link while PUBLIC_AFF_COUPANG is off`]);
+    expect(coupangProblems(new Map([['pdf-merge/index.html', ad(full, link('cp-mfp'))]]), false)).toEqual(['pdf-merge/index.html: a sponsored link while PUBLIC_AFF_COUPANG is off']);
     for (const tag of [
       '<img src="https://ads-partners.coupang.com/banner.png" alt="">',
       '<script src="https://ads-partners.coupang.com/g.js"></script>',
@@ -735,21 +772,53 @@ describe('built output', () => {
     expect(flipped.stderr).toContain(on ? 'contains sendBeacon while PUBLIC_USAGE_STATS is off' : 'no script carries sendBeacon and /api/usage although PUBLIC_USAGE_STATS is on');
   });
 
-  it('REV2 privacy: the link-count sentence and PRIVACY_OUT only in a usage-stats build', () => {
+  it('REV2/REV3 privacy: the link-count sentence, both change-log lines and PRIVACY_OUT only in a usage-stats build', () => {
     need();
     const html = readFileSync(join(DIST, 'privacy', 'index.html'), 'utf8');
     const on = usageBuilt();
-    const date = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync(join(ROOT, 'src', 'data', 'legal.ts'), 'utf8'))![1]!;
-    expect(html.includes('증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크를 눌렀는지(링크 종류만)')).toBe(on);
-    expect(html.includes(`${date}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`)).toBe(on);
+    const legal = readFileSync(join(ROOT, 'src', 'data', 'legal.ts'), 'utf8');
+    const date = /PRIVACY_OUT = '([^']+)'/.exec(legal)![1]!;
+    const rev2 = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(legal)![1]!;
+    expect(html.includes('도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)')).toBe(on);
+    expect(html.includes('증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크를 눌렀는지')).toBe(false);
+    expect(html.includes(`${date}: 익명 사용 통계에 도구 결과 화면과 안내 글의 상품 링크 누름을 더함`)).toBe(on);
+    expect(html.includes(`${rev2}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`)).toBe(on);
     expect(html.includes(`시행일: ${date}`)).toBe(on);
+  });
+
+  it('REV3 blocks in the build: flag off, none anywhere; flag on, inside the result containers and on the id-photo guides with the first-part line', () => {
+    need();
+    const aff = process.env.PUBLIC_AFF_COUPANG?.trim() === '1';
+    const read = (p: string) => readFileSync(join(DIST, p), 'utf8');
+    for (const p of ['pdf-merge/index.html', 'pdf-split/index.html', 'jpg-to-pdf/index.html', 'pdf-sign/index.html', 'stamp-signature/index.html', 'hwp-to-pdf/index.html', 'hwp-viewer/index.html', 'hwpx-to-hwp/index.html', 'guide/passport-photo/index.html', 'guide/hwp-on-phone/index.html']) {
+      expect(read(p).includes('rel="sponsored'), p).toBe(aff);
+    }
+    expect(read('guide/passport-photo/index.html').includes(AFF_COPY.top)).toBe(aff);
+    for (const p of ['index.html', '404.html', 'pdf-compress/index.html', 'photo-compress/index.html', 'guide/index.html', 'guide/kakao-photo/index.html', 'guide/photo-sizes/index.html']) {
+      expect(read(p), p).not.toContain('rel="sponsored');
+      expect(read(p), p).not.toContain(AFF_COPY.top);
+    }
+    if (!aff) return;
+    // pdf-merge: inside #merge-result, after the download row, before 이어서 하기.
+    const merge = read('pdf-merge/index.html');
+    const result = merge.indexOf('id="merge-result"');
+    const out = merge.indexOf('<div class="out-links">');
+    expect(result).toBeGreaterThan(0);
+    expect(out).toBeGreaterThan(merge.indexOf('id="merge-download"'));
+    expect(out).toBeLessThan(merge.indexOf('id="merge-next"'));
+    expect(merge.slice(out)).toMatch(/^<div class="out-links"><p>광고: [^<]+<\/p><p>종이로 내야 하면<\/p><ul><li><a href="https:\/\/link\.coupang\.com\/a\/\w+" rel="sponsored noopener" target="_blank" data-out="cp-mfp">/);
+    // passport-photo: the line right after the H1, the block first in the aside, headed 도움이 되는 물건 (광고).
+    const pp = read('guide/passport-photo/index.html');
+    expect(pp).toMatch(new RegExp(`<h1 id="guide-title"[^>]*>[^<]+</h1>\\s*<p class="guide-aff-top"[^>]*>${AFF_COPY.top}</p>`));
+    expect(pp).toMatch(/<aside class="guide-more[^"]*"[^>]*>\s*<section aria-labelledby="guide-out-title"[^>]*>\s*<div class="out-links" data-guide="passport-photo" data-tool="id-photo">\s*<h2 id="guide-out-title"[^>]*>도움이 되는 물건 \(광고\)<\/h2>/);
+    expect(pp.slice(0, pp.indexOf('<body'))).not.toContain(AFF_COPY.top);
   });
 
   it('REV2 id-photo: the info link block with exact href/rel/target; sponsored links only when an affiliate env is set', () => {
     need();
     const html = readFileSync(join(DIST, 'id-photo', 'index.html'), 'utf8');
     if (process.env.PUBLIC_PRINT_INFO?.trim() !== '0') {
-      expect(html).toMatch(/<div class="print-links" id="idp-print-links">/);
+      expect(html).toMatch(/<div class="out-links" id="idp-print-links">/);
       expect(html).toContain('<a href="https://map.naver.com/p/search/%EC%82%AC%EC%A7%84%EA%B4%80" rel="noopener noreferrer" target="_blank" data-out="photo-studio">가까운 사진관 찾기 (네이버 지도, 새 창)</a>');
     }
     const aff = process.env.PUBLIC_AFF_COUPANG?.trim() === '1';

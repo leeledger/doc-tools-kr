@@ -9,7 +9,7 @@
 // of them would make rolldown build a namespace object with its runtime helper, which lives in the export chunk.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
-import { startUsage, track } from '../../lib/ui/usage';
+import { startUsage, track, trackOut } from '../../lib/ui/usage';
 
 /** What happened before the controller ran. */
 export interface BootStart {
@@ -62,7 +62,11 @@ function whenIdle(fn: () => void): void {
 export function bootHwpTool(rootId: string, load: () => Promise<BootInit>, tool?: 'hwp-to-pdf' | 'hwp-viewer' | 'hwpx-to-hwp'): void {
   const root = document.getElementById(rootId);
   if (!root) return;
-  if (tool) startUsage(tool);
+  if (tool) {
+    startUsage(tool);
+    // 제휴 링크 (REV3): count presses of the result block's links (link kind only).
+    trackOut(root, tool);
+  }
   const start: BootStart = {};
   let loading: Promise<void> | null = null;
 

@@ -2886,3 +2886,40 @@ Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP").
 
 **REV2 — deploy gate (2026-10-12)**
 - Richard r1: 1 Must Fix (sponsored detection) + Should Fix; all applied in round 2 with tests. Orchestrator committed after round 2 (owner asked for speed); Richard re-check of round 2 runs post-commit, fix-forward if needed. CI cloud build now builds with PUBLIC_AFF_COUPANG=1 (precache 448.7/450 KB).
+
+**GROWTH3 — brief written (2026-10-12, Arch)**: handoff/ARCHITECT-BRIEF-GROWTH3.md. Owner: "방문자 늘리는 작업도 같이 진행시켜". Separate worktree `growth3` off origin/main; strict file whitelist (no REV2/REV3 files).
+- Count correction: 37 published guides + 8 drafts (not 45 published) + 2 hubs. 13 new guides needed for about 50 articles (AdSense condition); floor 11; no padding.
+- Decisions: tool pages byte-identical (pin current 관련 안내 in tool-guide-order.ts; 0 font / 0 precache); quality bar ≥ 3 official quotes incl. one non-size fact, DUP 0.45; G1 snippet edits on 8 pages with GSC impressions (before/after table); G4 GSC-only 11-10 indicators (cluster, guide vs tool CTR, brand, page×query) in growth.mjs via new indicators.mjs; blog team handoff file. Deploys D1 (G1+G4) 10-15, D2 (≥ 6 guides) 10-22, D3 11-03.
+- Known Gaps: visa (owner declined), 대학원 원서 사진 (no single source), 8 login-blocked drafts.
+
+**REV3 — build (2026-10-13, Bob): DONE_WITH_CONCERNS** (details: handoff/REVIEW-REQUEST.md "REV3"; nothing committed)
+- Steps:
+  - R3.0: /hwp-to-pdf/ moved to NOT_PRECACHED and RUNTIME_PAGES; −37.5 KB on the cloud build. CI already built flag-on.
+  - R3.1: `.print-links` renamed to `.out-links`, plus OutLinks.astro. The id-photo HTML diff is the class name only.
+  - R3.2: affiliate.ts gets AFF_LINKS (cp-mfp, cp-scanner, cp-tripod from the orchestrator addendum), TOOL_AFF/GUIDE_AFF, the leads and affBlock.
+  - R3.3: blocks on 9 more result screens, plus trackOut.
+  - R3.4: guide top line, aside block and GuideOutTracker.
+  - R3.5: TOOL_OUT/GUIDE_OUT, validate, the outs SQL (tool, guide), admin "상품·사진관 링크" (자리 / 링크 / 누른 횟수 / 저장 성공 대비).
+  - R3.6: out-links-check.mjs, rules (a)-(e), with (a) as an allowlist.
+  - R3.7: privacy (PRIVACY_OUT 2026-10-13, to re-confirm at the gate).
+  - R3.8: HWP trademark, product-licence and KS X 6101 lines in src/data/hwp-notice.ts (core font scope).
+  - R3.9: OPS-RUNBOOK §10, REVENUE-MODEL §1, COPY.md.
+- Gates:
+  - Precache: cloud flag-on 412.5/450 KB (37.5 KB headroom; HEAD 448.7). Default 404.6 (HEAD 441.4).
+  - Core preload: +0.2 KB, from 옛 and 승 in TRADEMARK_NOTICE. The links add 0.
+  - vitest 1,415/1,415. astro check 0. check-dist OK on default, cloud and autoframe.
+  - e2e: cloud usage ×5 83 passed. Default site/sw/growth/hwp×3 ×5 all passed after retries (3 flaky). id-photo ×5 168 passed.
+  - LHCI flag-on: guide LCP about 1.67 s, tools ≤ 1.82 s, CLS ≤ 0.0003.
+- Key decisions:
+  - (1) The guide counter is the dependency-free src/lib/ui/guide-out.ts, unit-tested equal to buildPayload. trackOut would break the 4 KB guide JS budget (8.7 KB static, 355 KB via import()). Arch ruling requested.
+  - (2) Astro emits the GuideOutTracker chunk in every build. It is 0 bytes when stats are off and referenced by no page; script-tag counts equal HEAD.
+  - (3) The minifier drops `/*! */` legal comments; the notice stays in the source and on /licenses/.
+  - (4) The id-photo block keeps its REV2 position after 이어서 하기.
+- Known Gaps:
+  - e2e default ports 4173/4183 collide across worktrees (`reuseExistingServer`). A stale server answered the first cloud run, so use E2E_PORT/E2E_CLOUD_PORT when two builders run e2e.
+  - postbuild "plain language" takes 60-95 s locally (the HEAD dist too), over the 60 s timeout.
+  - The GA-build privacy section uses 「브라우저」 (pre-existing; not in the CI checks build).
+  - check:quotes not run: no guide claim changed.
+
+**REV3 — deploy gate (2026-10-13)**
+- Richard: clear (0 Must Fix). Orchestrator: aligned the HWP FAQ answer (tools.ts:703) with the new non-affiliation wording (existing glyphs only); id-photo block stays after 이어서 하기; hwp-viewer block above the document accepted for now. Committed as ONE commit (deviation from the R3.0/R3.1 split: sw.spec.ts hunks are interleaved; revert granularity accepted). Precache cloud flag-on 412.5/450 KB.

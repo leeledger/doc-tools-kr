@@ -4,7 +4,9 @@
 // exactly one allowed request, POST /api/usage (no query); the default (flag-off) projects keep the strict rule, which
 // is the "off sends nothing" regression test.
 import { readFileSync } from 'node:fs';
+
 import { join } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
 import type { Locator, Page, Request } from '@playwright/test';
 import { validate } from '../../scripts/lib/usage.mjs';
 import { expect, gotoReady, test } from './no-upload';
@@ -19,6 +21,7 @@ const PORTRAIT_SIZE = String(readFileSync(PORTRAIT).length);
 /** legal.ts reads build-time constants, so the date is read from its source here. */
 const PRIVACY_USAGE = /PRIVACY_USAGE = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_OUT = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_OUT_ID_PHOTO = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'w']);
 
 interface Beacon {
@@ -322,7 +325,7 @@ test('쿠팡 제휴 링크 (REV2 round 2; this build has PUBLIC_AFF_COUPANG=1 li
   await page.locator('#idp-confirm').check();
   await page.locator('#idp-save').click();
   await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
-  const group = page.locator('#idp-print-links .print-links-ad');
+  const group = page.locator('#idp-print-links .out-links');
   await expect(group).toBeVisible();
   // The disclosure is the group's first element, at body size and colour (not the muted hint style).
   const disclosure = group.locator('> p').first();
@@ -387,12 +390,137 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   await expect(main).toContainText('보내지 않는 것: 파일 이름, 크기, 내용, IP 주소, 쿠키, 나를 알아볼 수 있는 값.');
   await expect(main).toContainText(`${PRIVACY_USAGE}: 익명 사용 통계를 더함`);
   await expect(main).toContainText('이어서 하기(보낸 도구·받을 도구 이름)');
-  await expect(main).toContainText('증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크를 눌렀는지(링크 종류만)');
-  await expect(main).toContainText(`${PRIVACY_OUT}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`);
+  await expect(main).toContainText('도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)');
+  await expect(main).toContainText(`${PRIVACY_OUT}: 익명 사용 통계에 도구 결과 화면과 안내 글의 상품 링크 누름을 더함`);
+  await expect(main).toContainText(`${PRIVACY_OUT_ID_PHOTO}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`);
   await expect(main).toContainText(`시행일: ${PRIVACY_OUT}`);
   // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence wins then (ga.cloud.spec.ts
-  // checks it); without it, the cookieless sentence. The date is the link count's (REV2) in both.
+  // checks it); without it, the cookieless sentence. The date is the link count's (REV3) in both.
   if ((await page.locator('#ga').count()) === 0) {
     await expect(main).toContainText('쿠키도 쓰지 않아요.');
+  }
+});
+
+// ---------- REV3: link blocks on result screens and guides (this build has PUBLIC_AFF_COUPANG=1 like production) ----------
+
+const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+const DISCLOSURE = '광고: 아래 링크로 주문하면 문서딱이 수수료를 받을 수 있어요. 이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
+const COUPANG_HOST = /^https:\/\/link\.coupang\.com\//;
+
+/** Stubs link.coupang.com (no test reaches Coupang). */
+const stubCoupang = (page: Page) => page.context().route(COUPANG_HOST, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' }));
+
+/** Clicks `link`, checks the popup opened its href (the stub), and takes the popup's own GETs of exactly that URL off the no-upload log. */
+async function openPopup(page: Page, link: Locator, network: { requests: Request[] }): Promise<void> {
+  const href = (await link.getAttribute('href'))!;
+  const [popup] = await Promise.all([page.waitForEvent('popup'), link.click()]);
+  await popup.waitForLoadState();
+  expect(popup.url()).toBe(href);
+  await popup.close();
+  const external = network.requests.filter((r) => COUPANG_HOST.test(r.url()));
+  expect(external.length).toBeGreaterThan(0);
+  for (const r of external) {
+    expect([r.method(), r.url(), r.postDataBuffer()]).toEqual(['GET', href, null]);
+    network.requests.splice(network.requests.indexOf(r), 1);
+  }
+}
+
+/** The block's shape: the disclosure first, then the lead line, then sponsored new-tab links named 광고. */
+async function expectBlock(block: Locator, lead: string, dests: string[]): Promise<void> {
+  await expect(block.locator('> p').first()).toHaveText(DISCLOSURE);
+  await expect(block.locator('> p').nth(1)).toHaveText(lead);
+  const links = block.locator('a');
+  expect(await links.evaluateAll((as) => as.map((a) => a.getAttribute('data-out')))).toEqual(dests);
+  for (const a of await links.all()) {
+    await expect(a).toHaveAttribute('rel', 'sponsored noopener');
+    await expect(a).toHaveAttribute('target', '_blank');
+    await expect(a).toHaveAttribute('href', COUPANG_HOST);
+    await expect(a).toContainText('광고');
+  }
+  // The system font (the copy is not in the UI font subset).
+  expect(await block.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^-apple-system/);
+}
+
+test('REV3 PDF 합치기: the block shows only with a result, inside it before 이어서 하기; a click opens a new tab and sends out (t=pdf-merge, v=cp-mfp); axe', async ({ page, network }) => {
+  const beacons = await record(page);
+  await stubCoupang(page);
+  await gotoReady(page, '/pdf-merge/');
+  const block = page.locator('#merge-result .out-links');
+  await expect(block).toHaveCount(1);
+  await expect(block).toBeHidden();
+  await page.setInputFiles('#merge-input', [fixturePath('kr_law_form.pdf'), fixturePath('irs_fw9.pdf')]);
+  await expect(page.locator('#merge-list .info').nth(1)).toContainText('쪽');
+  await page.locator('#merge-run').click();
+  await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
+  await expect(block).toBeVisible();
+  await expectBlock(block, '종이로 내야 하면', ['cp-mfp']);
+  expect(await page.evaluate(() => {
+    const b = document.querySelector('#merge-result .out-links')!;
+    return Boolean(document.getElementById('merge-download')!.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) && Boolean(b.compareDocumentPosition(document.getElementById('merge-next')!) & Node.DOCUMENT_POSITION_FOLLOWING);
+  })).toBe(true);
+  const axe = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+  expect(axe.violations.map((v) => v.id)).toEqual([]);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toContain('success');
+  await openPopup(page, block.locator('a').first(), network);
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'out').length).toBe(1);
+  expectClean(beacons);
+  const out = beacons.find((b) => b.ev.e === 'out')!;
+  expect(out.ev).toEqual({ e: 'out', t: 'pdf-merge', o: 'out', v: 'cp-mfp', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
+  expect(out.body).not.toMatch(/https?:|coupang|hM4/i);
+});
+
+test('REV3 PDF 서명·도장 넣기: a click on the result block sends exactly { e: out, t: pdf-sign, o: out, v: cp-stamp } with no URL', async ({ page, network }) => {
+  const beacons = await record(page);
+  await stubCoupang(page);
+  await gotoReady(page, '/pdf-sign/');
+  await page.setInputFiles('#sg-input', fixturePath('gen_links_outline.pdf'));
+  await expect(page.locator('#sg-tool')).toHaveAttribute('data-state', 'ready');
+  await page.setInputFiles('#sg-image-input', PORTRAIT);
+  await expect(page.locator('.sign-box')).toHaveCount(1);
+  await page.locator('#sg-run').click();
+  await expect(page.locator('#sg-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  const block = page.locator('#sg-result .out-links');
+  await expect(block).toBeVisible();
+  await expectBlock(block, '실물 도장이 필요할 때', ['cp-stamp']);
+  await openPopup(page, block.locator('a'), network);
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'out').length).toBe(1);
+  expectClean(beacons);
+  const out = beacons.find((b) => b.ev.e === 'out')!;
+  expect(out.ev).toEqual({ e: 'out', t: 'pdf-sign', o: 'out', v: 'cp-stamp', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
+  expect(out.body).not.toMatch(/https?:|coupang|hM1/i);
+});
+
+test('REV3 guide (passport-photo): the first-part line under the H1, the block first in the aside; a click sends one out with g and via=guide; axe', async ({ page, network }) => {
+  const beacons = await record(page);
+  await stubCoupang(page);
+  await gotoReady(page, '/guide/passport-photo/');
+  const top = page.locator('h1 + p.guide-aff-top');
+  await expect(top).toHaveText('이 글에는 쿠팡 파트너스 광고 링크가 있어요. 링크로 사면 문서딱이 수수료를 받을 수 있어요.');
+  // Small muted text, below the H1 (never the LCP candidate in size).
+  const size = (sel: string) => page.locator(sel).first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  expect(await size('p.guide-aff-top')).toBeLessThan(await size('.guide-answer'));
+  for (const sel of ['meta[name="description"]', 'meta[property="og:description"]']) await expect(page.locator(sel)).not.toHaveAttribute('content', /쿠팡|광고 링크/);
+  expect((await page.locator('script[type="application/ld+json"]').allTextContents()).join('')).not.toMatch(/쿠팡|광고 링크/);
+  const first = page.locator('aside.guide-more > section').first();
+  await expect(first.locator('h2')).toHaveText('도움이 되는 물건 (광고)');
+  const block = first.locator('.out-links');
+  await expect(block).toHaveAttribute('data-guide', 'passport-photo');
+  await expectBlock(block, '집에서 직접 찍고 뽑으려면', ['cp-tripod', 'cp-backdrop', 'cp-printer']);
+  const axe = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+  expect(axe.violations.map((v) => v.id)).toEqual([]);
+  expect(beacons).toEqual([]);
+  await openPopup(page, block.locator('a[data-out="cp-backdrop"]'), network);
+  await expect.poll(() => beacons.length).toBe(1);
+  expectClean(beacons);
+  expect(beacons[0]!.ev).toEqual({ e: 'out', t: 'id-photo', o: 'out', v: 'cp-backdrop', g: 'passport-photo', via: 'guide', d: expect.any(String), b: expect.any(String), w: 1 });
+  expect(beacons[0]!.body).not.toMatch(/https?:|coupang|hM1/i);
+});
+
+test('REV3 No-block screens: no sponsored link, no first-part line on pdf-compress, photo-compress, a size guide, the guide index, the home page and 404', async ({ page }) => {
+  for (const path of ['/pdf-compress/', '/photo-compress/', '/guide/kakao-photo/', '/guide/', '/', '/does-not-exist/']) {
+    await page.goto(path);
+    await expect(page.locator('a[rel~="sponsored"]'), path).toHaveCount(0);
+    await expect(page.locator('a[href^="https://link.coupang.com/"]'), path).toHaveCount(0);
+    await expect(page.locator('.guide-aff-top'), path).toHaveCount(0);
   }
 });

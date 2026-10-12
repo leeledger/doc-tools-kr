@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import licenses from '../../generated/licenses.json';
 import { SITE } from '../../data/site';
 import { josa } from '../../lib/ui/josa';
-import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
+import { HANCOM_NOTICE, HANCOM_NOTICE_PDF, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
 
 interface LicenseEntry {
   name: string;
@@ -26,6 +26,7 @@ const list = licenses as LicenseEntry[];
       <section aria-labelledby="hwp-notice-title">
         <h2 id="hwp-notice-title">한글(HWP) 문서 관련 고지</h2>
         <p>{HANCOM_NOTICE}</p>
+        <p>{HANCOM_NOTICE_PDF}</p>
         <p>{TRADEMARK_NOTICE}</p>
       </section>
       <p class="meta-line">{josa(SITE.name, '은/는')} 아래 오픈소스 소프트웨어와 글꼴을 이 사이트에서 직접 제공해 사용합니다. 각 라이선스 전문은 항목을 펼쳐 볼 수 있습니다.</p>

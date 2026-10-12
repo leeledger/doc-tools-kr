@@ -13,8 +13,9 @@
 //   br  browser     fail only, family and major version ("chrome 131")
 //   o/v setting     start: a key of SETTINGS and one of its values (exact numbers are bucketed client-side)
 //                   next (CHAIN 이어서 하기, required): o = "next", v = the tool the result was handed to (one of TOOLS)
-//                   out (REV2 인화·사진관 링크, required): t = "id-photo", o = "out", v = one of OUT_DESTS (never the href)
-//   g   guide slug  arrive only
+//                   out (REV2/REV3 링크 누름, required): o = "out", v = a dest of TOOL_OUT[t] (a result screen) or, with g,
+//                   of GUIDE_OUT[t] (a guide; t = its tools[0]); never the href
+//   g   guide slug  arrive, and out from a guide
 //   dl  deep link   arrive only, "0" | "1"
 //   via             every event, guide | direct
 //   d   device      mobile | tablet | desktop
@@ -78,16 +79,44 @@ export const DATASET_RE = /^[a-z0-9_]{1,64}$/;
 export const BLOB_KEYS = ['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b'];
 const KEYS = new Set([...BLOB_KEYS, 'w']);
 /** Keys allowed on the listed event types only. */
-const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'next', 'out'], v: ['start', 'next', 'out'], g: ['arrive'], dl: ['arrive'] };
+const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'next', 'out'], v: ['start', 'next', 'out'], g: ['arrive', 'out'], dl: ['arrive'] };
 /** The o of a next event (its v is a tool). */
 export const NEXT_KEY = 'next';
 /** The o of an out event (its v is one of OUT_DESTS). */
 export const OUT_KEY = 'out';
 /**
- * The links of the id-photo result block (src/data/print-links.ts, src/data/affiliate.ts): 사진관 찾기, then the Coupang
- * Partners links (광고) of the id-photo placement. A placement that is not rendered yet has no dest here.
+ * The link blocks (brief handoff/ARCHITECT-BRIEF-REV3.md Decision 6): copies of TOOL_AFF and GUIDE_AFF in
+ * src/data/affiliate.ts (tests/unit/affiliate.test.ts keeps them equal), plus 사진관 찾기 (src/data/print-links.ts) on the
+ * id-photo result. An out from a result screen must name a dest of TOOL_OUT[t], one from a guide (with g) of GUIDE_OUT[t].
  */
-export const OUT_DESTS = ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop'];
+export const TOOL_OUT = {
+  'id-photo': ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop'],
+  'remove-background': ['cp-backdrop'],
+  'stamp-signature': ['cp-stamp'],
+  'pdf-sign': ['cp-stamp'],
+  'hwp-viewer': ['cp-hancom'],
+  'hwp-to-pdf': ['cp-hancom'],
+  'hwpx-to-hwp': ['cp-hancom'],
+  'pdf-merge': ['cp-mfp'],
+  'pdf-split': ['cp-mfp'],
+  'jpg-to-pdf': ['cp-mfp', 'cp-scanner'],
+};
+export const GUIDE_OUT = {
+  'id-photo': ['cp-tripod', 'cp-backdrop', 'cp-printer'],
+  'hwp-viewer': ['cp-hancom'],
+  'hwp-to-pdf': ['cp-hancom'],
+  'hwpx-to-hwp': ['cp-hancom'],
+  'stamp-signature': ['cp-stamp'],
+  'pdf-sign': ['cp-stamp'],
+  'pdf-merge': ['cp-mfp'],
+  'pdf-split': ['cp-mfp'],
+  'jpg-to-pdf': ['cp-mfp', 'cp-scanner'],
+  'remove-background': ['cp-backdrop'],
+};
+/** The dests of `tool` in TOOL_OUT or GUIDE_OUT ([] for anything else, prototype keys included). */
+const outDests = (map, tool) => (typeof tool === 'string' && Object.hasOwn(map, tool) ? map[tool] : []);
+/** Every link kind, in admin order. */
+export const OUT_DESTS = ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'cp-stamp', 'cp-hancom', 'cp-mfp', 'cp-scanner', 'cp-tripod'];
 
 /** PUBLIC_USAGE_STATS: on only for "1" (after trimming). */
 export function usageOn(value) {
@@ -178,7 +207,7 @@ export function validate(text) {
   if (o.e === 'next') {
     if (o.o !== NEXT_KEY || !TOOLS.includes(o.v)) return null;
   } else if (o.e === 'out') {
-    if (o.t !== 'id-photo' || o.o !== OUT_KEY || !OUT_DESTS.includes(o.v)) return null;
+    if (o.o !== OUT_KEY || !outDests(Object.hasOwn(o, 'g') ? GUIDE_OUT : TOOL_OUT, o.t).includes(o.v)) return null;
   } else if (Object.hasOwn(o, 'o') && (o.o === NEXT_KEY || o.o === OUT_KEY || !SETTINGS[o.o].includes(o.v))) return null;
   const ev = { w: o.w };
   for (const k of BLOB_KEYS) ev[k] = Object.hasOwn(o, k) ? o[k] : '';
@@ -194,7 +223,7 @@ export function toDataPoint(ev) {
 
 const N = 'SUM(_sample_interval * double1)';
 
-/** The six queries of the admin page and the weekly report (chains: 이어서 하기, blob2 sender -> blob6 receiver; outs: 인화·사진관 링크, blob6 dest). Throws on a period or dataset outside the whitelist. */
+/** The six queries of the admin page and the weekly report (chains: 이어서 하기, blob2 sender -> blob6 receiver; outs: 링크 누름, blob2 tool, blob7 guide ('' on a result screen), blob6 dest). Throws on a period or dataset outside the whitelist. */
 export function usageSql(dataset, days) {
   if (!DATASET_RE.test(dataset ?? '')) throw new Error('usage: invalid dataset name');
   if (!PERIODS.includes(days)) throw new Error('usage: invalid period');
@@ -205,7 +234,7 @@ export function usageSql(dataset, days) {
     settings: `SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'start' AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
     guides: `SELECT blob7 AS guide, blob2 AS tool, blob8 AS dl, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'arrive' GROUP BY blob7, blob2, blob8 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
     chains: `SELECT blob2 AS tool, blob6 AS dest, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'next' GROUP BY blob2, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
-    outs: `SELECT blob6 AS dest, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'out' GROUP BY blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
+    outs: `SELECT blob2 AS tool, blob7 AS guide, blob6 AS dest, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'out' GROUP BY blob2, blob7, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
   };
 }
 
@@ -342,7 +371,19 @@ export const FAIL_LABELS = {
   export: 'HWP로 바꾸기 실패',
 };
 /** Admin and weekly-report labels of OUT_DESTS. */
-export const OUT_LABELS = { 'photo-studio': '사진관 찾기(네이버 지도)', 'cp-printer': '포토프린터(쿠팡 광고)', 'cp-paper': '인화지(쿠팡 광고)', 'cp-backdrop': '흰색 배경천(쿠팡 광고)' };
+export const OUT_LABELS = {
+  'photo-studio': '사진관 찾기(네이버 지도)',
+  'cp-printer': '포토프린터(쿠팡 광고)',
+  'cp-paper': '인화지(쿠팡 광고)',
+  'cp-backdrop': '흰색 배경천(쿠팡 광고)',
+  'cp-stamp': '인감도장(쿠팡 광고)',
+  'cp-hancom': '한컴오피스(쿠팡 광고)',
+  'cp-mfp': '가정용 복합기(쿠팡 광고)',
+  'cp-scanner': '휴대용 문서 스캐너(쿠팡 광고)',
+  'cp-tripod': '스마트폰 삼각대(쿠팡 광고)',
+};
+/** The 자리 of the guide rows of the link table (every guide summed). */
+export const OUT_GUIDE_PLACE = '안내 글';
 const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽' };
 export const VALUE_LABELS = {
   le100: '100KB 이하',
@@ -406,8 +447,9 @@ const rate = (part, whole) => (whole > 0 ? `${Math.round((part / whole) * 100)}%
  * Query rows -> display tables (strings only, not yet escaped) for the weekly report (markdown), the totals for its
  * summary, and raw numbers for the admin page (scripts/lib/admin-view.mjs): kpi (rate in percent, null without
  * attempts), tools (TOOLS order), failRows (codeLabel null for a code outside FAIL_LABELS) and chains (이어서 하기:
- * total, pairs sender -> receiver, perTool sent/received; rows with a tool outside TOOLS are dropped) and outs (인화·사진관
- * 링크: total, rows per dest with the share of id-photo successes; a dest outside OUT_DESTS is dropped).
+ * total, pairs sender -> receiver, perTool sent/received; rows with a tool outside TOOLS are dropped) and outs (링크 누름:
+ * total, rows per result screen and dest with the share of that tool's successes, then one row per dest for all guides
+ * summed (share '-'); a pair outside TOOL_OUT / GUIDE_OUT is dropped).
  * @param {{ events?: Array<Record<string, any>>, fails?: Array<Record<string, any>>, settings?: Array<Record<string, any>>, guides?: Array<Record<string, any>>, chains?: Array<Record<string, any>>, outs?: Array<Record<string, any>> }} rows
  */
 export function shapeUsage({ events = [], fails = [], settings = [], guides = [], chains = [], outs = [] }) {
@@ -476,13 +518,25 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
   // Array.prototype.sort is stable, so ties keep TOOLS order.
   const perTool = [...perChain.values()].filter((c) => c.sent > 0 || c.received > 0).sort((a, b) => b.sent + b.received - (a.sent + a.received));
 
-  const outMap = new Map();
-  for (const r of outs) if (OUT_DESTS.includes(r.dest)) outMap.set(r.dest, (outMap.get(r.dest) ?? 0) + num(r.n));
-  // Denominator: id-photo saves in the same period (the block shows only on a saved result). Stable sort: ties keep OUT_DESTS order.
-  const idSuccess = per.get('id-photo')?.success ?? 0;
-  const outRows = OUT_DESTS.filter((d) => outMap.has(d))
-    .map((d) => ({ dest: d, label: OUT_LABELS[d], n: outMap.get(d), share: rate(outMap.get(d), idSuccess) }))
-    .sort((a, b) => b.n - a.n);
+  // Tool rows: one per (tool, dest), share = that tool's own successes in the period (the block shows only with a result).
+  // Guide rows: one per dest, every guide summed, no share. Stable sorts: ties keep TOOLS, then OUT_DESTS order.
+  const toolOut = new Map();
+  const guideOut = new Map();
+  for (const r of outs) {
+    const fromGuide = typeof r.guide === 'string' && r.guide !== '';
+    if (!outDests(fromGuide ? GUIDE_OUT : TOOL_OUT, r.tool).includes(r.dest)) continue;
+    const map = fromGuide ? guideOut : toolOut;
+    const key = fromGuide ? r.dest : `${r.tool}\u0000${r.dest}`;
+    map.set(key, (map.get(key) ?? 0) + num(r.n));
+  }
+  const toolRows = TOOLS.flatMap((t) =>
+    OUT_DESTS.filter((d) => toolOut.has(`${t}\u0000${d}`)).map((d) => {
+      const n = toolOut.get(`${t}\u0000${d}`);
+      return { tool: t, place: TOOL_LABELS[t], dest: d, label: OUT_LABELS[d], n, share: rate(n, per.get(t)?.success ?? 0) };
+    }),
+  );
+  const guideRows = OUT_DESTS.filter((d) => guideOut.has(d)).map((d) => ({ tool: null, place: OUT_GUIDE_PLACE, dest: d, label: OUT_LABELS[d], n: guideOut.get(d), share: '-' }));
+  const outRows = [...toolRows.sort((a, b) => b.n - a.n), ...guideRows.sort((a, b) => b.n - a.n)];
   const outTotal = outRows.reduce((sum, r) => sum + r.n, 0);
 
   return {
@@ -528,7 +582,7 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
       },
       { title: '이어서 하기 (보낸 도구 → 받은 도구)', head: ['보낸 도구', '받은 도구', '횟수'], rows: pairs.map((p) => [p.fromLabel, p.toLabel, count(p.n)]) },
       { title: '이어서 하기 도구별 합계', head: ['도구', '보냄', '받음'], rows: perTool.map((c) => [c.label, count(c.sent), count(c.received)]) },
-      { title: '증명사진 인화·사진관 링크', head: ['링크', '누른 횟수', '증명사진 저장 성공 대비(%)'], rows: outRows.map((r) => [r.label, count(r.n), r.share]) },
+      { title: '상품·사진관 링크', head: ['자리', '링크', '누른 횟수', '저장 성공 대비(%)'], rows: outRows.map((r) => [r.place, r.label, count(r.n), r.share]) },
     ],
   };
 }

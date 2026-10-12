@@ -11,8 +11,8 @@ import { detectDevice, type Device } from './device';
 export const USAGE_ON: boolean = __USAGE_STATS__;
 
 export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp';
-/** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/print-links.test.ts keeps the links' dests equal to it). */
-export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop';
+/** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/affiliate.test.ts keeps the links' dests equal to it). */
+export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod';
 export type UsagePhase = 'load' | 'parse' | 'process' | 'save';
 export type UsageSetting =
   | { o: 'target-kb'; v: 'le100' | 'le200' | 'le300' | 'le500' | 'le1000' | 'gt1000' }
@@ -33,8 +33,11 @@ export type UsageEvent =
   | ({ e: 'start'; t: UsageTool } & (UsageSetting | { o?: undefined; v?: undefined }))
   /** 이어서 하기 (CHAIN): the result of `t` was handed to the tool `v`. */
   | { e: 'next'; t: UsageTool; o: 'next'; v: UsageTool }
-  /** 인화·사진관 링크 (REV2): a link of the id-photo result block was pressed; only its kind, never the href. */
-  | { e: 'out'; t: 'id-photo'; o: 'out'; v: OutDest }
+  /**
+   * 인화·사진관·상품 링크 (REV2, REV3): a link of a result screen's block (or, with g, of a guide's block, t = the guide's
+   * tools[0]) was pressed; only its kind, never the href. The server checks the pair (scripts/lib/usage.mjs TOOL_OUT, GUIDE_OUT).
+   */
+  | { e: 'out'; t: UsageTool; o: 'out'; v: OutDest; g?: string }
   | { e: 'fail'; t: UsageTool; c: string; p: UsagePhase };
 
 type Via = 'guide' | 'direct';
@@ -77,11 +80,13 @@ export function buildPayload(ev: UsageEvent | Arrive, ctx: PayloadContext): Reco
       p.o = ev.o;
       p.v = ev.v;
     }
+    if (ev.e === 'out' && ev.g !== undefined) p.g = ev.g;
   } else if (ev.e === 'arrive') {
     p.g = ev.g;
     p.dl = ev.dl;
   }
-  p.via = ctx.via;
+  // A guide's link block (REV3): the click happens on the guide itself, so it is via=guide.
+  p.via = ev.e === 'out' && ev.g !== undefined ? 'guide' : ctx.via;
   p.d = ctx.device;
   p.b = BUILD_RE.test(ctx.build) ? ctx.build : 'dev';
   p.w = ctx.w;
@@ -174,3 +179,16 @@ export const startUsage: (tool: UsageTool) => void = __USAGE_STATS__ ? (tool) =>
 
 /** Reports one tool event. A no-op while usage statistics are off (and the tracker is dropped from the bundle). */
 export const track: (ev: UsageEvent) => void = __USAGE_STATS__ ? (ev) => live!.track(ev) : noop;
+
+/**
+ * 링크 누름 (REV3 Decision 6): one delegated click listener on a result screen's `root` reports each press of an
+ * a[data-out] inside it as out (the link kind only). No preventDefault, no URL rewriting: the browser opens the link as
+ * usual. A no-op while usage statistics are off, like track. Guides: src/components/GuideOutTracker.astro.
+ */
+export function trackOut(root: Element | null, t: UsageTool): void {
+  if (!__USAGE_STATS__ || !root) return;
+  root.addEventListener('click', (e) => {
+    const a = (e.target as Element | null)?.closest<HTMLAnchorElement>('a[data-out]');
+    if (a) track({ e: 'out', t, o: 'out', v: a.dataset.out as OutDest });
+  });
+}

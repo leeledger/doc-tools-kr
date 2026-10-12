@@ -289,3 +289,13 @@ test.describe('mobile layout', () => {
     expect(small).toEqual([]);
   });
 });
+
+test('REV3: the default build (PUBLIC_AFF_COUPANG off) has no affiliate block, sponsored link or first-part line on any tool page or guide', async ({ page }) => {
+  for (const path of [...PAGES, '/hwp-to-pdf/', '/hwp-viewer/', '/hwpx-to-hwp/', '/guide/passport-photo/', '/guide/pdf-merge/', '/guide/hwp-on-phone/']) {
+    await page.goto(path);
+    await expect(page.locator('a[rel~="sponsored"]'), path).toHaveCount(0);
+    await expect(page.locator('a[href^="https://link.coupang.com/"]'), path).toHaveCount(0);
+    await expect(page.locator('.guide-aff-top, .out-links .out-links, [data-guide]'), path).toHaveCount(0);
+    await expect(page.locator('.out-links'), path).toHaveCount(path === '/id-photo/' ? 1 : 0);
+  }
+});

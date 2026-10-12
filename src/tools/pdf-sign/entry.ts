@@ -6,11 +6,13 @@ import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
 import { hasSignPng } from '../../lib/ui/sign-handoff';
-import { startUsage, track } from '../../lib/ui/usage';
+import { startUsage, track, trackOut } from '../../lib/ui/usage';
 
 type Api = { open(files: File[]): Promise<void> } | null;
 
 startUsage('pdf-sign');
+// 제휴 링크 (REV3): count presses of the result block's links (link kind only).
+trackOut(document.getElementById('sg-result'), 'pdf-sign');
 
 const root = document.getElementById('sg-tool');
 if (root) {

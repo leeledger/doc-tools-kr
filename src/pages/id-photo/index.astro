@@ -9,17 +9,17 @@ import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
-import { PRINT_COPY, printDisclosure, printLinks } from '../../data/print-links';
+import OutLinks from '../../components/OutLinks.astro';
+import { PRINT_COPY, printLinks } from '../../data/print-links';
+import { affBlock, affOn } from '../../data/affiliate';
 import { CUSTOM_BOUNDS, DEFAULT_PRESET, PASSPORT_CHECK_URL, PASSPORT_RULE_URL, PRESETS, PRESET_GROUPS, RETRIEVED } from '../../data/id-photo-presets';
 
 const tool = getTool('id-photo');
 const jsonLd = toolJsonLd(tool, Astro.site);
 const autoframe = __ID_PHOTO_AUTOFRAME__;
-// 인화·사진관 링크 (REV2): PUBLIC_PRINT_INFO=0 drops the info link; PUBLIC_AFF_COUPANG=1 adds the affiliate links.
-const printList = printLinks({ PUBLIC_PRINT_INFO: import.meta.env.PUBLIC_PRINT_INFO, PUBLIC_AFF_COUPANG: import.meta.env.PUBLIC_AFF_COUPANG });
-const infoLinks = printList.filter((l) => !l.sponsored);
-const affLinks = printList.filter((l) => l.sponsored);
-const affHead = printDisclosure(printList);
+// 인화·사진관 링크 (REV2): PUBLIC_PRINT_INFO=0 drops the info link; PUBLIC_AFF_COUPANG=1 adds the affiliate group (REV3: OutLinks).
+const infoLinks = printLinks({ PUBLIC_PRINT_INFO: import.meta.env.PUBLIC_PRINT_INFO });
+const aff = affBlock('tool', 'id-photo', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
 const notices = [
   '이 도구는 자르기·기울기 조정·크기 조정·재압축만 합니다. 얼굴·피부·배경을 수정하지 않습니다.',
@@ -178,23 +178,15 @@ const nudges = [
           <div id="idp-next" class="next-steps" role="group" aria-labelledby="idp-next-label" hidden></div>
           <p class="save-name" id="idp-save-name"></p>
           <p class="notice" id="idp-print" hidden></p>
-          {printList.length > 0 && (
-            <div class="print-links" id="idp-print-links">
+          {(infoLinks.length > 0 || aff) && (
+            <div class="out-links" id="idp-print-links">
               <p>{PRINT_COPY.lead}</p>
               {infoLinks.length > 0 && (
                 <ul>
                   {infoLinks.map((l) => <li><a href={l.href} rel="noopener noreferrer" target="_blank" data-out={l.dest}>{l.label}</a></li>)}
                 </ul>
               )}
-              {affHead && (
-                <div class="print-links-ad">
-                  <p>{affHead.disclosure}</p>
-                  <p>{affHead.head}</p>
-                  <ul>
-                    {affLinks.map((l) => <li><a href={l.href} rel="sponsored noopener" target="_blank" data-out={l.dest}>{l.label}</a></li>)}
-                  </ul>
-                </div>
-              )}
+              <OutLinks block={aff} />
             </div>
           )}
           <Share name={tool.name} text={sharePreview('/id-photo/', Astro.site!).description} id="idp-share" />

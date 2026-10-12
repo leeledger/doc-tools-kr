@@ -25,8 +25,11 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
 const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts', 'lib/bgremove/cloud.ts'];
-/** sendBeacon only in the usage tracker, which is off (and dropped from the bundle) unless PUBLIC_USAGE_STATS=1. */
-const BEACON_ALLOWLIST: string[] = ['lib/ui/usage.ts'];
+/**
+ * sendBeacon only in the usage tracker, which is off (and dropped from the bundle) unless PUBLIC_USAGE_STATS=1, and in
+ * its guide twin (REV3; rendered only in a PUBLIC_USAGE_STATS=1 build, src/layouts/Guide.astro).
+ */
+const BEACON_ALLOWLIST: string[] = ['lib/ui/guide-out.ts', 'lib/ui/usage.ts'];
 
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((d) => {

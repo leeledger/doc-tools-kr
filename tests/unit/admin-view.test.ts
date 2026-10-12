@@ -208,21 +208,30 @@ describe('renderAdminPage', () => {
     expect(noChains).toMatch(/<h2 id="s-chain-tools">이어서 하기 도구별 합계<\/h2>\n<p class="muted">이 기간에는 기록이 없어요.<\/p>/);
   });
 
-  it('인화·사진관 링크 (REV2): s-out after s-chain-tools, the note, the ratio to id-photo successes; out-only data is not empty', () => {
-    const html = page(7, { ...FULL, outs: [{ dest: 'photo-studio', n: 4 }, { dest: 'cp-printer', n: 1 }, { dest: '<img src=x onerror=1>', n: 9 }] });
+  it('상품·사진관 링크 (REV2, REV3): s-out after s-chain-tools, the note, 자리 per tool or 안내 글, the ratio to that tool\'s successes ("-" for guides); out-only data is not empty', () => {
+    const html = page(7, {
+      ...FULL,
+      outs: [
+        { tool: 'id-photo', guide: '', dest: 'photo-studio', n: 4 },
+        { tool: 'id-photo', guide: '', dest: 'cp-printer', n: 1 },
+        { tool: 'id-photo', guide: 'passport-photo', dest: 'cp-tripod', n: 3 },
+        { tool: 'id-photo', guide: '', dest: '<img src=x onerror=1>', n: 9 },
+      ],
+    });
     const chainTools = html.indexOf('<h2 id="s-chain-tools">');
-    const out = html.indexOf('<h2 id="s-out">증명사진 인화·사진관 링크</h2>');
+    const out = html.indexOf('<h2 id="s-out">상품·사진관 링크</h2>');
     expect(chainTools).toBeGreaterThan(0);
     expect(out).toBeGreaterThan(chainTools);
     expect(OUT_NOTE).toBe('링크를 누른 횟수예요. 실제로 주문했는지는 알 수 없어요.');
-    expect(html).toContain(`<h2 id="s-out">증명사진 인화·사진관 링크</h2>\n<p class="muted kpi-note">${OUT_NOTE}</p>`);
-    expect(html).toContain('<tr><th scope="col">링크</th><th scope="col" class="num">누른 횟수</th><th scope="col" class="num">증명사진 저장 성공 대비(%)</th></tr>');
-    expect(html).toMatch(/<tr><td>사진관 찾기\(네이버 지도\)<\/td><td class="num">4<\/td><td class="num">(\d+%|-)<\/td><\/tr>/);
+    expect(html).toContain(`<h2 id="s-out">상품·사진관 링크</h2>\n<p class="muted kpi-note">${OUT_NOTE}</p>`);
+    expect(html).toContain('<tr><th scope="col">자리</th><th scope="col">링크</th><th scope="col" class="num">누른 횟수</th><th scope="col" class="num">저장 성공 대비(%)</th></tr>');
+    expect(html).toMatch(/<tr><td>증명사진 규격 맞추기<\/td><td>사진관 찾기\(네이버 지도\)<\/td><td class="num">4<\/td><td class="num">(\d+%|-)<\/td><\/tr>/);
     expect(html).toContain('<td>포토프린터(쿠팡 광고)</td>');
+    expect(html).toContain('<tr><td>안내 글</td><td>스마트폰 삼각대(쿠팡 광고)</td><td class="num">3</td><td class="num">-</td></tr>');
     expect(html).not.toContain('onerror');
-    const only = page(7, { ...EMPTY, outs: [{ dest: 'photo-studio', n: 2 }] });
+    const only = page(7, { ...EMPTY, outs: [{ tool: 'id-photo', guide: '', dest: 'photo-studio', n: 2 }] });
     expect(only).not.toContain('이 기간에는 아직 기록이 없어요');
-    expect(only).toContain('<tr><td>사진관 찾기(네이버 지도)</td><td class="num">2</td><td class="num">-</td></tr>');
+    expect(only).toContain('<tr><td>증명사진 규격 맞추기</td><td>사진관 찾기(네이버 지도)</td><td class="num">2</td><td class="num">-</td></tr>');
   });
 
   it('error notice: exact text with role="status" inside the shell with the tabs', () => {

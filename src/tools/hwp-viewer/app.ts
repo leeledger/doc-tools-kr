@@ -1,4 +1,5 @@
 // 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
+/*! 본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다. */
 // /hwp-viewer/ controller (G2 A0 "Flow" V2): the shared HWP document session (../hwp-shared/session.ts) with
 // zoomable pages, no PDF warm-up (the PDF is optional here: 「PDF로 내려받기」 loads the export chunk on its
 // first click, for the same open document) and the viewer controls (./ui), which start loading when a file

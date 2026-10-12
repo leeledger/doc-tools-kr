@@ -12,11 +12,15 @@ import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { affBlock, affOn } from '../../data/affiliate';
 import QuickLinks from '../../components/QuickLinks.astro';
 // Page-only styles, inlined (the /stamp-signature/ pattern): no other page carries them.
 import signCss from '../../tools/pdf-sign/sign.css?inline';
 
 const tool = getTool('pdf-sign');
+// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+const aff = affBlock('tool', 'pdf-sign', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const jsonLd = toolJsonLd(tool, Astro.site);
 const where = [
   { value: 'one', label: '이 쪽만' },
@@ -135,6 +139,7 @@ const where = [
             <button type="button" class="btn ghost" id="sg-again">다시 편집하기</button>
             <button type="button" class="btn ghost" id="sg-reset">다른 파일 처리하기</button>
           </div>
+          <OutLinks block={aff} />
           <div id="sg-chain" class="next-steps" role="group" aria-labelledby="sg-chain-label" hidden></div>
           <p class="save-name" id="sg-save-name"></p>
           <Share name={tool.name} text={sharePreview('/pdf-sign/', Astro.site!).description} id="sg-share" />

@@ -11,9 +11,13 @@ import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { affBlock, affOn } from '../../data/affiliate';
 import QuickLinks from '../../components/QuickLinks.astro';
 
 const tool = getTool('pdf-split');
+// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+const aff = affBlock('tool', 'pdf-split', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const jsonLd = toolJsonLd(tool, Astro.site);
 const modes = [
   { value: 'edit', label: '편집한 PDF 하나로' },
@@ -121,6 +125,7 @@ const modes = [
             <button type="button" class="btn ghost" id="ps-again">다시 편집하기</button>
             <button type="button" class="btn ghost" id="ps-reset">다른 파일 처리하기</button>
           </div>
+          <OutLinks block={aff} />
           <div id="ps-next" class="next-steps" role="group" aria-labelledby="ps-next-label" hidden></div>
           <p class="save-name" id="ps-save-name"></p>
           <Share name={tool.name} text={sharePreview('/pdf-split/', Astro.site!).description} id="ps-share" />

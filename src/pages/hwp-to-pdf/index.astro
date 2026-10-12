@@ -8,12 +8,16 @@ import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { affBlock, affOn } from '../../data/affiliate';
 import QuickLinks from '../../components/QuickLinks.astro';
 import { COPY, HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
 // The tool styles are inlined (1.2 KB): a second render-blocking stylesheet held back LCP (G2 A0/V0).
 import hwpCss from '../../tools/hwp-shared/hwp.css?inline';
 
 const tool = getTool('hwp-to-pdf');
+// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+const aff = affBlock('tool', 'hwp-to-pdf', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
 const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx';
 ---
@@ -63,6 +67,7 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
             <p><a id="hw-again" download>다시 내려받기</a> · <a href="/pdf-compress/">저장한 PDF가 크면 PDF 용량 줄이기</a></p>
             <Share name={tool.name} text={sharePreview('/hwp-to-pdf/', Astro.site!).description} id="hw-share" />
           </div>
+          <OutLinks block={aff} />
           <div id="hw-next" class="next-steps" role="group" aria-labelledby="hw-next-label" hidden></div>
           <div class="hw-preview" id="hw-preview" tabindex="0" role="region" aria-label="문서 미리보기"></div>
         </div>

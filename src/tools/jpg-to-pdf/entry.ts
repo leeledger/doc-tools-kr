@@ -5,11 +5,13 @@
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
-import { startUsage, track } from '../../lib/ui/usage';
+import { startUsage, track, trackOut } from '../../lib/ui/usage';
 
 type Api = { add(files: File[]): void } | null;
 
 startUsage('jpg-to-pdf');
+// 제휴 링크 (REV3): count presses of the result block's links (link kind only).
+trackOut(document.getElementById('jp-result'), 'jpg-to-pdf');
 
 const root = document.getElementById('jp-tool');
 if (root) {

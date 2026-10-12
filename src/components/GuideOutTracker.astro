@@ -1,0 +1,13 @@
+---
+// 안내 글 링크 누름 (brief handoff/ARCHITECT-BRIEF-REV3.md Decision 6): counts presses of the guide's affiliate block
+// (.out-links[data-guide], src/components/OutLinks.astro) as out with t = the guide's tools[0] and g = its slug.
+// src/layouts/Guide.astro renders this only when the guide has a block and PUBLIC_USAGE_STATS=1, so every other page
+// ships no extra script. src/lib/ui/guide-out.ts explains why it does not import usage.ts (the guide JS budget).
+// Astro emits the chunk in every build, referenced by no page unless rendered; __USAGE_STATS__ empties it when the
+// statistics are off (check-dist: no beacon code then). Guides are not precached, so neither is this chunk.
+---
+<script>
+  import { bindGuideOut } from '../lib/ui/guide-out';
+
+  if (__USAGE_STATS__) bindGuideOut();
+</script>

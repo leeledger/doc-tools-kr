@@ -46,8 +46,11 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * home kept): it cannot open a file offline on a first visit anyway, because its 9.7 MB rhwp wasm is never precached.
  * T4 round 2 (review): returning visitors keep offline use: /jpg-to-pdf/, /pdf-to-jpg/, /pdf-password/ and /hwp-viewer/
  * are in sw.ts RUNTIME_PAGES (stored when visited; their scripts and /vendor/ engines are runtime-cached on first use).
+ * REV3 R3.0 (brief handoff/ARCHITECT-BRIEF-REV3.md Decision 8): /hwp-to-pdf/ leaves too, on the /hwp-viewer/ precedent
+ * above: it needs the same 9.7 MB rhwp wasm, never precached, so a first offline visit cannot convert anyway; returning
+ * visitors keep it through sw.ts RUNTIME_PAGES. Frees room for the affiliate links of the production build.
  */
-export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
+export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

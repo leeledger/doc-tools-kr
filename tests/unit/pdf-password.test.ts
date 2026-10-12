@@ -185,7 +185,9 @@ describe('precache (deploy-gate ruling: the 450 KB limit is never raised)', () =
   it('/pdf-password/ is not precached from the start; /hwp-viewer/ left to make room (measured, gen-sw.mjs); home and the PDF tools stay', () => {
     expect(NOT_PRECACHED('/pdf-password/')).toBe(true);
     expect(NOT_PRECACHED('/hwp-viewer/')).toBe(true);
-    for (const p of ['/', '/pdf-merge/', '/pdf-compress/', '/hwp-to-pdf/', '/stamp-signature/']) expect(NOT_PRECACHED(p), p).toBe(false);
+    // REV3 R3.0: /hwp-to-pdf/ left too (the same rhwp wasm, never precached), for the production build's affiliate links.
+    expect(NOT_PRECACHED('/hwp-to-pdf/')).toBe(true);
+    for (const p of ['/', '/pdf-merge/', '/pdf-compress/', '/stamp-signature/']) expect(NOT_PRECACHED(p), p).toBe(false);
   });
 });
 

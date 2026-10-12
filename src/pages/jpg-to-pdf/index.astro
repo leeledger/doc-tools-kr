@@ -10,10 +10,14 @@ import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { affBlock, affOn } from '../../data/affiliate';
 import QuickLinks from '../../components/QuickLinks.astro';
 import { REDUCE_EDGE } from '../../tools/jpg-to-pdf/limits';
 
 const tool = getTool('jpg-to-pdf');
+// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+const aff = affBlock('tool', 'jpg-to-pdf', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const jsonLd = toolJsonLd(tool, Astro.site);
 const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.heic,.heif';
 const groups = [
@@ -83,6 +87,7 @@ const groups = [
             <a class="btn primary" id="jp-download" download tabindex="0">내려받기</a>
             <button type="button" class="btn ghost" id="jp-reset">다른 사진 처리하기</button>
           </div>
+          <OutLinks block={aff} />
           <div id="jp-next" class="next-steps" role="group" aria-labelledby="jp-next-label" hidden></div>
           <p class="save-name" id="jp-save-name"></p>
           <Share name={tool.name} text={sharePreview('/jpg-to-pdf/', Astro.site!).description} id="jp-share" />

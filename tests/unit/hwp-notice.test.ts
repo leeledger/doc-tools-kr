@@ -3,7 +3,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { HANCOM_NOTICE } from '../../src/tools/hwp-shared/messages';
+import { HANCOM_NOTICE, HANCOM_NOTICE_PDF } from '../../src/tools/hwp-shared/messages';
 
 const NOTICE = '본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.';
 const DIRS = ['src/tools/hwp-shared', 'src/tools/hwp-viewer', 'src/tools/hwpx-to-hwp'];
@@ -30,4 +30,13 @@ describe('HWP spec notice', () => {
       expect(first).toBe(comment);
     });
   }
+
+  // REV3 Decision 10: the product wording of the licence as a legal comment (kept by minifiers that keep /*! */) at the top
+  // of the shared copy and the HWP tool entry files, and the same text as HANCOM_NOTICE_PDF (shown on /licenses/).
+  it('HANCOM_NOTICE_PDF is a /*! */ legal comment in the first two lines of messages.ts and the three tool entries', () => {
+    expect(HANCOM_NOTICE_PDF).toBe('본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.');
+    for (const f of ['src/tools/hwp-shared/messages.ts', 'src/tools/hwp-to-pdf/controller.ts', 'src/tools/hwp-viewer/app.ts', 'src/tools/hwpx-to-hwp/controller.ts']) {
+      expect(readFileSync(f, 'utf8').split(/\r?\n/, 2), f).toContain(`/*! ${HANCOM_NOTICE_PDF} */`);
+    }
+  });
 });
