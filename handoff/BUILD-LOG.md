@@ -2923,3 +2923,63 @@ Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP").
 
 **REV3 — deploy gate (2026-10-13)**
 - Richard: clear (0 Must Fix). Orchestrator: aligned the HWP FAQ answer (tools.ts:703) with the new non-affiliation wording (existing glyphs only); id-photo block stays after 이어서 하기; hwp-viewer block above the document accepted for now. Committed as ONE commit (deviation from the R3.0/R3.1 split: sw.spec.ts hunks are interleaved; revert granularity accepted). Precache cloud flag-on 412.5/450 KB.
+
+
+## GROWTH3 build notes (Bob, 2026-10-12/13, branch growth3 off origin/main 29826f0)
+
+Status: **DONE_WITH_CONCERNS** — 6 of 13 new guides published (floor 11 not met; shortfall logged, no padding); G1b changes /id-photo/ link text (escalated).
+
+**G0 baseline (origin/main 29826f0, this machine)**
+| Gate | default (AUTOFRAME=1) | cloud (BG_REMOVE+BG_CLOUD+USAGE+GA+AFF_COUPANG, officer=TestOfficer) |
+|---|---|---|
+| UI font core | 611 chars, 400 44.1 KiB / 800 47.4 KiB | 608 chars, 44.0 / 47.4 KiB |
+| precache | 31 URLs, 443.5 KB / 450 | 31 URLs, 448.7 KB / 450 |
+| check-dist | OK, 2441 files | OK, 2456 files |
+| sitemap | 57 URLs | — |
+After GROWTH3: font identical (611 / 608 chars, same KiB), precache 443.5 / 448.7 KB (id-photo page −2 bytes), check-dist OK (2453 / 2468 files), sitemap 63.
+- Pins (src/data/tool-guide-order.ts): id-photo, photo-compress, pdf-merge, pdf-compress frozen to their current 4. Other tools a guide names have < 4 own guides (next-step guides fill the list), so a pin cannot freeze them; the unit test fails if a new guide names one of them (OWN_COUNT). Consequence: new guides may only name the 4 frozen tools (and hwp-to-pdf).
+- Byte compare (scratch script, all files outside /guide/, /og/, sitemap, llms, vendor, build id normalised): default 227 identical + `id-photo/index.html`; cloud 233 identical + `id-photo/index.html`. The one difference is G1b (two link texts in 관련 안내). Without G1b: 228/228 identical (checked at G1a).
+
+**G1 before/after (2026-42 GSC 28 days baseline; re-check 12-15)**
+| Page | imp / CTR / pos | Change |
+|---|---|---|
+| id-card-photo | 130 / 0.8% / 9.3 | title 주민등록증 사진 크기·규격 (신규·재발급); description leads with 크기(사이즈) 3.5×4.5 cm; query 주민등록증 사진 크기; updated 10-12. No 카드 크기 FAQ: law.go.kr is a script shell (1,267 bytes), easylaw search shell (735 bytes) |
+| police-exam-photo | 9 / 0% / 5.3 | G1a: description answer-first, query 경찰 증명사진 규격. G1b: title 경찰 증명사진 규격, 원서 사진 3×4 cm, og 경찰 증명사진, updated 10-12 |
+| kuksiwon-photo | 30 / 6.7% / 6.0 | G1a: description 국시원 first, query 국시원 사진 규격. G1b: title 국시원 원서 사진 규격 (간호사 등 국가시험), updated 10-12 |
+| history-exam-photo | 56 / 3.6% / 9.7 | title 한국사능력검정시험(한능검) 원서 사진 규격; description 한능검 first + 10시 change rule; query 한능검 사진 규격; updated 10-12 |
+| resume-photo | 22 / 0% / 7.9 | description = the answer (사람인 100×140·10 MB, 잡코리아 150×210·5 MB) |
+| hub photo-sizes | 18 / 0% / 21.0 | description: 크기와 용량, 기관별 한 표 (adds 경찰). Title unchanged (hub) |
+| korcham-photo | 18 / 5.6% / 10.0 | **No change**: guideDetail no=194 states 400×500 and 1:1.25 but no KB/MB limit |
+| admission-photo | 37 / 2.7% / 9.9 | **No change**: no 진학사/유웨이 quote covers 대학원 photos (유웨이 mentions 대학원 only for login type and 전형료) |
+
+**G2 candidate table** (volume: next-t not fetched this run — estimates missing, owner to check in 네이버 키워드 도구)
+| # | Candidate | Source result | Outcome |
+|---|---|---|---|
+| 1 | 청소년증 | gov.kr search is a script app; 성평등가족부 sp_yth_f005.do 200, full text | **published** youth-card-photo (6 quotes) |
+| 2 | 국제운전면허증 | safedriving selectDiGuide10.do 200 | **published** intl-driving-license (6 quotes) |
+| 3 | 한자능력검정시험 | hanja.re.kr faq.do?id=91 + applyMeth.do 200 | **published** hanja-exam-photo (5 quotes) |
+| 4 | 소방공무원 | 119gosi.kr no answer (bot + browser headers); nfa.go.kr no rule | draft fire-exam-photo |
+| 5 | 군무원 | recruit.mnd.go.kr no answer | draft military-civilian-photo |
+| 6 | 전산회계·전산세무 | license.kacta.or.kr script shell | draft kacta-exam-photo |
+| 7 | JLPT / HSK | jlpt.or.kr information_01.html 200 (JPG, 3.5×4.5 비율, 1MB); HSK: no public photo rule | **published** jlpt-photo (4 quotes); draft hsk-photo |
+| 8 | 장애인·외국인등록증 | gov.kr FAQ search: no item; no CappBiz code findable without the browser | not created (no URL to record beyond the FAQ search) |
+| 9 | 정부24 서류 PDF | gov.kr faqList JSON (srchTxt=PDF, 전자증명서) | **published** gov24-pdf-save (6 quotes) |
+| 10 | 정부24 여권 사진 오류 | gov.kr faqList JSON (srchTxt=여권), error codes 701/704/706/707/679 | **published** passport-photo-error (8 quotes) |
+| 11 | 홈택스 PDF 비밀번호 | not sourced: naming pdf-password would change /pdf-password/ (locked decision 3) | draft hometax-pdf-password (Arch) |
+| 12 | 네이버·다음 메일 첨부 | Naver help = script app; Daum attach FAQs state no limit | draft naver-daum-mail-limit |
+| 13 | 카카오톡 파일 용량 | cs.kakao.com search = script app; no article id found | draft kakao-file-limit |
+- chrome-cdp (via: browser) was unavailable all session: `connectOverCDP` timed out twice while /json/version answered (20 targets; likely a hung tab or another session). No guide uses `via: browser`.
+- Every published new guide: ≥ 3 verbatim official quotes incl. a non-size fact (online-only/membership, 발급 장소·유효기간, 대상·장소·무료, JPG-only/합격인정서, 오류 코드 meaning, PDF printer blocked/전자증명서), FAQ 5, spec rows where numbers exist (4 photo rows → hub photo-sizes picks them up; checked in dist), related 3, DUP gate passed (check-dist OK).
+- Inbound links: history-exam → hanja, teps → jlpt, driver-license → intl, passport-photo → passport-photo-error, id-card → youth-card, kosaf-docs → gov24-pdf-save. `updated` left alone where only `related` changed (runbook: content changes only; also keeps the driver-license fixed-date unit test valid).
+- GROWTH-RUNBOOK calendar: 2026-12-01 passport-photo-error re-check, 2027-05-20 intl-driving-license re-check.
+
+**G4**: gsc.mjs pages28 250 rows, pageQueries28 (page×query, 1000) with its own error path; indicators.mjs + section after renderReport; growth-data gets `indicators`. BRAND exported from opportunities.mjs (brief G4c says export; file not on the whitelist — flagged).
+
+**Tests**: check:quotes `214 quotes verbatim` exit 0; vitest 1416 pass + ga.test 21/21 after cleaning public/vendor (its one failure is environmental: public/vendor/mediapipe left by an AUTOFRAME=1 prebuild, the test builds without the flag — same on origin/main); astro check 0 errors; e2e growth+site chromium+mobile-chrome 174/174, hubs 12/12, growth "guides" block on 5 projects 25/25 with retries 0 (after the axe test got a 120 s timeout; with 4 pages two runs had hit 60 s under load).
+
+**Known Gaps (GROWTH3)**
+- Published 43 + 2 hubs = 45 guide URLs (target 50 articles). Shortfall 7: sources behind script apps/unreachable hosts and the browser path down. Retry with chrome-cdp when it is free: kakao file limit, Naver mail, 119gosi, mnd, kacta, hikorea, gov.kr CappBiz (장애인등록증).
+- Tools with < 4 own guides (pdf-password, jpg-to-pdf, pdf-to-jpg, image-to-jpg, …) cannot be frozen by pins; any new guide naming them changes a precached page. Needs an Arch rule (e.g. pins that may include next-step guides) — blocks hometax-pdf-password.
+- id-photo output carries no EXIF, so no 찍은 날짜; gov24 passport error 704 checks 찍은 날짜. Unknown whether gov24 rejects a file with no date (passport_online preset). Needs a real upload test by the owner.
+- 대학원 원서 사진 (no single source), 주민등록증 카드 크기 (law.go.kr shell).
+- next-t volume estimates not collected this run.
