@@ -121,7 +121,8 @@ test.describe('share (G.7)', () => {
 
 test.describe('guides (G.1, G.2)', () => {
   test('/guide/ and a guide have no serious or critical axe findings', async ({ page }) => {
-    for (const path of ['/guide/', '/guide/passport-photo/']) {
+    // GROWTH3 G3: one new photo guide and one new PDF/서류 guide join the axe check.
+    for (const path of ['/guide/', '/guide/passport-photo/', '/guide/hanja-exam-photo/', '/guide/gov24-pdf-save/']) {
       await gotoReady(page, path);
       const r = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
       const bad = r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
