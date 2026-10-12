@@ -6,13 +6,14 @@
 // of page loads that report, a number in [0.01, 1] (default 1); every event carries the weight 1/share.
 //
 // Payload (client -> server): JSON text of at most 512 bytes with these short keys only (an unknown key is rejected):
-//   e   event       pick | start | success | fail | download | arrive | next
+//   e   event       pick | start | success | fail | download | arrive | next | out
 //   t   tool        one of TOOLS
 //   c   fail code   fail only, ^[a-z-]{1,24}$
 //   p   phase       fail only, load | parse | process | save
 //   br  browser     fail only, family and major version ("chrome 131")
 //   o/v setting     start: a key of SETTINGS and one of its values (exact numbers are bucketed client-side)
 //                   next (CHAIN 이어서 하기, required): o = "next", v = the tool the result was handed to (one of TOOLS)
+//                   out (REV2 인화·사진관 링크, required): t = "id-photo", o = "out", v = one of OUT_DESTS (never the href)
 //   g   guide slug  arrive only
 //   dl  deep link   arrive only, "0" | "1"
 //   via             every event, guide | direct
@@ -40,7 +41,7 @@ export const DEFAULT_DAYS = 7;
 /** Periods the admin page compares with the period before (90 days: the one before is past the 3-month retention). */
 export const COMPARE_PERIODS = [1, 7, 30];
 
-export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next'];
+export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out'];
 export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct'];
@@ -77,9 +78,16 @@ export const DATASET_RE = /^[a-z0-9_]{1,64}$/;
 export const BLOB_KEYS = ['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b'];
 const KEYS = new Set([...BLOB_KEYS, 'w']);
 /** Keys allowed on the listed event types only. */
-const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'next'], v: ['start', 'next'], g: ['arrive'], dl: ['arrive'] };
+const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'next', 'out'], v: ['start', 'next', 'out'], g: ['arrive'], dl: ['arrive'] };
 /** The o of a next event (its v is a tool). */
 export const NEXT_KEY = 'next';
+/** The o of an out event (its v is one of OUT_DESTS). */
+export const OUT_KEY = 'out';
+/**
+ * The links of the id-photo result block (src/data/print-links.ts, src/data/affiliate.ts): 사진관 찾기, then the Coupang
+ * Partners links (광고) of the id-photo placement. A placement that is not rendered yet has no dest here.
+ */
+export const OUT_DESTS = ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop'];
 
 /** PUBLIC_USAGE_STATS: on only for "1" (after trimming). */
 export function usageOn(value) {
@@ -131,7 +139,7 @@ const VALUE_CHECKS = {
   t: (x) => TOOLS.includes(x),
   c: (x) => CODE_RE.test(x),
   p: (x) => PHASES.includes(x),
-  o: (x) => Object.hasOwn(SETTINGS, x) || x === NEXT_KEY,
+  o: (x) => Object.hasOwn(SETTINGS, x) || x === NEXT_KEY || x === OUT_KEY,
   v: () => true, // checked against o below
   g: (x) => GUIDE_RE.test(x),
   dl: (x) => x === '0' || x === '1',
@@ -169,7 +177,9 @@ export function validate(text) {
   if (Object.hasOwn(o, 'o') !== Object.hasOwn(o, 'v')) return null;
   if (o.e === 'next') {
     if (o.o !== NEXT_KEY || !TOOLS.includes(o.v)) return null;
-  } else if (Object.hasOwn(o, 'o') && (o.o === NEXT_KEY || !SETTINGS[o.o].includes(o.v))) return null;
+  } else if (o.e === 'out') {
+    if (o.t !== 'id-photo' || o.o !== OUT_KEY || !OUT_DESTS.includes(o.v)) return null;
+  } else if (Object.hasOwn(o, 'o') && (o.o === NEXT_KEY || o.o === OUT_KEY || !SETTINGS[o.o].includes(o.v))) return null;
   const ev = { w: o.w };
   for (const k of BLOB_KEYS) ev[k] = Object.hasOwn(o, k) ? o[k] : '';
   return ev;
@@ -184,7 +194,7 @@ export function toDataPoint(ev) {
 
 const N = 'SUM(_sample_interval * double1)';
 
-/** The five queries of the admin page and the weekly report (chains: 이어서 하기, blob2 sender -> blob6 receiver). Throws on a period or dataset outside the whitelist. */
+/** The six queries of the admin page and the weekly report (chains: 이어서 하기, blob2 sender -> blob6 receiver; outs: 인화·사진관 링크, blob6 dest). Throws on a period or dataset outside the whitelist. */
 export function usageSql(dataset, days) {
   if (!DATASET_RE.test(dataset ?? '')) throw new Error('usage: invalid dataset name');
   if (!PERIODS.includes(days)) throw new Error('usage: invalid period');
@@ -195,11 +205,12 @@ export function usageSql(dataset, days) {
     settings: `SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'start' AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
     guides: `SELECT blob7 AS guide, blob2 AS tool, blob8 AS dl, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'arrive' GROUP BY blob7, blob2, blob8 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
     chains: `SELECT blob2 AS tool, blob6 AS dest, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'next' GROUP BY blob2, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
+    outs: `SELECT blob6 AS dest, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'out' GROUP BY blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
   };
 }
 
 /**
- * The admin page's sixth query: event totals of the period before the current one (days 2N..N ago). Alias "kind",
+ * The admin page's comparison query: event totals of the period before the current one (days 2N..N ago). Alias "kind",
  * not "event", so the two are told apart. Throws on a period outside COMPARE_PERIODS or a bad dataset name.
  */
 export function usagePrevSql(dataset, days) {
@@ -238,14 +249,14 @@ async function runSql({ accountId, token, fetch: f }, q) {
 }
 
 /**
- * Runs the five queries against the Analytics Engine SQL API. `fetch` is injectable for tests.
- * Resolves to { events, fails, settings, guides, chains } (arrays of rows); rejects with UsageApiError (status 0: network).
+ * Runs the six queries against the Analytics Engine SQL API. `fetch` is injectable for tests.
+ * Resolves to { events, fails, settings, guides, chains, outs } (arrays of rows); rejects with UsageApiError (status 0: network).
  */
 export async function fetchUsage({ accountId, token, dataset, days, fetch: f = fetch }) {
   const sql = usageSql(dataset, days);
   const api = { accountId, token, fetch: f };
-  const [events, fails, settings, guides, chains] = await Promise.all([runSql(api, sql.events), runSql(api, sql.fails), runSql(api, sql.settings), runSql(api, sql.guides), runSql(api, sql.chains)]);
-  return { events, fails, settings, guides, chains };
+  const [events, fails, settings, guides, chains, outs] = await Promise.all([runSql(api, sql.events), runSql(api, sql.fails), runSql(api, sql.settings), runSql(api, sql.guides), runSql(api, sql.chains), runSql(api, sql.outs)]);
+  return { events, fails, settings, guides, chains, outs };
 }
 
 /**
@@ -330,6 +341,8 @@ export const FAIL_LABELS = {
   unverified: '바꾼 파일 다시 열기 확인 실패',
   export: 'HWP로 바꾸기 실패',
 };
+/** Admin and weekly-report labels of OUT_DESTS. */
+export const OUT_LABELS = { 'photo-studio': '사진관 찾기(네이버 지도)', 'cp-printer': '포토프린터(쿠팡 광고)', 'cp-paper': '인화지(쿠팡 광고)', 'cp-backdrop': '흰색 배경천(쿠팡 광고)' };
 const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽' };
 export const VALUE_LABELS = {
   le100: '100KB 이하',
@@ -393,10 +406,11 @@ const rate = (part, whole) => (whole > 0 ? `${Math.round((part / whole) * 100)}%
  * Query rows -> display tables (strings only, not yet escaped) for the weekly report (markdown), the totals for its
  * summary, and raw numbers for the admin page (scripts/lib/admin-view.mjs): kpi (rate in percent, null without
  * attempts), tools (TOOLS order), failRows (codeLabel null for a code outside FAIL_LABELS) and chains (이어서 하기:
- * total, pairs sender -> receiver, perTool sent/received; rows with a tool outside TOOLS are dropped).
- * @param {{ events?: Array<Record<string, any>>, fails?: Array<Record<string, any>>, settings?: Array<Record<string, any>>, guides?: Array<Record<string, any>>, chains?: Array<Record<string, any>> }} rows
+ * total, pairs sender -> receiver, perTool sent/received; rows with a tool outside TOOLS are dropped) and outs (인화·사진관
+ * 링크: total, rows per dest with the share of id-photo successes; a dest outside OUT_DESTS is dropped).
+ * @param {{ events?: Array<Record<string, any>>, fails?: Array<Record<string, any>>, settings?: Array<Record<string, any>>, guides?: Array<Record<string, any>>, chains?: Array<Record<string, any>>, outs?: Array<Record<string, any>> }} rows
  */
-export function shapeUsage({ events = [], fails = [], settings = [], guides = [], chains = [] }) {
+export function shapeUsage({ events = [], fails = [], settings = [], guides = [], chains = [], outs = [] }) {
   const per = new Map();
   const cell = (tool) => {
     if (!per.has(tool)) per.set(tool, { pick: 0, start: 0, success: 0, fail: 0, download: 0, guide: { success: 0, fail: 0 }, direct: { success: 0, fail: 0 } });
@@ -405,8 +419,8 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
   let arrive = 0;
   for (const r of events) {
     if (TOOLS.includes(r.tool) && r.event === 'arrive') arrive += num(r.n);
-    // next is counted from the chains query.
-    if (!TOOLS.includes(r.tool) || !EVENTS.includes(r.event) || r.event === 'arrive' || r.event === 'next') continue;
+    // next is counted from the chains query and out from the outs query: neither is a step of the tool's own funnel.
+    if (!TOOLS.includes(r.tool) || !EVENTS.includes(r.event) || r.event === 'arrive' || r.event === 'next' || r.event === 'out') continue;
     const c = cell(r.tool);
     const n = num(r.n);
     c[r.event] += n;
@@ -462,6 +476,15 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
   // Array.prototype.sort is stable, so ties keep TOOLS order.
   const perTool = [...perChain.values()].filter((c) => c.sent > 0 || c.received > 0).sort((a, b) => b.sent + b.received - (a.sent + a.received));
 
+  const outMap = new Map();
+  for (const r of outs) if (OUT_DESTS.includes(r.dest)) outMap.set(r.dest, (outMap.get(r.dest) ?? 0) + num(r.n));
+  // Denominator: id-photo saves in the same period (the block shows only on a saved result). Stable sort: ties keep OUT_DESTS order.
+  const idSuccess = per.get('id-photo')?.success ?? 0;
+  const outRows = OUT_DESTS.filter((d) => outMap.has(d))
+    .map((d) => ({ dest: d, label: OUT_LABELS[d], n: outMap.get(d), share: rate(outMap.get(d), idSuccess) }))
+    .sort((a, b) => b.n - a.n);
+  const outTotal = outRows.reduce((sum, r) => sum + r.n, 0);
+
   return {
     totals: { success, fail, rate: rate(success, success + fail) },
     kpi: { start, success, fail, rate: success + fail > 0 ? (success / (success + fail)) * 100 : null, arrive },
@@ -474,6 +497,7 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
       return { tool: String(r.tool ?? ''), toolLabel: label(TOOL_LABELS, r.tool), code, codeLabel: Object.hasOwn(FAIL_LABELS, code) ? FAIL_LABELS[code] : null, phaseLabel: label(PHASE_LABELS, r.phase), n: num(r.n) };
     }),
     chains: { total: chainTotal, pairs, perTool },
+    outs: { total: outTotal, rows: outRows },
     tables: [
       {
         title: '도구별',
@@ -504,6 +528,7 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
       },
       { title: '이어서 하기 (보낸 도구 → 받은 도구)', head: ['보낸 도구', '받은 도구', '횟수'], rows: pairs.map((p) => [p.fromLabel, p.toLabel, count(p.n)]) },
       { title: '이어서 하기 도구별 합계', head: ['도구', '보냄', '받음'], rows: perTool.map((c) => [c.label, count(c.sent), count(c.received)]) },
+      { title: '증명사진 인화·사진관 링크', head: ['링크', '누른 횟수', '증명사진 저장 성공 대비(%)'], rows: outRows.map((r) => [r.label, count(r.n), r.share]) },
     ],
   };
 }

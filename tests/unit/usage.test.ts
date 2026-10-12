@@ -7,6 +7,8 @@ import {
   FAIL_LABELS,
   LEVEL_IDS,
   MAX_BODY,
+  OUT_DESTS,
+  OUT_KEY,
   PRESETS,
   TOOLS,
   bucketKB,
@@ -164,13 +166,14 @@ describe('whitelist (scripts/lib/usage.mjs)', () => {
 });
 
 describe('SQL builders and table shaping', () => {
-  it('the five queries (snapshot)', () => {
+  it('the six queries (snapshot)', () => {
     expect(usageSql('docttak_usage', 7)).toEqual({
       events: "SELECT blob2 AS tool, blob1 AS event, blob9 AS via, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY GROUP BY blob2, blob1, blob9 FORMAT JSON",
       fails: "SELECT blob2 AS tool, blob3 AS code, blob4 AS phase, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'fail' GROUP BY blob2, blob3, blob4 ORDER BY n DESC LIMIT 20 FORMAT JSON",
       settings: "SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'start' AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
       guides: "SELECT blob7 AS guide, blob2 AS tool, blob8 AS dl, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'arrive' GROUP BY blob7, blob2, blob8 ORDER BY n DESC LIMIT 500 FORMAT JSON",
       chains: "SELECT blob2 AS tool, blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'next' GROUP BY blob2, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
+      outs: "SELECT blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'out' GROUP BY blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
     });
     expect(() => usageSql('docttak_usage', 365)).toThrow();
     expect(() => usageSql('x; DROP TABLE y', 7)).toThrow();
@@ -270,8 +273,8 @@ describe('SQL builders and table shaping', () => {
     expect(shaped.tables.slice(0, 5).every((t) => !t.rows.length)).toBe(true);
     const empty = shapeUsage({});
     expect(empty.chains).toEqual({ total: 0, pairs: [], perTool: [] });
-    expect(empty.tables).toHaveLength(7);
-    expect(empty.tables.slice(5).every((t) => !t.rows.length)).toBe(true);
+    expect(empty.tables).toHaveLength(8);
+    expect(empty.tables.slice(5, 7).every((t) => !t.rows.length)).toBe(true);
   });
 
   it('renders markdown and HTML from the same rows; HTML escapes every value', () => {
@@ -367,7 +370,11 @@ describe('SQL builders and table shaping', () => {
       | PDF 합치기 | 12 | 3 |
       | PDF 용량 줄이기 | 3 | 12 |
       | 사진 용량 줄이기 | 12 | 0 |
-      | 사진 PDF 변환 | 0 | 12 |"
+      | 사진 PDF 변환 | 0 | 12 |
+
+      ### 증명사진 인화·사진관 링크
+
+      기록이 아직 없어요."
     `);
   });
 
@@ -380,7 +387,9 @@ describe('SQL builders and table shaping', () => {
     const r = await fetchUsage({ accountId: 'acc/1', token: 't0k', dataset: 'docttak_usage', days: 30, fetch: ok as never });
     expect(r.events).toHaveLength(1);
     expect(r.chains).toHaveLength(1);
-    expect(calls).toHaveLength(5);
+    expect(r.outs).toHaveLength(1);
+    expect(calls).toHaveLength(6);
+    expect(calls.some((c) => String(c.init.body).includes("blob1 = 'out'"))).toBe(true);
     expect(calls.some((c) => String(c.init.body).includes("blob1 = 'next'"))).toBe(true);
     for (const c of calls) {
       expect(c.url).toBe('https://api.cloudflare.com/client/v4/accounts/acc%2F1/analytics_engine/sql');
@@ -952,5 +961,87 @@ describe('이어서 하기 next event (CHAIN decision 9)', () => {
     const shaped = shapeUsage({ events: [{ tool: 'jpg-to-pdf', event: 'next', via: 'direct', n: 3 }, { tool: 'jpg-to-pdf', event: 'success', via: 'direct', n: 2 }] });
     expect(shaped.tools[0]).toMatchObject({ tool: 'jpg-to-pdf', success: 2, start: 0 });
     expect(JSON.stringify(shaped)).not.toContain('NaN');
+  });
+});
+
+describe('인화·사진관 링크 out event (REV2 decision 7)', () => {
+  const OUT = { ...BASE, t: 'id-photo', e: 'out', o: 'out' };
+
+  it('accepts out for the four dests, only from id-photo', () => {
+    expect(EVENTS).toContain('out');
+    expect(OUT_KEY).toBe('out');
+    expect(OUT_DESTS).toEqual(['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop']);
+    for (const v of OUT_DESTS) expect(validate(body({ ...OUT, v })), v).toMatchObject({ e: 'out', t: 'id-photo', o: 'out', v });
+    expect(toDataPoint(validate(body({ ...OUT, v: 'cp-backdrop' }))!).blobs.slice(0, 6)).toEqual(['out', 'id-photo', '', '', 'out', 'cp-backdrop']);
+  });
+
+  it('rejects a wrong tool, missing o/v, an unknown dest, another o, out carrying g/dl/c, and o=out on other events', () => {
+    for (const [why, b] of [
+      ['wrong tool', body({ ...OUT, t: 'pdf-merge', v: 'photo-studio' })],
+      ['no o/v', body({ ...BASE, t: 'id-photo', e: 'out' })],
+      ['o without v', body({ ...BASE, t: 'id-photo', e: 'out', o: 'out' })],
+      ['unknown dest', body({ ...OUT, v: 'https://map.naver.com/' })],
+      ['a placement not rendered yet', body({ ...OUT, v: 'cp-stamp' })],
+      ['cp-stamp from stamp-signature', body({ ...OUT, t: 'stamp-signature', v: 'cp-stamp' })],
+      ['a tool as dest', body({ ...OUT, v: 'pdf-merge' })],
+      ['another o', body({ ...OUT, o: 'next', v: 'photo-studio' })],
+      ['a setting o', body({ ...OUT, o: 'preset', v: 'id_card' })],
+      ['g on out', body({ ...OUT, v: 'photo-studio', g: 'x' })],
+      ['dl on out', body({ ...OUT, v: 'photo-studio', dl: '1' })],
+      ['c on out', body({ ...OUT, v: 'photo-studio', c: 'x' })],
+      ['o=out on start', body({ ...BASE, t: 'id-photo', e: 'start', o: 'out', v: 'photo-studio' })],
+      ['o=out on next', body({ ...BASE, t: 'id-photo', e: 'next', o: 'out', v: 'photo-studio' })],
+      ['o=out on success', body({ ...BASE, t: 'id-photo', e: 'success', o: 'out', v: 'photo-studio' })],
+    ] as const) expect(validate(b), why).toBeNull();
+  });
+
+  it('buildPayload(out) carries only e, t, o, v, via, d, b, w', () => {
+    const ctx = { via: 'guide' as const, ua: 'Mozilla/5.0 Chrome/131.0', device: 'mobile' as const, build: 'abc1234', w: 2 };
+    const p = buildPayload({ e: 'out', t: 'id-photo', o: 'out', v: 'photo-studio' }, ctx);
+    expect(p).toEqual({ e: 'out', t: 'id-photo', o: 'out', v: 'photo-studio', via: 'guide', d: 'mobile', b: 'abc1234', w: 2 });
+    expect(validate(JSON.stringify(p))).not.toBeNull();
+  });
+
+  it('outs query; shaping: dest whitelist, n desc with ties in OUT_DESTS order, share of id-photo successes, events loop skips out', () => {
+    expect(usageSql('docttak_usage', 30).outs).toBe(
+      "SELECT blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '30' DAY AND blob1 = 'out' GROUP BY blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
+    );
+    const shaped = shapeUsage({
+      events: [
+        { tool: 'id-photo', event: 'success', via: 'direct', n: 200 },
+        { tool: 'id-photo', event: 'out', via: 'direct', n: 9 },
+      ],
+      outs: [
+        { dest: 'cp-backdrop', n: 3 },
+        { dest: 'photo-studio', n: 6 },
+        { dest: 'cp-paper', n: 3 },
+        { dest: '<script>', n: 50 },
+        { dest: 'photo-studio', n: 1 },
+      ],
+    });
+    expect(shaped.tools).toEqual([expect.objectContaining({ tool: 'id-photo', success: 200, start: 0, download: 0 })]);
+    expect(shaped.outs.total).toBe(13);
+    expect(shaped.outs.rows.map((r) => [r.dest, r.n, r.share])).toEqual([
+      ['photo-studio', 7, '4%'],
+      ['cp-paper', 3, '2%'],
+      ['cp-backdrop', 3, '2%'],
+    ]);
+    const table = shaped.tables[7]!;
+    expect(shaped.tables).toHaveLength(8);
+    expect(table).toEqual({
+      title: '증명사진 인화·사진관 링크',
+      head: ['링크', '누른 횟수', '증명사진 저장 성공 대비(%)'],
+      rows: [
+        ['사진관 찾기(네이버 지도)', '7', '4%'],
+        ['인화지(쿠팡 광고)', '3', '2%'],
+        ['흰색 배경천(쿠팡 광고)', '3', '2%'],
+      ],
+    });
+    // the existing tables keep their order
+    expect(shaped.tables.map((t) => t.title).slice(0, 7)).toEqual(['도구별', '실패 이유', '많이 쓴 설정', '안내 글에서 도구로', '도구별 성공률 (안내에서 온 경우와 바로 온 경우)', '이어서 하기 (보낸 도구 → 받은 도구)', '이어서 하기 도구별 합계']);
+    expect(JSON.stringify(shaped)).not.toContain('script');
+    // zero id-photo successes: the share is "-"
+    expect(shapeUsage({ outs: [{ dest: 'photo-studio', n: 2 }] }).tables[7]!.rows).toEqual([['사진관 찾기(네이버 지도)', '2', '-']]);
+    expect(shapeUsage({}).outs).toEqual({ total: 0, rows: [] });
   });
 });

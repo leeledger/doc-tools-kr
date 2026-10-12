@@ -15,7 +15,7 @@ import { drawCrop, renderOutput, renderPreview } from '../../lib/idphoto/render'
 import { checklist, headReading, limitLabel, type Checklist } from '../../lib/idphoto/warnings';
 import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { renderSource } from './source';
-import { track } from '../../lib/ui/usage';
+import { track, type OutDest } from '../../lib/ui/usage';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { formatSize } from '../../lib/ui/format';
@@ -690,6 +690,11 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     resultUrl = null;
   });
   download.addEventListener('click', () => track({ e: 'download', t: 'id-photo' }));
+  // 인화·사진관 링크 (REV2): only the link kind is counted; the browser opens the new tab as usual.
+  document.getElementById('idp-print-links')?.addEventListener('click', (e) => {
+    const a = (e.target as Element | null)?.closest<HTMLAnchorElement>('a[data-out]');
+    if (a) track({ e: 'out', t: 'id-photo', o: 'out', v: a.dataset.out as OutDest });
+  });
 
   // Initial state: whatever the preset controls show now (they work before this module loads).
   choosePreset();

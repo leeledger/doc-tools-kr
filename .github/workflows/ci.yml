@@ -98,6 +98,8 @@ jobs:
       # fixtures; no test reaches Cloudflare. The same build carries the anonymous usage statistics (usage.spec.ts;
       # /api/usage is page.route'd too) and Google Analytics with a test ID (ga.cloud.spec.ts; gtag.js and the collect
       # hosts are stubbed by the no-upload fixture). The default and checks builds stay GA-off.
+      # REV2 round 2 (Arch): it also has the Coupang affiliate links on, as production does (PUBLIC_AFF_COUPANG=1), so the
+      # 450 KB precache gate measures the real production build; usage.spec.ts checks the links (link.coupang.com stubbed).
       - name: Build (배경 지우기 cloud on → dist-bgcloud)
         run: mv dist dist-keep && npm run build && mv dist dist-bgcloud && mv dist-keep dist
         env:
@@ -107,6 +109,7 @@ jobs:
           PUBLIC_CONTACT_EMAIL: 'robotncoding@kakao.com'
           PUBLIC_USAGE_STATS: '1'
           PUBLIC_GA_ID: 'G-TEST000000'
+          PUBLIC_AFF_COUPANG: '1'
       - name: Install Playwright browser
         run: |
           case "${{ matrix.project }}" in

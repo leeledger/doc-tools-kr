@@ -2,7 +2,7 @@
 // admin fields of shapeUsage, fail-code labels and the HTML of scripts/lib/admin-view.mjs.
 import { describe, expect, it, vi } from 'vitest';
 import { FAIL_LABELS, UsageApiError, fetchPrevTotals, shapeUsage, usagePrevSql } from '../../scripts/lib/usage.mjs';
-import { CHAIN_NOTE, barPct, delta, formatKst, rateLevel, renderAdminPage, sampleShareOf } from '../../scripts/lib/admin-view.mjs';
+import { CHAIN_NOTE, OUT_NOTE, barPct, delta, formatKst, rateLevel, renderAdminPage, sampleShareOf } from '../../scripts/lib/admin-view.mjs';
 import { EMPTY, FULL, PREV, XSS } from '../fixtures/usage-rows.mjs';
 
 const NOW = new Date('2026-10-07T05:03:00Z');
@@ -206,6 +206,23 @@ describe('renderAdminPage', () => {
     expect(hostile).toMatch(/<h2 id="s-chain">[^<]+<\/h2>\n<p class="muted kpi-note">[^<]+<\/p>\n<p class="muted">이 기간에는 기록이 없어요.<\/p>/);
     const noChains = page(7, { ...FULL, chains: [] });
     expect(noChains).toMatch(/<h2 id="s-chain-tools">이어서 하기 도구별 합계<\/h2>\n<p class="muted">이 기간에는 기록이 없어요.<\/p>/);
+  });
+
+  it('인화·사진관 링크 (REV2): s-out after s-chain-tools, the note, the ratio to id-photo successes; out-only data is not empty', () => {
+    const html = page(7, { ...FULL, outs: [{ dest: 'photo-studio', n: 4 }, { dest: 'cp-printer', n: 1 }, { dest: '<img src=x onerror=1>', n: 9 }] });
+    const chainTools = html.indexOf('<h2 id="s-chain-tools">');
+    const out = html.indexOf('<h2 id="s-out">증명사진 인화·사진관 링크</h2>');
+    expect(chainTools).toBeGreaterThan(0);
+    expect(out).toBeGreaterThan(chainTools);
+    expect(OUT_NOTE).toBe('링크를 누른 횟수예요. 실제로 주문했는지는 알 수 없어요.');
+    expect(html).toContain(`<h2 id="s-out">증명사진 인화·사진관 링크</h2>\n<p class="muted kpi-note">${OUT_NOTE}</p>`);
+    expect(html).toContain('<tr><th scope="col">링크</th><th scope="col" class="num">누른 횟수</th><th scope="col" class="num">증명사진 저장 성공 대비(%)</th></tr>');
+    expect(html).toMatch(/<tr><td>사진관 찾기\(네이버 지도\)<\/td><td class="num">4<\/td><td class="num">(\d+%|-)<\/td><\/tr>/);
+    expect(html).toContain('<td>포토프린터(쿠팡 광고)</td>');
+    expect(html).not.toContain('onerror');
+    const only = page(7, { ...EMPTY, outs: [{ dest: 'photo-studio', n: 2 }] });
+    expect(only).not.toContain('이 기간에는 아직 기록이 없어요');
+    expect(only).toContain('<tr><td>사진관 찾기(네이버 지도)</td><td class="num">2</td><td class="num">-</td></tr>');
   });
 
   it('error notice: exact text with role="status" inside the shell with the tabs', () => {

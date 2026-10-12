@@ -5,7 +5,7 @@
 // is the "off sends nothing" regression test.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Page, Request } from '@playwright/test';
+import type { Locator, Page, Request } from '@playwright/test';
 import { validate } from '../../scripts/lib/usage.mjs';
 import { expect, gotoReady, test } from './no-upload';
 import { fixturePath, photoFixture, photoRuntime, runtimePath } from './paths';
@@ -18,7 +18,7 @@ const PORTRAIT_NAME = 'portrait_pd';
 const PORTRAIT_SIZE = String(readFileSync(PORTRAIT).length);
 /** legal.ts reads build-time constants, so the date is read from its source here. */
 const PRIVACY_USAGE = /PRIVACY_USAGE = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
-const PRIVACY_CHAIN = /PRIVACY_CHAIN = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_OUT = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'w']);
 
 interface Beacon {
@@ -279,6 +279,84 @@ test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before t
   expect(next[0]!.body).not.toContain('gen_scan');
 });
 
+test('인화·사진관 링크 (REV2): a click on the info link sends exactly one out (v=photo-studio); no URL in the body', async ({ page, network }) => {
+  const beacons = await record(page);
+  const studio = /^https:\/\/map\.naver\.com\//;
+  // The external site is a stub: no test reaches Naver.
+  await page.context().route(studio, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' }));
+  await gotoReady(page, '/id-photo/');
+  await page.selectOption('#idp-preset', 'passport_online');
+  await page.setInputFiles('#idp-input', PORTRAIT);
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', /^(adjust|blocked)$/, { timeout: 90_000 });
+  await page.locator('#idp-confirm').check();
+  await page.locator('#idp-save').click();
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toContain('success');
+  const [popup] = await Promise.all([page.waitForEvent('popup'), page.locator('#idp-print-links a[data-out="photo-studio"]').click()]);
+  await popup.waitForLoadState();
+  await popup.close();
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'out').length).toBe(1);
+  expectClean(beacons);
+  const out = beacons.filter((b) => b.ev.e === 'out');
+  expect(out[0]!.ev).toEqual({ e: 'out', t: 'id-photo', o: 'out', v: 'photo-studio', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
+  expect(out[0]!.body).not.toMatch(/https?:|naver|%EC/i);
+  // The opened tab's navigation went to the stub only (bodiless GETs of exactly the link's URL); it is the link, not
+  // page data, so it leaves the no-upload log (upload-guard is not widened).
+  const external = network.requests.filter((r) => studio.test(r.url()));
+  expect(external.length).toBeGreaterThan(0);
+  for (const r of external) {
+    expect([r.method(), r.url(), r.postDataBuffer()]).toEqual(['GET', 'https://map.naver.com/p/search/%EC%82%AC%EC%A7%84%EA%B4%80', null]);
+    network.requests.splice(network.requests.indexOf(r), 1);
+  }
+});
+
+test('쿠팡 제휴 링크 (REV2 round 2; this build has PUBLIC_AFF_COUPANG=1 like production): disclosure first, three sponsored links, a click sends out with the link kind only', async ({ page, network }) => {
+  const beacons = await record(page);
+  const COUPANG = 'https://link.coupang.com/a/hM1VvrGKdg';
+  // The external site is a stub: no test reaches Coupang.
+  await page.context().route(/^https:\/\/link\.coupang\.com\//, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' }));
+  await gotoReady(page, '/id-photo/');
+  await page.selectOption('#idp-preset', 'passport_online');
+  await page.setInputFiles('#idp-input', PORTRAIT);
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', /^(adjust|blocked)$/, { timeout: 90_000 });
+  await page.locator('#idp-confirm').check();
+  await page.locator('#idp-save').click();
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  const group = page.locator('#idp-print-links .print-links-ad');
+  await expect(group).toBeVisible();
+  // The disclosure is the group's first element, at body size and colour (not the muted hint style).
+  const disclosure = group.locator('> p').first();
+  await expect(disclosure).toHaveText('광고: 아래 링크로 주문하면 문서딱이 수수료를 받을 수 있어요. 이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.');
+  const look = (l: Locator) =>
+    l.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return [s.color, s.fontSize];
+    });
+  expect(await look(disclosure)).toEqual(await look(page.locator('#idp-print-links > p').first()));
+  const links = group.locator('a');
+  await expect(links).toHaveText(['포토프린터 (쿠팡, 광고, 새 창)', '포토프린터 인화지 (쿠팡, 광고, 새 창)', '흰색 촬영 배경천 (쿠팡, 광고, 새 창)']);
+  for (const a of await links.all()) {
+    await expect(a).toHaveAttribute('rel', 'sponsored noopener');
+    await expect(a).toHaveAttribute('target', '_blank');
+  }
+  const [popup] = await Promise.all([page.waitForEvent('popup'), links.first().click()]);
+  await popup.waitForLoadState();
+  expect(popup.url()).toBe(COUPANG);
+  await popup.close();
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'out').length).toBe(1);
+  expectClean(beacons);
+  const out = beacons.find((b) => b.ev.e === 'out')!;
+  expect(out.ev).toMatchObject({ e: 'out', t: 'id-photo', o: 'out', v: 'cp-printer' });
+  expect(out.body).not.toMatch(/https?:|coupang\.com|hM1/i);
+  // As in the info-link test: only the opened tab's own navigation to exactly the link's URL leaves the no-upload log.
+  const external = network.requests.filter((r) => r.url().startsWith('https://link.coupang.com/'));
+  expect(external.length).toBeGreaterThan(0);
+  for (const r of external) {
+    expect([r.method(), r.url(), r.postDataBuffer()]).toEqual(['GET', COUPANG, null]);
+    network.requests.splice(network.requests.indexOf(r), 1);
+  }
+});
+
 test('guide -> tool: the guide CTA sends one arrive (g, dl=1) and later events say via=guide; a direct open sends no arrive', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/guide/photo-kb/');
@@ -309,9 +387,11 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   await expect(main).toContainText('보내지 않는 것: 파일 이름, 크기, 내용, IP 주소, 쿠키, 나를 알아볼 수 있는 값.');
   await expect(main).toContainText(`${PRIVACY_USAGE}: 익명 사용 통계를 더함`);
   await expect(main).toContainText('이어서 하기(보낸 도구·받을 도구 이름)');
-  await expect(main).toContainText(`시행일: ${PRIVACY_CHAIN}`);
+  await expect(main).toContainText('증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크를 눌렀는지(링크 종류만)');
+  await expect(main).toContainText(`${PRIVACY_OUT}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`);
+  await expect(main).toContainText(`시행일: ${PRIVACY_OUT}`);
   // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence wins then (ga.cloud.spec.ts
-  // checks it); without it, the cookieless sentence. The date is 이어서 하기's (CHAIN) in both.
+  // checks it); without it, the cookieless sentence. The date is the link count's (REV2) in both.
   if ((await page.locator('#ga').count()) === 0) {
     await expect(main).toContainText('쿠키도 쓰지 않아요.');
   }

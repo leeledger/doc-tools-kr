@@ -632,6 +632,49 @@ test('axe: empty, adjust (overlay and checklist) and done', async ({ page }) => 
   expect(await serious()).toEqual([]);
 });
 
+// ---------- REV2 인화·사진관 링크 ----------
+
+const STUDIO_URL = 'https://map.naver.com/p/search/%EC%82%AC%EC%A7%84%EA%B4%80';
+const STUDIO_HOST = /^https:\/\/map\.naver\.com\//;
+
+test('인화·사진관 링크 (REV2): the info link on every result, no sponsored link in this build; a click opens a new tab (stubbed host)', async ({ page, context, network }) => {
+  // The external site is a stub: no test reaches Naver.
+  await context.route(STUDIO_HOST, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' }));
+  await open(page);
+  const block = page.locator('#idp-print-links');
+  await expect(block).toBeHidden();
+  await pick(page, PORTRAIT);
+  await choosePreset(page, 'passport_online');
+  await save(page);
+  await expect(block).toBeVisible();
+  await expect(block.locator('> p')).toHaveText('종이 사진이 필요하면 사진관에서 뽑을 수 있습니다.');
+  const link = block.locator('a[data-out]');
+  await expect(link).toHaveCount(1);
+  await expect(link).toHaveText('가까운 사진관 찾기 (네이버 지도, 새 창)');
+  await expect(link).toHaveAttribute('href', STUDIO_URL);
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('data-out', 'photo-studio');
+  // The block renders in the system font (the copy is not in the UI font subset).
+  expect(await block.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^-apple-system/);
+  await expect(page.locator('a[rel^="sponsored"]')).toHaveCount(0);
+  await expect(page.getByText('광고:')).toHaveCount(0);
+  const [popup] = await Promise.all([page.waitForEvent('popup'), link.click()]);
+  await popup.waitForLoadState();
+  expect(popup.url()).toBe(STUDIO_URL);
+  await popup.close();
+  await expect(tool(page)).toHaveAttribute('data-state', 'done');
+  // The user-opened tab's navigation went to the stub only: bodiless GETs of exactly the link's URL (the stub page has no
+  // subresources). That is the link, not data from this page, so it leaves the no-upload log here; every other request
+  // is still checked by the fixture (upload-guard is not widened).
+  const external = network.requests.filter((r) => STUDIO_HOST.test(r.url()));
+  expect(external.length).toBeGreaterThan(0);
+  for (const r of external) {
+    expect([r.method(), r.url(), r.postDataBuffer()]).toEqual(['GET', STUDIO_URL, null]);
+    network.requests.splice(network.requests.indexOf(r), 1);
+  }
+});
+
 // ---------- 15 mobile ----------
 
 test('mobile at 360 px: no horizontal scroll; stage buttons, sliders and the checkbox label are ≥ 44 px', async ({ page, isMobile }) => {

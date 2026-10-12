@@ -289,7 +289,7 @@ describe('GA-on build (PUBLIC_GA_ID=G-TEST000000)', { timeout: 300_000 }, () => 
     ]) expect(text, s).toContain(s);
     expect(html).toContain('href="https://support.google.com/policies/contact/general_privacy_form?hl=ko"');
     expect(html).toContain('href="https://tools.google.com/dlpage/gaoptout?hl=ko"');
-    expect(page('sitemap.xml')).toMatch(/<loc>[^<]*\/privacy\/<\/loc><lastmod>2026-10-11<\/lastmod>/);
+    expect(page('sitemap.xml')).toMatch(/<loc>[^<]*\/privacy\/<\/loc><lastmod>2026-10-12<\/lastmod>/);
   });
 
   it('check-dist: an invalid ID, a missing or altered ga.js, or the ID unset on this build fail', () => {

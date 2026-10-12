@@ -25,7 +25,10 @@ import { HUB_KIND, HUB_SLUGS } from '../../src/data/hubs';
 import { DUP_LIMIT, articleText, duplicatePairs, jaccard, shingles } from '../../scripts/lib/shingles.mjs';
 import { CLAIM_FILE_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, claimText, unqualifiedClaims } from '../../scripts/lib/bgcloud.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from '../../scripts/lib/fontcover.mjs';
-import { CORE_PATHS, uiCharSets } from '../../scripts/lib/ui-font-chars.mjs';
+import { CORE_PATHS, stripComments, uiCharSets } from '../../scripts/lib/ui-font-chars.mjs';
+import { PRINT_PAGE, coupangProblems, disclosureStrings, sponsoredProblems } from '../../scripts/lib/print-links-check.mjs';
+import { PRINT_COPY } from '../../src/data/print-links';
+import { AFF_COPY, COUPANG_DISCLOSURE } from '../../src/data/affiliate';
 
 const ROOT = join(__dirname, '..', '..');
 const DIST = join(ROOT, 'dist');
@@ -454,6 +457,17 @@ describe('UI font static instances (P.12)', () => {
       expect(existsSync(join(ROOT, 'src', p))).toBe(true);
     }
   });
+
+  it('REV2: the 인화·사진관 and affiliate link copy (PRINT_COPY, AFF_COPY, AFF_LINKS, COUPANG_DISCLOSURE) adds no character to the core faces', () => {
+    for (const f of ['print-links.ts', 'affiliate.ts']) {
+      const source = readFileSync(join(ROOT, 'src', 'data', f), 'utf8');
+      expect(source, f).toMatch(/[가-힣]/);
+      expect(stripComments(source), f).not.toMatch(/[가-힣]/);
+    }
+    // the rules are named: the same text in another constant stays
+    expect(stripComments("const OTHER = { a: '뽑기' };")).toContain('뽑기');
+    expect(stripComments("export const COUPANG_DISCLOSURE = '일환';\nconst PRINT_COPY = { a: '뽑' } as const;\nconst AFF_COPY = { a: '집' };\nexport const AFF_LINKS: readonly X[] = [{ label: '도장' }];")).not.toMatch(/[가-힣]/);
+  });
 });
 
 describe('UI font coverage helpers (scripts/lib/fontcover.mjs)', () => {
@@ -504,6 +518,86 @@ describe('UI font coverage helpers (scripts/lib/fontcover.mjs)', () => {
 
   it('uncovered lists each missing character once and ignores whitespace', () => {
     expect(uncovered('가 나\n가다', new Set([0xac00]))).toEqual(['나', '다']);
+  });
+});
+
+describe('check-dist: sponsored links (REV2 H, scripts/lib/print-links-check.mjs)', () => {
+  const d = disclosureStrings(readFileSync(join(ROOT, 'src', 'data', 'affiliate.ts'), 'utf8'))!;
+  const info = '<a href="https://map.naver.com/p/search/x" rel="noopener noreferrer" target="_blank" data-out="photo-studio">가까운 사진관 찾기 (네이버 지도, 새 창)</a>';
+  const print = '<a href="https://example.com/print" rel="sponsored noopener" target="_blank" data-out="cp-x">사진 인화 주문하기 (광고, 새 창)</a>';
+  const coupang = '<a href="https://link.coupang.com/a/abc" rel="sponsored noopener" target="_blank" data-out="cp-printer">포토프린터 (쿠팡, 광고, 새 창)</a>';
+  const block = (inner: string) => `<div class="idp-done"><div class="print-links" id="idp-print-links"><p>${PRINT_COPY.lead}</p>${inner}</div><p>뒤</p></div>`;
+  const ad = (text: string, links: string) => `<div class="print-links-ad"><p class="hint">${text}</p><ul><li>${links}</li></ul></div>`;
+  const check = (html: string, extra: [string, string][] = []) => sponsoredProblems(new Map([[PRINT_PAGE, html], ...extra]), d);
+
+  it('reads the disclosure strings from src/data/affiliate.ts', () => {
+    expect(d).toEqual({ generic: AFF_COPY.ad, coupang: COUPANG_DISCLOSURE });
+    expect(disclosureStrings('const x = 1;')).toBeNull();
+  });
+
+  it('passes: info link only; info + both affiliate links after the full disclosure', () => {
+    expect(check(block(`<ul><li>${info}</li></ul>`))).toEqual([]);
+    expect(check(block(`<ul><li>${info}</li></ul>${ad(`${AFF_COPY.ad} ${COUPANG_DISCLOSURE}`, print + coupang)}`))).toEqual([]);
+    expect(check(block(ad(AFF_COPY.ad, print)))).toEqual([]);
+    expect(check('<p>no block</p>')).toEqual([]);
+  });
+
+  it('(a) a sponsored link on another page fails', () => {
+    expect(check(block(''), [['guide/x/index.html', `<p>${print}</p>`]])).toEqual(['guide/x/index.html: a sponsored link outside /id-photo/']);
+  });
+
+  it('(b) disclosure missing, after the link, coupang sentence missing, link outside the block, info link under the disclosure', () => {
+    expect(check(block(ad('', print)))).toEqual([`${PRINT_PAGE}: the sponsored link "cp-x" is not preceded by the disclosure`]);
+    expect(check(block(`<ul><li>${print}</li></ul><p>${AFF_COPY.ad}</p>`))).toEqual([`${PRINT_PAGE}: the sponsored link "cp-x" is not preceded by the disclosure`]);
+    expect(check(block(ad(AFF_COPY.ad, coupang)))).toEqual([`${PRINT_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`]);
+    expect(check(`${block(ad(AFF_COPY.ad, ''))}<p>${print}</p>`)).toEqual([`${PRINT_PAGE}: the sponsored link "cp-x" is outside .print-links`]);
+    expect(check(block(ad(AFF_COPY.ad, print + info)))).toEqual([`${PRINT_PAGE}: the link "photo-studio" follows the affiliate disclosure`]);
+  });
+
+  it('(c) a sponsored link without a new tab or without 광고 in its label fails', () => {
+    expect(check(block(ad(AFF_COPY.ad, print.replace(' target="_blank"', ''))))).toEqual([`${PRINT_PAGE}: the sponsored link "cp-x" does not open a new tab`]);
+    expect(check(block(ad(AFF_COPY.ad, print.replace('광고, ', ''))))).toEqual([`${PRINT_PAGE}: the label of the sponsored link "cp-x" does not say 광고`]);
+  });
+
+  it('(c) Review R2: a Coupang link without sponsored fails (and gets every sponsored check); "noopener sponsored" counts as sponsored', () => {
+    const full = `${AFF_COPY.ad} ${COUPANG_DISCLOSURE}`;
+    // dropped rel=sponsored, before the disclosure: not passed as an info link
+    const bare = coupang.replace('rel="sponsored noopener"', 'rel="noopener noreferrer"').replace('광고, ', '');
+    expect(check(block(`<ul><li>${bare}</li></ul>${ad(full, '')}`))).toEqual([
+      `${PRINT_PAGE}: the Coupang link "cp-printer" is not rel=sponsored`,
+      `${PRINT_PAGE}: the sponsored link "cp-printer" is not preceded by the disclosure`,
+      `${PRINT_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`,
+      `${PRINT_PAGE}: the label of the sponsored link "cp-printer" does not say 광고`,
+    ]);
+    // sponsored not first in rel: still a sponsored link with all its checks
+    const late = coupang.replace('rel="sponsored noopener"', 'rel="noopener sponsored"');
+    expect(check(block(ad(full, late)))).toEqual([]);
+    expect(check(block(`<ul><li>${late}</li></ul>${ad(full, '')}`))).toEqual([
+      `${PRINT_PAGE}: the sponsored link "cp-printer" is not preceded by the disclosure`,
+      `${PRINT_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`,
+    ]);
+    expect(check(block(''), [['guide/x/index.html', `<p>${late}</p>`]])).toEqual(['guide/x/index.html: a sponsored link outside /id-photo/']);
+  });
+
+  it('PUBLIC_AFF_COUPANG: Coupang links on /id-photo/ exactly when on, nowhere else, never embedded (script src or inline, iframe, img, link, source, object, embed)', () => {
+    const on = block(ad(`${AFF_COPY.ad} ${COUPANG_DISCLOSURE}`, coupang));
+    const off = block(`<ul><li>${info}</li></ul>`);
+    expect(coupangProblems(new Map([[PRINT_PAGE, on]]), true)).toEqual([]);
+    expect(coupangProblems(new Map([[PRINT_PAGE, off]]), false)).toEqual([]);
+    expect(coupangProblems(new Map([[PRINT_PAGE, off]]), true)).toEqual([`${PRINT_PAGE}: no Coupang link although PUBLIC_AFF_COUPANG is on`]);
+    expect(coupangProblems(new Map([[PRINT_PAGE, on]]), false)).toEqual([`${PRINT_PAGE}: a Coupang link while PUBLIC_AFF_COUPANG is off`]);
+    expect(coupangProblems(new Map([[PRINT_PAGE, on], ['stamp-signature/index.html', `<p>${coupang.replace(' rel="sponsored noopener"', '')}</p>`]]), true)).toEqual(['stamp-signature/index.html: a Coupang link outside /id-photo/']);
+    for (const tag of [
+      '<img src="https://ads-partners.coupang.com/banner.png" alt="">',
+      '<script src="https://ads-partners.coupang.com/g.js"></script>',
+      '<iframe src="https://coupang.com/x"></iframe>',
+      '<link rel="preconnect" href="https://ads-partners.coupang.com">',
+      '<picture><source srcset="https://static.coupangcdn.com/a.webp"></picture>',
+      '<object data="https://ads-partners.coupang.com/a.swf"></object>',
+      '<embed src="https://ads-partners.coupang.com/a">',
+      '<script>new PartnersCoupang.G({ id: 1 });</script>',
+    ]) expect(coupangProblems(new Map([['index.html', tag]]), false), tag).toEqual(['index.html: a Coupang script, iframe, image or other embed']);
+    expect(coupangProblems(new Map([['index.html', '<script>console.log(1)</script>']]), false)).toEqual([]);
   });
 });
 
@@ -639,6 +733,28 @@ describe('built output', () => {
     });
     expect(flipped.status).toBe(1);
     expect(flipped.stderr).toContain(on ? 'contains sendBeacon while PUBLIC_USAGE_STATS is off' : 'no script carries sendBeacon and /api/usage although PUBLIC_USAGE_STATS is on');
+  });
+
+  it('REV2 privacy: the link-count sentence and PRIVACY_OUT only in a usage-stats build', () => {
+    need();
+    const html = readFileSync(join(DIST, 'privacy', 'index.html'), 'utf8');
+    const on = usageBuilt();
+    const date = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync(join(ROOT, 'src', 'data', 'legal.ts'), 'utf8'))![1]!;
+    expect(html.includes('증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크를 눌렀는지(링크 종류만)')).toBe(on);
+    expect(html.includes(`${date}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`)).toBe(on);
+    expect(html.includes(`시행일: ${date}`)).toBe(on);
+  });
+
+  it('REV2 id-photo: the info link block with exact href/rel/target; sponsored links only when an affiliate env is set', () => {
+    need();
+    const html = readFileSync(join(DIST, 'id-photo', 'index.html'), 'utf8');
+    if (process.env.PUBLIC_PRINT_INFO?.trim() !== '0') {
+      expect(html).toMatch(/<div class="print-links" id="idp-print-links">/);
+      expect(html).toContain('<a href="https://map.naver.com/p/search/%EC%82%AC%EC%A7%84%EA%B4%80" rel="noopener noreferrer" target="_blank" data-out="photo-studio">가까운 사진관 찾기 (네이버 지도, 새 창)</a>');
+    }
+    const aff = process.env.PUBLIC_AFF_COUPANG?.trim() === '1';
+    expect(html.includes('rel="sponsored')).toBe(aff);
+    expect(html.includes(AFF_COPY.ad)).toBe(aff);
   });
 
   it('/admin and /api/ are never pages: not in the sitemap, llms.txt or the precache; _routes.json sends them to Functions', async () => {

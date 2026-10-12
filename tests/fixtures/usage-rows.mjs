@@ -87,6 +87,8 @@ export const FULL = {
     { tool: 'pdf-rotate', dest: 'pdf-merge', n: 9 },
     { tool: 'pdf-merge', dest: 'gone-tool', n: 5 },
   ],
+  // 인화·사진관 링크 (REV2): none in this period (admin-view.test.ts adds rows where it needs them).
+  outs: /** @type {{ dest: string, n: number }[]} */ ([]),
 };
 
 /** The previous period ("AS kind" query): pick / download / unknown kinds are ignored by fetchPrevTotals. */
@@ -120,6 +122,7 @@ export const XSS = {
     { tool: XSS_TEXT, dest: 'pdf-merge', n: 2 },
     { tool: 'pdf-merge', dest: XSS_IMG, n: 1 },
   ],
+  outs: [{ dest: XSS_IMG, n: 4 }],
 };
 
-export const EMPTY = { events: [], fails: [], settings: [], guides: [], chains: [] };
+export const EMPTY = { events: [], fails: [], settings: [], guides: [], chains: [], outs: [] };

@@ -2814,3 +2814,75 @@ Details, line ranges, probes and proofs: handoff/REVIEW-REQUEST.md ("HWPX2HWP").
 
 **CHAIN-ADMIN — deploy gate (2026-10-11)**
 - Richard: clear (0 Must Fix). Should Fix applied by the orchestrator: chain.spec pdf-password fast-reset comment corrected (held request is Vite's modulepreload; two rAFs cover the gap; a slow run can only pass falsely). Pushed; CI watched.
+
+**REV2 — brief written (2026-10-12)**: handoff/ARCHITECT-BRIEF-REV2.md. Source: reports/문서딱 수익화 전략 검증.md (owner: "권하는 순서대로 진행시켜").
+- Order locked: 1 성장 엔진 (built: 증명사진 원스톱, TOOLS4 사진→PDF·PDF→JPG·PDF 암호, CHAIN 이어서 하기 + 관리자; no new feature) → 2 R2 정적 제휴 링크 (REV2) → 3 무료 임베드 위젯 (later sprint) → 4 R1 애드센스 안내 글만 + 경로별 CSP (later sprint) → 5 R3 증명사진 유료 옵션 (only after demand; owner decision, 사업자 등록). 광고 제거 구독 dropped.
+- REVENUE-MODEL rewrite: 25% 기본 / 40% 낙관 / 15% 보수; 11-10 single-rule replaced by indicator table + 7th row (인화 링크 누름) + 12-15 re-check.
+- Decisions: one static link block on every id-photo result (not print-preset only: id_card is the sole print preset); non-affiliate 「가까운 사진관 찾기 (네이버 지도)」 ON by default to start measuring in the October peak (kill switch PUBLIC_PRINT_INFO=0); affiliate links only via PUBLIC_AFF_PRINT_URL / PUBLIC_AFF_COUPANG_URL, rel="sponsored noopener", new tab, disclosure paragraph before them + 「광고」 in labels; Coupang mandated sentence as one constant (wording unverified → owner confirms at signup); block in system font + core-char exclusion (font headroom); usage event `out` (t=id-photo, o=out, v ∈ photo-studio|print-service|coupang); admin s-out + weekly table with ratio to id-photo success; privacy list sentence + PRIVACY_OUT; M-3 checklist text corrected (guide-only ads, route CSP, 50 guides, 14세 미만). No CSP/_headers/CLAUDE.md change, no script, no Function.
+- Known Gap (deferred): links on guide pages (no tracker there).
+
+**REV2 — built (2026-10-12) — Status: DONE_WITH_CONCERNS**
+- Orchestrator update mid-build (approved change to the brief):
+  - The owner's Coupang short links live in `src/data/affiliate.ts` (label + placement) behind one flag, `PUBLIC_AFF_COUPANG=1`. This replaces `PUBLIC_AFF_PRINT_URL` / `PUBLIC_AFF_COUPANG_URL`.
+  - The disclosure is confirmed verbatim.
+  - Only the id-photo placement is rendered.
+- Built:
+  - REVENUE-MODEL rewrite (sections 0-8: 25% 기본, indicator table + 7th row, 11-10 / 12-15 dates, R3 = 증명사진 유료 옵션, 광고 제거 구독 뺌).
+  - id-photo `.print-links` block: the info link on by default, then the Coupang group (disclosure → 「집에서 인화하려면」 → 3 links) behind the flag. The block renders in the system font, and its copy is excluded from the core set.
+  - Usage `out` event (photo-studio | cp-printer | cp-paper | cp-backdrop), with the admin `s-out` section and the weekly 8th table (ratio to id-photo success).
+  - Privacy sentence, PRIVACY_OUT and the change-log line (stats builds only).
+  - check-dist rules H(a)(b)(c) plus a flag ⇔ HTML check (scripts/lib/print-links-check.mjs).
+  - M-3 checklist text; OPS-RUNBOOK §10; COPY.md exception.
+- Gates:
+  - vitest 1,402/1,403 (photo-engine timing test flaky under load, 41/41 alone).
+  - astro check 0.
+  - Default build: core 605 → 607 (눌, 렀 from the privacy sentence; the block adds 0), 400 +36 B, 800 +252 B, precache 440.5 → 441.4.
+  - Cloud build: core 606 → 608, precache 446.8 → 447.9.
+  - Cloud + flag build: 448.7.
+  - `<script` counts = HEAD.
+  - e2e main 831 passed / 8 flaky / 0 failed (7 projects); cloud 77 passed / 3 flaky / 0 failed.
+  - Naver Map probe 200.
+- Known Gaps:
+  - (1) stamp-signature (인감도장) and HWP (한컴오피스) Coupang links are in the data file but not rendered: flag-on cloud precache 448.7/450, and /stamp-signature/ and /hwp-to-pdf/ are precached (~0.55 KB HTML each + listener ≈ 450). Options: precache work first, or the Hancom link on /hwp-viewer/ and /hwpx-to-hwp/ only (not precached).
+  - (2) Cloud precache headroom is now 2.1 KB (flag off) / 1.3 KB (flag on).
+  - (3) No e2e on a flag-on build; covered by check-dist and unit tests.
+  - (4) Links on guide pages remain out of scope.
+  - (5) Local Windows load flakiness: Firefox goto timeouts, WebKit skia allocation crash.
+
+**REV3 / REV4 / REV5 — briefs written (2026-10-12, Arch)**: handoff/ARCHITECT-BRIEF-REV3.md, -REV4.md, -REV5.md. Owner: "쿠팡 파트너스 등 수익화 가능한 수단을 최대한 많이 진행시켜". REV2 still in flight; ARCHITECT-BRIEF.md first line untouched.
+- REV2 risk flagged to the orchestrator: CI cloud build env (ci.yml L102-109) has no PUBLIC_AFF_COUPANG=1, so the 450 KB precache gate does not measure the production (flag-on) build. REV3 R3.0 adds it if REV2 does not.
+- REV3 decisions: placement map in affiliate.ts (TOOL_AFF, GUIDE_AFF keyed by guide tools[0]), max 3 links per block, missing links skipped; no block on upload/size tools, home, 404, hubs, guide index; /hwp-to-pdf/ leaves the precache first (hwp-viewer precedent, 35.2 KB); `.print-links` renamed `.out-links` as a refactor step; guides get a top disclosure line (공정위 첫 부분) + block in aside; guide clicks counted via a guide-only tracker component (guides already run site.ts; not precached); usage out validated by TOOL_OUT/GUIDE_OUT with a sync test; HWP: TRADEMARK_NOTICE 상표 wording, HANCOM_NOTICE_PDF on /licenses/ + legal comment, KS X 6101 help line.
+- REV4 decisions: two env stages (PUBLIC_ADSENSE_CLIENT = meta tag + ads.txt; PUBLIC_ADSENSE_ON + 2 slot IDs = serve); guide articles only; self-hosted /ads.js after load+idle; manual units, auto/anchor/vignette off; scheme-source CSP on /guide/* with `!` detach (not strict CSP, not Functions); reserved boxes, never collapse; transparency + opt-out (no banner, no CMP); owner decides personalized vs non-personalized; CLAUDE.md text needs owner approval.
+- REV5 decisions: iframe-only snippet + host-side backlink line; IdPhotoTool.astro extraction first (byte-identical); /embed/id-photo/ noindex, no SW, no GA, no affiliate/info links; frame-ancestors * only on /embed/*; usage via=embed; /embed/ info page with copy code + white-label contact line; /terms/ wording needs owner approval. Arch recommends building REV5 before REV4 (locked order 3 before 4).
+- Rejected / deferred (no brief):
+  - Donation (Ko-fi, GitHub Sponsors): rejected for now. Korean users rarely use them, payouts go through foreign processors (PayPal/Stripe availability for a Korean individual unverified), amounts tiny, toss.me ended. Revisit only as one static footer text link if the owner wants it.
+  - Kakao AdFit: rejected (invite/pre-approval only; would also need a script and the REV4 route CSP). Revisit if invited, guide routes only.
+  - 링크프라이스 / 텐핑: deferred until about 100 real visits/day for 2 weeks (approval criteria unverified). Purpose then: a photo-print service merchant for the id-photo result (R3 demand signal), not more generic links. 텐핑 (CPA share campaigns) does not fit a tool site.
+  - Naver AdPost: not for docttak.com (Naver blog only). Note for the owner/blog team: they may apply on the marketing blog; revenue is falling with AI 브리핑 (report L71).
+  - Coupang dynamic banner / carousel / search widget: rejected (script/iframe, floating ban, CSP).
+
+**REV2 round 2 — built (2026-10-12, base 87486a7) — Status: DONE_WITH_CONCERNS (placements deferred to REV3)**
+- Must Fix:
+  - check-dist treats `rel` containing the word `sponsored` anywhere as sponsored.
+  - Every link.coupang.com anchor must be sponsored, and it gets all disclosure, 「광고」 and new-tab checks.
+  - Fixtures for a missing-sponsored Coupang link and for `noopener sponsored`.
+- Should Fix:
+  - Disclosure is a plain `<p>` at body colour and size, first in the group.
+  - e2e stub filters require GET + exact link URL + no body; usage.spec asserts at least one such request.
+  - Privacy wording 「사진관·인화 관련 링크와 상품 링크」 uses existing glyphs only (core and font bytes unchanged).
+  - The no-embed check now also covers link, source, object, embed and inline scripts.
+  - Restored the space in `UsagePhase = 'load'`.
+- Arch:
+  - `PUBLIC_AFF_COUPANG: '1'` added to the CI cloud (dist-bgcloud) build env, so the 450 KB gate measures the production-like build.
+  - New cloud e2e for the flag-on block and a Coupang click (link.coupang.com stubbed).
+- Gates:
+  - vitest 1,404/1,404; astro check 0.
+  - check-dist OK on default (441.4), cloud flag-off (447.9), cloud flag-on (448.7) and AUTOFRAME (443.5).
+  - e2e id-photo/usage/ga.cloud on chromium + mobile-chrome (+ manual/cloud variants): 132 passed, 0 failed.
+  - All cloud specs on 5 projects: 131 passed, 2 WebKit flaky (remove-background.cloud, closed page), 0 failed.
+- Known Gaps:
+  - (1) Flag-on precache headroom is 1.3 KB (448.7/450). Until this round, CI built the cloud variant flag-off (447.9), so CI would not have caught a flag-on overflow. Since round 2, the CI cloud build is flag-on and measures it. Any id-photo addition needs precache work first.
+  - (2) stamp-signature and HWP placements are deferred to REV3 (after precache work).
+
+**REV2 — deploy gate (2026-10-12)**
+- Richard r1: 1 Must Fix (sponsored detection) + Should Fix; all applied in round 2 with tests. Orchestrator committed after round 2 (owner asked for speed); Richard re-check of round 2 runs post-commit, fix-forward if needed. CI cloud build now builds with PUBLIC_AFF_COUPANG=1 (precache 448.7/450 KB).

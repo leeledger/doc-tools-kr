@@ -161,6 +161,8 @@ function failSection(failRows) {
 const shapedSection = (id, table, numCols, note = '') => section(id, table.title, table.head, table.rows.map((r) => r.map(esc)), numCols, note);
 
 export const CHAIN_NOTE = '이어서 하기 버튼을 누른 횟수예요. 파일이 다음 도구에서 열렸는지는 따로 세지 않아요.';
+/** Under the 인화·사진관 링크 table (REV2): a press is not an order. */
+export const OUT_NOTE = '링크를 누른 횟수예요. 실제로 주문했는지는 알 수 없어요.';
 
 function viaSection(tools) {
   const rows = tools.map((t) => [esc(t.label), pill(t.guide.success, t.guide.fail), pill(t.direct.success, t.direct.fail)]);
@@ -327,7 +329,7 @@ export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = 
   if (!usageOk) body = `<p class="notice" role="status">도구 사용 통계를 불러오지 못했어요 (${esc(notice ?? '')}).</p>`;
   else if (isEmpty(shaped)) body = emptyBlock(days);
   else {
-    const [, , settings, guides, , chainPairs, chainTools] = shaped.tables;
+    const [, , settings, guides, , chainPairs, chainTools, outs] = shaped.tables;
     body = [
       kpis(shaped.kpi, prev, days),
       toolsSection(shaped.tools),
@@ -337,6 +339,7 @@ export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = 
       viaSection(shaped.tools),
       shapedSection('s-chain', chainPairs, [2], CHAIN_NOTE),
       shapedSection('s-chain-tools', chainTools, [1, 2]),
+      shapedSection('s-out', outs, [1, 2], OUT_NOTE),
     ].join('\n');
   }
   const hasVisits = visits !== undefined || visitsNotice !== undefined;

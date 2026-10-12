@@ -11,6 +11,8 @@ import { detectDevice, type Device } from './device';
 export const USAGE_ON: boolean = __USAGE_STATS__;
 
 export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp';
+/** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/print-links.test.ts keeps the links' dests equal to it). */
+export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop';
 export type UsagePhase = 'load' | 'parse' | 'process' | 'save';
 export type UsageSetting =
   | { o: 'target-kb'; v: 'le100' | 'le200' | 'le300' | 'le500' | 'le1000' | 'gt1000' }
@@ -31,6 +33,8 @@ export type UsageEvent =
   | ({ e: 'start'; t: UsageTool } & (UsageSetting | { o?: undefined; v?: undefined }))
   /** 이어서 하기 (CHAIN): the result of `t` was handed to the tool `v`. */
   | { e: 'next'; t: UsageTool; o: 'next'; v: UsageTool }
+  /** 인화·사진관 링크 (REV2): a link of the id-photo result block was pressed; only its kind, never the href. */
+  | { e: 'out'; t: 'id-photo'; o: 'out'; v: OutDest }
   | { e: 'fail'; t: UsageTool; c: string; p: UsagePhase };
 
 type Via = 'guide' | 'direct';
@@ -68,7 +72,7 @@ export function buildPayload(ev: UsageEvent | Arrive, ctx: PayloadContext): Reco
     p.c = CODE_RE.test(ev.c) ? ev.c : 'unknown';
     p.p = ev.p;
     p.br = browserFamily(ctx.ua);
-  } else if (ev.e === 'start' || ev.e === 'next') {
+  } else if (ev.e === 'start' || ev.e === 'next' || ev.e === 'out') {
     if (ev.o !== undefined && ev.v !== undefined) {
       p.o = ev.o;
       p.v = ev.v;

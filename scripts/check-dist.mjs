@@ -16,6 +16,7 @@ import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mj
 import { headMeta, metaLen, metaProblems } from './lib/meta-length.mjs';
 import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fontcover.mjs';
+import { coupangProblems, disclosureStrings, sponsoredProblems } from './lib/print-links-check.mjs';
 
 const dist = distDir();
 const KB = 1024;
@@ -401,6 +402,11 @@ else {
   const age = Math.floor((Date.now() - Date.parse(`${retrieved}T00:00:00Z`)) / 86_400_000);
   if (age > 180) warnings.push(`id-photo presets were last checked ${retrieved} (${age} days ago): re-verify every source`);
 }
+// 인화·사진관 links (REV2): sponsored links only on /id-photo/, after their disclosure, new tab, labelled 광고.
+const disclosures = disclosureStrings(readFileSync(join(import.meta.dirname, '..', 'src', 'data', 'affiliate.ts'), 'utf8'));
+if (!disclosures) errors.push('src/data/affiliate.ts: AFF_COPY.ad or COUPANG_DISCLOSURE not found');
+else errors.push(...sponsoredProblems(pageHtml, disclosures));
+errors.push(...coupangProblems(pageHtml, env.PUBLIC_AFF_COUPANG?.trim() === '1'));
 
 // UI fonts (Polish P.12; 600 dropped in G2 ci-green; core + late split in the LCP fix after TOOLS4; 700 retired in
 // LCP round 2): two static core instances (400, 800), ≤ 50 KB each; up to two late instances (controller-only
