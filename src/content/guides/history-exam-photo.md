@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=history', label: '한국사 시험 사진 규격에 맞추기' }
-related: [id-photo-size, qnet-photo, gosi-photo]
+related: [id-photo-size, qnet-photo, gosi-photo, hanja-exam-photo]
 sources:
   - preset: history
   - url: https://www.historyexam.go.kr/pst/view.do?bbs=faq&pst_sno=1000015355

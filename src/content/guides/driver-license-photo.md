@@ -10,7 +10,7 @@ category: 사진
 topic: 여권·신분증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=driver_license', label: '사진 규격 맞추기' }
-related: [passport-photo, id-photo-size]
+related: [passport-photo, id-photo-size, intl-driving-license]
 sources:
   - url: https://www.safedriving.or.kr/diGuide/selectDiGuide01.do?menuCd=MN-PO-1211
     title: 도로교통공단 안전운전 통합민원 — 정기적성검사/면허갱신

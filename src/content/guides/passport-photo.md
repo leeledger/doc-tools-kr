@@ -10,7 +10,7 @@ category: 사진
 topic: 여권·신분증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=passport_online', label: '여권사진 규격에 맞추기' }
-related: [id-photo-size, id-photo-kb, gosi-photo]
+related: [id-photo-size, id-photo-kb, gosi-photo, passport-photo-error]
 sources:
   - preset: passport_online
   - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=32

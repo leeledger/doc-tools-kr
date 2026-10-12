@@ -10,7 +10,7 @@ category: 서류
 topic: 입시·장학
 tools: [photo-compress]
 cta: { href: '/photo-compress/', label: '서류 사진 용량 줄이기' }
-related: [univ-docs-upload, admission-photo, photo-kb]
+related: [univ-docs-upload, admission-photo, photo-kb, gov24-pdf-save]
 sources:
   - url: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EB%AA%A8%EB%91%90+%EC%84%9C%EB%A5%98%EB%A5%BC
     title: 한국장학재단 FAQ — 국가장학금 신청자 모두 서류를 제출해야 하나요?

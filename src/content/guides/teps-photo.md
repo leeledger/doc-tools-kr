@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=teps', label: '텝스 사진 규격에 맞추기' }
-related: [id-photo-kb, photo-kb, qnet-photo]
+related: [id-photo-kb, photo-kb, qnet-photo, jlpt-photo]
 sources:
   - preset: teps
   - url: https://www.teps.or.kr/Etc2/FaqList?sch_faqType=09

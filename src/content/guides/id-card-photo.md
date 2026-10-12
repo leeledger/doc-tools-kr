@@ -10,7 +10,7 @@ category: 사진
 topic: 여권·신분증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=id_card', label: '사진 규격 맞추기' }
-related: [passport-photo, driver-license-photo, id-photo-size]
+related: [passport-photo, driver-license-photo, id-photo-size, youth-card-photo]
 sources:
   - url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000013
     title: 정부24 — 주민등록증 신규 발급신청

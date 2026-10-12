@@ -6,6 +6,8 @@ export default {
   "ecfs-pdf-limit": "전자소송 PDF 용량, 파일 하나 20MB까지",
   "email-attachment-limit": "메일 첨부파일 용량 제한, 지메일·아웃룩 기준",
   "gosi-photo": "공무원 시험 원서 사진 규격 (국가직)",
+  "gov24-pdf-save": "정부24 서류 PDF 저장되나요? 전자증명서로 내는 법",
+  "hanja-exam-photo": "한자능력검정시험 원서 사진 규격 (한국어문회)",
   "heic-to-jpg": "아이폰 HEIC 사진 JPG로 바꾸는 법",
   "history-exam-photo": "한국사능력검정시험(한능검) 원서 사진 규격",
   "hwp-on-phone": "휴대폰·아이폰에서 HWP 열기",
@@ -14,6 +16,8 @@ export default {
   "id-card-photo": "주민등록증 사진 크기·규격 (신규·재발급)",
   "id-photo-kb": "증명사진 용량 줄이기 (200·350·500KB 맞추기)",
   "id-photo-size": "증명사진 사이즈 규격 정리 (여권·공무원·큐넷·이력서)",
+  "intl-driving-license": "국제운전면허증 사진 규격과 발급 준비물",
+  "jlpt-photo": "JLPT 원서 사진 규격, 온라인·우편 접수",
   "jpg-to-pdf": "아이폰·갤럭시 사진 PDF로 만드는 법",
   "kakao-photo": "카톡 사진 용량, 한 번에 보낼 수 있는 양",
   "korcham-photo": "컴활 원서 사진 규격 (대한상공회의소 자격시험)",
@@ -21,6 +25,7 @@ export default {
   "kuksiwon-photo": "국시원 원서 사진 규격 (간호사 등 국가시험)",
   "open-hwp-without-hangul": "한글 없이 HWP 파일 여는 법",
   "passport-photo": "여권사진 규격과 사이즈, 귀·눈썹·옷 기준",
+  "passport-photo-error": "정부24 여권 재발급 사진 오류 코드별 해결",
   "pdf-compress": "PDF 용량 줄이기, 폰·맥북·PC에서 무료로 하는 법",
   "pdf-merge": "PDF 합치기, 아이폰·갤럭시·PC에서 하는 법",
   "pdf-password": "PDF 암호 해제·설정, 폰·PC에서 하는 법",
@@ -38,5 +43,6 @@ export default {
   "univ-docs-upload": "대학 원서 서류 올리기, 용량·파일이 안 될 때",
   "upload-limits": "서류 제출 용량 모음, 메일·전자소송·원서 사진",
   "what-is-hwpx": "HWPX가 뭔가요? 여는 법",
-  "yearend-tax-pdf": "연말정산 간소화 PDF, 회사에 내는 법"
+  "yearend-tax-pdf": "연말정산 간소화 PDF, 회사에 내는 법",
+  "youth-card-photo": "청소년증 사진 규격과 발급 신청 방법"
 };
