@@ -1,11 +1,11 @@
 ---
-title: 한국사능력검정시험 원서 사진 규격
-description: 한국사능력검정시험 원서 사진 규격을 시험 누리집 안내로 정리했어요. GIF·JPG 파일, 권장 크기 120×160픽셀이에요.
+title: 한국사능력검정시험(한능검) 원서 사진 규격
+description: 한능검(한국사능력검정시험) 원서 사진은 GIF·JPG 파일, 권장 크기 120×160픽셀이에요. 시험 당일 10시까지 바꿀 수 있어요.
 ogDescription: 한국사능력검정시험 원서 사진은 GIF·JPG, 권장 크기 120×160픽셀이에요.
-query: 한국사능력검정시험 사진
+query: 한능검 사진 규격
 answer: 한국사능력검정시험 원서 사진은 GIF나 JPG 파일이면 되고, 권장 크기는 가로 120픽셀, 세로 160픽셀(약 3×4 cm)이에요.
 published: '2026-10-02'
-updated: '2026-10-02'
+updated: '2026-10-12'
 category: 사진
 topic: 시험·자격증
 tools: [id-photo, photo-compress]
