@@ -1,5 +1,22 @@
 # Review Request — TWA step 1 (repository part)
-Date: 2026-10-12
+Date: 2026-10-12 (round 2: 2026-10-13)
+
+## Round 2 (REVIEW-FEEDBACK-TWA.md)
+- Must Fix, screenshot 02: `02-id-photo-adjust.jpg` deleted. New `02-id-photo-presets.png` = /id-photo/ before a photo is picked
+  (제출처 select, 기준일·출처, "사진은 이 기기 밖으로 전송되지 않습니다", 사진 선택). No photo, no face.
+- Can't recur: twa/screenshots.mjs:19-56 `syntheticPhoto(page, scale)` draws a face-free picture (gradient, circle, card, seeded
+  noise) in the page and hands it over as a file buffer; 03 (id-photo result) and 07 (photo-compress; scale 2.5 → 3.6 MB → 481 KB,
+  so the shot shows a real reduction instead of "이미 충분히 작아요") use it. No photo fixture is referenced any more, and
+  tests/unit/manifest.test.ts "feeds the tools a synthetic picture only" fails if portrait_pd / scene_cc0 (a painting with a
+  person) / cc0-person / any `'photo'` fixture path appears in the script.
+- Sticky header: twa/screenshots.mjs:143-151 scrolls each focus element to just below `header.top` (sticky) + 16 px instead of
+  `scrollIntoView`, so nothing shows through the header (checked 02, 03, 07 visually).
+- Shortcut label: src/data/web-manifest.ts adds `short_name` per shortcut (`SHORTCUT_SHORT_NAMES`, only 'id-photo' →
+  「증명사진 규격」, 7 chars; others keep the tools.ts name, all ≤ `SHORT_LABEL_MAX` 12). twa-manifest.json shortName follows;
+  `bubblewrap update --skipVersionUpgrade` re-run (app/build.gradle shortcuts, manifest-checksum.txt). Tests: every short_name
+  ≤ 12, twa shortName = web short_name, checksum matches.
+- Re-run: vitest manifest + assetlinks + postbuild 85/85 passed; astro check 0 errors; default build check-dist OK (2435 files);
+  screenshots regenerated (8 × 1080x1920 PNG, 80–143 KB).
 Branch: twa-step1 (base origin/main 29826f0)
 Ready for Review: YES
 Status: DONE_WITH_CONCERNS — everything up to the signed build is in place and tested; the Gradle build itself was not run
@@ -18,7 +35,7 @@ Status: DONE_WITH_CONCERNS — everything up to the signed build is in place and
 - twa/.gitattributes (new) — keeps twa-manifest.json / manifest-checksum.txt byte-exact (repo has core.autocrlf=true; a CRLF checkout would change the SHA-1 and make `bubblewrap build` prompt and bump the version).
 - twa/README.md (new, Korean) — owner commands (keytool, build with env-var passwords), assetlinks phases, version rule, backup, device checklist.
 - twa/screenshots.mjs (new) — repo Playwright + tests/e2e/serve.mjs on dist/: 8 shots 360x640@3 = 1080x1920 (PNG, JPEG q85 fallback over 500 KB), feature graphic, icon copy.
-- twa/listing/feature.html, feature-graphic.png (1024x500), icon-512.png (512x512 RGBA), screenshots/01..08 (all 1080x1920, 80–245 KB).
+- twa/listing/feature.html, feature-graphic.png (1024x500), icon-512.png (512x512 RGBA), screenshots/01..08 (all 1080x1920, all PNG, 80–143 KB; no real person anywhere).
 - twa/listing/listing.ko.md (new) — title 25 / short 51 / full 1,758 chars; every live tool by name (15), on-device processing with the 배경 지우기 exception stated honestly, offline after first open, shortcuts, no sign-up/ads, 정부·외교부와 무관.
 - twa/listing/play-console-answers.md (new) — Data safety, ads, IARC, audience, app access, gov/fin/health, privacy URL, appeal text; header records the live flags it was derived from.
 - tests/unit/manifest.test.ts (new) — id/description/categories/shortcuts (names from tools.ts, all live), twa-manifest mirrors the shortcuts, prod URLs, no extras, checksum = SHA-1 of twa-manifest, no password field.
@@ -46,7 +63,7 @@ Status: DONE_WITH_CONCERNS — everything up to the signed build is in place and
 
 ## Concerns / Open Questions
 1. **Gradle build not run.** I tried `gradlew assembleRelease` (unsigned, no keystore) to prove the project compiles; the permission system denied it. So "the generated project compiles" is unverified until the owner's first `npm run build`. Risk is low (stock Bubblewrap 1.27.0 template, no edits).
-2. **Screenshot 02 shows a real, identifiable person** (tests/fixtures/photo/portrait_pd.jpg, a public-domain US congressional portrait). Fine for tests, questionable for a store listing (impersonation/endorsement look). Recommend dropping 02 (7 shots remain, within 6–8) or replacing the fixture with a consented/AI-free model photo before upload. Arch decides.
+2. ~~Screenshot 02 shows a real, identifiable person~~ — fixed in round 2 (below).
 3. **Data safety "앱 상호작용"**: brief says 앱 상호작용 = no, 페이지 조회 = yes, but Play has no separate page-view item; page views/taps are 앱 활동 > 앱 상호작용. Answers file says **예**. Please confirm.
 4. **Delete-request question**: answers file recommends 아니요 (no account, anonymous/aggregate data). Owner/Arch confirm.
 5. **Short description** keeps the draft's "파일은 폰 안에서 처리해요" (true for the three tools it names); the full description states the 배경 지우기 exception. Tighten if Arch wants zero ambiguity.

@@ -16,25 +16,54 @@ const SHOTS = join(OUT, 'screenshots');
 const MAX_BYTES = 500 * 1024;
 const fixture = (...p) => join(REPO, 'tests', ...p);
 
-/** Each shot: open `path`, run `act`, then scroll `focus` (if any) to the top and capture the viewport. */
+/**
+ * Store screenshots never show a real person (review TWA r1): the test photo fixtures include a real public figure's
+ * portrait and a painting, so photo tools get this synthetic picture instead (soft backdrop and shapes, no face),
+ * drawn in the page and handed over as a file. tests/unit/manifest.test.ts fails if a photo fixture appears here.
+ */
+async function syntheticPhoto(page, scale = 1) {
+  const b64 = await page.evaluate((k) => {
+    const c = document.createElement('canvas');
+    c.width = 1200 * k;
+    c.height = 1600 * k;
+    const g = c.getContext('2d');
+    g.scale(k, k);
+    const bg = g.createLinearGradient(0, 0, 1200, 1600);
+    bg.addColorStop(0, '#dbeafe');
+    bg.addColorStop(1, '#99f6e4');
+    g.fillStyle = bg;
+    g.fillRect(0, 0, 1200, 1600);
+    g.fillStyle = '#0f766e';
+    g.beginPath();
+    g.arc(600, 620, 260, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#f8fafc';
+    g.fillRect(250, 1050, 700, 380);
+    const img = g.getImageData(0, 0, c.width, c.height);
+    let s = 7;
+    for (let i = 0; i < img.data.length; i += 4) {
+      s = (s * 1103515245 + 12345) >>> 0;
+      const n = ((s >>> 16) % (8 * k + 5)) - 4 * k - 2;
+      img.data[i] += n;
+      img.data[i + 1] += n;
+      img.data[i + 2] += n;
+    }
+    g.putImageData(img, 0, 0);
+    return c.toDataURL('image/jpeg', 0.92).split(',')[1];
+  }, scale);
+  return { name: '사진.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(b64, 'base64') };
+}
+
+/** Each shot: open `path`, run `act`, then scroll `focus` (if any) just below the sticky header and capture the viewport. */
 const SHOTS_PLAN = [
   { name: '01-home', path: '/' },
-  {
-    name: '02-id-photo-adjust',
-    path: '/id-photo/',
-    focus: '#idp-overlay',
-    center: true,
-    act: async (page) => {
-      await page.setInputFiles('#idp-input', fixture('fixtures', 'photo', 'portrait_pd.jpg'));
-      await page.locator('#idp-tool[data-state="adjust"]').waitFor({ timeout: 90_000 });
-    },
-  },
+  { name: '02-id-photo-presets', path: '/id-photo/', focus: '#idp-tool' },
   {
     name: '03-id-photo-done',
     path: '/id-photo/',
     focus: '#idp-tool',
     act: async (page) => {
-      await page.setInputFiles('#idp-input', fixture('fixtures', 'photo', 'portrait_pd.jpg'));
+      await page.setInputFiles('#idp-input', await syntheticPhoto(page));
       await page.locator('#idp-tool[data-state="adjust"]').waitFor({ timeout: 90_000 });
       await page.locator('#idp-confirm').check();
       await page.locator('#idp-save').click();
@@ -76,7 +105,7 @@ const SHOTS_PLAN = [
     path: '/photo-compress/',
     focus: '#photo-tool',
     act: async (page) => {
-      await page.setInputFiles('#ph-input', fixture('fixtures', 'photo', 'scene_cc0.jpg'));
+      await page.setInputFiles('#ph-input', await syntheticPhoto(page, 2.5)); // a few MB: over the default target
       await page.getByRole('button', { name: '사진 용량 줄이기', exact: true }).click();
       await page.locator('#photo-tool[data-state="done"]').waitFor({ timeout: 110_000 });
     },
@@ -113,7 +142,12 @@ try {
     await page.goto(`${server.url}${shot.path}`, { waitUntil: 'load' });
     if (shot.act) await shot.act(page);
     if (shot.focus) {
-      await page.locator(shot.focus).first().evaluate((el, center) => el.scrollIntoView({ block: center ? 'center' : 'start' }), Boolean(shot.center));
+      // Below the sticky header, not under it (scrollIntoView left text showing through the translucent header).
+      await page.locator(shot.focus).first().evaluate((el) => {
+        const header = document.querySelector('header.top');
+        const offset = header && getComputedStyle(header).position === 'sticky' ? header.getBoundingClientRect().height : 0;
+        window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset - 16, behavior: 'instant' });
+      });
     }
     await settle(page);
     console.log(`screenshot ${await capture(page, join(SHOTS, shot.name))}`);

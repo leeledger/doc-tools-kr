@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { defaultDescription } from '../../src/data/site';
 import { getTool } from '../../src/data/tools';
-import { SHORTCUT_SLUGS, webManifest } from '../../src/data/web-manifest';
+import { SHORTCUT_SLUGS, SHORT_LABEL_MAX, webManifest } from '../../src/data/web-manifest';
 
 const m = webManifest();
 const twa = JSON.parse(readFileSync('twa/twa-manifest.json', 'utf8')) as {
@@ -43,6 +43,7 @@ describe('web app manifest', () => {
     expect(m.shortcuts.map((s) => s.url)).toEqual(['/id-photo/', '/pdf-merge/', '/hwp-to-pdf/', '/photo-compress/']);
     for (const [i, s] of m.shortcuts.entries()) {
       expect(s.name).toBe(getTool(SHORTCUT_SLUGS[i]!).name);
+      expect([...s.short_name].length).toBeLessThanOrEqual(SHORT_LABEL_MAX);
       expect(getTool(SHORTCUT_SLUGS[i]!).status).toBe('live');
       expect(s.icons).toEqual([{ src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png' }]);
     }
@@ -54,7 +55,7 @@ describe('twa/twa-manifest.json', () => {
 
   it('mirrors the web manifest shortcuts (same names, absolute URLs on the app host)', () => {
     expect(twa.shortcuts).toEqual(
-      m.shortcuts.map((s) => ({ name: s.name, shortName: s.name, url: `${origin}${s.url}`, chosenIconUrl: `${origin}${s.icons[0]!.src}` })),
+      m.shortcuts.map((s) => ({ name: s.name, shortName: s.short_name, url: `${origin}${s.url}`, chosenIconUrl: `${origin}${s.icons[0]!.src}` })),
     );
   });
 
@@ -85,5 +86,13 @@ describe('twa/twa-manifest.json', () => {
     expect(JSON.stringify(twa)).not.toMatch(/password/i);
     expect(Number.isInteger(twa.appVersionCode) && twa.appVersionCode >= 1).toBe(true);
     expect(twa.appVersion).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+});
+
+describe('twa/screenshots.mjs (Play listing images)', () => {
+  it('feeds the tools a synthetic picture only: no photo fixture (real people, paintings) can reach a store screenshot', () => {
+    const src = readFileSync('twa/screenshots.mjs', 'utf8');
+    expect(src).not.toMatch(/portrait_pd|scene_cc0|cc0-person|exif6_gps|p3_patches|bgremove|bgcloud|['"]photo['"]/);
+    expect(src).toContain('syntheticPhoto');
   });
 });
