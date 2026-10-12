@@ -352,6 +352,30 @@ describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
     expect(orderToolGuides('id-photo', own).map((g) => g.id).slice(0, 2)).toEqual(['passport-photo', 'photo-kb']);
   });
 
+  it('GROWTH3 G0: the tools new guides name show exactly their frozen 4 (tool pages stay byte-identical)', () => {
+    const FROZEN: Record<string, string[]> = {
+      'id-photo': ['passport-photo', 'photo-kb', 'kuksiwon-photo', 'police-exam-photo'],
+      'photo-compress': ['gosi-photo', 'admission-photo', 'photo-kb', 'passport-photo'],
+      'pdf-merge': ['pdf-merge', 'univ-docs-upload', 'yearend-tax-pdf', 'ecfs-pdf-limit'],
+      'pdf-compress': ['pdf-compress', 'univ-docs-upload', 'hwp-to-pdf', 'email-attachment-limit'],
+    };
+    for (const [tool, list] of Object.entries(FROZEN)) {
+      expect(TOOL_GUIDE_PINS[tool], tool).toEqual(list);
+      const own = published
+        .filter((g) => g.parsed.tools.includes(tool))
+        .sort((a, b) => a.parsed.category.localeCompare(b.parsed.category, 'ko') || a.parsed.title.localeCompare(b.parsed.title, 'ko'))
+        .map((g) => ({ id: g.slug }));
+      expect(orderToolGuides(tool, own).slice(0, 4).map((g) => g.id), tool).toEqual(list);
+    }
+    // Any other tool a guide names must not have room for a new guide: a tool with fewer than 4 own guides shows
+    // next-step guides after them, and a new guide naming it would push one off. Those tools stay as they are.
+    const named = new Set(published.flatMap((g) => g.parsed.tools));
+    const partial = ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'pdf-password', 'image-to-jpg', 'hwp-viewer', 'hwpx-to-hwp', 'stamp-signature', 'hwp-to-pdf', 'remove-background'];
+    for (const tool of named) if (!FROZEN[tool]) expect(partial, `${tool}: freeze its 4 in TOOL_GUIDE_PINS before a new guide names it`).toContain(tool);
+    const OWN_COUNT: Record<string, number> = { 'jpg-to-pdf': 1, 'pdf-to-jpg': 1, 'pdf-split': 1, 'pdf-sign': 1, 'pdf-password': 1, 'image-to-jpg': 1, 'hwp-viewer': 3, 'hwpx-to-hwp': 2, 'stamp-signature': 3, 'hwp-to-pdf': 4, 'remove-background': 1 };
+    for (const tool of partial) expect(published.filter((g) => g.parsed.tools.includes(tool)).length, `${tool}: a new guide names it (its 관련 안내 would change)`).toBe(OWN_COUNT[tool]);
+  });
+
   it('G2 A3: /pdf-merge/ and /pdf-compress/ list their own how-to guide first', () => {
     for (const tool of ['pdf-merge', 'pdf-compress']) {
       const own = published

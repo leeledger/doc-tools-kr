@@ -5,9 +5,13 @@
 
 /** Per tool: guide slugs shown first, most searched first. */
 export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
-  'id-photo': ['passport-photo', 'photo-kb'],
-  'pdf-merge': ['pdf-merge'],
-  'pdf-compress': ['pdf-compress'],
+  // GROWTH3 G0: the full list of 4 is frozen for every tool a new guide names, so adding a guide (or retitling one,
+  // which moves it in the title order) never changes a precached tool page. A new guide may name only these tools
+  // (or a tool whose 4 shown guides are all pinned here); the unit test checks the exact lists.
+  'id-photo': ['passport-photo', 'photo-kb', 'kuksiwon-photo', 'police-exam-photo'],
+  'photo-compress': ['gosi-photo', 'admission-photo', 'photo-kb', 'passport-photo'],
+  'pdf-merge': ['pdf-merge', 'univ-docs-upload', 'yearend-tax-pdf', 'ecfs-pdf-limit'],
+  'pdf-compress': ['pdf-compress', 'univ-docs-upload', 'hwp-to-pdf', 'email-attachment-limit'],
   // TOOL-GUIDES: each of these tools pins its own how-to guide (slug = tool slug).
   'jpg-to-pdf': ['jpg-to-pdf'],
   'pdf-to-jpg': ['pdf-to-jpg'],
