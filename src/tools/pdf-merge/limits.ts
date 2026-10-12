@@ -1,6 +1,5 @@
 // Device limits for PDF 합치기. Basis: spike S7 (75 MB / 845쪽 took 6.5–10.8 s and about +351 MB of memory on desktop).
 import { MB, type Device } from '../../lib/ui/device';
-import { josa } from '../../lib/ui/josa';
 
 export const MAX_FILES = 50;
 
@@ -20,43 +19,34 @@ export const LIMITS: Record<Device, DeviceLimits> = {
 
 export type LimitCheck = { level: 'ok' } | { level: 'soft' | 'hard'; message: string };
 
-const mbText = (bytes: number): string => `${Math.round(bytes / MB).toLocaleString('ko-KR')} MB`;
+/** The limit messages of one language (the tool catalog's `limits` entry, EN0); sizes in bytes. */
+export interface LimitCopy {
+  /** More than `max` files: `over` of them were not added. */
+  tooMany: (max: number, over: number) => string;
+  /** The total passed the hard limit: some files were not added. */
+  tooBig: (hardBytes: number, device: Device) => string;
+  softBytes: (softBytes: number) => string;
+  softPages: (softPages: number) => string;
+}
 
 /** Checks whether `fileCount` more files may be added to a list that already has `current` files. */
-export function checkFileCount(current: number, adding: number): LimitCheck {
+export function checkFileCount(current: number, adding: number, copy: LimitCopy): LimitCheck {
   if (current + adding <= MAX_FILES) return { level: 'ok' };
-  return {
-    level: 'hard',
-    message: `한 번에 최대 ${MAX_FILES}개 파일까지 합칠 수 있어 ${current + adding - MAX_FILES}개 파일은 추가하지 않았습니다. 나머지는 나눠서 합쳐 주세요.`,
-  };
+  return { level: 'hard', message: copy.tooMany(MAX_FILES, current + adding - MAX_FILES) };
 }
 
 /** Checks a total size before adding (hard limit only). */
-export function checkAddBytes(totalBytes: number, device: Device): LimitCheck {
+export function checkAddBytes(totalBytes: number, device: Device, copy: LimitCopy): LimitCheck {
   const lim = LIMITS[device];
   if (totalBytes <= lim.hardBytes) return { level: 'ok' };
-  const where = device === 'mobile' ? '휴대폰' : '이 기기';
-  return {
-    level: 'hard',
-    message: `파일 합계가 ${josa(mbText(lim.hardBytes), '을/를')} 넘으면 ${where}에서 한 번에 합칠 수 없어 일부 파일을 추가하지 않았습니다. 파일을 나눠서 합쳐 주세요.`,
-  };
+  return { level: 'hard', message: copy.tooBig(lim.hardBytes, device) };
 }
 
 /** Checks the whole job before merging. */
-export function checkMerge(totalBytes: number, totalPages: number, device: Device): LimitCheck {
+export function checkMerge(totalBytes: number, totalPages: number, device: Device, copy: LimitCopy): LimitCheck {
   const lim = LIMITS[device];
-  if (totalBytes > lim.hardBytes) return checkAddBytes(totalBytes, device);
-  if (totalBytes > lim.softBytes) {
-    return {
-      level: 'soft',
-      message: `파일 합계가 ${josa(mbText(lim.softBytes), '을/를')} 넘습니다. 처리할 양이 많아 오래 걸리거나 화면이 멈출 수 있습니다. 계속 합칠까요?`,
-    };
-  }
-  if (totalPages > lim.softPages) {
-    return {
-      level: 'soft',
-      message: `모두 ${lim.softPages.toLocaleString('ko-KR')}쪽이 넘습니다. 처리할 양이 많아 오래 걸리거나 화면이 멈출 수 있습니다. 계속 합칠까요?`,
-    };
-  }
+  if (totalBytes > lim.hardBytes) return checkAddBytes(totalBytes, device, copy);
+  if (totalBytes > lim.softBytes) return { level: 'soft', message: copy.softBytes(lim.softBytes) };
+  if (totalPages > lim.softPages) return { level: 'soft', message: copy.softPages(lim.softPages) };
   return { level: 'ok' };
 }

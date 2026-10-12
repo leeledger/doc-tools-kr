@@ -29,6 +29,7 @@ import {
   type Target,
 } from '../../src/tools/image-to-jpg/convert';
 import { LIMITS, planAdd } from '../../src/tools/image-to-jpg/limits';
+import { KO } from '../../src/tools/image-to-jpg/messages.ko';
 import { LIMITS as JPG_PDF_LIMITS } from '../../src/tools/jpg-to-pdf/limits';
 import { exifApp1, insertSegments, pngRgba, segment } from '../helpers/image-writers';
 
@@ -114,22 +115,22 @@ describe('planAdd (사진 PDF 변환 numbers)', () => {
     }
   });
   it('phone: 50 images, 50 MB each, 150 MB in total; messages with numbers and usage codes', () => {
-    const many = planAdd(Array(53).fill(MB), 0, 0, 'mobile');
+    const many = planAdd(Array(53).fill(MB), 0, 0, 'mobile', KO.limits);
     expect(many.accepted).toHaveLength(50);
     expect(many.messages[0]).toBe('한 번에 최대 50장까지 바꿀 수 있어 3장은 추가하지 않았습니다. 나머지는 나눠서 바꿔 주세요.');
     expect(many.codes).toEqual(['too-many']);
-    const big = planAdd([51 * MB, MB], 0, 0, 'mobile');
+    const big = planAdd([51 * MB, MB], 0, 0, 'mobile', KO.limits);
     expect(big.accepted).toEqual([1]);
     expect(big.messages[0]).toBe('사진 한 장은 휴대폰에서 50 MB까지 넣을 수 있어 1장은 추가하지 않았습니다.');
-    const total = planAdd([40 * MB, 40 * MB], 2, 100 * MB, 'mobile');
+    const total = planAdd([40 * MB, 40 * MB], 2, 100 * MB, 'mobile', KO.limits);
     expect(total.accepted).toEqual([0]);
     expect(total.messages[0]).toBe('사진 합계가 150 MB를 넘으면 휴대폰에서 한 번에 바꿀 수 없어 1장은 추가하지 않았습니다. 나눠서 바꿔 주세요.');
     expect(total.codes).toEqual(['too-big']);
   });
   it('PC: 200 images, 100 MB each, 500 MB in total', () => {
-    expect(planAdd(Array(201).fill(1), 0, 0, 'desktop').accepted).toHaveLength(200);
-    expect(planAdd([101 * MB], 0, 0, 'desktop').accepted).toEqual([]);
-    expect(planAdd([100 * MB], 0, 450 * MB, 'desktop').accepted).toEqual([]);
+    expect(planAdd(Array(201).fill(1), 0, 0, 'desktop', KO.limits).accepted).toHaveLength(200);
+    expect(planAdd([101 * MB], 0, 0, 'desktop', KO.limits).accepted).toEqual([]);
+    expect(planAdd([100 * MB], 0, 450 * MB, 'desktop', KO.limits).accepted).toEqual([]);
   });
 });
 

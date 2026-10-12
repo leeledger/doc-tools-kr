@@ -55,14 +55,26 @@ export interface EngineCopy {
   body: string;
 }
 
-export const ENGINE_COPY = {
-  offline: '인터넷 연결이 끊겨 처리 도구를 불러오지 못했습니다.',
-  deployed: '사이트가 방금 새 버전으로 바뀌었습니다.',
-  generic: '처리 도구를 불러오지 못했습니다.',
-  reload: '새로고침',
-} as const;
+/** The panel copy of one language, per state, and the button label (a tool catalog's `engine` entry, EN0). */
+export interface EngineMessages {
+  offline: EngineCopy;
+  deployed: EngineCopy;
+  generic: EngineCopy;
+  reload: string;
+}
 
 const body = (when: string): string => `파일에는 문제가 없습니다. ${when} 새로고침해 주세요. 새로고침하면 파일을 다시 골라야 합니다.`;
+
+/**
+ * The Korean panel copy, used by every Korean tool page. Literals and pure-marked calls only, so a bundle that never
+ * shows the panel (the workers import isEngineLoadFailure from here) drops the object.
+ */
+export const ENGINE_KO: EngineMessages = {
+  offline: { title: '인터넷 연결이 끊겨 처리 도구를 불러오지 못했습니다.', body: /* @__PURE__ */ body('연결을 확인한 뒤') },
+  deployed: { title: '사이트가 방금 새 버전으로 바뀌었습니다.', body: /* @__PURE__ */ body('바로') },
+  generic: { title: '처리 도구를 불러오지 못했습니다.', body: /* @__PURE__ */ body('잠시 뒤') },
+  reload: '새로고침',
+};
 
 export const MANIFEST_TIMEOUT_MS = 3000;
 
@@ -72,15 +84,20 @@ function pageBuild(): string | null {
   return document.querySelector('meta[name="build-id"]')?.getAttribute('content') ?? null;
 }
 
+type EngineCopyDeps = { online?: boolean; fetch?: typeof fetch; build?: string | null; timeoutMs?: number };
+
+/** The Korean panel copy (pickEngineCopy with ENGINE_KO). */
+export function engineErrorCopy(deps: EngineCopyDeps = {}): Promise<EngineCopy> {
+  return pickEngineCopy(ENGINE_KO, deps);
+}
+
 /**
- * The panel copy: offline, a new deploy (the live /deploy-manifest.json names another build than this
+ * The panel copy from `m`: offline, a new deploy (the live /deploy-manifest.json names another build than this
  * page), or generic when the builds match or the manifest cannot be read within 3 s.
  */
-export async function engineErrorCopy(
-  deps: { online?: boolean; fetch?: typeof fetch; build?: string | null; timeoutMs?: number } = {},
-): Promise<EngineCopy> {
+export async function pickEngineCopy(m: EngineMessages, deps: EngineCopyDeps = {}): Promise<EngineCopy> {
   const online = deps.online ?? (typeof navigator === 'undefined' ? true : navigator.onLine !== false);
-  if (!online) return { title: ENGINE_COPY.offline, body: body('연결을 확인한 뒤') };
+  if (!online) return m.offline;
   const build = deps.build === undefined ? pageBuild() : deps.build;
   const get = deps.fetch ?? (typeof fetch === 'function' ? (url: string, init: RequestInit) => fetch(url, init) : null);
   const ctrl = new AbortController();
@@ -93,7 +110,7 @@ export async function engineErrorCopy(
       ]);
       if (res.ok) {
         const live = ((await res.json()) as { build?: unknown }).build;
-        if (typeof live === 'string' && live !== build) return { title: ENGINE_COPY.deployed, body: body('바로') };
+        if (typeof live === 'string' && live !== build) return m.deployed;
       }
     }
   } catch {
@@ -101,5 +118,5 @@ export async function engineErrorCopy(
   } finally {
     clearTimeout(timer);
   }
-  return { title: ENGINE_COPY.generic, body: body('잠시 뒤') };
+  return m.generic;
 }

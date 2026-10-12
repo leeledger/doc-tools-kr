@@ -55,6 +55,16 @@ export const NEXT_LABELS: Readonly<Record<NextTarget, string>> = {
 export const NEXT_GROUP_LABEL = '이 파일로 이어서 하기';
 /** Sender alert when the file could not be stored. */
 export const sendFailed = (label: string): string => `파일을 넘기지 못했습니다. 내려받은 뒤 ${label}에서 골라 주세요.`;
+/** The group label, the button labels and the sender alert of one language (a tool catalog's `next` entry, EN0). */
+export interface NextMessages {
+  group: string;
+  labels: Readonly<Record<NextTarget, string>>;
+  sendFailed: (label: string) => string;
+}
+
+/** The Korean labels, used by every Korean tool page. */
+export const NEXT_KO: NextMessages = { group: NEXT_GROUP_LABEL, labels: NEXT_LABELS, sendFailed };
+
 /** Results above this are not offered. */
 export const NEXT_MAX_BYTES = 200 * MB;
 
@@ -98,8 +108,13 @@ export interface NextDeps extends HandoffDeps {
   go?: (path: string) => void;
 }
 
-/** Fills the slot with the group label and one button per next tool; hidden when there is none. */
+/** The group with the Korean labels (showNextStepsIn with NEXT_KO). */
 export function showNextSteps(slot: HTMLElement, from: NextSource, files: readonly (NextFile | NextMaker)[], deps: NextDeps = {}): void {
+  showNextStepsIn(NEXT_KO, slot, from, files, deps);
+}
+
+/** Fills the slot with the group label and one button per next tool, labelled from `m`; hidden when there is none. */
+export function showNextStepsIn(m: NextMessages, slot: HTMLElement, from: NextSource, files: readonly (NextFile | NextMaker)[], deps: NextDeps = {}): void {
   const targets = nextTargets(from, files);
   if (!targets.length) {
     hideNextSteps(slot);
@@ -110,7 +125,7 @@ export function showNextSteps(slot: HTMLElement, from: NextSource, files: readon
   const label = document.createElement('p');
   label.id = `${slot.id}-label`;
   label.className = 'next-steps-label';
-  label.textContent = NEXT_GROUP_LABEL;
+  label.textContent = m.group;
   const row = document.createElement('div');
   row.className = 'row';
   const buttons = targets.map((to) => {
@@ -118,7 +133,7 @@ export function showNextSteps(slot: HTMLElement, from: NextSource, files: readon
     b.type = 'button';
     b.className = 'btn ghost';
     b.dataset.next = to;
-    b.textContent = NEXT_LABELS[to];
+    b.textContent = m.labels[to];
     return b;
   });
   for (const b of buttons) {
@@ -136,7 +151,7 @@ export function showNextSteps(slot: HTMLElement, from: NextSource, files: readon
           if (ok) return;
           for (const x of buttons) x.disabled = false;
           b.removeAttribute('aria-busy');
-          announce('alert', sendFailed(NEXT_LABELS[to]));
+          announce('alert', m.sendFailed(m.labels[to]));
         });
     });
   }

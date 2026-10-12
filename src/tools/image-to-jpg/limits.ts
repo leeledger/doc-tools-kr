@@ -2,7 +2,6 @@
 // canvas caps a converted photo is drawn within. The FAQ and the guides' tool facts read these numbers.
 import type { CanvasCaps } from '../../lib/image/caps';
 import { MB, type Device } from '../../lib/ui/device';
-import { josa } from '../../lib/ui/josa';
 
 export interface DeviceLimits {
   maxImages: number;
@@ -19,8 +18,12 @@ export const LIMITS: Record<Device, DeviceLimits> = {
   mobile: { maxImages: 50, maxFileBytes: 50 * MB, maxTotalBytes: 150 * MB, caps: { maxArea: 16_000_000, maxEdge: 8_192 } },
 };
 
-const mbText = (bytes: number): string => `${Math.round(bytes / MB).toLocaleString('ko-KR')} MB`;
-const where = (device: Device): string => (device === 'mobile' ? '휴대폰' : '이 기기');
+/** The limit messages of one language (the tool catalog's `limits` entry, EN0); sizes in bytes, `left` photos left out. */
+export interface LimitCopy {
+  tooMany: (maxImages: number, left: number) => string;
+  fileTooBig: (maxFileBytes: number, device: Device, left: number) => string;
+  totalTooBig: (maxTotalBytes: number, device: Device, left: number) => string;
+}
 
 export interface AddPlan {
   /** Indexes (into the picked files) that may be added, in order. */
@@ -35,7 +38,7 @@ export interface AddPlan {
  * Which of the picked files (sizes in bytes) fit next to `current` photos totalling `currentBytes` (the 사진 PDF 변환
  * rule). Files over a limit are not added; the rest keep their order.
  */
-export function planAdd(sizes: readonly number[], current: number, currentBytes: number, device: Device): AddPlan {
+export function planAdd(sizes: readonly number[], current: number, currentBytes: number, device: Device, copy: LimitCopy): AddPlan {
   const lim = LIMITS[device];
   const accepted: number[] = [];
   let overCount = 0;
@@ -54,15 +57,15 @@ export function planAdd(sizes: readonly number[], current: number, currentBytes:
   const messages: string[] = [];
   const codes: AddPlan['codes'] = [];
   if (overCount) {
-    messages.push(`한 번에 최대 ${lim.maxImages.toLocaleString('ko-KR')}장까지 바꿀 수 있어 ${overCount.toLocaleString('ko-KR')}장은 추가하지 않았습니다. 나머지는 나눠서 바꿔 주세요.`);
+    messages.push(copy.tooMany(lim.maxImages, overCount));
     codes.push('too-many');
   }
   if (overFile) {
-    messages.push(`사진 한 장은 ${where(device)}에서 ${mbText(lim.maxFileBytes)}까지 넣을 수 있어 ${overFile.toLocaleString('ko-KR')}장은 추가하지 않았습니다.`);
+    messages.push(copy.fileTooBig(lim.maxFileBytes, device, overFile));
     codes.push('too-big');
   }
   if (overTotal) {
-    messages.push(`사진 합계가 ${josa(mbText(lim.maxTotalBytes), '을/를')} 넘으면 ${where(device)}에서 한 번에 바꿀 수 없어 ${overTotal.toLocaleString('ko-KR')}장은 추가하지 않았습니다. 나눠서 바꿔 주세요.`);
+    messages.push(copy.totalTooBig(lim.maxTotalBytes, device, overTotal));
     if (!codes.includes('too-big')) codes.push('too-big');
   }
   return { accepted, messages, codes };

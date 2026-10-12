@@ -132,5 +132,7 @@ const groups = [
 </Base>
 
 <script>
-  import '../../tools/image-to-jpg/entry';
+  import { ENGINE_KO } from '../../lib/ui/engine-load';
+  import { startImageToJpg } from '../../tools/image-to-jpg/entry';
+  startImageToJpg(ENGINE_KO, () => import('../../tools/image-to-jpg/ko/controller'));
 </script>

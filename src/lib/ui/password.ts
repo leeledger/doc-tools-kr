@@ -1,11 +1,12 @@
 // Show/hide toggle for a password field (brief Polish P.17): 44×44, aria-pressed, switches the input type.
 const EYE = '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
 
-export function passwordToggle(field: HTMLInputElement): HTMLButtonElement {
+/** `label`: the button's accessible name, from the tool's catalog (EN0). */
+export function passwordToggle(field: HTMLInputElement, label: string): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn small ghost icon-btn pw-toggle';
-  btn.setAttribute('aria-label', '비밀번호 보기');
+  btn.setAttribute('aria-label', label);
   btn.setAttribute('aria-pressed', 'false');
   btn.dataset.role = 'pw-toggle';
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

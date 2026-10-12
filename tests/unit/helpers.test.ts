@@ -4,6 +4,7 @@ import { MB } from '../../src/lib/ui/device';
 import { baseName, formatMB, formatPages } from '../../src/lib/ui/format';
 import { mergedFileName } from '../../src/tools/pdf-merge/format';
 import { LIMITS, MAX_FILES, checkAddBytes, checkFileCount, checkMerge } from '../../src/tools/pdf-merge/limits';
+import { KO } from '../../src/tools/pdf-merge/messages.ko';
 
 const enc = (s: string) => new TextEncoder().encode(s);
 
@@ -46,27 +47,27 @@ describe('format', () => {
 
 describe('limits', () => {
   it('caps the number of files', () => {
-    expect(checkFileCount(48, 2).level).toBe('ok');
-    const r = checkFileCount(49, 3);
+    expect(checkFileCount(48, 2, KO.limits).level).toBe('ok');
+    const r = checkFileCount(49, 3, KO.limits);
     expect(r.level).toBe('hard');
     expect(r.level !== 'ok' && r.message).toContain(`${MAX_FILES}개`);
   });
 
   it('desktop: soft above 200 MB or 1,500쪽, hard above 500 MB', () => {
-    expect(checkMerge(200 * MB, 1500, 'desktop').level).toBe('ok');
-    expect(checkMerge(200 * MB + 1, 10, 'desktop').level).toBe('soft');
-    expect(checkMerge(10 * MB, 1501, 'desktop').level).toBe('soft');
-    expect(checkMerge(500 * MB + 1, 10, 'desktop').level).toBe('hard');
-    expect(checkAddBytes(500 * MB, 'desktop').level).toBe('ok');
-    expect(checkAddBytes(500 * MB + 1, 'desktop').level).toBe('hard');
+    expect(checkMerge(200 * MB, 1500, 'desktop', KO.limits).level).toBe('ok');
+    expect(checkMerge(200 * MB + 1, 10, 'desktop', KO.limits).level).toBe('soft');
+    expect(checkMerge(10 * MB, 1501, 'desktop', KO.limits).level).toBe('soft');
+    expect(checkMerge(500 * MB + 1, 10, 'desktop', KO.limits).level).toBe('hard');
+    expect(checkAddBytes(500 * MB, 'desktop', KO.limits).level).toBe('ok');
+    expect(checkAddBytes(500 * MB + 1, 'desktop', KO.limits).level).toBe('hard');
   });
 
   it('mobile: soft above 50 MB, hard above 150 MB, and messages state the number', () => {
-    expect(checkMerge(50 * MB, 5000, 'mobile').level).toBe('ok');
-    const soft = checkMerge(50 * MB + 1, 1, 'mobile');
+    expect(checkMerge(50 * MB, 5000, 'mobile', KO.limits).level).toBe('ok');
+    const soft = checkMerge(50 * MB + 1, 1, 'mobile', KO.limits);
     expect(soft.level).toBe('soft');
     expect(soft.level !== 'ok' && soft.message).toContain('50 MB');
-    const hard = checkMerge(150 * MB + 1, 1, 'mobile');
+    const hard = checkMerge(150 * MB + 1, 1, 'mobile', KO.limits);
     expect(hard.level).toBe('hard');
     expect(hard.level !== 'ok' && hard.message).toContain('150 MB');
     expect(LIMITS.mobile.hardBytes).toBe(150 * MB);

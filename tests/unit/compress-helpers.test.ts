@@ -12,6 +12,7 @@ import { QPDF_VENDOR_DIR } from '../../src/lib/pdf/qpdf/load';
 import { checkResult, checkedPages, type TextDoc } from '../../src/tools/pdf-compress/check';
 import { compressedFileName, reductionPercent, sizeChange } from '../../src/tools/pdf-compress/format';
 import { LIMITS, checkFileBytes, checkPages, checkRun } from '../../src/tools/pdf-compress/limits';
+import { KO } from '../../src/tools/pdf-compress/messages.ko';
 import { nodeCompressDeps } from '../helpers/compress-deps';
 
 const MB = 1024 * 1024;
@@ -119,36 +120,36 @@ describe('main-thread result check', () => {
 
 describe('limits (brief 5.4)', () => {
   it('desktop: confirm above 40 MB or 1,000쪽, block above 100 MB', () => {
-    expect(checkRun(40 * MB, 1000, false, 'desktop').level).toBe('ok');
-    expect(checkRun(40 * MB + 1, 1, false, 'desktop').level).toBe('soft');
-    expect(checkRun(1, 1001, false, 'desktop').level).toBe('soft');
-    expect(checkFileBytes(100 * MB, 'desktop').level).toBe('ok');
-    const hard = checkFileBytes(100 * MB + 1, 'desktop');
+    expect(checkRun(40 * MB, 1000, false, 'desktop', KO.limits).level).toBe('ok');
+    expect(checkRun(40 * MB + 1, 1, false, 'desktop', KO.limits).level).toBe('soft');
+    expect(checkRun(1, 1001, false, 'desktop', KO.limits).level).toBe('soft');
+    expect(checkFileBytes(100 * MB, 'desktop', KO.limits).level).toBe('ok');
+    const hard = checkFileBytes(100 * MB + 1, 'desktop', KO.limits);
     expect(hard.level).toBe('hard');
     expect(hard.level !== 'ok' && hard.message).toContain('100 MB');
   });
 
   it('mobile: confirm above 20 MB or 300쪽, block above 50 MB, with the number and the reason', () => {
-    expect(checkRun(20 * MB, 300, false, 'mobile').level).toBe('ok');
-    const soft = checkRun(20 * MB + 1, 1, false, 'mobile');
+    expect(checkRun(20 * MB, 300, false, 'mobile', KO.limits).level).toBe('ok');
+    const soft = checkRun(20 * MB + 1, 1, false, 'mobile', KO.limits);
     expect(soft.level).toBe('soft');
     expect(soft.level !== 'ok' && soft.message).toContain('20 MB');
-    expect(checkRun(1, 301, false, 'mobile').level).toBe('soft');
-    const hard = checkFileBytes(50 * MB + 1, 'mobile');
+    expect(checkRun(1, 301, false, 'mobile', KO.limits).level).toBe('soft');
+    const hard = checkFileBytes(50 * MB + 1, 'mobile', KO.limits);
     expect(hard.level !== 'ok' && hard.message).toBe('휴대폰에서는 50 MB까지 줄일 수 있습니다. 이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다.');
   });
 
   it('이미지로 변환: desktop confirm above 200쪽, block above 500쪽; mobile 30쪽 / 100쪽', () => {
-    expect(checkRun(1, 200, true, 'desktop').level).toBe('ok');
-    expect(checkRun(1, 201, true, 'desktop').level).toBe('soft');
-    expect(checkPages(500, true, 'desktop').level).toBe('ok');
-    expect(checkPages(501, true, 'desktop').level).toBe('hard');
-    expect(checkRun(1, 501, true, 'desktop').level).toBe('hard');
-    expect(checkRun(1, 30, true, 'mobile').level).toBe('ok');
-    expect(checkRun(1, 31, true, 'mobile').level).toBe('soft');
-    expect(checkPages(101, true, 'mobile').level).toBe('hard');
+    expect(checkRun(1, 200, true, 'desktop', KO.limits).level).toBe('ok');
+    expect(checkRun(1, 201, true, 'desktop', KO.limits).level).toBe('soft');
+    expect(checkPages(500, true, 'desktop', KO.limits).level).toBe('ok');
+    expect(checkPages(501, true, 'desktop', KO.limits).level).toBe('hard');
+    expect(checkRun(1, 501, true, 'desktop', KO.limits).level).toBe('hard');
+    expect(checkRun(1, 30, true, 'mobile', KO.limits).level).toBe('ok');
+    expect(checkRun(1, 31, true, 'mobile', KO.limits).level).toBe('soft');
+    expect(checkPages(101, true, 'mobile', KO.limits).level).toBe('hard');
     // The normal levels have no page hard limit.
-    expect(checkPages(100_000, false, 'mobile').level).toBe('ok');
+    expect(checkPages(100_000, false, 'mobile', KO.limits).level).toBe('ok');
   });
 
   it('matches the table', () => {

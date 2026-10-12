@@ -9,7 +9,7 @@ import { TARGET_FLOORS, TARGET_LADDER, TARGET_SEARCH, LEVELS, type RungName } fr
 import type { CompressReport } from '../../src/lib/pdf/compress/report';
 import { searchTarget, type RungOutcome } from '../../src/lib/pdf/compress/target';
 import { announce, clearAlert } from '../../src/lib/ui/announce';
-import { EngineLoadError, ENGINE_COPY, engineErrorCopy, isEngineLoadFailure, withEngineRetry } from '../../src/lib/ui/engine-load';
+import { EngineLoadError, ENGINE_KO, engineErrorCopy, isEngineLoadFailure, withEngineRetry } from '../../src/lib/ui/engine-load';
 import { formatSize } from '../../src/lib/ui/format';
 import { nonPdfMessage } from '../../src/lib/ui/pdf-pick';
 import { SIGNALS, schedulePreload, warmWorker } from '../../src/lib/ui/preload';
@@ -89,7 +89,7 @@ describe('engineErrorCopy', () => {
   it('another build is live: the new-version copy; the manifest is fetched with no-store', async () => {
     const f = manifest('b');
     const c = await engineErrorCopy({ online: true, fetch: f, build: 'a' });
-    expect(c.title).toBe(ENGINE_COPY.deployed);
+    expect(c.title).toBe(ENGINE_KO.deployed.title);
     expect(c.body).toBe('파일에는 문제가 없습니다. 바로 새로고침해 주세요. 새로고침하면 파일을 다시 골라야 합니다.');
     expect(f).toHaveBeenCalledWith('/deploy-manifest.json', expect.objectContaining({ cache: 'no-store' }));
   });
@@ -102,7 +102,7 @@ describe('engineErrorCopy', () => {
 
   it('a failed manifest fetch or a 404: the generic copy', async () => {
     for (const f of [vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))), vi.fn(async () => new Response('', { status: 404 }))]) {
-      expect((await engineErrorCopy({ online: true, fetch: f as unknown as typeof fetch, build: 'a' })).title).toBe(ENGINE_COPY.generic);
+      expect((await engineErrorCopy({ online: true, fetch: f as unknown as typeof fetch, build: 'a' })).title).toBe(ENGINE_KO.generic.title);
     }
   });
 
@@ -111,7 +111,7 @@ describe('engineErrorCopy', () => {
     const hang = vi.fn(() => new Promise<Response>(() => undefined));
     const p = engineErrorCopy({ online: true, fetch: hang as unknown as typeof fetch, build: 'a' });
     await vi.advanceTimersByTimeAsync(3000);
-    expect((await p).title).toBe(ENGINE_COPY.generic);
+    expect((await p).title).toBe(ENGINE_KO.generic.title);
     vi.useRealTimers();
   });
 });

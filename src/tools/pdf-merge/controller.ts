@@ -7,18 +7,18 @@ import type { MergeRequest, MergeResponse, WorkerFile } from '../../lib/pdf/merg
 import { announce, clearAlert } from '../../lib/ui/announce';
 import { startUsage, track, trackOut, type UsagePhase } from '../../lib/ui/usage';
 import { detectDevice } from '../../lib/ui/device';
-import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
+import { hideEngineError, showEngineErrorIn } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
-import { baseName, formatPages, formatSize } from '../../lib/ui/format';
+import { baseName, formatSize } from '../../lib/ui/format';
 import { sweepIfDue } from '../../lib/ui/handoff-marker';
-import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
+import { hideNextSteps, showNextStepsIn } from '../../lib/ui/next-steps';
 import { passwordToggle } from '../../lib/ui/password';
-import { nonPdfMessage, splitPdfFiles } from '../../lib/ui/pdf-pick';
+import { splitPdfFiles } from '../../lib/ui/pdf-pick';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { startRowDrag } from '../../lib/ui/reorder';
-import { mergedFileName } from './format';
 import { MAX_FILES, checkAddBytes, checkFileCount, checkMerge } from './limits';
+import type { Messages } from './messages.ko';
 
 type State = 'empty' | 'listing' | 'merging' | 'done' | 'error';
 
@@ -36,19 +36,6 @@ interface Entry {
   error: PdfErrorCode | null;
   thumbnail: HTMLCanvasElement | null;
 }
-
-const MESSAGES: Record<PdfErrorCode, string> = {
-  'not-pdf': 'PDF 파일이 아닙니다. PDF 파일만 합칠 수 있습니다.',
-  password: '이 파일은 비밀번호로 보호되어 있습니다.',
-  'wrong-password': '비밀번호가 맞지 않습니다.',
-  corrupt: '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아 주세요.',
-  oom: '이 기기에서 한 번에 처리할 수 있는 양을 넘었습니다. 파일 수를 줄여 나눠서 합쳐 주세요.',
-  unknown: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
-  // Not sent by the merge worker (it maps a failed output check to corrupt); required by the type.
-  verify: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
-};
-
-const PREPARING = '처리 도구를 준비하는 중입니다(처음 한 번만).';
 
 // Row icons (24-unit, stroked like the tool icons).
 const ICONS = {
@@ -84,7 +71,8 @@ function must<T extends HTMLElement>(id: string): T {
 const createMergeWorker = (): Worker => new Worker(new URL('../../lib/pdf/merge.worker.ts', import.meta.url), { type: 'module' });
 const loadInspect = () => withEngineRetry(() => import('../../lib/pdf/inspect'));
 
-export function initMergeTool(): void {
+/** `m`: the page's catalog (KO on the Korean page; EN0). */
+export function initMergeTool(m: Messages): void {
   const found = document.getElementById('merge-tool');
   if (!found) return;
   const root: HTMLElement = found;
@@ -137,8 +125,8 @@ export function initMergeTool(): void {
 
   const preload = schedulePreload(
     async () => {
-      const m = await loadInspect();
-      await m.preloadPdfJs();
+      const mod = await loadInspect();
+      await mod.preloadPdfJs();
       await warmWorker(createMergeWorker);
     },
     { root, immediate: [pick, input, addLabel, addInput], dropZone: root },
@@ -151,7 +139,7 @@ export function initMergeTool(): void {
   async function afterPreload(claim = false): Promise<void> {
     const p = claim ? preload.claim() : preload.pending();
     if (!p) return;
-    status(PREPARING);
+    status(m.preparing);
     await p;
   }
 
@@ -176,11 +164,11 @@ export function initMergeTool(): void {
   const errorCards = (): Entry[] => entries.filter((e) => e.error !== null);
 
   function blocker(): string | null {
-    if (entries.length < 2) return entries.length === 1 ? '파일을 하나 더 추가하면 합칠 수 있습니다.' : null;
-    if (entries.some((e) => e.pending)) return '처리 도구를 불러오지 못해 파일을 확인하지 못했습니다.';
-    if (entries.some((e) => e.inspecting)) return '파일을 확인하는 중입니다.';
-    if (entries.some((e) => e.error)) return '문제가 있는 파일을 목록에서 삭제하면 합칠 수 있습니다.';
-    if (entries.some((e) => e.locked)) return '비밀번호가 걸린 파일의 비밀번호를 입력하면 합칠 수 있습니다.';
+    if (entries.length < 2) return entries.length === 1 ? m.blockOne : null;
+    if (entries.some((e) => e.pending)) return m.blockPending;
+    if (entries.some((e) => e.inspecting)) return m.blockInspecting;
+    if (entries.some((e) => e.error)) return m.blockError;
+    if (entries.some((e) => e.locked)) return m.blockLocked;
     return null;
   }
 
@@ -208,7 +196,7 @@ export function initMergeTool(): void {
 
   function updateRun(): void {
     const why = blocker();
-    runBtn.textContent = `PDF ${entries.length}개 합치기`;
+    runBtn.textContent = m.runButton(entries.length);
     runBtn.disabled = why !== null || state === 'merging';
     hint.textContent = why ?? '';
     removeBad.hidden = errorCards().length < 2;
@@ -253,7 +241,7 @@ export function initMergeTool(): void {
 
     const thumb = el('div', 'thumb');
     if (e.thumbnail) thumb.append(e.thumbnail);
-    else thumb.append(el('span', 'thumb-ph', e.locked ? '잠김' : e.inspecting ? '확인 중' : e.pending ? '대기' : 'PDF'));
+    else thumb.append(el('span', 'thumb-ph', e.locked ? m.thumbLocked : e.inspecting ? m.thumbInspecting : e.pending ? m.thumbPending : m.thumbPdf));
     thumb.setAttribute('aria-hidden', 'true');
 
     const meta = el('div', 'meta');
@@ -263,28 +251,28 @@ export function initMergeTool(): void {
     const info = el('p', 'info');
     if (e.locked && !e.error) {
       const s = el('span', 'state-ico');
-      s.append(svgIcon(ICONS.lock), el('span', 'visually-hidden', '잠김'));
+      s.append(svgIcon(ICONS.lock), el('span', 'visually-hidden', m.stateLocked));
       info.append(s, ' ');
     } else if (e.error) {
       const s = el('span', 'state-ico err');
-      s.append(svgIcon(ICONS.error), el('span', 'visually-hidden', '오류'));
+      s.append(svgIcon(ICONS.error), el('span', 'visually-hidden', m.stateError));
       info.append(s, ' ');
     }
-    info.append([e.pageCount !== null ? formatPages(e.pageCount) : null, formatSize(e.file.size)].filter(Boolean).join(' · '));
+    info.append([e.pageCount !== null ? m.pages(e.pageCount) : null, formatSize(e.file.size)].filter(Boolean).join(' · '));
     meta.append(info);
 
     const act = el('div', 'actions');
-    const up = iconButton('up', `${name} 위로 이동`, ICONS.up, () => reorder(e.id, i - 1, 'up'));
+    const up = iconButton('up', m.moveUp(name), ICONS.up, () => reorder(e.id, i - 1, 'up'));
     up.disabled = i === 0;
-    const down = iconButton('down', `${name} 아래로 이동`, ICONS.down, () => reorder(e.id, i + 1, 'down'));
+    const down = iconButton('down', m.moveDown(name), ICONS.down, () => reorder(e.id, i + 1, 'down'));
     down.disabled = i === entries.length - 1;
-    const del = iconButton('remove', `${name} 삭제`, ICONS.remove, () => remove(e.id), 'danger');
+    const del = iconButton('remove', m.remove(name), ICONS.remove, () => remove(e.id), 'danger');
     act.append(up, down, del);
 
     li.append(handle, thumb, meta, act);
     // Password and error content expands the row below.
-    if (e.encrypted === 'owner' && !e.error) li.append(el('p', 'row-note', '보안 설정(편집 제한)이 해제된 사본이 만들어집니다'));
-    if (e.error) li.append(el('p', 'row-note file-error', MESSAGES[e.error]));
+    if (e.encrypted === 'owner' && !e.error) li.append(el('p', 'row-note', m.ownerNote));
+    if (e.error) li.append(el('p', 'row-note file-error', m.errors[e.error]));
     if (e.locked && !e.error) li.append(renderPasswordForm(e));
     return li;
   }
@@ -293,9 +281,9 @@ export function initMergeTool(): void {
     const form = el('form', 'pw row-note');
     form.noValidate = true;
     const fieldId = `pw-${e.id}`;
-    const stateLine = el('p', 'pw-state', '이 파일은 비밀번호로 보호되어 있습니다.');
+    const stateLine = el('p', 'pw-state', m.pwState);
     stateLine.id = `${fieldId}-state`;
-    const label = el('label', 'pw-label', '비밀번호');
+    const label = el('label', 'pw-label', m.pwLabel);
     label.htmlFor = fieldId;
     const row = el('div', 'row pw-row');
     const pw = el('input', 'pw-input');
@@ -304,11 +292,11 @@ export function initMergeTool(): void {
     pw.autocomplete = 'off';
     pw.dataset.role = 'password';
     pw.setAttribute('aria-describedby', `${fieldId}-state ${fieldId}-err`);
-    const ok = el('button', 'btn small primary', '확인');
+    const ok = el('button', 'btn small primary', m.pwOk);
     ok.type = 'submit';
     ok.dataset.role = 'unlock';
-    ok.setAttribute('aria-label', `${e.file.name} 비밀번호 확인`);
-    row.append(pw, passwordToggle(pw), ok);
+    ok.setAttribute('aria-label', m.pwOkLabel(e.file.name));
+    row.append(pw, passwordToggle(pw, m.pwToggle), ok);
     const err = el('p', 'pw-error');
     err.id = `${fieldId}-err`;
     form.append(stateLine, label, row, err);
@@ -334,7 +322,7 @@ export function initMergeTool(): void {
       const other = li?.querySelector<HTMLButtonElement>(`[data-role="${focusRole === 'up' ? 'down' : 'up'}"]`);
       (same && !same.disabled ? same : other)?.focus();
     }
-    status(`${item!.file.name}: ${entries.length}개 중 ${j + 1}번째로 옮겼습니다.`);
+    status(m.moved(item!.file.name, entries.length, j + 1));
   }
 
   function beginDrag(ev: PointerEvent, li: HTMLLIElement, id: number): void {
@@ -366,7 +354,7 @@ export function initMergeTool(): void {
       const next = entries[Math.min(i, entries.length - 1)]!;
       list.querySelector<HTMLElement>(`li[data-id="${next.id}"] [data-role="remove"]`)?.focus();
     }
-    status(`${gone!.file.name} 파일을 목록에서 뺐습니다. ${entries.length}개 남았습니다.`);
+    status(m.removed(gone!.file.name, entries.length));
   }
 
   function removeProblemFiles(): void {
@@ -381,7 +369,7 @@ export function initMergeTool(): void {
       goListing();
       (runBtn.disabled ? addInput : runBtn).focus();
     }
-    status(`문제 파일 ${bad.length}개를 목록에서 뺐습니다. ${entries.length}개 남았습니다.`);
+    status(m.removedBad(bad.length, entries.length));
   }
 
   function goListing(): void {
@@ -400,7 +388,7 @@ export function initMergeTool(): void {
     usageFail('engine', phase);
     if (engineShown) return;
     engineShown = true;
-    void showEngineError();
+    void showEngineErrorIn(m.engine);
   }
 
   // ---------- adding & inspecting ----------
@@ -416,7 +404,7 @@ export function initMergeTool(): void {
     loadDynamicFont();
     const device = detectDevice();
     const messages: string[] = [];
-    const count = checkFileCount(entries.length, files.length);
+    const count = checkFileCount(entries.length, files.length, m.limits);
     if (count.level !== 'ok') {
       usageFail('too-many', 'parse');
       messages.push(count.message);
@@ -426,7 +414,7 @@ export function initMergeTool(): void {
     let bytes = totalBytes();
     let rejectedForSize = false;
     for (const file of files) {
-      if (checkAddBytes(bytes + file.size, device).level !== 'ok') {
+      if (checkAddBytes(bytes + file.size, device, m.limits).level !== 'ok') {
         rejectedForSize = true;
         continue;
       }
@@ -445,11 +433,11 @@ export function initMergeTool(): void {
     }
     if (rejectedForSize) {
       usageFail('too-large', 'parse');
-      const r = checkAddBytes(Number.POSITIVE_INFINITY, device);
+      const r = checkAddBytes(Number.POSITIVE_INFINITY, device, m.limits);
       if (r.level !== 'ok') messages.push(r.message);
     }
     showNotice(messages.length ? messages.join(' ') : null);
-    if (rejected.length) announce('alert', nonPdfMessage(rejected.map((f) => f.name)), root);
+    if (rejected.length) announce('alert', m.nonPdf(rejected.map((f) => f.name)), root);
     if (!accepted.length) {
       if (messages.length && !rejected.length) status(messages.join(' '));
       return;
@@ -462,7 +450,7 @@ export function initMergeTool(): void {
     }
     entries.push(...accepted);
     goListing();
-    if (!rejected.length) status(`파일 ${accepted.length}개를 추가했습니다. 모두 ${entries.length}개입니다.`);
+    if (!rejected.length) status(m.added(accepted.length, entries.length));
     for (const e of [...retry, ...accepted]) {
       inspectQueue = inspectQueue.then(() => inspectEntry(e)).catch(() => undefined);
     }
@@ -498,7 +486,7 @@ export function initMergeTool(): void {
     if (entries.includes(e) && state !== 'merging') {
       renderList();
       updateRun();
-      if (e.error) status(`${e.file.name}: ${MESSAGES[e.error]}`);
+      if (e.error) status(`${e.file.name}: ${m.errors[e.error]}`);
     }
   }
 
@@ -506,7 +494,7 @@ export function initMergeTool(): void {
     const e = entries.find((x) => x.id === id);
     if (!e) return;
     if (!pw) {
-      errEl.textContent = '비밀번호를 입력해 주세요.';
+      errEl.textContent = m.pwEmpty;
       field.focus();
       return;
     }
@@ -516,8 +504,8 @@ export function initMergeTool(): void {
     } catch {
       e.inspecting = false;
       usageFail('wrong-password', 'parse');
-      errEl.textContent = MESSAGES['wrong-password'];
-      status(`${e.file.name}: ${MESSAGES['wrong-password']}`);
+      errEl.textContent = m.errors['wrong-password'];
+      status(`${e.file.name}: ${m.errors['wrong-password']}`);
       field.value = '';
       field.focus();
       updateRun();
@@ -525,7 +513,7 @@ export function initMergeTool(): void {
     }
     if (!e.locked && !e.error && !e.pending) {
       e.password = pw;
-      status(`${e.file.name}의 잠금을 풀었습니다.`);
+      status(m.unlocked(e.file.name));
       list.querySelector<HTMLElement>(`li[data-id="${e.id}"] [data-role="remove"]`)?.focus();
     }
   }
@@ -534,7 +522,7 @@ export function initMergeTool(): void {
 
   function requestMerge(): void {
     if (blocker() !== null || state === 'merging') return;
-    const check = checkMerge(totalBytes(), totalPages(), detectDevice());
+    const check = checkMerge(totalBytes(), totalPages(), detectDevice(), m.limits);
     if (check.level === 'hard') {
       showNotice(check.message);
       status(check.message);
@@ -560,8 +548,8 @@ export function initMergeTool(): void {
     setState('merging');
     progressBar.max = snapshot.length;
     progressBar.value = 0;
-    progressText.textContent = `합치는 중… (0/${snapshot.length})`;
-    status('합치는 중입니다.');
+    progressText.textContent = m.progress(0, snapshot.length);
+    status(m.merging);
     cancelBtn.focus();
 
     let files: WorkerFile[];
@@ -586,7 +574,7 @@ export function initMergeTool(): void {
       const msg = ev.data;
       if (msg.type === 'progress') {
         progressBar.value = msg.done;
-        progressText.textContent = `합치는 중… (${msg.done}/${msg.total})`;
+        progressText.textContent = m.progress(msg.done, msg.total);
       } else if (msg.type === 'done') {
         stopWorker();
         finish(msg.bytes, msg.report, snapshot);
@@ -625,7 +613,7 @@ export function initMergeTool(): void {
     stopWorker();
     goListing();
     runBtn.focus();
-    status('합치기를 취소했습니다. 파일 목록은 그대로 있습니다.');
+    status(m.cancelled);
   }
 
   function finish(bytes: Uint8Array, report: MergeReport, snapshot: Entry[]): void {
@@ -634,20 +622,19 @@ export function initMergeTool(): void {
     blobUrl = URL.createObjectURL(blob);
     track({ e: 'success', t: 'pdf-merge' });
     download.href = blobUrl;
-    download.download = mergedFileName(snapshot[0]!.file.name, snapshot.length);
-    summary.textContent = `${formatPages(report.pageCount)} · ${formatSize(blob.size)}`;
-    saveName.textContent = `저장될 이름: ${download.download}`;
+    download.download = m.fileName(snapshot[0]!.file.name, snapshot.length);
+    const sum = `${m.pages(report.pageCount)} · ${formatSize(blob.size)}`;
+    summary.textContent = sum;
+    saveName.textContent = m.saveName(download.download);
     const n: string[] = [];
-    if (snapshot.some((e) => e.encrypted === 'user')) n.push('합친 파일에는 비밀번호가 걸려 있지 않습니다.');
-    if (report.renamedFields > 0) {
-      n.push(`같은 이름의 입력 칸 ${report.renamedFields}개의 이름을 바꿔 모두 입력할 수 있게 했습니다.`);
-    }
+    if (snapshot.some((e) => e.encrypted === 'user')) n.push(m.noteUnlocked);
+    if (report.renamedFields > 0) n.push(m.noteRenamed(report.renamedFields));
     notes.replaceChildren(...n.map((t) => el('li', undefined, t)));
     setState('done');
-    showNextSteps(nextSlot, 'pdf-merge', [{ blob, name: download.download }]);
+    showNextStepsIn(m.next, nextSlot, 'pdf-merge', [{ blob, name: download.download }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
-    status(`합치기를 마쳤습니다. ${summary.textContent}. ${n.join(' ')}`.trim());
+    status(m.done(sum, n.join(' ')));
   }
 
   function fail(code: PdfErrorCode, entry?: Entry): void {
@@ -657,7 +644,7 @@ export function initMergeTool(): void {
       entry.password = undefined;
     }
     usageFail(code, code === 'verify' ? 'save' : 'process');
-    const msg = entry ? `${entry.file.name}: ${MESSAGES[code]}` : MESSAGES[code];
+    const msg = entry ? `${entry.file.name}: ${m.errors[code]}` : m.errors[code];
     setState('error');
     announce('alert', msg, root);
     runBtn.focus();
@@ -679,7 +666,7 @@ export function initMergeTool(): void {
     setState('empty');
     if (focus) {
       input.focus();
-      status('처음 상태로 돌아왔습니다.');
+      status(m.reset);
     }
   }
 

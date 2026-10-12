@@ -8,13 +8,13 @@ import type { WebpRequest, WebpResponse } from '../../lib/codecs/webp.worker';
 import type { Sniff } from '../../lib/image/sniff';
 import { decodeImage } from '../../lib/image/decode';
 import { stripJpegMetadata } from '../../lib/image/jpeg-strip';
-import { ERRORS, photoErrorCode } from '../../lib/image/messages';
+import { photoErrorCode } from '../../lib/image/messages';
 import { HEAD_BYTES, TAIL_BYTES, sniffImage } from '../../lib/image/sniff';
 import { announce, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
 import { loadDynamicFont } from '../../lib/ui/font';
 import { formatSize } from '../../lib/ui/format';
-import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
+import { hideNextSteps, showNextStepsIn } from '../../lib/ui/next-steps';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { dedupeNames } from '../../lib/zip/names';
 import { StoredZip } from '../../lib/zip/stored';
@@ -22,7 +22,6 @@ import {
   ACCEPTED_FORMATS,
   ConvertError,
   convertImage,
-  noteText,
   oncePerCode,
   outputName,
   zipName,
@@ -33,6 +32,7 @@ import {
   type Target,
 } from './convert';
 import { LIMITS, planAdd } from './limits';
+import type { Messages } from './messages.ko';
 
 type State = 'empty' | 'listing' | 'working' | 'done';
 type RowError = 'heic' | 'not-image' | 'corrupt' | 'empty' | 'canvas' | 'encoder' | 'oom' | 'unknown';
@@ -62,13 +62,6 @@ const THUMB_EDGE = 128;
 
 const FORMAT_LABEL: Record<string, string> = { jpeg: 'JPG', png: 'PNG', webp: 'WebP', heic: 'HEIC', avif: 'AVIF', gif: 'GIF', bmp: 'BMP', tiff: 'TIFF' };
 const TARGET_LABEL: Record<Target, string> = { jpg: 'JPG', png: 'PNG', webp: 'WebP' };
-
-const MESSAGES: Record<Exclude<RowError, 'heic' | 'not-image' | 'corrupt' | 'empty'>, string> = {
-  canvas: '이 기기에서 사진을 그리지 못했습니다. 다른 앱이나 PC에서 다시 해 주세요.',
-  encoder: '이 형식으로 저장하지 못했습니다. 다른 저장 형식을 골라 다시 해 주세요.',
-  oom: ERRORS.oom,
-  unknown: ERRORS.unknown,
-};
 
 const ICONS = {
   remove: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
@@ -169,10 +162,18 @@ function runErrorCode(err: unknown): RowError {
   return code === 'heic' || code === 'corrupt' || code === 'oom' ? code : 'unknown';
 }
 
-export function initImageToJpg(pending?: File[]): { add(files: File[]): void } | null {
+/** `m`: the page's catalog (KO on the Korean page; EN0). */
+export function initImageToJpg(m: Messages, pending?: File[]): { add(files: File[]): void } | null {
   const found = document.getElementById('ij-tool');
   if (!found) return null;
   const root: HTMLElement = found;
+  /** Messages of the conversion failures that are not read errors. */
+  const runMessages: Record<Exclude<RowError, 'heic' | 'not-image' | 'corrupt' | 'empty'>, string> = {
+    canvas: m.canvas,
+    encoder: m.encoder,
+    oom: m.errors.oom,
+    unknown: m.errors.unknown,
+  };
 
   const input = must<HTMLInputElement>('ij-input');
   const addInput = must<HTMLInputElement>('ij-add');
@@ -258,9 +259,9 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
   function updateRun(): void {
     const n = runnable();
     const checking = entries.some((e) => e.checking);
-    runBtn.textContent = n ? `사진 ${n.toLocaleString('ko-KR')}장 변환하기` : '변환하기';
+    runBtn.textContent = n ? m.runButton(n) : m.runIdle;
     runBtn.disabled = checking || n === 0 || state === 'working';
-    hint.textContent = checking ? '사진을 확인하는 중입니다.' : entries.some((e) => e.error && !e.runError) && n ? '문제가 있는 사진은 빼고 바꿉니다.' : '';
+    hint.textContent = checking ? m.hintChecking : entries.some((e) => e.error && !e.runError) && n ? m.hintSkip : '';
   }
 
   function syncOptions(): void {
@@ -289,7 +290,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
       c.height = e.thumb.height;
       c.getContext('2d')?.drawImage(e.thumb, 0, 0);
       thumb.append(c);
-    } else thumb.append(el('span', 'thumb-ph', e.checking ? '확인 중' : '사진'));
+    } else thumb.append(el('span', 'thumb-ph', e.checking ? m.thumbChecking : m.thumbPhoto));
 
     const meta = el('div', 'meta');
     const nameEl = el('p', 'name', name);
@@ -297,7 +298,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
     const info = el('p', 'info');
     if (e.error) {
       const s = el('span', 'state-ico err');
-      s.append(svgIcon(ICONS.error), el('span', 'visually-hidden', '오류'));
+      s.append(svgIcon(ICONS.error), el('span', 'visually-hidden', m.stateError));
       info.append(s, ' ');
     }
     const from = e.sniff ? FORMAT_LABEL[e.sniff.format] : undefined;
@@ -307,18 +308,18 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
 
     const act = el('div', 'actions');
     if (e.out) {
-      const a = el('a', 'btn small ghost', '내려받기');
+      const a = el('a', 'btn small ghost', m.download);
       a.href = e.out.url;
       a.download = e.out.name;
       a.dataset.role = 'download';
-      a.setAttribute('aria-label', `${e.out.name} 내려받기`);
+      a.setAttribute('aria-label', m.downloadLabel(e.out.name));
       a.addEventListener('click', () => track({ e: 'download', t: 'image-to-jpg' }));
       act.append(a);
     } else if (state !== 'done') {
       const del = el('button', 'btn small ghost icon-btn danger');
       del.type = 'button';
       del.dataset.role = 'remove';
-      del.setAttribute('aria-label', `${name} 삭제`);
+      del.setAttribute('aria-label', m.remove(name));
       del.append(svgIcon(ICONS.remove));
       del.disabled = state === 'working';
       del.addEventListener('click', () => remove(e.id));
@@ -327,7 +328,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
 
     li.append(thumb, meta, act);
     if (e.error) li.append(el('p', 'row-note file-error', e.message));
-    for (const n of e.out?.notes ?? []) li.append(el('p', 'row-note', noteText(n)));
+    for (const n of e.out?.notes ?? []) li.append(el('p', 'row-note', m.note(n)));
     return li;
   }
 
@@ -344,7 +345,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
       const next = entries[Math.min(i, entries.length - 1)]!;
       list.querySelector<HTMLElement>(`li[data-id="${next.id}"] [data-role="remove"]`)?.focus();
     }
-    status(`${gone!.file.name} 사진을 목록에서 뺐습니다. ${entries.length}장 남았습니다.`);
+    status(m.removed(gone!.file.name, entries.length));
   }
 
   // ---------- adding & checking ----------
@@ -360,6 +361,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
       entries.length,
       entries.reduce((a, e) => a + e.file.size, 0),
       detectDevice(),
+      m.limits,
     );
     // One usage event per code per picked batch (brief decision 7: `fail c=heic` once per batch).
     const failOnce = oncePerCode((code) => usageFail(code, 'parse'));
@@ -374,7 +376,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
     }
     entries.push(...accepted);
     setState('listing');
-    status(`사진 ${accepted.length}장을 추가했습니다. 모두 ${entries.length}장입니다.`);
+    status(m.added(accepted.length, entries.length));
     for (const e of accepted) checkQueue = checkQueue.then(() => checkEntry(e, failOnce)).catch(() => undefined);
   }
 
@@ -407,7 +409,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
     const f = e.file;
     try {
       if (f.size === 0) {
-        markError(e, 'empty', ERRORS.empty);
+        markError(e, 'empty', m.errors.empty);
         failOnce('empty');
       } else {
         const head = new Uint8Array(await f.slice(0, HEAD_BYTES).arrayBuffer());
@@ -415,16 +417,16 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
         const s = sniffImage(head, { tail, size: f.size });
         e.sniff = s;
         if (!ACCEPTED_FORMATS.includes(s.format)) {
-          markError(e, 'not-image', s.format === 'unknown' ? ERRORS['not-image'] : `${FORMAT_LABEL[s.format] ?? s.format} 형식은 아직 바꿀 수 없습니다.`);
+          markError(e, 'not-image', s.format === 'unknown' ? m.errors['not-image'] : m.notFormat(FORMAT_LABEL[s.format] ?? s.format));
           failOnce('not-image');
         } else if (s.truncated) {
-          markError(e, 'corrupt', ERRORS.truncated);
+          markError(e, 'corrupt', m.errors.truncated);
           failOnce('corrupt');
         } else e.thumb = await thumbnail(f, s);
       }
     } catch (err) {
       const code = photoErrorCode(err) === 'heic' ? 'heic' : 'corrupt';
-      markError(e, code, code === 'heic' ? ERRORS.heic : ERRORS.corrupt);
+      markError(e, code, code === 'heic' ? m.errors.heic : m.errors.corrupt);
       failOnce(code);
     } finally {
       e.checking = false;
@@ -454,8 +456,8 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
     setState('working');
     progressBar.max = todo.length;
     progressBar.value = 0;
-    progressText.textContent = `바꾸는 중… (0/${todo.length})`;
-    status('사진을 바꾸는 중입니다.');
+    progressText.textContent = m.progress(0, todo.length);
+    status(m.converting);
     cancelBtn.focus();
 
     const made: { entry: Entry; blob: Blob; notes: RowNote[] }[] = [];
@@ -467,24 +469,24 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
       } catch (err) {
         if (id !== runId) return;
         const code = runErrorCode(err);
-        markError(e, code, code === 'heic' ? ERRORS.heic : code === 'corrupt' ? ERRORS.corrupt : MESSAGES[code as keyof typeof MESSAGES], true);
+        markError(e, code, code === 'heic' ? m.errors.heic : code === 'corrupt' ? m.errors.corrupt : runMessages[code as keyof typeof runMessages], true);
         failOnce(code);
       }
       progressBar.value = k + 1;
-      progressText.textContent = `바꾸는 중… (${k + 1}/${todo.length})`;
+      progressText.textContent = m.progress(k + 1, todo.length);
       await nextTask();
       if (id !== runId) return;
     }
 
     if (!made.length) {
       setState('listing');
-      announce('alert', '사진을 바꾸지 못했습니다. 목록에서 이유를 확인해 주세요.', root);
+      announce('alert', m.allFailed, root);
       runBtn.focus();
       return;
     }
-    const names = dedupeNames(made.map((m) => outputName(m.entry.file.name, to)));
-    made.forEach((m, i) => {
-      m.entry.out = { name: names[i]!, to, blob: m.blob, url: URL.createObjectURL(m.blob), notes: m.notes };
+    const names = dedupeNames(made.map((r) => outputName(r.entry.file.name, to)));
+    made.forEach((r, i) => {
+      r.entry.out = { name: names[i]!, to, blob: r.blob, url: URL.createObjectURL(r.blob), notes: r.notes };
     });
     let out: Blob;
     let outName: string;
@@ -494,7 +496,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
         outName = names[0]!;
       } else {
         const zip = new StoredZip();
-        for (const [i, m] of made.entries()) zip.add(names[i]!, new Uint8Array(await m.blob.arrayBuffer()));
+        for (const [i, r] of made.entries()) zip.add(names[i]!, new Uint8Array(await r.blob.arrayBuffer()));
         out = await zip.finish();
         outName = zipName(made[0]!.entry.file.name, to);
       }
@@ -502,7 +504,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
       if (id !== runId) return;
       usageFail(runErrorCode(err) === 'oom' ? 'oom' : 'unknown', 'save');
       finish(null, '', made.length, to);
-      announce('alert', ERRORS.zip, root);
+      announce('alert', m.errors.zip, root);
       return;
     }
     if (id !== runId) return;
@@ -515,7 +517,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
     revokeAll();
     setState('listing');
     runBtn.focus();
-    status('변환을 멈췄습니다. 사진 목록은 그대로 있습니다.');
+    status(m.cancelled);
   }
 
   /** `out` null: the ZIP failed, the rows' own links still work. */
@@ -528,23 +530,25 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
       download.href = blobUrl;
       download.download = name;
       download.hidden = false;
-      saveName.textContent = `저장될 이름: ${name}`;
+      saveName.textContent = m.saveName(name);
     } else {
       download.removeAttribute('href');
       download.hidden = true;
       saveName.textContent = '';
     }
     const failed = entries.filter((e) => e.error).length;
-    headline.textContent = count > 1 ? `${TARGET_LABEL[to]} 사진 ${count.toLocaleString('ko-KR')}장이 ZIP 파일로 준비되었습니다` : `${TARGET_LABEL[to]} 사진이 준비되었습니다`;
-    summary.textContent = [out ? `${count > 1 ? 'ZIP' : TARGET_LABEL[to]} · ${formatSize(out.size)}` : '', failed ? `바꾸지 못한 사진 ${failed.toLocaleString('ko-KR')}장` : '']
+    const head = count > 1 ? m.headlineMany(TARGET_LABEL[to], count) : m.headlineOne(TARGET_LABEL[to]);
+    const sum = [out ? `${count > 1 ? 'ZIP' : TARGET_LABEL[to]} · ${formatSize(out.size)}` : '', failed ? m.failedCount(failed) : '']
       .filter(Boolean)
       .join(' · ');
+    headline.textContent = head;
+    summary.textContent = sum;
     setState('done');
     // 이어서 하기: one photo only (a ZIP is not offered).
-    if (out && count === 1) showNextSteps(nextSlot, 'image-to-jpg', [{ blob: out, name }]);
+    if (out && count === 1) showNextStepsIn(m.next, nextSlot, 'image-to-jpg', [{ blob: out, name }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
-    status(`${headline.textContent}. ${summary.textContent}.`);
+    status(m.done(head, sum));
   }
 
   function resetAll(focus = true): void {
@@ -558,7 +562,7 @@ export function initImageToJpg(pending?: File[]): { add(files: File[]): void } |
     setState('empty');
     if (focus) {
       input.focus();
-      status('처음 상태로 돌아왔습니다.');
+      status(m.reset);
     }
   }
 

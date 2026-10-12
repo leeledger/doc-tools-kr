@@ -5,25 +5,26 @@
 import type { PdfErrorCode } from '../../lib/pdf/errors';
 import type { CompressRequest, CompressResponse, TargetOutcome } from '../../lib/pdf/compress.worker';
 import { TARGET_SEARCH, type LevelName } from '../../lib/pdf/compress/levels';
-import type { CompressReport, Phase } from '../../lib/pdf/compress/report';
+import type { CompressReport } from '../../lib/pdf/compress/report';
 import type { OpenedPdf, PdfJsDoc } from '../../lib/pdf/inspect';
 import { announce, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
-import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
+import { hideEngineError, showEngineErrorIn } from '../../lib/ui/engine-error';
 import { isEngineLoadFailure, withEngineRetry } from '../../lib/ui/engine-load';
 import { loadDynamicFont } from '../../lib/ui/font';
-import { formatPages, formatSize } from '../../lib/ui/format';
+import { formatSize } from '../../lib/ui/format';
 import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
-import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
+import { hideNextSteps, showNextStepsIn } from '../../lib/ui/next-steps';
 import { bindPasswordToggle } from '../../lib/ui/password';
-import { nonPdfMessage, splitPdfFiles } from '../../lib/ui/pdf-pick';
+import { splitPdfFiles } from '../../lib/ui/pdf-pick';
 import { schedulePreload, warmWorker } from '../../lib/ui/preload';
 import { startUsage, track, type UsagePhase } from '../../lib/ui/usage';
 import { bucketMB } from '../../../scripts/lib/usage.mjs';
 import { checkResult, type TextDoc } from './check';
-import { compressedFileName, reductionPercent, sizeChange } from './format';
+import { reductionPercent, sizeChange } from './format';
 import { checkFileBytes, checkPages, checkRun } from './limits';
-import { TARGET_COPY, TARGET_RANGE_MESSAGE, parseTargetMb, targetBytes, targetLabel } from './target';
+import type { Messages } from './messages.ko';
+import { parseTargetMb, targetBytes, targetLabel } from './target';
 import { bindQuickLinks, readUrl, writeUrl } from '../../lib/ui/quicklinks';
 import type { DeepState } from '../../lib/ui/deeplink';
 
@@ -31,24 +32,6 @@ type State = 'empty' | 'ready' | 'working' | 'done' | 'kept' | 'error';
 type Choice = LevelName | 'raster';
 type Mode = 'level' | 'target';
 
-const MESSAGES: Record<PdfErrorCode, string> = {
-  'not-pdf': 'PDF 파일이 아닙니다. PDF 파일을 골라 주세요.',
-  password: '이 파일은 비밀번호로 보호되어 있습니다. 비밀번호를 입력해 주세요.',
-  'wrong-password': '비밀번호가 맞지 않습니다.',
-  corrupt: '파일이 손상되었거나 다운로드가 완료되지 않았습니다. 원본을 다시 받아 주세요.',
-  oom: '이 기기에서 한 번에 처리할 수 있는 양을 넘었습니다. 더 작은 파일로 시도하거나 PC에서 이용해 주세요.',
-  unknown: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
-  verify: '결과 파일을 검증하지 못해 원본을 그대로 둡니다. 다른 단계로 다시 시도해 주세요.',
-};
-
-const PHASE_TEXT: Record<Phase, string> = {
-  normalize: '파일 분석 중…',
-  images: '이미지 줄이는 중…',
-  optimize: '마무리 중…',
-  verify: '마무리하는 중…',
-};
-
-const PREPARING = '처리 도구를 준비하는 중입니다(처음 한 번만).';
 const PREVIEW_WIDTH = 240;
 
 function must<T extends HTMLElement>(id: string): T {
@@ -81,7 +64,8 @@ const createCompressWorker = (): Worker => new Worker(new URL('../../lib/pdf/com
 const loadInspect = () => withEngineRetry(() => import('../../lib/pdf/inspect'));
 const loadRasterRender = () => withEngineRetry(() => import('../../lib/pdf/raster-render'));
 
-export function initCompressTool(): void {
+/** `m`: the page's catalog (KO on the Korean page; EN0). */
+export function initCompressTool(m: Messages): void {
   const found = document.getElementById('compress-tool');
   if (!found) return;
   const root: HTMLElement = found;
@@ -157,8 +141,8 @@ export function initCompressTool(): void {
 
   const preload = schedulePreload(
     async () => {
-      const m = await loadInspect();
-      await m.preloadPdfJs();
+      const mod = await loadInspect();
+      await mod.preloadPdfJs();
       await warmWorker(createCompressWorker);
     },
     { root, immediate: [pick, input], dropZone: drop },
@@ -171,7 +155,7 @@ export function initCompressTool(): void {
   async function afterPreload(claim = false): Promise<void> {
     const p = claim ? preload.claim() : preload.pending();
     if (!p) return;
-    status(PREPARING);
+    status(m.preparing);
     await p;
   }
 
@@ -226,11 +210,11 @@ export function initCompressTool(): void {
 
   function blocker(): string | null {
     if (!file) return null;
-    if (pending) return '처리 도구를 불러오지 못해 파일을 확인하지 못했습니다.';
-    if (inspecting) return '파일을 확인하는 중입니다.';
-    if (pageCount === null) return '비밀번호를 입력하면 줄일 수 있습니다.';
-    if (mode() === 'target' && targetMb() === null) return TARGET_RANGE_MESSAGE;
-    const pages = checkPages(pageCount, choice() === 'raster', detectDevice());
+    if (pending) return m.blockPending;
+    if (inspecting) return m.blockInspecting;
+    if (pageCount === null) return m.blockPassword;
+    if (mode() === 'target' && targetMb() === null) return m.targetRange;
+    const pages = checkPages(pageCount, choice() === 'raster', detectDevice(), m.limits);
     return pages.level === 'ok' ? null : pages.message;
   }
 
@@ -249,8 +233,8 @@ export function initCompressTool(): void {
     targetCustom.hidden = !custom;
     const invalid = custom && targetInput.value.trim() !== '' && targetMb() === null;
     targetInput.setAttribute('aria-invalid', String(invalid));
-    targetError.textContent = invalid ? TARGET_RANGE_MESSAGE : '';
-    const again = target ? '다른 용량으로 다시 줄이기' : '다른 단계로 다시 줄이기';
+    targetError.textContent = invalid ? m.targetRange : '';
+    const again = target ? m.againTarget : m.againLevel;
     againBtn.textContent = again;
     keptAgain.textContent = again;
   }
@@ -278,8 +262,8 @@ export function initCompressTool(): void {
   function renderCard(canvas: HTMLCanvasElement | null): void {
     if (!file) return;
     nameEl.textContent = file.name;
-    infoEl.textContent = [pageCount !== null ? formatPages(pageCount) : null, formatSize(file.size)].filter(Boolean).join(' · ');
-    const ph = pending ? '대기' : pageCount === null && !inspecting ? '잠김' : inspecting ? '확인 중' : 'PDF';
+    infoEl.textContent = [pageCount !== null ? m.pages(pageCount) : null, formatSize(file.size)].filter(Boolean).join(' · ');
+    const ph = pending ? m.thumbPending : pageCount === null && !inspecting ? m.thumbLocked : inspecting ? m.thumbInspecting : m.thumbPdf;
     thumb.replaceChildren(canvas ?? el('span', 'thumb-ph', ph));
     ownerNote.hidden = encrypted !== 'owner';
     pwForm.hidden = inspecting || pending || pageCount !== null;
@@ -302,7 +286,7 @@ export function initCompressTool(): void {
   /** The engine did not load: nothing is marked; the page-level panel offers 새로고침. */
   function engineFailure(phase: 'load' | 'process'): void {
     usageFail('engine', phase);
-    void showEngineError();
+    void showEngineErrorIn(m.engine);
   }
 
   /** One failure for the usage statistics (user-caused ones included). */
@@ -316,10 +300,10 @@ export function initCompressTool(): void {
     track({ e: 'pick', t: 'pdf-compress' });
     if (!(await splitPdfFiles([f])).pdfs.length) {
       usageFail('not-pdf', 'parse');
-      announce('alert', nonPdfMessage([f.name]), root);
+      announce('alert', m.nonPdf([f.name]), root);
       return;
     }
-    const size = checkFileBytes(f.size, detectDevice());
+    const size = checkFileBytes(f.size, detectDevice(), m.limits);
     if (size.level !== 'ok') {
       usageFail('too-large', 'parse');
       showNotice(size.message);
@@ -337,7 +321,7 @@ export function initCompressTool(): void {
     inspecting = true;
     setState('ready');
     renderCard(null);
-    status(`${f.name} 파일을 확인하는 중입니다.`);
+    status(m.checking(f.name));
     try {
       const b = new Uint8Array(await f.arrayBuffer());
       if (run !== runId) return;
@@ -352,10 +336,10 @@ export function initCompressTool(): void {
       setState('ready');
       renderCard(r.thumbnail);
       if (pageCount === null) {
-        status(`${f.name}: 이 파일은 비밀번호로 보호되어 있습니다.`);
+        status(m.locked(f.name));
         pwInput.focus();
       } else {
-        status(`${f.name}, ${formatPages(pageCount)}. 압축 단계나 목표 용량을 고른 뒤 PDF 용량 줄이기를 누르세요.`);
+        status(m.ready(f.name, m.pages(pageCount)));
       }
     } catch (err) {
       if (run !== runId) return;
@@ -379,7 +363,7 @@ export function initCompressTool(): void {
     if (!file || !bytes || pageCount !== null || inspecting) return;
     const pw = pwInput.value;
     if (!pw) {
-      pwError.textContent = '비밀번호를 입력해 주세요.';
+      pwError.textContent = m.pwEmpty;
       pwInput.focus();
       return;
     }
@@ -397,7 +381,7 @@ export function initCompressTool(): void {
       pwError.textContent = '';
       setState('ready');
       renderCard(r.thumbnail);
-      status(`${file.name}의 잠금을 풀었습니다. ${formatPages(pageCount ?? 0)}.`);
+      status(m.unlocked(file.name, m.pages(pageCount ?? 0)));
       (mode() === 'target' ? modeRadios.find((x) => x.checked) : radios.find((x) => x.checked))?.focus();
     } catch (err) {
       if (run !== runId) return;
@@ -405,8 +389,8 @@ export function initCompressTool(): void {
       const code = (err as { code?: PdfErrorCode }).code;
       if (code === 'wrong-password') {
         usageFail('wrong-password', 'parse');
-        pwError.textContent = MESSAGES['wrong-password'];
-        status(MESSAGES['wrong-password']);
+        pwError.textContent = m.errors['wrong-password'];
+        status(m.errors['wrong-password']);
         pwInput.value = '';
         pwInput.focus();
         updateRun();
@@ -432,7 +416,7 @@ export function initCompressTool(): void {
         return;
       }
     }
-    const check = checkRun(bytes.length, pageCount!, choice() === 'raster', detectDevice());
+    const check = checkRun(bytes.length, pageCount!, choice() === 'raster', detectDevice(), m.limits);
     if (check.level === 'hard') {
       showNotice(check.message);
       status(check.message);
@@ -502,16 +486,16 @@ export function initCompressTool(): void {
     await afterPreload(true);
     if (run !== runId) return;
     if (level === 'raster') {
-      setProgress('쪽을 이미지로 바꾸는 중…', 0, pageCount);
-      status('쪽을 이미지로 바꾸는 중입니다.');
+      setProgress(m.rasterProgress, 0, pageCount);
+      status(m.rasterStatus);
       await runRaster(run, bytes, pageCount);
     } else if (searching()) {
-      setProgress(TARGET_COPY.progress(1, TARGET_SEARCH.length));
-      status('목표 용량에 맞추는 중입니다.');
+      setProgress(m.target.progress(1, TARGET_SEARCH.length));
+      status(m.targetStatus);
       runTarget(run, bytes, pageCount, targetBytes(targetMb()!));
     } else {
-      setProgress(PHASE_TEXT.normalize);
-      status('용량을 줄이는 중입니다.');
+      setProgress(m.phases.normalize);
+      status(m.levelStatus);
       runLevel(run, level, bytes, pageCount);
     }
   }
@@ -524,7 +508,7 @@ export function initCompressTool(): void {
   function runLevel(run: number, level: LevelName, input: Uint8Array, pages: number): void {
     const w = newWorker(run, (msg) => {
       if (msg.type === 'progress') {
-        setProgress(PHASE_TEXT[msg.phase], msg.phase === 'images' ? msg.done : undefined, msg.phase === 'images' ? msg.total : undefined);
+        setProgress(m.phases[msg.phase], msg.phase === 'images' ? msg.done : undefined, msg.phase === 'images' ? msg.total : undefined);
       } else if (msg.type === 'done') {
         onDone(run, msg);
       } else if (msg.type === 'error') {
@@ -538,15 +522,15 @@ export function initCompressTool(): void {
   }
 
   function runTarget(run: number, input: Uint8Array, pages: number, target: number): void {
-    let rungText = TARGET_COPY.progress(1, TARGET_SEARCH.length);
+    let rungText = m.target.progress(1, TARGET_SEARCH.length);
     const w = newWorker(run, (msg) => {
       if (msg.type === 'target-progress') {
-        rungText = TARGET_COPY.progress(msg.rung, msg.of);
+        rungText = m.target.progress(msg.rung, msg.of);
         setProgress(rungText);
         progressBar.max = msg.of;
         progressBar.value = msg.rung - 1;
       } else if (msg.type === 'progress' && msg.phase === 'images' && msg.total > 0) {
-        progressText.textContent = `${rungText} · 이미지 ${msg.done}/${msg.total}`;
+        progressText.textContent = m.targetImages(rungText, msg.done, msg.total);
       } else if (msg.type === 'done') {
         onDone(run, msg);
       } else if (msg.type === 'error') {
@@ -593,7 +577,7 @@ export function initCompressTool(): void {
         // Back-pressure: page i + 1 is rendered only after page i is encoded (at most two pages in memory).
         await acked;
         if (run !== runId) return;
-        setProgress('쪽을 이미지로 바꾸는 중…', i, pages);
+        setProgress(m.rasterProgress, i, pages);
       }
       w.postMessage({ type: 'raster-end', inBytes: input.length } satisfies CompressRequest);
     } catch (err) {
@@ -615,7 +599,7 @@ export function initCompressTool(): void {
       showKept(report);
       return;
     }
-    setProgress(PHASE_TEXT.verify);
+    setProgress(m.phases.verify);
     let orig: OpenedPdf | null = null;
     let res: OpenedPdf | null = null;
     let canvases: (HTMLCanvasElement | null)[] = [];
@@ -658,20 +642,20 @@ export function initCompressTool(): void {
     blobUrl = URL.createObjectURL(blob);
     track({ e: 'success', t: 'pdf-compress' });
     download.href = blobUrl;
-    download.download = compressedFileName(file!.name, report.level === 'raster');
+    download.download = m.fileName(file!.name, report.level === 'raster');
     headline.textContent = sizeChange(report.inBytes, blob.size);
-    summary.textContent = `${reductionPercent(report.inBytes, blob.size)}% 줄었습니다 · ${formatPages(report.pages)}`;
-    saveName.textContent = `저장될 이름: ${download.download}`;
+    summary.textContent = m.reduced(reductionPercent(report.inBytes, blob.size), m.pages(report.pages));
+    saveName.textContent = m.saveName(download.download);
     // 목표 용량: the chip on a hit, the explicit warning on a miss (also for 이미지로 변환 in target mode).
     const mb = mode() === 'target' ? targetMb() : null;
     const outcome = target?.outcome ?? (mb !== null ? (blob.size <= targetBytes(mb) ? 'hit' : 'miss') : null);
     const label = mb !== null ? targetLabel(mb) : '';
     chip.hidden = outcome !== 'hit';
-    chip.textContent = outcome === 'hit' ? TARGET_COPY.chip(label) : '';
+    chip.textContent = outcome === 'hit' ? m.target.chip(label) : '';
     missBox.hidden = outcome !== 'miss';
-    missBox.textContent = outcome === 'miss' ? TARGET_COPY.miss(label, formatSize(blob.size), report.level === 'raster') : '';
+    missBox.textContent = outcome === 'miss' ? m.target.miss(label, formatSize(blob.size), report.level === 'raster') : '';
     previews.replaceChildren(
-      ...['원본', '결과'].map((caption, i) => {
+      ...[m.previewOriginal, m.previewResult].map((caption, i) => {
         const fig = el('figure', 'pv');
         const box = el('div', 'pv-box');
         box.style.aspectRatio = String(aspect);
@@ -687,27 +671,27 @@ export function initCompressTool(): void {
     );
     signedBox.hidden = !report.signed;
     const n: string[] = [];
-    if (encrypted === 'user') n.push('줄인 파일에는 비밀번호가 걸려 있지 않습니다.');
-    if (report.ownerRestrictionRemoved) n.push('보안 설정(편집 제한)을 해제한 사본입니다.');
+    if (encrypted === 'user') n.push(m.noteUnlocked);
+    if (report.ownerRestrictionRemoved) n.push(m.noteOwner);
     notes.replaceChildren(...n.map((t) => el('li', undefined, t)));
     setState('done');
-    showNextSteps(nextSlot, 'pdf-compress', [{ blob, name: download.download }]);
+    showNextStepsIn(m.next, nextSlot, 'pdf-compress', [{ blob, name: download.download }]);
     reveal(result, headline);
     const extra = [chip.hidden ? '' : chip.textContent, missBox.hidden ? '' : missBox.textContent, report.signed ? signedBox.textContent?.trim() : '', ...n]
       .filter(Boolean)
       .join(' ');
-    status(`용량을 줄였습니다. ${headline.textContent}, ${summary.textContent}. ${extra}`.trim());
+    status(m.done(headline.textContent, summary.textContent, extra));
   }
 
   function showKept(report: CompressReport): void {
     track({ e: 'success', t: 'pdf-compress' });
     const lines: string[] = [];
     if (report.level === 'raster') {
-      lines.push('이미지로 바꾸면 오히려 커져서 원본을 그대로 둡니다. 이 파일에는 이 방법이 맞지 않습니다.');
+      lines.push(m.keptRaster);
     } else {
-      lines.push('이미 최적화된 파일입니다. 줄일 수 있는 이미지가 없어 원본을 그대로 둡니다.');
-      if ((report.skipped.jpx ?? 0) > 0) lines.push('이 파일의 이미지는 JPEG2000 형식이라 아직 줄이지 못합니다.');
-      if ((report.skipped.ccitt ?? 0) + (report.skipped.jbig2 ?? 0) > 0) lines.push('흑백 스캔 이미지는 이미 작게 저장되어 있습니다.');
+      lines.push(m.keptOptimized);
+      if ((report.skipped.jpx ?? 0) > 0) lines.push(m.keptJpx);
+      if ((report.skipped.ccitt ?? 0) + (report.skipped.jbig2 ?? 0) > 0) lines.push(m.keptBilevel);
     }
     const strongable = mode() === 'level' && (report.level === 'high' || report.level === 'recommended') && report.imagesSeen > report.imagesReplaced;
     showKeptLines(lines, strongable);
@@ -716,7 +700,7 @@ export function initCompressTool(): void {
   /** 목표 용량 and the input already fits: a kept-style panel, no run and no download. */
   function showAlreadyUnder(mb: number): void {
     revokeBlob();
-    showKeptLines([TARGET_COPY.already(targetLabel(mb), formatSize(bytes!.length))], false);
+    showKeptLines([m.target.already(targetLabel(mb), formatSize(bytes!.length))], false);
   }
 
   function showKeptLines(lines: string[], strongable: boolean): void {
@@ -736,7 +720,7 @@ export function initCompressTool(): void {
   function showError(code: PdfErrorCode, phase: UsagePhase): void {
     usageFail(code, phase);
     setState('error');
-    announce('alert', MESSAGES[code], root);
+    announce('alert', m.errors[code], root);
   }
 
   function fail(code: PdfErrorCode): void {
@@ -750,7 +734,7 @@ export function initCompressTool(): void {
       renderCard(null);
       // `password`: qpdf needs one though none was given; `wrong-password`: the one given was refused.
       usageFail(code, 'process');
-      pwError.textContent = code === 'password' ? MESSAGES.password : MESSAGES['wrong-password'];
+      pwError.textContent = code === 'password' ? m.errors.password : m.errors['wrong-password'];
       pwInput.focus();
       return;
     }
@@ -764,7 +748,7 @@ export function initCompressTool(): void {
     stopWorker();
     setState('ready');
     runBtn.focus();
-    status('줄이기를 취소했습니다. 파일과 설정은 그대로 있습니다.');
+    status(m.cancelled);
   }
 
   function backToReady(): void {
@@ -791,7 +775,7 @@ export function initCompressTool(): void {
     more.open = false;
     setState('empty');
     input.focus();
-    status('처음 상태로 돌아왔습니다.');
+    status(m.reset);
   }
 
   // ---------- wiring ----------
@@ -840,7 +824,7 @@ export function initCompressTool(): void {
     if (!more.open && choice() === 'raster') {
       setChoice('recommended');
       updateRun();
-      status('권장 단계로 돌아왔습니다.');
+      status(m.backToRecommended);
     }
   });
   runBtn.addEventListener('click', requestRun);
