@@ -72,7 +72,7 @@ describe('indicators: sums', () => {
     expect(ind.tool.ctr).toBeCloseTo(4 / 80);
     expect(ind.brand).toMatchObject({ impressions: 5, clicks: 2, queries: 2 });
     expect(ind.topPages!.map((p) => p.path)).toEqual(['/guide/id-card-photo/', '/id-photo/', '/guide/pdf-merge/', '/pdf-merge/', '/guide/police-exam-photo/', '/']);
-    expect(ind.topPages![0]!.queries.map((q) => q.query)).toEqual(['주민등록증 사진 규격', '주민등록증 사진', '주민등록증 크기']);
+    expect(ind.topPages![0]!.queries.map((q: { query: string }) => q.query)).toEqual(['주민등록증 사진 규격', '주민등록증 사진', '주민등록증 크기']);
     expect(ind.error).toBeNull();
   });
 
