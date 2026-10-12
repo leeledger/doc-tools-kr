@@ -1,0 +1,19 @@
+{
+  "name": "docttak-twa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "문서딱 Android app (Trusted Web Activity), built with Bubblewrap. See README.md.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "doctor": "bubblewrap doctor",
+    "build": "bubblewrap build --skipPwaValidation",
+    "fingerprint": "node scripts/fingerprint.mjs",
+    "screenshots": "node screenshots.mjs"
+  },
+  "devDependencies": {
+    "@bubblewrap/cli": "1.27.0"
+  }
+}

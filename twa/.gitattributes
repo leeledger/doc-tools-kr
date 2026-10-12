@@ -1,0 +1,5 @@
+# Bubblewrap compares a SHA-1 of twa-manifest.json with manifest-checksum.txt before every build; a CRLF checkout
+# (core.autocrlf) would change the bytes, and `bubblewrap build` would then prompt to regenerate and bump the version.
+twa-manifest.json -text
+manifest-checksum.txt -text
+gradlew text eol=lf

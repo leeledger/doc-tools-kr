@@ -932,7 +932,8 @@ describe('built output', () => {
     // Sprint C, C2: the brief's Cache Storage name `docttak-model-birefnet-<exportId>` is an internal key, never shown;
     // so is C2-cloud's localStorage key `docttak-bg-mode`, and TOOLS5 U3's sessionStorage key `docttak:sign-png`;
     // CHAIN's IndexedDB name `docttak-handoff` and sessionStorage key `docttak:handoff` (brief decision 2) likewise.
-    const misnamed = files.filter((f) => /독딱|docttak(?!\.com|-model-birefnet-|-bg-mode|:sign-png|-handoff|:handoff)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.(tistory\.)?com/gi, '')));
+    // TWA: the Android package id com.docttak.app in /.well-known/assetlinks.json is an identifier, never shown.
+    const misnamed = files.filter((f) => /독딱|docttak(?!\.com|-model-birefnet-|-bg-mode|:sign-png|-handoff|:handoff)/i.test(readFileSync(f, 'utf8').replace(/https?:\/\/docttak\.(tistory\.)?com/gi, '').replace(/\bcom\.docttak\.app\b/g, '')));
     expect(misnamed).toEqual([]);
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
     expect(home).toContain('<meta property="og:site_name" content="문서딱">');

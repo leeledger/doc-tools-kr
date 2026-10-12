@@ -105,6 +105,21 @@ test('REV3 R3.0: /hwp-to-pdf/ is not precached, but after one online visit it op
 });
 
 
+test('offline: the Play app start URL (home with utm query) is served from the precache', async ({ page, context, ownServer, browserName, isMobile }) => {
+  test.skip(browserName === 'webkit' && isMobile, 'mobile-safari runs the same WebKit service worker as the webkit project, which covers this test.');
+  ownServer.setRoot(ownServer.copyDist());
+  await page.goto('/');
+  await controlled(page);
+  const harnessOffline = browserName !== 'webkit';
+  if (harnessOffline) await context.setOffline(true);
+  else ownServer.setDown(true);
+  // twa/twa-manifest.json startUrl: the SW navigation lookup ignores the query (src/sw/sw.ts).
+  await page.goto('/?utm_source=play&utm_medium=twa');
+  await expect(page.locator('h1')).toContainText('딱 맞춰');
+  if (harnessOffline) await context.setOffline(false);
+  else ownServer.setDown(false);
+});
+
 test('update: a waiting worker shows the bar only when the page is not busy; 새로고침 loads the new build', async ({ page, ownServer, browserName, isMobile }) => {
   test.skip(browserName !== 'chromium' || isMobile, 'Update flow runs on chromium (brief Test map).');
   ownServer.setRoot(ownServer.copyDist());

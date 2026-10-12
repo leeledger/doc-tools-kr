@@ -1,0 +1,11 @@
+# Signing keys and build outputs never enter the repo (TWA brief step 3).
+*.jks
+*.keystore
+*.aab
+*.apk
+*.idsig
+build/
+app/build/
+.gradle/
+local.properties
+node_modules/
