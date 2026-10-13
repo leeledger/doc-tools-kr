@@ -135,7 +135,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
   const zoom2 = must<HTMLInputElement>('idp-zoom2');
   const againBtn = must<HTMLButtonElement>('idp-again');
   const newBtn = must<HTMLButtonElement>('idp-new');
-  const nextSlot = must<HTMLElement>('idp-next');
+  // 이어서 하기: absent in the embed widget (REV5), which hands no file to another tool.
+  const nextSlot = document.getElementById('idp-next');
 
   let model: SaveModel = INITIAL;
   let preset: IdPreset = getPreset(DEFAULT_PRESET)!;
@@ -165,7 +166,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     adjust.hidden = p !== 'adjust' && p !== 'blocked';
     exporting.hidden = p !== 'exporting';
     done.hidden = p !== 'done';
-    if (p !== 'done') hideNextSteps(nextSlot);
+    if (p !== 'done' && nextSlot) hideNextSteps(nextSlot);
     drop.hidden = p !== 'empty' && p !== 'error';
   }
 
@@ -658,7 +659,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     printNote.textContent = print;
     hideError();
     setPhase('done');
-    showNextSteps(nextSlot, 'id-photo', [{ blob, name }]);
+    if (nextSlot) showNextSteps(nextSlot, 'id-photo', [{ blob, name }]);
     say(COPY.exported(name));
     // The headline, the chips and 내려받기 sit fully below the sticky header (UX-AUDIT-2 P1-1): the box scrolls to
     // the html scroll-padding-top (global.css), then the headline takes focus without a second scroll.

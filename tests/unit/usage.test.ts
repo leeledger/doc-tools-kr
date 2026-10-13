@@ -86,7 +86,7 @@ describe('whitelist (scripts/lib/usage.mjs)', () => {
   it('validate accepts every whitelisted value', () => {
     for (const e of ['pick', 'success', 'download']) expect(validate(body({ ...BASE, e })), e).not.toBeNull();
     for (const t of TOOLS) expect(validate(body({ ...BASE, t })), t).not.toBeNull();
-    for (const via of ['guide', 'direct']) expect(validate(body({ ...BASE, via }))).not.toBeNull();
+    for (const via of ['guide', 'direct', 'embed']) expect(validate(body({ ...BASE, via }))).not.toBeNull();
     for (const d of ['mobile', 'tablet', 'desktop']) expect(validate(body({ ...BASE, d }))).not.toBeNull();
     for (const b of ['dev', 'abcdef0', 'a'.repeat(40)]) expect(validate(body({ ...BASE, b })), b).not.toBeNull();
     for (const w of [1, 100]) expect(validate(body({ ...BASE, w }))).not.toBeNull();
@@ -223,8 +223,8 @@ describe('SQL builders and table shaping', () => {
     ]);
     expect(guides!.rows).toEqual([['photo-200kb', '사진 용량 줄이기', '4', '75%']]);
     expect(via!.rows).toEqual([
-      ['사진 용량 줄이기', '75%', '100%'],
-      ['HWP 파일 보기', '-', '-'],
+      ['사진 용량 줄이기', '75%', '100%', '-'],
+      ['HWP 파일 보기', '-', '-', '-'],
     ]);
     expect(shapeUsage({}).totals).toEqual({ success: 0, fail: 0, rate: '-' });
   });
@@ -346,16 +346,16 @@ describe('SQL builders and table shaping', () => {
       | pdf-under-5mb | PDF 용량 줄이기 | 10 | 100% |
       | 이력서 사진 규격, 사람인·잡코리아 크기와 용량 | 사진 용량 줄이기 | 5 | 0% |
 
-      ### 도구별 성공률 (안내에서 온 경우와 바로 온 경우)
+      ### 도구별 성공률 (안내에서 온 경우, 바로 온 경우, 다른 누리집에 넣은 도구)
 
-      | 도구 | 안내에서 옴 | 바로 옴 |
-      | --- | --- | --- |
-      | PDF 합치기 | - | 73% |
-      | PDF 용량 줄이기 | 100% | 86% |
-      | 사진 용량 줄이기 | 98% | 96% |
-      | 증명사진 규격 맞추기 | - | 80% |
-      | HWP PDF 변환 | - | 96% |
-      | 사진 PDF 변환 | - | - |
+      | 도구 | 안내에서 옴 | 바로 옴 | 다른 누리집 |
+      | --- | --- | --- | --- |
+      | PDF 합치기 | - | 73% | - |
+      | PDF 용량 줄이기 | 100% | 86% | - |
+      | 사진 용량 줄이기 | 98% | 96% | - |
+      | 증명사진 규격 맞추기 | - | 80% | - |
+      | HWP PDF 변환 | - | 96% | - |
+      | 사진 PDF 변환 | - | - | - |
 
       ### 이어서 하기 (보낸 도구 → 받은 도구)
 
@@ -1078,7 +1078,7 @@ describe('링크 누름 out event (REV2 decision 7, REV3 decision 6)', () => {
       ],
     });
     // the existing tables keep their order
-    expect(shaped.tables.map((t) => t.title).slice(0, 7)).toEqual(['도구별', '실패 이유', '많이 쓴 설정', '안내 글에서 도구로', '도구별 성공률 (안내에서 온 경우와 바로 온 경우)', '이어서 하기 (보낸 도구 → 받은 도구)', '이어서 하기 도구별 합계']);
+    expect(shaped.tables.map((t) => t.title).slice(0, 7)).toEqual(['도구별', '실패 이유', '많이 쓴 설정', '안내 글에서 도구로', '도구별 성공률 (안내에서 온 경우, 바로 온 경우, 다른 누리집에 넣은 도구)', '이어서 하기 (보낸 도구 → 받은 도구)', '이어서 하기 도구별 합계']);
     expect(JSON.stringify(shaped)).not.toContain('script');
     // zero id-photo successes: the share is "-"; a row without a tool (pre-REV3 shape) is dropped
     expect(shapeUsage({ outs: [{ tool: 'id-photo', guide: '', dest: 'photo-studio', n: 2 }] }).tables[7]!.rows).toEqual([['증명사진 규격 맞추기', '사진관 찾기(네이버 지도)', '2', '-']]);

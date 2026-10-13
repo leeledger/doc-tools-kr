@@ -1,0 +1,15 @@
+---
+// 무료 임베드 위젯 (REV5): the 여권·증명사진 tool for a host site's iframe (/embed/ explains it). Not in the sitemap, not
+// precached, via=embed on every usage event (src/lib/ui/usage.ts arrival).
+import Embed from '../../../layouts/Embed.astro';
+import IdPhotoTool from '../../../components/IdPhotoTool.astro';
+import { getTool } from '../../../data/tools';
+import { SITE } from '../../../data/site';
+
+const tool = getTool('id-photo');
+---
+<Embed title={`${tool.name} | ${SITE.name}`} description={tool.description} tool="/id-photo/">
+  <h1 class="visually-hidden">{tool.h1}</h1>
+  <IdPhotoTool embed />
+</Embed>
+

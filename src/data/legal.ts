@@ -20,8 +20,20 @@ export const PRIVACY_OUT_ID_PHOTO = '2026년 10월 12일';
  * PUBLIC_USAGE_STATS=1. The REV3 deploy date (re-confirmed at the deploy gate).
  */
 export const PRIVACY_OUT = '2026년 10월 13일';
-/** The newest change in this build: the link counting in a usage-stats build, else 이어서 하기 (every build, newer than every other flagged section). */
-export const PRIVACY_REVISED = __USAGE_STATS__ ? PRIVACY_OUT : PRIVACY_CHAIN;
+/**
+ * 무료 임베드 위젯 (REV5 Decision 5): the usage statistics also say whether the tool was used inside another site's frame
+ * (via=embed). Only in a build with PUBLIC_USAGE_STATS=1. The REV5 deploy date (re-confirmed at the deploy gate).
+ */
+export const PRIVACY_EMBED = '2026년 10월 13일';
+/** The newest change in this build: the embed widget count (REV5) in a usage-stats build, else 이어서 하기 (every build, newer than every other flagged section). */
+export const PRIVACY_REVISED = __USAGE_STATS__ ? PRIVACY_EMBED : PRIVACY_CHAIN;
+/**
+ * 이용약관 11항 「다른 누리집에 넣어 쓰기」 (REV5 Decision 7; wording awaits the owner). Terms 9항: a change is posted 7 days
+ * before it takes effect, so this is the REV5 deploy date plus 7 days (re-confirmed at the deploy gate). Every build.
+ * 11항 carries this date itself and the terms change history lists it; the page-top 시행일 stays TERMS_EFFECTIVE (Review
+ * REV5 round 2: the rest of the terms is already in force).
+ */
+export const TERMS_EMBED = '2026년 10월 20일';
 export const TERMS_EFFECTIVE = __BG_CLOUD__ ? PRIVACY_CLOUD : '2026년 9월 30일';
 /** The sitemap lastmod of /privacy/, /terms/ and /licenses/ (YYYY-MM-DD; docs/COPY.md release checklist). */
 export const LEGAL_UPDATED = '2026-09-30';

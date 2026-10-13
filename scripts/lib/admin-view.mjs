@@ -165,8 +165,8 @@ export const CHAIN_NOTE = '이어서 하기 버튼을 누른 횟수예요. 파�
 export const OUT_NOTE = '링크를 누른 횟수예요. 실제로 주문했는지는 알 수 없어요.';
 
 function viaSection(tools) {
-  const rows = tools.map((t) => [esc(t.label), pill(t.guide.success, t.guide.fail), pill(t.direct.success, t.direct.fail)]);
-  return section('s-via', '안내에서 온 경우와 바로 온 경우 성공률', ['도구', '안내에서 옴', '바로 옴'], rows, [1, 2]);
+  const rows = tools.map((t) => [esc(t.label), pill(t.guide.success, t.guide.fail), pill(t.direct.success, t.direct.fail), pill(t.embed.success, t.embed.fail)]);
+  return section('s-via', '어디서 왔는지에 따른 성공률', ['도구', '안내에서 옴', '바로 옴', '다른 누리집'], rows, [1, 2, 3]);
 }
 
 function isEmpty(shaped) {

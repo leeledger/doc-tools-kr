@@ -2,6 +2,7 @@
 // stream). Unset: no tag, no dist/ga.js, no CSP change, policy unchanged. The ID is baked into a self-hosted /ga.js
 // (postbuild gen-ga), so the CSP needs no inline script; that file loads gtag.js only after the page has loaded.
 // Google signals and ad personalization are off here and in the property (docs/COPY.md, owner steps).
+import { extendSiteCsp } from './csp.mjs';
 
 export const GA_ID_RE = /^G-[A-Z0-9]{6,12}$/;
 /** The same-origin loader every page loads (Base.astro), generated at postbuild. */
@@ -27,18 +28,14 @@ export function gaId(value) {
 
 /** dist/_headers with Google Analytics allowed in the site-wide CSP (script-src, connect-src and img-src only). */
 export function withGaCsp(headers) {
-  let n = 0;
   let missing = false;
   const extend = (line, directive, hosts) => {
     const from = `${directive} 'self'`;
     if (!line.includes(from)) missing = true;
     return line.replace(from, `${from} ${hosts}`);
   };
-  const out = headers.replace(/^(\s*Content-Security-Policy:.*)$/m, (line) => {
-    n++;
-    return extend(extend(extend(line, 'script-src', GA_SCRIPT_SRC), 'connect-src', GA_CONNECT_SRC), 'img-src', GA_IMG_SRC);
-  });
-  if (n !== 1 || missing || out === headers) throw new Error('gen-headers: no site-wide Content-Security-Policy with script-src, connect-src and img-src to extend');
+  const out = extendSiteCsp(headers, (line) => extend(extend(extend(line, 'script-src', GA_SCRIPT_SRC), 'connect-src', GA_CONNECT_SRC), 'img-src', GA_IMG_SRC));
+  if (out === null || missing || out === headers) throw new Error('gen-headers: no site-wide Content-Security-Policy with script-src, connect-src and img-src to extend');
   return out;
 }
 

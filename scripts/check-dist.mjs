@@ -17,6 +17,7 @@ import { headMeta, metaLen, metaProblems } from './lib/meta-length.mjs';
 import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fontcover.mjs';
 import { coupangProblems, disclosureStrings, sponsoredProblems } from './lib/out-links-check.mjs';
+import { EMBED_PAGE_RE, embedHeaderProblems, embedPageProblems } from './lib/embed-check.mjs';
 
 const dist = distDir();
 const KB = 1024;
@@ -86,6 +87,8 @@ const budget = (label, paths, limit, measure = gz, unit = 'gzip') => {
 
 const pageHtml = new Map(files.filter((f) => f.path.endsWith('.html') && !/^(naver|google)[0-9a-f]+.html$/.test(f.path)).map((f) => [f.path, read(f.path).toString('utf8')]));
 for (const [p, html] of pageHtml) {
+  // The embed widget (REV5) never carries it: embedPageProblems below.
+  if (EMBED_PAGE_RE.test(p)) continue;
   const has = html.includes(BEACON_SRC);
   if (analytics && !has) errors.push(`${p}: no Cloudflare Web Analytics beacon although PUBLIC_CF_ANALYTICS_TOKEN is set`);
   if (!analytics && has) errors.push(`${p}: Cloudflare Web Analytics beacon although PUBLIC_CF_ANALYTICS_TOKEN is not set`);
@@ -105,7 +108,7 @@ console.log(`check-dist: meta, longest title ${metaMax.title.n} (${metaMax.title
 const GA_TAG = /<script\b[^>]*\bsrc="\/ga\.js"[^>]*>/g;
 for (const [p, html] of pageHtml) {
   const tags = html.match(GA_TAG) ?? [];
-  if (ga) {
+  if (ga && !EMBED_PAGE_RE.test(p)) {
     if (tags.length !== 1 || !tags[0].includes(' data-site-ga')) errors.push(`${p}: ${tags.length} Google Analytics tags (expected exactly one ${GA_LOADER} tag with data-site-ga)`);
     else {
       const firstModule = html.indexOf('type="module"');
@@ -126,6 +129,19 @@ if (ga) {
   for (const f of files) if (TEXT.test(f.path) && read(f.path).includes('googletagmanager')) errors.push(`${f.path}: names googletagmanager although PUBLIC_GA_ID is not set`);
 }
 const initialJs = (html) => [...new Set(moduleEntries(html).flatMap((e) => staticClosure(dist, e)))];
+
+// 무료 임베드 위젯 (REV5 R5.7): every widget page is noindex with the tool page as canonical, has no link block, share,
+// 이어서 하기, ad, GA or Web Analytics tag, never registers the service worker and is not in the sitemap; only its
+// _headers block allows framing, after detaching the site-wide policy (gen-headers runs after this: dist/_headers is
+// still the copy of public/_headers here).
+{
+  const sitemap = files.some((f) => f.path === 'sitemap.xml') ? read('sitemap.xml').toString('utf8') : '';
+  const widgets = [...pageHtml].filter(([p]) => EMBED_PAGE_RE.test(p));
+  if (!widgets.length) errors.push('no embed widget page in dist/embed/');
+  for (const [p, html] of widgets) errors.push(...embedPageProblems(p, html, { initialJs: initialJs(html).map((f) => read(f).toString('utf8')).join(' '), sitemap }));
+  if (files.some((f) => f.path === '_headers')) errors.push(...embedHeaderProblems(read('_headers').toString('utf8')));
+  else errors.push('dist/_headers is missing');
+}
 
 // Initial JS of each page: its module scripts plus their static imports (dynamic import() is lazy).
 for (const [path, html] of pageHtml) {

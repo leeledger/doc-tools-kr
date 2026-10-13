@@ -272,3 +272,8 @@ Ordering: REV2 commit -> EN0 (worktree, parallel with REV3) -> REV3 merged -> EN
 - **D6 EN ads:** CMP for EEA/UK (Google free Privacy & messaging) or no ads for EEA/UK on EN guides. Decide at EN4.
 - **Actions (owner only):** Bing Webmaster Tools (import from Search Console); optional URL-prefix GSC property for
   /en/; Amazon Associates signup (EN4). No AdSense step until EN4.
+
+## Orchestrator note (2026-10-13, after EN0)
+- EN0 actuals accepted: precache +2.6–2.7 KB, three JS entries +1.7–2.9% (check-dist budgets pass). EN1+ acceptance = check-dist budgets + precache ≤450 KB, not the original "+1% / +0.1 KB" EN0 wording.
+- check-dist finds the image-to-jpg controller by file name: EN1 must use the same naming (en/controller.ts) or switch check-dist to a sturdier lookup.
+- Owner decisions: English brand "Docttak" (update CLAUDE.md naming rule for EN pages only); no-upload is the secondary message; EN privacy/terms reuse the Korean policy's officer/contact, governing law Republic of Korea; final EN legal text shown to the owner before deploy.

@@ -42,7 +42,7 @@ describe('shapeUsage admin fields', () => {
     expect(s.kpi.arrive).toBe(35);
     expect(s.kpi.rate).toBeCloseTo((280 / 313) * 100, 6);
     expect(s.tools.map((t) => t.tool)).toEqual(['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'jpg-to-pdf']);
-    expect(s.tools[1]).toEqual({ tool: 'pdf-compress', label: 'PDF 용량 줄이기', pick: 95, start: 80, success: 70, fail: 10, download: 66, guide: { success: 10, fail: 0 }, direct: { success: 60, fail: 10 } });
+    expect(s.tools[1]).toEqual({ tool: 'pdf-compress', label: 'PDF 용량 줄이기', pick: 95, start: 80, success: 70, fail: 10, download: 66, guide: { success: 10, fail: 0 }, direct: { success: 60, fail: 10 }, embed: { success: 0, fail: 0 } });
     expect(s.failRows[0]).toEqual({ tool: 'pdf-merge', toolLabel: 'PDF 합치기', code: 'corrupt', codeLabel: '손상된 파일', phaseLabel: '파일 읽기', n: 9 });
     expect(s.failRows.find((r) => r.code === 'mystery-code')!.codeLabel).toBeNull();
     expect(shapeUsage({}).kpi).toEqual({ start: 0, success: 0, fail: 0, rate: null, arrive: 0 });

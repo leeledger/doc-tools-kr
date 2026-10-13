@@ -49,8 +49,10 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * REV3 R3.0 (brief handoff/ARCHITECT-BRIEF-REV3.md Decision 8): /hwp-to-pdf/ leaves too, on the /hwp-viewer/ precedent
  * above: it needs the same 9.7 MB rhwp wasm, never precached, so a first offline visit cannot convert anyway; returning
  * visitors keep it through sw.ts RUNTIME_PAGES. Frees room for the affiliate links of the production build.
+ * REV5 (Decision 6): /embed/ (the embed widget's info page) and anything under it, like the guides. The widget itself
+ * (/embed/id-photo/) is not in the sitemap at all; the prefix keeps it out even if it ever were.
  */
-export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/');
+export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/') || path.startsWith('/embed/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

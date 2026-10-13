@@ -2983,3 +2983,36 @@ After GROWTH3: font identical (611 / 608 chars, same KiB), precache 443.5 / 448.
 - id-photo output carries no EXIF, so no 찍은 날짜; gov24 passport error 704 checks 찍은 날짜. Unknown whether gov24 rejects a file with no date (passport_online preset). Needs a real upload test by the owner.
 - 대학원 원서 사진 (no single source), 주민등록증 카드 크기 (law.go.kr shell).
 - next-t volume estimates not collected this run.
+
+**REV5 — build (2026-10-13, Bob): DONE_WITH_CONCERNS** (details: handoff/REVIEW-REQUEST.md "REV5"; nothing committed)
+- Steps:
+  - R5.1: src/components/IdPhotoTool.astro holds the tool body (prop `embed`). With the script still in the page, /id-photo/ HTML was byte-identical in default and cloud flag-on (raw compare, hashes included). Final state moves the entry script into the component (see decision 1).
+  - R5.2: src/layouts/Embed.astro + /embed/id-photo/: no site script (no SW, menu, share), no GA/beacon/ads, no 인화·사진관/affiliate block, no 이어서 하기 (#idp-next optional in the controller), noindex + canonical /id-photo/, credit footer 「문서딱 제공」 → /id-photo/?via=embed.
+  - R5.3: public/_headers `/embed/id-photo/*` block (detach, site policy with `frame-ancestors *`, X-Robots-Tag noindex). scripts/lib/csp.mjs `extendSiteCsp`: GA and Web Analytics extend only the `/*` policy. tests/e2e/serve.mjs models detach and comma-joined duplicates.
+  - R5.4: VIAS += embed; arrival() gives via=embed for /embed/ paths; admin + weekly via table gain 「다른 누리집」; privacy usage list + PRIVACY_EMBED.
+  - R5.5: /embed/ info page (snippet, 코드 복사 with selection fallback, 조건, white-label line, preview on demand), sitemap, llms.txt, NOT_PRECACHED, lighthouserc.
+  - R5.6: /terms/ 11항 draft + TERMS_EMBED 2026-10-20 (owner approval pending).
+  - R5.7: scripts/lib/embed-check.mjs + check-dist (widget page rules, _headers framing rules); bgcloud LOCAL_SCOPE covers the two embed pages.
+  - R5.8: OPS-RUNBOOK §12, REVENUE-MODEL §1 "W: 구현(REV5)".
+- Gates:
+  - Precache: default 404.6 → 404.7, cloud flag-on 412.5 → 412.7 / 450, autoframe 406.8 → 406.9 KB (file-name bytes only). Core fonts: identical files (same hashes) in default and cloud; 0 new core characters.
+  - vitest 1,428/1,428 (default dist; ga.test "GA-on build" needs public/vendor to match a non-autoframe copy-vendor). astro check 0. check-dist OK on default, cloud flag-on, autoframe, noauto.
+  - e2e, embed/id-photo/site/sw/chain/preload on 5 projects + manual-chromium/firefox: 734 passed, 3 flaky (passed on retry: firefox site axe /pdf-compress/, webkit id-photo "done … below the sticky header" after a 2.5 min hang, mobile-safari id-photo "mobile at 360 px" after a 5 min hang), 86 skipped, 0 failed. embed.spec alone: 52 passed + 3 skipped (clipboard test is Chromium-only).
+  - e2e cloud usage + ga.cloud ×5: 109 passed, 6 skipped, 0 failed (incl. the new via=embed test in all 5).
+  - LHCI local (default build, median of 5): /id-photo/ 1,668 ms (HEAD 1,664), /embed/ 1,667 ms, CLS ≤ 0.0003, all categories 1.
+- Key decisions:
+  - (1) Entry script in IdPhotoTool.astro: a script per page made entry.ts a shared chunk and /id-photo/ a wrapper (LCP 1,664 → 1,822 ms). The tag now sits after the tool section instead of after `</html>`; otherwise the HTML is identical. Arch ruling requested.
+  - (2) Header block is `/embed/id-photo/*`, not `/embed/*` (the splat would also catch the indexable /embed/ page).
+  - (3) Preview on /embed/ is made on click: a lazy frame on that short page loaded at once and put LCP at 1,962 ms.
+  - (4) The e2e host page is a real loopback server on localhost (tests/e2e/host-page.ts): Chromium blocks a frame of 127.0.0.1 inside a page.route stub (ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS).
+  - (5) The plain-language postbuild check skips `<pre>` blocks (the snippet's CSS `720px`).
+- Known Gaps:
+  - Cloudflare detach + re-add in one block is not verified on a real deploy: curl a preview before production.
+  - `?via=embed` arrivals on /id-photo/ are not counted (arrive reads only a same-origin /guide/ referrer).
+  - Out of scope per brief: other widgets, paid white-label, postMessage auto-resize, host analytics, other languages.
+  - Overlap: public/_headers with the twa worktree.
+- Rebase (2026-10-13): REV5 rebased onto origin/main 8881a39 (WIP commit, rebase, soft reset; uncommitted again). Only BUILD-LOG conflicted; public/_headers keeps the assetlinks and embed blocks. vitest 1,469/1,469, astro check 0, check-dist OK default 407.3 / cloud flag-on 415.3 / autoframe 409.5 KB (origin/main 407.2 / 415.2), fonts unchanged, e2e embed + id-photo on chromium + mobile-chrome 93 passed, 7 skipped, 0 failed.
+- Round 2 (Richard cleared, 0 Must Fix): embedHeaderProblems refuses a detach outside /embed/<tool>/*, a detach without a new policy and any non-/* policy without frame-ancestors (+3 cases); terms page-top 시행일 back to TERMS_EFFECTIVE (9-30 / cloud 10-02), 11항 keeps its 10-20 date + 「변경 이력」; /embed/ 조건 and 11항 share 「도구 아래의 「문서딱 제공」 링크를 지우거나 가리지 말아 주세요」. vitest 1,470/1,470, astro check 0, check-dist OK default 407.3 / cloud 415.3 KB, embed.spec chromium + mobile-chrome 22 passed.
+
+**REV5 — deploy gate (2026-10-13)**
+- Richard: clear (0 Must Fix); round 2 applied (detach only on /embed/<tool>/*, frame-ancestors required, terms top date unchanged, §11 own date 2026-10-20, wording aligned). Owner approved the /terms/ §11 text in chat ("좋아"). Pushed; preview-deploy header check + CI watched.

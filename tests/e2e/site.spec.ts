@@ -145,7 +145,9 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
   const pages = locs.filter((p) => !p.startsWith('/guide/'));
-  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/'].sort());
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/', '/embed/'].sort());
+  // REV5: the widget's info page is listed, the widget itself (noindex) never.
+  expect(locs).not.toContain('/embed/id-photo/');
   // Growth G: /guide/ and every published guide (drafts never). G2 A1: hwp-to-pdf is published; both hubs are in.
   const guides = locs.filter((p) => p.startsWith('/guide/'));
   expect(guides).toContain('/guide/');

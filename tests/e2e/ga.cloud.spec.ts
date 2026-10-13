@@ -11,7 +11,8 @@ const ID = 'G-TEST000000';
 const GA_CSP = /Content-Security-Policy: ([^\r\n]*)/.exec(withGaCsp(readFileSync('public/_headers', 'utf8')))![1]!;
 /** legal.ts reads build-time constants, so the date is read from its source here. */
 const PRIVACY_GA = /PRIVACY_GA = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
-const PRIVACY_OUT = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+/** The newest privacy change in a usage-stats build: the embed widget count (REV5). */
+const PRIVACY_EMBED = /PRIVACY_EMBED = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const SECRET = '비밀-파일명.pdf';
 
 // The same build has the anonymous usage statistics on: using a tool sends its one allowed POST (usage.spec.ts covers it).
@@ -93,7 +94,7 @@ test('/privacy/ in this build (cloud + usage + GA): section 1 names the cookies,
   await expect(page.locator('#usage')).toHaveText('7. 익명 사용 통계');
   await expect(page.locator('h2')).toHaveText([/^1\. /, /^2\. /, /^3\. /, /^4\. 사이트를 여는 기록$/, /^5\. Google/, /^6\. 광고$/, /^7\. 익명/, /^8\. 개인정보 보호책임자$/, /^9\. 변경 이력$/]);
   // The 인화·사진관 link count (REV2, 2026-10-12, usage-stats builds such as this one) is the newest section.
-  await expect(main).toContainText(`시행일: ${PRIVACY_OUT}`);
+  await expect(main).toContainText(`시행일: ${PRIVACY_EMBED}`);
   await expect(main).toContainText(`${PRIVACY_GA}: Google 애널리틱스(방문 분석, 쿠키)와 국외 이전 내용을 더함`);
   await expect(main.locator('a[href="https://tools.google.com/dlpage/gaoptout?hl=ko"]')).toHaveCount(1);
 });

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { LIVE_TOOLS } from '../data/tools';
 import { LEGAL_UPDATED, PRIVACY_TERMS_UPDATED } from '../data/legal';
 import { guidePath, hubs, publishedGuides } from '../data/guides';
+import { EMBED_UPDATED } from '../data/embed';
 
 // Every indexable page with its lastmod (Growth G.3). Never a query URL: deep links canonicalize to the tool page.
 export const GET: APIRoute = async ({ site }) => {
@@ -15,6 +16,8 @@ export const GET: APIRoute = async ({ site }) => {
     ...tools,
     ...guideIndex,
     ...guideRows,
+    // The embed widget's info page (REV5); never the widget itself (/embed/id-photo/ is noindex).
+    ['/embed/', EMBED_UPDATED],
     ['/privacy/', PRIVACY_TERMS_UPDATED],
     ['/terms/', PRIVACY_TERMS_UPDATED],
     ['/licenses/', LEGAL_UPDATED],

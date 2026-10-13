@@ -61,7 +61,8 @@ describe('withGaCsp', () => {
       expect(tokens('script-src')).toEqual(expect.arrayContaining(["'self'", 'https://www.googletagmanager.com', 'https://static.cloudflareinsights.com', "'wasm-unsafe-eval'"]));
       expect(tokens('connect-src')).toEqual(expect.arrayContaining(["'self'", 'https://cloudflareinsights.com', ...GA_CONNECT_SRC.split(' ')]));
       expect(tokens('img-src')).toEqual(expect.arrayContaining(["'self'", ...GA_IMG_SRC.split(' '), 'data:', 'blob:']));
-      expect(out.match(/Content-Security-Policy/g)).toHaveLength(1);
+      // One policy per block: the site-wide one (extended) and the embed widget's (REV5, untouched).
+      expect(out.match(/^\s+Content-Security-Policy:/gm)).toHaveLength(2);
     }
   });
 });

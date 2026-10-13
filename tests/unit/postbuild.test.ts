@@ -839,6 +839,24 @@ describe('built output', () => {
     expect(JSON.parse(readFileSync(join(DIST, '_routes.json'), 'utf8'))).toEqual({ version: 1, include: ['/api/*', '/admin', '/admin/*'], exclude: [] });
   });
 
+  it('REV5 embed: /embed/ in the sitemap and llms.txt, the widget in neither; neither precached; the widget has no site script', async () => {
+    need();
+    const { precacheList } = await import('../../scripts/gen-sw.mjs');
+    const { urls } = precacheList(DIST);
+    for (const u of urls as string[]) expect(u.startsWith('/embed/'), u).toBe(false);
+    for (const f of ['sitemap.xml', 'llms.txt']) {
+      const text = readFileSync(join(DIST, f), 'utf8');
+      expect(text, f).toMatch(/\/embed\/[)<]/);
+      expect(text, f).not.toContain('/embed/id-photo/');
+    }
+    const widget = readFileSync(join(DIST, 'embed', 'id-photo', 'index.html'), 'utf8');
+    const home = readFileSync(join(DIST, 'index.html'), 'utf8');
+    const siteScript = /src="(\/_astro\/Base\.astro_astro_type_script[^"]+)"/.exec(home)![1]!;
+    expect(widget).not.toContain(siteScript);
+    expect(widget).not.toContain('rel="manifest"');
+    expect(widget).toContain('data-embed-credit');
+  });
+
   it('service worker: /offline/ is precached as the fallback, /404.html is not; the kill switch never reloads a tab', async () => {
     need();
     const { precacheList, KILL_SWITCH } = await import('../../scripts/gen-sw.mjs');
@@ -892,12 +910,15 @@ describe('built output', () => {
   // /licenses/ lists software as its authors name it. (/hwp-to-pdf/ has no exemption since HWP direct.)
   const COPY_EXEMPT_PAGES = ['licenses'];
 
-  /** What a user reads on a page: the title, the meta/og texts, alt/aria-label/placeholder/title attributes and the body text. */
+  /**
+   * What a user reads on a page: the title, the meta/og texts, alt/aria-label/placeholder/title attributes and the body
+   * text. A <pre> block is code to copy, not prose (REV5: the /embed/ snippet keeps its CSS max-width:720px).
+   */
   const userText = (html: string): string =>
     [
       html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '',
       ...[...html.matchAll(/\s(?:content|alt|aria-label|placeholder|title)="([^"]*)"/g)].map((m) => m[1]!),
-      html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/g, ' '),
+      html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<pre[\s>][\s\S]*?<\/pre>|<[^>]+>/g, ' '),
     ].join('\n');
 
   it('plain language (Polish Q): no 업로드·서버·브라우저·네트워크·메모리·EXIF·px·dpi in the pages or in our UI strings', () => {

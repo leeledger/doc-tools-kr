@@ -31,7 +31,10 @@ export const TYPES = {
   '.ttf': 'font/ttf',
 };
 
-/** Parses a Cloudflare _headers file into [{ pattern, headers }], skipping absolute-URL (host) rules. */
+/**
+ * Parses a Cloudflare _headers file into [{ pattern, headers, detach }], skipping absolute-URL (host) rules.
+ * `! Name` lines (detach, REV5) remove that header as set by the earlier matching rules.
+ */
 export function parseHeaders(text) {
   const rules = [];
   let current = null;
@@ -39,23 +42,36 @@ export function parseHeaders(text) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
     if (!/^\s/.test(line)) {
       const pattern = line.trim();
-      current = pattern.startsWith('/') ? { pattern, headers: {} } : null;
+      current = pattern.startsWith('/') ? { pattern, headers: {}, detach: [] } : null;
       if (current) rules.push(current);
       continue;
     }
-    if (current) {
-      const i = line.indexOf(':');
-      current.headers[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+    if (!current) continue;
+    const t = line.trim();
+    if (t.startsWith('! ')) {
+      current.detach.push(t.slice(2).trim());
+      continue;
     }
+    const i = line.indexOf(':');
+    current.headers[line.slice(0, i).trim()] = line.slice(i + 1).trim();
   }
   return rules;
 }
 
 const matches = (pattern, path) => (pattern.endsWith('*') ? path.startsWith(pattern.slice(0, -1)) : path === pattern);
 
-function headersFor(rules, path) {
+/**
+ * Like Cloudflare: rules apply in file order, a header set twice is joined with ", ", a detach drops the earlier value.
+ * @returns {Record<string, string>}
+ */
+export function headersFor(rules, path) {
+  /** @type {Record<string, string>} */
   const out = {};
-  for (const r of rules) if (matches(r.pattern, path)) Object.assign(out, r.headers);
+  for (const r of rules) {
+    if (!matches(r.pattern, path)) continue;
+    for (const name of r.detach ?? []) delete out[name];
+    for (const [name, value] of Object.entries(r.headers)) out[name] = name in out ? `${out[name]}, ${value}` : value;
+  }
   return out;
 }
 

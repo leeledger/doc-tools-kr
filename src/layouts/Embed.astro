@@ -1,0 +1,65 @@
+---
+// The embed widget layout (REV5 Decision 3): a tool inside a host site's iframe. Same CSS and core font preloads as
+// every page; no site header, menu or footer, no site script (so no service worker: storage in a third-party frame is
+// partitioned and the widget is online-only), no Google Analytics, no Web Analytics beacon, no ads. noindex, and the
+// canonical names the tool's own page. The only link out is the credit. public/_headers lets any site frame /embed/*.
+import '../generated/anolim-ui.css';
+import '../styles/global.css';
+import '../styles/app.css';
+import { SITE, sharePreview } from '../data/site';
+import { BUILD_ID } from '../data/build';
+import uiFont400 from '../generated/anolim-ui-400.woff2?url';
+import uiFont800 from '../generated/anolim-ui-800.woff2?url';
+
+interface Props {
+  title: string;
+  description: string;
+  /** The tool page this widget is a copy of ("/id-photo/"): canonical and credit link. */
+  tool: string;
+}
+const { title, description, tool } = Astro.props;
+const canonical = new URL(tool, Astro.site).href;
+const credit = new URL(`${tool}?via=embed`, Astro.site).href;
+// The tool page's share preview: a shared frame URL previews as the tool.
+const share = sharePreview(tool, Astro.site!);
+---
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<meta name="description" content={description}>
+<meta name="robots" content="noindex">
+<link rel="canonical" href={canonical}>
+<meta name="build-id" content={BUILD_ID}>
+<meta name="theme-color" content={SITE.themeColor}>
+<meta property="og:type" content="website">
+<meta property="og:locale" content={SITE.locale}>
+<meta property="og:site_name" content={SITE.name}>
+<meta property="og:title" content={title}>
+<meta property="og:description" content={share.description}>
+<meta property="og:url" content={canonical}>
+<meta property="og:image" content={share.image}>
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content={share.alt}>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content={title}>
+<meta name="twitter:description" content={share.description}>
+<meta name="twitter:image" content={share.image}>
+<meta name="twitter:image:alt" content={share.alt}>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="preload" href={uiFont400} as="font" type="font/woff2" crossorigin>
+<link rel="preload" href={uiFont800} as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+<main id="main">
+<slot />
+</main>
+<footer class="wrap narrow">
+  <p class="level-desc"><a href={credit} rel="noopener" target="_blank" data-embed-credit>{SITE.name} 제공</a> · 파일은 이 기기 밖으로 나가지 않아요.</p>
+</footer>
+</body>
+</html>

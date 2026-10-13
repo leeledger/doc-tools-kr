@@ -5,7 +5,8 @@
 import { withAnalyticsCsp } from './analytics.mjs';
 import { withGaCsp } from './ga.mjs';
 
-const BASE = "  Content-Security-Policy: script-src 'self'; connect-src 'self'; img-src 'self'";
+// The site-wide (/*) block: the generators extend only that block's policy (scripts/lib/csp.mjs, REV5).
+const BASE = "/*\n  Content-Security-Policy: script-src 'self'; connect-src 'self'; img-src 'self'";
 
 /** The connect-src value of a CSP header ('self' https://…), whitespace collapsed; null without one. */
 export function connectSrcOf(csp) {

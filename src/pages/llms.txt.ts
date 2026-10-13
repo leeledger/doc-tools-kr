@@ -22,6 +22,10 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     ...[...hubList, ...guides].map((g) => `- [${g.data.title}](${abs(guidePath(g.id))}): ${g.data.answer}`),
     '',
+    '## 누리집에 넣기',
+    '',
+    `- [내 누리집에 증명사진 도구 넣기](${abs('/embed/')}): 사진관·학원·행정사 누리집에 증명사진 규격 맞추기 도구를 무료로 넣는 방법이에요.`,
+    '',
   ].join('\n');
   return new Response(body, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 };

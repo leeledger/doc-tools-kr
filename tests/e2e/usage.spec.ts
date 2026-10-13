@@ -10,6 +10,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Locator, Page, Request } from '@playwright/test';
 import { validate } from '../../scripts/lib/usage.mjs';
 import { expect, gotoReady, test } from './no-upload';
+import { startHost } from './host-page';
 import { fixturePath, photoFixture, photoRuntime, runtimePath } from './paths';
 
 test.use({ allowUpload: [{ method: 'POST', path: '/api/usage' }] });
@@ -22,6 +23,7 @@ const PORTRAIT_SIZE = String(readFileSync(PORTRAIT).length);
 const PRIVACY_USAGE = /PRIVACY_USAGE = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_OUT = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_OUT_ID_PHOTO = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_EMBED = /PRIVACY_EMBED = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'w']);
 
 interface Beacon {
@@ -282,6 +284,34 @@ test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before t
   expect(next[0]!.body).not.toContain('gen_scan');
 });
 
+test('REV5 embed widget in another site\'s frame: pick, start, success, download, all via=embed; never the host site, no arrive', async ({ page, network, baseURL }) => {
+  const beacons = await record(page);
+  // The host page is another site (tests/e2e/host-page.ts: localhost against our 127.0.0.1); its own requests are taken
+  // off the no-upload log (they are the test's page, not ours).
+  const site = await startHost();
+  try {
+    await page.goto(site.url(`${baseURL}/embed/id-photo/`), { waitUntil: 'domcontentloaded' });
+    const frame = page.frameLocator('iframe');
+    await expect(frame.locator('#idp-tool')).toHaveAttribute('data-state', 'empty');
+    await frame.locator('#idp-preset').selectOption('passport_online');
+    await frame.locator('#idp-input').setInputFiles(PORTRAIT);
+    await expect(frame.locator('#idp-tool')).toHaveAttribute('data-state', /^(adjust|blocked)$/, { timeout: 90_000 });
+    await frame.locator('#idp-confirm').check();
+    await frame.locator('#idp-save').click();
+    await expect(frame.locator('#idp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+    await Promise.all([page.waitForEvent('download'), frame.locator('#idp-download').click()]);
+    await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['pick', 'start', 'success', 'download']);
+    expectClean(beacons);
+    for (const b of beacons) {
+      expect(b.ev).toMatchObject({ t: 'id-photo', via: 'embed', w: 1 });
+      expect(b.body).not.toMatch(/studio|localhost|https?:/);
+    }
+    site.drop(network);
+  } finally {
+    await site.close();
+  }
+});
+
 test('인화·사진관 링크 (REV2): a click on the info link sends exactly one out (v=photo-studio); no URL in the body', async ({ page, network }) => {
   const beacons = await record(page);
   const studio = /^https:\/\/map\.naver\.com\//;
@@ -393,9 +423,12 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   await expect(main).toContainText('도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)');
   await expect(main).toContainText(`${PRIVACY_OUT}: 익명 사용 통계에 도구 결과 화면과 안내 글의 상품 링크 누름을 더함`);
   await expect(main).toContainText(`${PRIVACY_OUT_ID_PHOTO}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`);
-  await expect(main).toContainText(`시행일: ${PRIVACY_OUT}`);
+  // REV5: the embed widget count (via=embed) is the newest change.
+  await expect(main).toContainText('안내 글에서 넘어왔는지, 다른 누리집에 넣은 도구에서 쓴 것인지, 기기 종류');
+  await expect(main).toContainText(`${PRIVACY_EMBED}: 익명 사용 통계에 다른 누리집에 넣은 도구에서 쓴 것인지를 더함`);
+  await expect(main).toContainText(`시행일: ${PRIVACY_EMBED}`);
   // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence wins then (ga.cloud.spec.ts
-  // checks it); without it, the cookieless sentence. The date is the link count's (REV3) in both.
+  // checks it); without it, the cookieless sentence. The date is the embed count's (REV5) in both.
   if ((await page.locator('#ga').count()) === 0) {
     await expect(main).toContainText('쿠키도 쓰지 않아요.');
   }

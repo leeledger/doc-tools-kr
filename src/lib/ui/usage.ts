@@ -40,7 +40,7 @@ export type UsageEvent =
   | { e: 'out'; t: UsageTool; o: 'out'; v: OutDest; g?: string }
   | { e: 'fail'; t: UsageTool; c: string; p: UsagePhase };
 
-type Via = 'guide' | 'direct';
+type Via = 'guide' | 'direct' | 'embed';
 type Arrive = { e: 'arrive'; t: UsageTool; g: string; dl: '0' | '1' };
 
 export interface PayloadContext {
@@ -98,9 +98,11 @@ const GUIDE_PATH = /^\/guide\/([a-z0-9-]{1,60})\/$/;
 /**
  * Guide -> tool (brief decision 7): a tool page opened from a same-origin /guide/<slug>/ page reports one arrive and
  * tags every event of this page load via=guide; anything else (another site, the guide index, another tool, no
- * referrer) is via=direct without an arrive. Only the referrer's path is read, never sent.
+ * referrer) is via=direct without an arrive. Only the referrer's path is read, never sent. The embed widget
+ * (/embed/..., REV5 Decision 5) is via=embed on every event, read from its own path; the host site is never read.
  */
 export function arrival(referrer: string, origin: string, pathname: string, deepValid: boolean): { via: Via; arrive: { g: string; dl: '0' | '1' } | null } {
+  if (pathname.startsWith('/embed/')) return { via: 'embed', arrive: null };
   const direct = { via: 'direct' as const, arrive: null };
   if (!referrer || pathname.startsWith('/guide/')) return direct;
   let ref: URL;

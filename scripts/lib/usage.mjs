@@ -17,7 +17,7 @@
 //                   of GUIDE_OUT[t] (a guide; t = its tools[0]); never the href
 //   g   guide slug  arrive, and out from a guide
 //   dl  deep link   arrive only, "0" | "1"
-//   via             every event, guide | direct
+//   via             every event, guide | direct | embed (the embed widget /embed/..., REV5)
 //   d   device      mobile | tablet | desktop
 //   b   build id    ^([0-9a-f]{7,40}|dev)$
 //   w   weight      integer 1-100 (1 / sample share)
@@ -45,7 +45,7 @@ export const COMPARE_PERIODS = [1, 7, 30];
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out'];
 export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
-export const VIAS = ['guide', 'direct'];
+export const VIAS = ['guide', 'direct', 'embed'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
 export const KB_BUCKETS = ['le100', 'le200', 'le300', 'le500', 'le1000', 'gt1000'];
 export const MB_BUCKETS = ['le1', 'le2', 'le5', 'le10', 'gt10'];
@@ -455,7 +455,7 @@ const rate = (part, whole) => (whole > 0 ? `${Math.round((part / whole) * 100)}%
 export function shapeUsage({ events = [], fails = [], settings = [], guides = [], chains = [], outs = [] }) {
   const per = new Map();
   const cell = (tool) => {
-    if (!per.has(tool)) per.set(tool, { pick: 0, start: 0, success: 0, fail: 0, download: 0, guide: { success: 0, fail: 0 }, direct: { success: 0, fail: 0 } });
+    if (!per.has(tool)) per.set(tool, { pick: 0, start: 0, success: 0, fail: 0, download: 0, guide: { success: 0, fail: 0 }, direct: { success: 0, fail: 0 }, embed: { success: 0, fail: 0 } });
     return per.get(tool);
   };
   let arrive = 0;
@@ -544,7 +544,7 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
     kpi: { start, success, fail, rate: success + fail > 0 ? (success / (success + fail)) * 100 : null, arrive },
     tools: tools.map((t) => {
       const c = per.get(t);
-      return { tool: t, label: TOOL_LABELS[t], pick: c.pick, start: c.start, success: c.success, fail: c.fail, download: c.download, guide: { ...c.guide }, direct: { ...c.direct } };
+      return { tool: t, label: TOOL_LABELS[t], pick: c.pick, start: c.start, success: c.success, fail: c.fail, download: c.download, guide: { ...c.guide }, direct: { ...c.direct }, embed: { ...c.embed } };
     }),
     failRows: fails.slice(0, 20).map((r) => {
       const code = String(r.code ?? '');
@@ -573,11 +573,11 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
         rows: [...arrivals.values()].sort((a, b) => b.n - a.n).map((a) => [label(GUIDE_TITLES, a.guide), label(TOOL_LABELS, a.tool), count(a.n), rate(a.dl, a.n)]),
       },
       {
-        title: '도구별 성공률 (안내에서 온 경우와 바로 온 경우)',
-        head: ['도구', '안내에서 옴', '바로 옴'],
+        title: '도구별 성공률 (안내에서 온 경우, 바로 온 경우, 다른 누리집에 넣은 도구)',
+        head: ['도구', '안내에서 옴', '바로 옴', '다른 누리집'],
         rows: tools.map((t) => {
           const c = per.get(t);
-          return [label(TOOL_LABELS, t), rate(c.guide.success, c.guide.success + c.guide.fail), rate(c.direct.success, c.direct.success + c.direct.fail)];
+          return [label(TOOL_LABELS, t), rate(c.guide.success, c.guide.success + c.guide.fail), rate(c.direct.success, c.direct.success + c.direct.fail), rate(c.embed.success, c.embed.success + c.embed.fail)];
         }),
       },
       { title: '이어서 하기 (보낸 도구 → 받은 도구)', head: ['보낸 도구', '받은 도구', '횟수'], rows: pairs.map((p) => [p.fromLabel, p.toLabel, count(p.n)]) },
