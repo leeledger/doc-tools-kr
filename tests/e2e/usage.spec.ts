@@ -557,3 +557,17 @@ test('REV3 No-block screens: no sponsored link, no first-part line on pdf-compre
     await expect(page.locator('.guide-aff-top'), path).toHaveCount(0);
   }
 });
+
+test('EN1: an English tool page sends no usage beacon (Korean statistics stay clean until EN2)', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/en/pdf-merge/');
+  await page.setInputFiles('#merge-input', [fixturePath('kr_law_form.pdf'), fixturePath('irs_fw9.pdf')]);
+  await page.getByRole('button', { name: /^Merge 2 PDFs$/ }).click();
+  await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'done');
+  await page.waitForTimeout(500);
+  expect(beacons).toEqual([]);
+  // The same flow on the Korean page does send (the guard is the page language, not the build).
+  await gotoReady(page, '/pdf-merge/');
+  await page.setInputFiles('#merge-input', [fixturePath('kr_law_form.pdf'), fixturePath('irs_fw9.pdf')]);
+  await expect.poll(() => beacons.length).toBeGreaterThan(0);
+});

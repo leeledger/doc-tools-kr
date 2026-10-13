@@ -1,0 +1,195 @@
+---
+// /en/pdf-compress/ (EN1): the Korean page's markup with English words and the same element ids (check-dist id parity,
+// scripts/lib/en-check.mjs). No next-step group, quick links or ad slot on English pages; ?target= deep links work.
+import BaseEn from '../../../layouts/BaseEn.astro';
+import EngineError from '../../../components/EngineError.astro';
+import RelatedTools from '../../../i18n/en/components/RelatedTools.astro';
+import Share from '../../../i18n/en/components/Share.astro';
+import { toolJsonLdEn } from '../../../i18n/en/jsonld';
+import { sharePreviewEn } from '../../../i18n/en/site';
+import { getToolEn } from '../../../i18n/en/tools';
+import { LEVEL_COPY_EN } from '../../../i18n/en/tools/pdf-compress';
+import { TARGET_CHIPS } from '../../../tools/pdf-compress/level-copy';
+
+const tool = getToolEn('pdf-compress');
+---
+<BaseEn title={tool.title} description={tool.description} jsonLd={toolJsonLdEn(tool, Astro.site)}>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">{tool.lead}</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="Compress PDF tool">
+    <div class="wrap narrow">
+      <div id="compress-tool" class="compress" data-state="empty" data-mode="level">
+        <div class="drop" id="cmp-drop">
+          <input id="cmp-input" class="file-input" type="file" accept="application/pdf,.pdf">
+          <label class="btn primary" for="cmp-input" id="cmp-pick">Choose a PDF file</label>
+          <p class="drop-hint">or drop the file here</p>
+          <p class="drop-hint-touch">You can pick a file from the Files app or your Downloads folder.</p>
+          <p class="privacy-note">Your files stay on your device. Nothing is uploaded. <a href="/en/privacy/">Privacy</a></p>
+        </div>
+
+        <p class="notice" id="cmp-notice" hidden></p>
+        <EngineError />
+
+        <div class="file-item file-card" id="cmp-file" hidden>
+          <div class="thumb" id="cmp-thumb" aria-hidden="true"></div>
+          <div class="meta">
+            <p class="name" id="cmp-name"></p>
+            <p class="info" id="cmp-info"></p>
+            <p class="note" id="cmp-owner" hidden>The copy will not have the editing limits of the original</p>
+          </div>
+          <form class="pw" id="cmp-pw" novalidate hidden>
+            <p class="pw-state" id="cmp-pw-state">This file is protected with a password.</p>
+            <label class="pw-label" for="cmp-pw-input">Password</label>
+            <div class="row pw-row">
+              <input class="pw-input" id="cmp-pw-input" type="password" autocomplete="off" aria-describedby="cmp-pw-state cmp-pw-error">
+              <button type="button" class="btn small ghost icon-btn pw-toggle" id="cmp-pw-toggle" aria-label="Show password" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button type="submit" class="btn small primary">OK</button>
+            </div>
+            <p class="pw-error" id="cmp-pw-error"></p>
+          </form>
+        </div>
+
+        <div class="cmp-controls" id="cmp-controls" hidden>
+          <fieldset class="modes">
+            <legend class="visually-hidden">How to compress</legend>
+            <label class="radio"><input type="radio" name="cmp-mode" value="level" checked><span>Compress by quality level</span></label>
+            <label class="radio"><input type="radio" name="cmp-mode" value="target"><span>Compress to a target size</span></label>
+          </fieldset>
+          <div class="target-box" id="cmp-target-box" hidden>
+            <p class="target-label" id="cmp-target-label">Target size</p>
+            <div class="chips" role="radiogroup" aria-labelledby="cmp-target-label">
+              {TARGET_CHIPS.map((t) => (
+                <label class="chip"><input type="radio" name="cmp-target" value={t} checked={t === '10'}><span>{t} MB</span></label>
+              ))}
+              <label class="chip"><input type="radio" name="cmp-target" value="custom"><span>Other size</span></label>
+            </div>
+            <div class="ph-custom" id="cmp-target-custom" hidden>
+              <label for="cmp-target-mb">Target size (MB)</label>
+              <input class="num-input" id="cmp-target-mb" type="text" inputmode="decimal" autocomplete="off" aria-describedby="cmp-target-error">
+              <p class="field-error" id="cmp-target-error"></p>
+            </div>
+            <p class="level-desc">Finds the sharpest result that fits the target size. It never goes below the sharpness you need to read text (about 96 ppi).</p>
+          </div>
+          <fieldset class="levels" id="cmp-levels">
+            <legend>Quality level</legend>
+            {LEVEL_COPY_EN.map((l) => (
+              <div class="level">
+                <label class="radio">
+                  <input type="radio" name="cmp-level" value={l.value} checked={l.value === 'recommended'} aria-describedby={`cmp-desc-${l.value}`}>
+                  <span>{l.label}</span>
+                </label>
+                <p class="level-desc" id={`cmp-desc-${l.value}`}>{l.desc}</p>
+              </div>
+            ))}
+            <p class="levels-common">All three levels keep text and lines as they are and only shrink the images.</p>
+          </fieldset>
+          <details class="more" id="cmp-more">
+            <summary>Need it even smaller?</summary>
+            <div class="level">
+              <label class="radio">
+                <input type="radio" name="cmp-level" value="raster" aria-describedby="cmp-desc-raster">
+                <span>Convert pages to images</span>
+              </label>
+              <div class="warn-box" id="cmp-desc-raster" role="note">Turns every page into an image (about 150 ppi). You can no longer select or search the text, and form fields, links and bookmarks are lost. Text-only documents can get bigger; then we keep the original.</div>
+            </div>
+          </details>
+          <div class="confirm" id="cmp-confirm" hidden>
+            <p id="cmp-confirm-text"></p>
+            <div class="row">
+              <button type="button" class="btn primary" id="cmp-confirm-yes">Compress anyway</button>
+              <button type="button" class="btn ghost" id="cmp-confirm-no">Cancel</button>
+            </div>
+          </div>
+          <div class="row">
+            <button type="button" class="btn primary" id="cmp-run" disabled>Compress PDF</button>
+          </div>
+          <p class="hint" id="cmp-hint"></p>
+        </div>
+
+        <div class="progress-box" id="cmp-progress" hidden>
+          <p id="cmp-progress-text">Reading the file…</p>
+          <progress id="cmp-progress-bar" aria-labelledby="cmp-progress-text"></progress>
+          <button type="button" class="btn ghost" id="cmp-cancel">Cancel</button>
+        </div>
+
+        <div class="result" id="cmp-result" hidden>
+          <p class="result-title" id="cmp-headline" tabindex="-1"></p>
+          <p class="result-summary" id="cmp-summary"></p>
+          <p class="target-chip" id="cmp-chip" hidden></p>
+          <div class="row">
+            <a class="btn primary" id="cmp-download" download tabindex="0">Download</a>
+            <button type="button" class="btn ghost" id="cmp-reset">Start over</button>
+            <button type="button" class="btn ghost" id="cmp-again">Try another level</button>
+          </div>
+          <p class="save-name" id="cmp-save-name"></p>
+          <Share name={tool.name} text={sharePreviewEn('/en/pdf-compress/', Astro.site!).description} id="cmp-share" />
+          <div class="warn-box" id="cmp-miss" role="note" hidden></div>
+          <div class="warn-box" id="cmp-signed" role="note" hidden>This file has a digital signature. The signature is no longer valid in the compressed file. For signed documents such as certificates, send the original.</div>
+          <ul class="result-notes" id="cmp-notes"></ul>
+          <details class="pv-details" open>
+            <summary>Preview</summary>
+            <div class="previews" id="cmp-previews"></div>
+          </details>
+          <p class="related-line">To combine several files into one, use <a href="/en/pdf-merge/">Merge PDF</a>.</p>
+        </div>
+
+        <div class="kept" id="cmp-kept" hidden>
+          <div id="cmp-kept-text" tabindex="-1"></div>
+          <div class="row">
+            <button type="button" class="btn primary" id="cmp-strong" hidden>Try again with Strong</button>
+            <button type="button" class="btn ghost" id="cmp-kept-again">Try another level</button>
+            <button type="button" class="btn ghost" id="cmp-kept-reset">Start over</button>
+          </div>
+        </div>
+
+        <p class="error-box" id="cmp-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="cmp-status" aria-live="polite" data-live="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">How to compress a PDF</h2>
+      <ol class="steps">
+        <li><strong>Choose a file</strong><span>Pick the PDF you want to make smaller, or drop it on the page. For a locked file, type its password.</span></li>
+        <li><strong>Choose a level or a target size</strong><span>Choose High quality, Recommended or Strong, or set the upload limit you need to meet (for example 10 MB) as the target size. For documents you send or submit, Recommended works well.</span></li>
+        <li><strong>Download</strong><span>Press Compress PDF, check the new size and the preview, then press Download to save the file.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">Good to know</h2>
+      <ul class="points">
+        <li><strong>Nothing is uploaded</strong><span>Your file and password are used only while this page is open. They are gone when you press Start over or close the page.</span></li>
+        <li><strong>No install, no sign-up</strong><span>Open this page on a computer or phone and start right away.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">FAQ</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} />
+</BaseEn>
+
+<script>
+  import { initCompressTool } from '../../../tools/pdf-compress/controller.ts?en';
+  import { EN } from '../../../i18n/en/tools/pdf-compress';
+  initCompressTool(EN);
+</script>

@@ -1,0 +1,116 @@
+---
+// The English layout (EN1; brief EN decisions 2, 3, 9, 10, 11). The same three stylesheets as Base.astro in the same
+// order (so Korean pages keep one CSS file), no font preload (html[lang="en"] uses the system font), no Google
+// Analytics (Cloudflare Web Analytics only, cookieless), no ads, no manifest (the installed app is the Korean site).
+// hreflang pairs live in sitemap.xml only. Every English word of the chrome is here or in src/i18n/en/.
+import '../generated/anolim-ui.css';
+import '../styles/global.css';
+import '../styles/app.css';
+import { SITE } from '../data/site';
+import { ANALYTICS_ON, BEACON_SRC, CF_ANALYTICS_TOKEN } from '../data/analytics';
+import { BUILD_ID } from '../data/build';
+import JsonLd from '../components/JsonLd.astro';
+import SiteScript from '../components/SiteScript.astro';
+import { SITE_EN, sharePreviewEn } from '../i18n/en/site';
+import { TOOLS_EN, koTwin } from '../i18n/en/tools';
+
+interface Props {
+  title: string;
+  description: string;
+  skipTarget?: string;
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown>[];
+}
+
+const { title, description, skipTarget = 'main', noindex = false, jsonLd } = Astro.props;
+const path = Astro.url.pathname;
+const canonical = new URL(path, Astro.site).href;
+const share = sharePreviewEn(path, Astro.site!);
+const korean = koTwin(path) ?? '/';
+const favicon =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M10 9h8l4 4v10H10z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M13 18l2.5 2.5L20 16' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<meta name="description" content={description}>
+{noindex && <meta name="robots" content="noindex">}
+{!noindex && <link rel="canonical" href={canonical}>}
+<meta name="build-id" content={BUILD_ID}>
+<meta name="theme-color" content={SITE.themeColor}>
+<meta property="og:type" content="website">
+<meta property="og:locale" content={SITE_EN.locale}>
+<meta property="og:locale:alternate" content={SITE_EN.altLocale}>
+<meta property="og:site_name" content={SITE_EN.name}>
+<meta property="og:title" content={title}>
+<meta property="og:description" content={share.description}>
+<meta property="og:url" content={canonical}>
+<meta property="og:image" content={share.image}>
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content={share.alt}>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content={title}>
+<meta name="twitter:description" content={share.description}>
+<meta name="twitter:image" content={share.image}>
+<meta name="twitter:image:alt" content={share.alt}>
+<link rel="icon" href={favicon} type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+{jsonLd && <JsonLd data={jsonLd} />}
+<slot name="head" />
+{ANALYTICS_ON && <script is:inline defer src={BEACON_SRC} data-cf-beacon={JSON.stringify({ token: CF_ANALYTICS_TOKEN })} data-site-analytics></script>}
+</head>
+<body data-sw-new="A new version is available." data-sw-reload="Reload">
+<a class="skip" href={`#${skipTarget}`}>Skip to content</a>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="brand" href="/en/" aria-label={`${SITE_EN.name} home`}>
+      <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M10 9h8l4 4v10H10z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M13 18l2.5 2.5L20 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>{SITE_EN.name}</span>
+    </a>
+    <nav aria-label="Main menu" class="top-nav">
+      <div class="menu" data-menu>
+        <a class="menu-toggle" href="/en/#tools" data-menu-toggle>Tools</a>
+        <div class="menu-panel" id="tools-menu" hidden>
+          <ul>
+            {TOOLS_EN.map((t) => (
+              <li>
+                <a href={`/en/${t.slug}/`} aria-current={path === `/en/${t.slug}/` ? 'page' : undefined}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" set:html={t.icon} />
+                  <span>{t.name}</span>
+                </a>
+              </li>
+            ))}
+            <li class="menu-sep"><a href="/en/#faq">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+      <a class="nav-extra" href={path === '/en/' ? '#faq' : '/en/#faq'}>FAQ</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<slot />
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-inner">
+    <nav class="foot-links" aria-label="Site information">
+      <a href="/en/terms/">Terms</a>
+      <a href="/en/privacy/">Privacy</a>
+      <a href="/licenses/">Open-source licenses (Korean)</a>
+      <a href={korean} hreflang="ko" lang="ko">한국어</a>
+    </nav>
+    <p class="foot-copy">© 2026 {SITE_EN.name} · {SITE_EN.tagline}</p>
+  </div>
+</footer>
+<SiteScript />
+</body>
+</html>

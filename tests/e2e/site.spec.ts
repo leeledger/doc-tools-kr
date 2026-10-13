@@ -144,7 +144,9 @@ test('related tools: each tool page links to the other live tools (the HWP tools
 test('sitemap lists exactly the live pages; robots points to it', async ({ request }) => {
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
-  const pages = locs.filter((p) => !p.startsWith('/guide/'));
+  // EN1: the English twins are listed too (hreflang alternates: scripts/lib/en-check.mjs rule e).
+  expect(locs.filter((p) => p.startsWith('/en/')).sort()).toEqual(['/en/', '/en/image-to-jpg/', '/en/pdf-compress/', '/en/pdf-merge/', '/en/privacy/', '/en/terms/']);
+  const pages = locs.filter((p) => !p.startsWith('/guide/') && !p.startsWith('/en/'));
   expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/', '/embed/'].sort());
   // REV5: the widget's info page is listed, the widget itself (noindex) never.
   expect(locs).not.toContain('/embed/id-photo/');

@@ -7,6 +7,16 @@ export const TITLE_MAX = 40;
 export const DESC_MIN = 40;
 export const DESC_MAX = 80;
 export const OG_DESC_MAX = 80;
+/**
+ * EN1 (brief EN decision 13): English pages (`<html lang="en">`) are measured with English limits (code points; the SERP
+ * truncates by pixels, about 600 px): title at most 60 incl. " | Docttak", description 70–155, og/twitter description at
+ * most 155. src/i18n/en/site.ts holds the same numbers; a unit test keeps them equal.
+ */
+export const EN_LIMITS = { title: 60, descMin: 70, descMax: 155, ogDescMax: 155 };
+const KO_LIMITS = { title: TITLE_MAX, descMin: DESC_MIN, descMax: DESC_MAX, ogDescMax: OG_DESC_MAX };
+
+/** The page language from `<html lang>` ("ko" when missing). */
+export const pageLang = (html) => /<html\b[^>]*\blang="([a-z-]+)"/i.exec(html)?.[1]?.toLowerCase() ?? 'ko';
 
 export const metaLen = (s) => [...s].length;
 
@@ -51,21 +61,22 @@ export function headMeta(html) {
 /** Problems with one page's meta lengths; each message names the page, the count and the text. */
 export function metaProblems(path, html) {
   const m = headMeta(html);
+  const lim = pageLang(html) === 'en' ? EN_LIMITS : KO_LIMITS;
   const out = [];
   const q = (s) => JSON.stringify(s);
   if (m.title === undefined) out.push(`${path}: title missing`);
-  else if (metaLen(m.title) > TITLE_MAX) out.push(`${path}: title ${metaLen(m.title)} > ${TITLE_MAX}: ${q(m.title)}`);
+  else if (metaLen(m.title) > lim.title) out.push(`${path}: title ${metaLen(m.title)} > ${lim.title}: ${q(m.title)}`);
   if (m.description === undefined) out.push(`${path}: meta description missing`);
   else {
     const n = metaLen(m.description);
-    if (n < DESC_MIN) out.push(`${path}: description ${n} < ${DESC_MIN}: ${q(m.description)}`);
-    if (n > DESC_MAX) out.push(`${path}: description ${n} > ${DESC_MAX}: ${q(m.description)}`);
+    if (n < lim.descMin) out.push(`${path}: description ${n} < ${lim.descMin}: ${q(m.description)}`);
+    if (n > lim.descMax) out.push(`${path}: description ${n} > ${lim.descMax}: ${q(m.description)}`);
   }
   if (m.ogTitle !== m.title) out.push(`${path}: og:title ${q(m.ogTitle)} differs from title ${q(m.title)}`);
   if (m.twTitle !== m.title) out.push(`${path}: twitter:title ${q(m.twTitle)} differs from title ${q(m.title)}`);
   if (m.ogDescription !== m.twDescription)
     out.push(`${path}: og:description ${q(m.ogDescription)} differs from twitter:description ${q(m.twDescription)}`);
-  if (m.ogDescription !== undefined && metaLen(m.ogDescription) > OG_DESC_MAX)
-    out.push(`${path}: og:description ${metaLen(m.ogDescription)} > ${OG_DESC_MAX}: ${q(m.ogDescription)}`);
+  if (m.ogDescription !== undefined && metaLen(m.ogDescription) > lim.ogDescMax)
+    out.push(`${path}: og:description ${metaLen(m.ogDescription)} > ${lim.ogDescMax}: ${q(m.ogDescription)}`);
   return out;
 }

@@ -105,7 +105,8 @@ export function initMergeTool(m: Messages): void {
   const notes = must<HTMLUListElement>('merge-notes');
   const download = must<HTMLAnchorElement>('merge-download');
   const resetBtn = must<HTMLButtonElement>('merge-reset');
-  const nextSlot = must<HTMLDivElement>('merge-next');
+  // The 이어서 하기 group is optional (EN1: the English page has none until EN2).
+  const nextSlot = document.getElementById('merge-next');
 
   let state: State = 'empty';
   let entries: Entry[] = [];
@@ -185,7 +186,7 @@ export function initMergeTool(m: Messages): void {
     actions.hidden = !hasFiles || busy || next === 'done';
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
-    if (next !== 'done') hideNextSteps(nextSlot);
+    if (next !== 'done' && nextSlot) hideNextSteps(nextSlot);
     confirmBox.hidden = true;
     list.querySelectorAll('button, input').forEach((b) => {
       (b as HTMLButtonElement | HTMLInputElement).disabled = busy;
@@ -631,7 +632,7 @@ export function initMergeTool(m: Messages): void {
     if (report.renamedFields > 0) n.push(m.noteRenamed(report.renamedFields));
     notes.replaceChildren(...n.map((t) => el('li', undefined, t)));
     setState('done');
-    showNextStepsIn(m.next, nextSlot, 'pdf-merge', [{ blob, name: download.download }]);
+    if (nextSlot) showNextStepsIn(m.next, nextSlot, 'pdf-merge', [{ blob, name: download.download }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
     status(m.done(sum, n.join(' ')));

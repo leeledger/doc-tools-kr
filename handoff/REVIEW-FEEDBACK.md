@@ -1,4 +1,4 @@
-# Review Feedback — Step REV5 (free embed widget: 증명사진 규격 맞추기)
+# Review Feedback — Step EN1
 Date: 2026-10-13
 Ready for Builder: YES
 
@@ -6,24 +6,23 @@ Ready for Builder: YES
 None.
 
 ## Should Fix
-- scripts/lib/embed-check.mjs:60-63 (confidence: 8/10) — `framing` only catches blocks whose CSP line has `frame-ancestors (?!'none')`. Two regressions slip through: a block with only `! Content-Security-Policy` and no replacement (the route is then sent with no CSP at all and can be framed), and a block that detaches and sets a policy without any `frame-ancestors` directive. Quoted: `const framing = all.filter((b) => b.lines.some((l) => l.startsWith('Content-Security-Policy:') && /frame-ancestors (?!'none')/.test(l)));`. Fix: (a) any block containing `! Content-Security-Policy` must be a `/embed/<tool>/*` block, and (b) every CSP line outside `/*` must carry a `frame-ancestors` directive. Add both cases to the embedHeaderProblems fixture test. public/_headers today is correct, so this does not block.
-- src/pages/terms/index.astro:47 vs src/pages/embed/index.astro (조건) (confidence: 6/10) — the info page says 「도구 안의 「문서딱 제공」 표시와 코드 아래 줄의 링크를 지우지 말아 주세요」, the terms say 「「문서딱 제공」 표시와 함께 넣는 링크를 지우거나 가리지 말아 주세요」. "함께 넣는 링크" is less clear than "코드 아래 줄의 링크", and "가리지" appears only in the terms. The two say the same thing, but align the wording when the owner approves 11항 (for example 「코드와 함께 넣는 아래 줄의 링크」 in both).
-- src/pages/embed/index.astro (`<pre id="embed-code" … aria-label="넣을 코드">`) (confidence: 4/10, verify) — `aria-label` on a `pre` (generic role) is not supported by all screen readers. Bob reports axe is clean, so check only. If needed, use `role="region"` with the label, or a visible caption plus `aria-labelledby`.
+- scripts/check-dist.mjs:116 (confidence: 8/10) — `if (EN_PAGE_RE.test(p)) continue;` sits above the two lines that apply to every page regardless of GA (`if (html.includes('googletagmanager')) …` and `if (html.includes('gtag(')) …`). en-check rule (a) covers `src="/ga.js"` and `googletagmanager` but not an inline `gtag(` call, so English pages lost the inline-gtag guard. That is a scope change that drops a check, which the brief does not allow ("change scope, never weaken"). Fix: move the `continue` below line 125, or add `/\bgtag\(/` to the rule (a) list in en-check.mjs with a fixture.
+- scripts/lib/en-check.mjs:51-58 `readableText` (confidence: 8/10) — rule (b) reads only title, description, og/twitter description and body text (with `<script>` removed). It does not look at JSON-LD (`<script type="application/ld+json">`, which search engines show), `og:image:alt` or `twitter:image:alt`. The current dist is clean: I scanned the whole HTML of every dist/en/ page and found Hangul only in the 한국어 switch. But a Korean string added later to `src/i18n/en/jsonld.ts` or to `sharePreviewEn` alt text would not be caught. Fix: also scan the ld+json text and the two image:alt values, with one fixture each.
 
 ## Escalate to Architect
-- /terms/ 시행일 for the whole page: `TERMS_EFFECTIVE = TERMS_EMBED` (src/data/legal.ts) moves the top-line 「시행일」 from 2026년 9월 30일 (default) / PRIVACY_CLOUD (cloud) to 2026년 10월 20일 in every build. From deploy until 10/20, the whole page reads as not yet in effect, although only 11항 is new and 11항 already states its own date. Whether that is right under 9항 (7-day notice) is an owner/legal decision, not a code one. Bring it to the owner together with the 11항 wording approval.
-- Dates to re-confirm at the gate (Bob flagged these as well): PRIVACY_EMBED 2026년 10월 13일 (the same date as PRIVACY_OUT, so two history lines share it), EMBED_UPDATED 2026-10-13, TERMS_EMBED = deploy + 7 days.
-- Cloudflare detach + re-add in the same block is modelled correctly in serve.mjs (detach is applied before the same rule sets the header, so the value is not appended). It is still unproven on a real Pages deploy. Arch must `curl -sI` a preview of `/embed/id-photo/` and `/id-photo/` before production, as Bob's Open Question 4 says.
+None. Open Questions 1–3 are closed by orchestrator and owner decisions. Q4 (Cloudflare nearest-404 behaviour) still needs `curl -sI <preview>/en/nope/` before production. If that fails, unknown /en/ paths get the Korean 404, which the brief accepts as a fallback.
 
 ## Cleared
-Reviewed and passed:
-- public/_headers: frame-ancestors * only in `/embed/id-photo/*`, after `! Content-Security-Policy`, other directives identical, X-Robots-Tag noindex. `/*` keeps 'none'. The `/.well-known/assetlinks.json` and preview-host blocks are intact.
-- extendSiteCsp: GA and Web Analytics change only the `/*` CSP line.
-- Embed.astro: noindex, canonical to /id-photo/, no site script/SW/GA/beacon/ad. The credit link opens in a new tab with ?via=embed.
-- IdPhotoTool embed: affiliate, 사진관 links, Share, #idp-next and AdSlot all dropped. The controller now treats #idp-next as optional.
-- usage: arrival() returns via=embed from the frame's own path before it reads the referrer, so no host data. VIAS, the admin column and the weekly column are updated.
-- gen-sw: NOT_PRECACHED covers the /embed/ prefix. Sitemap and llms.txt list /embed/ only.
-- check-dist R5.7 rules and the matching unit and e2e tests.
-- /id-photo/: only the script tag moved (accepted deviation).
-- /embed/ page: copy and the clipboard fallback (selects the code, polite live status), click-to-open preview with a no-JS link.
-- Privacy line and history entry.
+I checked the following against dist and source:
+- **No Korean on /en/:** every dist/en/ page passes, including JS-rendered text. The share and update-bar words come from data attributes. File names come from the EN catalogs. The Korean strings still inside shared chunks are fallbacks that EN pages never use.
+- **Docttak stays on /en/:** the name appears in no shared chunk, no Korean page, not in llms.txt and not in the manifest.
+- **hreflang:** the sitemap pairs are reciprocal, with ko/en and x-default = en on all 6 pairs.
+- **Head tags:** every EN page has its own canonical, `html lang="en"` and `og:locale` en_US. The 404 page has no canonical.
+- **Tags and links on EN pages:** 0 font preloads, no ga.js, no Coupang, sponsored, out-links or ad markup, and one shared stylesheet.
+- **Precache:** no /en/ path in sw.js.
+- **Usage beacon:** `createTracker` only sends on ko pages.
+- **Meta lengths:** limits depend on page language; the EN constants match their tests.
+- **404 handling:** en404 rename plus the serve.mjs nearest-404 model.
+- **Korean footer link:** marked up correctly, and the font rule keeps it in the UI font.
+- **CLAUDE.md:** the edits stay inside the D1/D2 English-only scope.
+- **Tests:** the en-check rules (a)–(h) and their fixtures test real behaviour. en-check and usage unit tests pass (152).

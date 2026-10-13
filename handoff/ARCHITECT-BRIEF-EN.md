@@ -277,3 +277,4 @@ Ordering: REV2 commit -> EN0 (worktree, parallel with REV3) -> REV3 merged -> EN
 - EN0 actuals accepted: precache +2.6–2.7 KB, three JS entries +1.7–2.9% (check-dist budgets pass). EN1+ acceptance = check-dist budgets + precache ≤450 KB, not the original "+1% / +0.1 KB" EN0 wording.
 - check-dist finds the image-to-jpg controller by file name: EN1 must use the same naming (en/controller.ts) or switch check-dist to a sturdier lookup.
 - Owner decisions: English brand "Docttak" (update CLAUDE.md naming rule for EN pages only); no-upload is the secondary message; EN privacy/terms reuse the Korean policy's officer/contact, governing law Republic of Korea; final EN legal text shown to the owner before deploy.
+- 2026-10-13: owner approved the EN privacy policy and terms as drafted in REVIEW-REQUEST (officer name stays in Hangul with lang="ko"; §6 Cloudflare transfer sentence kept).

@@ -1,0 +1,8 @@
+---
+// The shared site script (menu, service worker, share buttons) of Base.astro and BaseEn.astro (EN1). One component, so
+// both layouts load the same single chunk; a <script> in each layout made src/lib/ui/site.ts a shared chunk behind two
+// wrappers (one more request on every page).
+---
+<script>
+  import '../lib/ui/site';
+</script>

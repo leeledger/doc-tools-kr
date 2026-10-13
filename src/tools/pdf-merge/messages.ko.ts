@@ -11,6 +11,8 @@ import { mergedFileName } from './format';
 import type { LimitCopy } from './limits';
 
 export interface Messages {
+  /** The catalog's language mark (scripts/lib/en-check.mjs CATALOG_MARK): check-dist finds a catalog in a page's JS by it. */
+  mark: string;
   errors: Record<PdfErrorCode, string>;
   limits: LimitCopy;
   engine: EngineMessages;
@@ -63,6 +65,7 @@ const mbText = (bytes: number): string => `${Math.round(bytes / MB).toLocaleStri
 const where = (device: Device): string => (device === 'mobile' ? '휴대폰' : '이 기기');
 
 export const KO = {
+  mark: 'catalog-mark:ko',
   errors: {
     'not-pdf': 'PDF 파일이 아닙니다. PDF 파일만 합칠 수 있습니다.',
     password: '이 파일은 비밀번호로 보호되어 있습니다.',

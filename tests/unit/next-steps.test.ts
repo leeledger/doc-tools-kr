@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTool } from '../../src/data/tools';
 import { HANDOFF_KEY, type HandoffRecord, type HandoffStore } from '../../src/lib/ui/handoff';
-import { FLOW, NEXT_GROUP_LABEL, NEXT_LABELS, NEXT_MAX_BYTES, hideNextSteps, nextTargets, sendFailed, showNextSteps, sourceTool, type NextSource, type NextTarget } from '../../src/lib/ui/next-steps';
+import { FLOW, NEXT_GROUP_LABEL, NEXT_LABELS, NEXT_MAX_BYTES, hideNextSteps, nextTargets, sendFailed, showNextSteps, showNextStepsIn, sourceTool, type NextMessages, type NextSource, type NextTarget } from '../../src/lib/ui/next-steps';
 
 const one = (size = 10) => [{ blob: new Blob([new Uint8Array(size)], { type: 'application/pdf' }), name: '사진.pdf' }];
 
@@ -70,6 +70,18 @@ describe('showNextSteps / hideNextSteps', () => {
     hideNextSteps(slot);
     expect(slot.hidden).toBe(true);
     expect(slot.childElementCount).toBe(0);
+  });
+
+  it('EN0: showNextStepsIn renders the catalog it is given, not the Korean labels (a fake non-Korean catalog)', () => {
+    const FAKE: NextMessages = {
+      group: 'Continue with this file',
+      labels: { 'pdf-compress': 'Compress', 'pdf-password': 'Lock', 'pdf-sign': 'Sign', 'pdf-split': 'Split', 'photo-compress': 'Shrink', 'jpg-to-pdf': 'To PDF' },
+      sendFailed: (label) => `Could not pass it to ${label}.`,
+    };
+    showNextStepsIn(FAKE, slot, 'jpg-to-pdf', one());
+    expect(document.getElementById('jp-next-label')!.textContent).toBe('Continue with this file');
+    expect([...slot.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Compress', 'Lock', 'Sign']);
+    expect(slot.textContent).not.toMatch(/[가-힣]/);
   });
 
   it('no targets: empty and hidden', () => {

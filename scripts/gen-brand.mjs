@@ -78,6 +78,9 @@ function maskable(size) {
 /** The share-preview copy (src/data/og.json): one image per entry in `images`. */
 export const OG = JSON.parse(readFileSync(join(root, 'src', 'data', 'og.json'), 'utf8'));
 export const BRAND_NAME = '문서딱';
+/** EN1: the English share-preview copy (src/i18n/en/og.json), drawn as brand/og-en-<image>.png with the English name. */
+export const OG_EN = JSON.parse(readFileSync(join(root, 'src', 'i18n', 'en', 'og.json'), 'utf8'));
+export const BRAND_NAME_EN = 'Docttak';
 const OG_W = 1200;
 const OG_H = 630;
 /**
@@ -146,7 +149,7 @@ function fitLine(ctx, text, max, maxLines) {
  * 1200×630 share image: the 문서딱 wordmark and icon, a large title, the plain line, the domain. All centred.
  * Exported for the guide images (src/pages/og/guide/[slug].png.ts, Growth G.1): their line may take two rows.
  */
-export function ogImage(image, domain, { lineMaxLines = 1 } = {}) {
+export function ogImage(image, domain, { lineMaxLines = 1, name = BRAND_NAME } = {}) {
   registerFonts();
   const c = createCanvas(OG_W, OG_H);
   const ctx = c.getContext('2d');
@@ -160,14 +163,14 @@ export function ogImage(image, domain, { lineMaxLines = 1 } = {}) {
 
   // Wordmark: icon + 문서딱, centred as a group.
   ctx.font = `56px ${FAMILY_XBOLD}`;
-  const nameW = ctx.measureText(BRAND_NAME).width;
+  const nameW = ctx.measureText(name).width;
   const icon = 64;
   const gap = 16;
   const groupLeft = cx - (icon + gap + nameW) / 2;
   drawLogo(ctx, groupLeft, 58, icon, '#ffffff', BRAND);
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'left';
-  ctx.fillText(BRAND_NAME, groupLeft + icon + gap, 58 + icon / 2 + 2);
+  ctx.fillText(name, groupLeft + icon + gap, 58 + icon / 2 + 2);
   ctx.textAlign = 'center';
 
   // Title: up to two lines, 88 px down to 60 px.
@@ -242,13 +245,18 @@ export function renderBrand(domain = ogDomain(), flags = /** @type {{ bgRemove?:
   };
 }
 
+/** EN1: the English share images, keyed by their path under public/ (brand/og-en-<image>.png). */
+export function renderBrandEn(domain = ogDomain()) {
+  return Object.fromEntries(Object.entries(OG_EN.images).map(([name, image]) => [`brand/og-en-${name}.png`, ogImage(image, domain, { name: BRAND_NAME_EN })]));
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const pub = join(root, 'public');
   mkdirSync(join(pub, 'brand'), { recursive: true });
   const { publicEnv } = await import('./lib/dist.mjs');
   const { bgRemoveOn } = await import('./lib/bgremove.mjs');
   const env = publicEnv();
-  const out = renderBrand(ogDomain(), { bgRemove: bgRemoveOn(env.PUBLIC_BG_REMOVE) });
+  const out = { ...renderBrand(ogDomain(), { bgRemove: bgRemoveOn(env.PUBLIC_BG_REMOVE) }), ...renderBrandEn(ogDomain()) };
   // A share image whose page entry was removed (or the old single og.png) must not ship.
   for (const f of readdirSync(join(pub, 'brand'))) if (/^og.*\.png$/.test(f) && !(`brand/${f}` in out)) rmSync(join(pub, 'brand', f));
   for (const [path, data] of Object.entries(out)) writeFileSync(join(pub, path), data);

@@ -4,6 +4,7 @@ import { SITE } from '../data/site';
 import { josa } from '../lib/ui/josa';
 import { LIVE_TOOLS } from '../data/tools';
 import { guidePath, hubs, publishedGuides } from '../data/guides';
+import { TOOLS_EN } from '../i18n/en/tools';
 
 export const GET: APIRoute = async ({ site }) => {
   const guides = await publishedGuides();
@@ -25,6 +26,12 @@ export const GET: APIRoute = async ({ site }) => {
     '## 누리집에 넣기',
     '',
     `- [내 누리집에 증명사진 도구 넣기](${abs('/embed/')}): 사진관·학원·행정사 누리집에 증명사진 규격 맞추기 도구를 무료로 넣는 방법이에요.`,
+    '',
+    // EN1: the English pages. No site name here: Docttak is the name on /en/ pages only (the brand dist test reads this file).
+    '## English',
+    '',
+    `- [English home](${abs('/en/')}): free PDF and photo tools in English. No sign-up.`,
+    ...TOOLS_EN.map((t) => `- [${t.name}](${abs(`/en/${t.slug}/`)}): ${t.summary}`),
     '',
   ].join('\n');
   return new Response(body, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });

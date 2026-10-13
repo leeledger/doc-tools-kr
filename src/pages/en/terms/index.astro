@@ -1,0 +1,58 @@
+---
+// /en/terms/ (EN1; owner D3): the English terms of use for the /en/ pages, following the Korean terms (governing law:
+// the Republic of Korea). The contact line appears only in the build that publishes it on the Korean privacy policy.
+import BaseEn from '../../../layouts/BaseEn.astro';
+import { CONTACT_EMAIL } from '../../../data/site';
+import { SITE_EN } from '../../../i18n/en/site';
+import { EN_LEGAL_EFFECTIVE } from '../../../i18n/en/legal';
+
+const contact = __BG_CLOUD__;
+---
+<BaseEn
+  title={`Terms of Use | ${SITE_EN.name}`}
+  description={`The terms for using the English pages of ${SITE_EN.name}: what the free tools do, your responsibilities, results, and the limits of our liability.`}
+>
+  <div class="prose">
+    <div class="wrap narrow">
+      <h1>Terms of Use</h1>
+      <p class="meta-line">Effective: {EN_LEGAL_EFFECTIVE}</p>
+
+      <h2>1. About these terms</h2>
+      <p>These terms apply to the English pages of {SITE_EN.name} (docttak.com/en/, "the service"), run by its operator in the Republic of Korea ("we"). By using the service, you agree to these terms. The Korean pages have their own <a href="/terms/" hreflang="ko">Korean terms</a>.</p>
+
+      <h2>2. The service</h2>
+      <p>The service is a set of free tools that process PDF and photo files on your own device (computer or phone). Your files are not uploaded to us or anyone else, and no account is needed.</p>
+
+      <h2>3. Price and ads</h2>
+      <p>All features are free. We may show ads in the future to cover running costs; if we do, we will update the privacy policy first.</p>
+
+      <h2>4. Your responsibilities</h2>
+      <p>Use only files you have the right to use. Do not use the service to process other people's documents without permission or for any unlawful purpose.</p>
+
+      <h2>5. Things you must not do</h2>
+      <p>Do not disrupt the service (for example with excessive automated requests), and do not redistribute it in a way that makes it look as if someone other than us provides it. Open-source components may be used under their own licenses.</p>
+
+      <h2>6. Results</h2>
+      <p>We do not guarantee that a result will meet the requirements of, or be accepted by, any organization, company or website. Before you submit a file, check the latest requirements (size, dimensions, format) against your result. The service does not change your original files, but please keep your own copy of them.</p>
+
+      <h2>7. Limitation of liability</h2>
+      <p>The service is free and provided "as is", without warranties of any kind. We are not liable for the quality of results, rejected submissions, or damage caused by your device or browser, except for damage caused by our intentional misconduct or gross negligence, or where the law does not allow such a limitation.</p>
+
+      <h2>8. Changes to the service</h2>
+      <p>We may change features or stop the service. We will post important changes on this page.</p>
+
+      <h2>9. Changes to these terms</h2>
+      <p>We will post changes to these terms, with their effective date, on this page at least 7 days before they take effect, or at least 30 days before if a change is unfavorable to you.</p>
+
+      <h2>10. Governing law</h2>
+      <p>These terms are governed by the laws of the Republic of Korea, and disputes are settled by the competent court under the Korean Civil Procedure Act. This does not take away any rights you have under the mandatory consumer protection laws of your country.</p>
+
+      {contact && (
+        <>
+          <h2>11. Contact</h2>
+          <p>Questions about these terms: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+        </>
+      )}
+    </div>
+  </div>
+</BaseEn>

@@ -1,4 +1,6 @@
 // @ts-check
+import { renameSync, rmdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
@@ -38,6 +40,21 @@ const bgRemoveRoute = {
     },
   },
 };
+/**
+ * EN1: src/pages/en/404.astro builds as en/404/index.html (build.format directory; only the root 404 is special). Cloudflare
+ * Pages serves the nearest 404.html up the path tree, so the page moves to en/404.html before the postbuild checks.
+ * @type {import('astro').AstroIntegration}
+ */
+const en404 = {
+  name: 'docttak-en-404',
+  hooks: {
+    'astro:build:done': ({ dir }) => {
+      const out = fileURLToPath(dir);
+      renameSync(join(out, 'en', '404', 'index.html'), join(out, 'en', '404.html'));
+      rmdirSync(join(out, 'en', '404'));
+    },
+  },
+};
 
 export default defineConfig({
   output: 'static',
@@ -45,7 +62,7 @@ export default defineConfig({
   trailingSlash: 'always',
   build: { format: 'directory', inlineStylesheets: 'never' },
   devToolbar: { enabled: false },
-  integrations: [bgRemoveRoute],
+  integrations: [bgRemoveRoute, en404],
   vite: {
     build: {
       sourcemap: false,

@@ -410,7 +410,7 @@ describe('page tracker (src/lib/ui/usage.ts)', () => {
   const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36';
   const deps = (over: Record<string, unknown> = {}) => {
     const send = vi.fn((_p: string, _b: string) => true);
-    return { send, deps: { rate: 1, random: () => 0, send, ua: UA, device: 'desktop' as const, build: 'abc1234', referrer: '', origin: 'https://docttak.com', pathname: '/photo-compress/', search: '', ...over } };
+    return { send, deps: { rate: 1, random: () => 0, send, ua: UA, device: 'desktop' as const, build: 'abc1234', referrer: '', origin: 'https://docttak.com', pathname: '/photo-compress/', search: '', lang: 'ko', ...over } };
   };
   const bodies = (send: ReturnType<typeof vi.fn>) => send.mock.calls.map((c) => JSON.parse(c[1] as string) as Record<string, unknown>);
 

@@ -1,0 +1,124 @@
+---
+// /en/pdf-merge/ (EN1): the Korean page's markup with English words and the same element ids (check-dist id parity,
+// scripts/lib/en-check.mjs). No next-step group, link block, quick links or ad slot on English pages.
+import BaseEn from '../../../layouts/BaseEn.astro';
+import EngineError from '../../../components/EngineError.astro';
+import RelatedTools from '../../../i18n/en/components/RelatedTools.astro';
+import Share from '../../../i18n/en/components/Share.astro';
+import { toolJsonLdEn } from '../../../i18n/en/jsonld';
+import { sharePreviewEn } from '../../../i18n/en/site';
+import { getToolEn } from '../../../i18n/en/tools';
+
+const tool = getToolEn('pdf-merge');
+---
+<BaseEn title={tool.title} description={tool.description} jsonLd={toolJsonLdEn(tool, Astro.site)}>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">{tool.lead}</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label="Merge PDF tool">
+    <div class="wrap narrow">
+      <div id="merge-tool" class="merge" data-state="empty">
+        <div class="drop" id="merge-drop">
+          <input id="merge-input" class="file-input" type="file" accept="application/pdf,.pdf" multiple>
+          <label class="btn primary" for="merge-input" id="merge-pick">Choose PDF files</label>
+          <p class="drop-hint">or drop the files here</p>
+          <p class="drop-hint-touch">You can pick files from the Files app or your Downloads folder.</p>
+          <p class="privacy-note">Your files stay on your device. Nothing is uploaded. <a href="/en/privacy/">Privacy</a></p>
+        </div>
+
+        <p class="notice" id="merge-notice" hidden></p>
+        <EngineError />
+
+        <ol class="file-list" id="merge-list" aria-label="Files to merge" hidden></ol>
+
+        <div class="merge-controls" id="merge-controls" hidden>
+          <button type="button" class="btn ghost danger" id="merge-remove-bad" hidden>Remove all files with problems</button>
+          <label class="check">
+            <input type="checkbox" id="merge-bookmarks" checked>
+            <span>Add a bookmark for each file</span>
+          </label>
+          <div class="confirm" id="merge-confirm" hidden>
+            <p id="merge-confirm-text"></p>
+            <div class="row">
+              <button type="button" class="btn primary" id="merge-confirm-yes">Merge anyway</button>
+              <button type="button" class="btn ghost" id="merge-confirm-no">Cancel</button>
+            </div>
+          </div>
+          <p class="hint" id="merge-hint"></p>
+        </div>
+
+        <div class="row merge-actions" id="merge-actions" hidden>
+          <button type="button" class="btn primary" id="merge-run" disabled>Merge PDF</button>
+          <input id="merge-add" class="file-input" type="file" accept="application/pdf,.pdf" multiple>
+          <label class="btn ghost" for="merge-add" id="merge-add-label">Add files</label>
+        </div>
+
+        <div class="progress-box" id="merge-progress" hidden>
+          <p id="merge-progress-text">Merging…</p>
+          <progress id="merge-progress-bar" max="1" value="0" aria-labelledby="merge-progress-text"></progress>
+          <button type="button" class="btn ghost" id="merge-cancel">Cancel</button>
+        </div>
+
+        <div class="result" id="merge-result" hidden>
+          <p class="result-title" id="merge-headline" tabindex="-1">Your merged file is ready</p>
+          <p class="result-summary" id="merge-summary"></p>
+          <div class="row">
+            <a class="btn primary" id="merge-download" download tabindex="0">Download</a>
+            <button type="button" class="btn ghost" id="merge-reset">Start over</button>
+          </div>
+          <p class="save-name" id="merge-save-name"></p>
+          <Share name={tool.name} text={sharePreviewEn('/en/pdf-merge/', Astro.site!).description} id="merge-share" />
+          <ul class="result-notes" id="merge-notes"></ul>
+          <p class="related-line">Is the merged file too big? Make it smaller with <a href="/en/pdf-compress/">Compress PDF</a>.</p>
+        </div>
+
+        <p class="error-box" id="merge-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="merge-status" aria-live="polite" data-live="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">How to merge PDF files</h2>
+      <ol class="steps">
+        <li><strong>Choose PDF files</strong><span>Pick two or more PDF files, or drop them on the page.</span></li>
+        <li><strong>Set the order</strong><span>Use the up and down buttons, or drag the handle on the left, to put the files in order. For a locked file, type its password.</span></li>
+        <li><strong>Merge and download</strong><span>Press Merge, then Download to save the file.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">Good to know</h2>
+      <ul class="points">
+        <li><strong>Nothing is uploaded</strong><span>Your files and passwords are used only while this page is open. They are gone when you press Start over or close the page.</span></li>
+        <li><strong>No install, no sign-up</strong><span>Open this page on a computer or phone and start right away.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">FAQ</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} />
+</BaseEn>
+
+<script>
+  import { initMergeTool } from '../../../tools/pdf-merge/controller.ts?en';
+  import { EN } from '../../../i18n/en/tools/pdf-merge';
+  initMergeTool(EN);
+</script>

@@ -1,6 +1,6 @@
 // Static server for dist/ that mimics Cloudflare Pages closely enough for e2e, Lighthouse and the asset
 // smoke test: applies dist/_headers (the `/*` block and the path blocks, so tests run under the real CSP and
-// cache rules), redirects directory paths to their trailing-slash form, serves 404.html with status 404,
+// cache rules), redirects directory paths to their trailing-slash form, serves the nearest 404.html with status 404,
 // and gzips text responses the way the CDN compresses them (keeps Lighthouse numbers comparable).
 // `startServer({ root, port })` serves any build folder; the folder can be swapped at runtime (the service
 // worker e2e serves a second build this way).
@@ -144,7 +144,10 @@ export function startServer({ root = join(repo, 'dist'), port = 4173, host = '12
     } else if (existsSync(file)) {
       return send(req, res, 200, file, path);
     }
-    send(req, res, 404, join(dist, '404.html'), path);
+    // Cloudflare Pages "Not Found behavior": the nearest 404.html up the path tree, ending at /404.html (EN1: en/404.html).
+    let dir = dirname(join(dist, path.endsWith('/') ? `${path}x` : path));
+    while (dir.startsWith(dist + sep) && !existsSync(join(dir, '404.html'))) dir = dirname(dir);
+    send(req, res, 404, existsSync(join(dir, '404.html')) ? join(dir, '404.html') : join(dist, '404.html'), path);
   });
 
   return new Promise((resolve) => {

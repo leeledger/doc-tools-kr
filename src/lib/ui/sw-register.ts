@@ -16,11 +16,13 @@ function showUpdateBar(reg: ServiceWorkerRegistration): void {
     bar.className = 'sw-bar';
     bar.setAttribute('role', 'status');
     const text = document.createElement('span');
-    text.textContent = '새 버전이 있습니다.';
+    // The English layout (EN1) puts its words on <body>; Korean pages have none and keep these.
+    const words = document.body.dataset;
+    text.textContent = words.swNew ?? '새 버전이 있습니다.';
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn small primary';
-    btn.textContent = '새로고침';
+    btn.textContent = words.swReload ?? '새로고침';
     btn.addEventListener('click', () => {
       btn.disabled = true;
       navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true });

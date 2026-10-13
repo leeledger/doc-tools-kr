@@ -74,7 +74,8 @@ export function initCompressTool(m: Messages): void {
   const pick = must<HTMLLabelElement>('cmp-pick');
   const drop = must<HTMLDivElement>('cmp-drop');
   const notice = must<HTMLParagraphElement>('cmp-notice');
-  const nextSlot = must<HTMLDivElement>('cmp-next');
+  // The 이어서 하기 group is optional (EN1: the English page has none until EN2).
+  const nextSlot = document.getElementById('cmp-next');
   const card = must<HTMLDivElement>('cmp-file');
   const thumb = must<HTMLDivElement>('cmp-thumb');
   const nameEl = must<HTMLParagraphElement>('cmp-name');
@@ -250,7 +251,7 @@ export function initCompressTool(m: Messages): void {
     controls.hidden = !file || next === 'working' || next === 'done' || next === 'kept' || (next === 'error' && !usable);
     progressBox.hidden = next !== 'working';
     result.hidden = next !== 'done';
-    if (next !== 'done') hideNextSteps(nextSlot);
+    if (next !== 'done' && nextSlot) hideNextSteps(nextSlot);
     kept.hidden = next !== 'kept';
     confirmBox.hidden = true;
     for (const r of [...radios, ...modeRadios, ...targetRadios]) r.disabled = next === 'working';
@@ -675,7 +676,7 @@ export function initCompressTool(m: Messages): void {
     if (report.ownerRestrictionRemoved) n.push(m.noteOwner);
     notes.replaceChildren(...n.map((t) => el('li', undefined, t)));
     setState('done');
-    showNextStepsIn(m.next, nextSlot, 'pdf-compress', [{ blob, name: download.download }]);
+    if (nextSlot) showNextStepsIn(m.next, nextSlot, 'pdf-compress', [{ blob, name: download.download }]);
     reveal(result, headline);
     const extra = [chip.hidden ? '' : chip.textContent, missBox.hidden ? '' : missBox.textContent, report.signed ? signedBox.textContent?.trim() : '', ...n]
       .filter(Boolean)

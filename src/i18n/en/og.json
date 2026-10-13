@@ -1,0 +1,17 @@
+{
+  "$comment": "English share previews (EN1). scripts/gen-brand.mjs draws /brand/og-en-<image>.png (1200x630) from each image's title and line, with the Docttak wordmark. BaseEn.astro picks the page's image and description (at most 155 characters). Paths not listed use \"*\".",
+  "images": {
+    "home": { "title": "PDF and photo tools", "line": "Merge, compress, convert — free, no sign-up" },
+    "pdf-merge": { "title": "Merge PDF", "line": "Many PDFs into one file — free, no sign-up" },
+    "pdf-compress": { "title": "Compress PDF", "line": "Fit any upload limit — free, no sign-up" },
+    "image-to-jpg": { "title": "HEIC to JPG", "line": "HEIC, PNG and WebP to JPG — free, no sign-up" },
+    "default": { "title": "Docttak", "line": "Free PDF and photo tools — no sign-up" }
+  },
+  "pages": {
+    "/en/": { "image": "home", "description": "Merge PDF, compress PDF and convert HEIC to JPG. Free, no sign-up, and your files stay on your device." },
+    "/en/pdf-merge/": { "image": "pdf-merge", "description": "Combine PDF files into one in the order you want. Free, no sign-up, and your files are never uploaded." },
+    "/en/pdf-compress/": { "image": "pdf-compress", "description": "Make a PDF small enough for an upload limit like 1 MB or 10 MB. Text stays sharp. Free and no sign-up." },
+    "/en/image-to-jpg/": { "image": "image-to-jpg", "description": "Convert iPhone HEIC photos, PNG and WebP to JPG, many at once. Free, no sign-up, and nothing is uploaded." },
+    "*": { "image": "default", "description": "Free PDF and photo tools that work on your phone or computer. No sign-up, and your files stay on your device." }
+  }
+}

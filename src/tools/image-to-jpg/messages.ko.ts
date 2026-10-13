@@ -9,6 +9,8 @@ import { noteText, type RowNote } from './convert';
 import type { LimitCopy } from './limits';
 
 export interface Messages {
+  /** The catalog's language mark (scripts/lib/en-check.mjs CATALOG_MARK): check-dist finds a catalog in a page's JS by it. */
+  mark: string;
   /** Row and alert messages shared with the other photo tools (lib/image/messages.ts). */
   errors: Record<'heic' | 'not-image' | 'empty' | 'corrupt' | 'truncated' | 'oom' | 'unknown' | 'zip', string>;
   limits: LimitCopy;
@@ -48,6 +50,7 @@ const mbText = (bytes: number): string => `${Math.round(bytes / MB).toLocaleStri
 const where = (device: Device): string => (device === 'mobile' ? '휴대폰' : '이 기기');
 
 export const KO = {
+  mark: 'catalog-mark:ko',
   errors: ERRORS,
   limits: {
     tooMany: (maxImages, left) =>

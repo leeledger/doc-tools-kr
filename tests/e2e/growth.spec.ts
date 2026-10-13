@@ -214,7 +214,8 @@ const BLOG_LINKS = [
 
 test('every page: the footer links both blogs (followed, same tab); the home Organization sameAs lists them', async ({ page }) => {
   const sitemap = await (await page.request.get('/sitemap.xml')).text();
-  const paths = [...sitemap.matchAll(/<loc>https?:\/\/[^/]+(\/[^<]*)<\/loc>/g)].map((m) => m[1]!);
+  // EN1: English pages link no Korean blogs (brief EN build order 2); en.spec.ts covers their footer.
+  const paths = [...sitemap.matchAll(/<loc>https?:\/\/[^/]+(\/[^<]*)<\/loc>/g)].map((m) => m[1]!).filter((p) => !p.startsWith('/en/'));
   expect(paths.length).toBeGreaterThan(20);
   for (const path of [...paths, '/offline/', '/does-not-exist/']) {
     const html = await (await page.request.get(path)).text();

@@ -1,0 +1,27 @@
+---
+// "Copy link / Share link" on an English tool result (EN1): the markup of src/components/Share.astro with English words;
+// src/lib/ui/share.ts reads the copied messages from the data attributes.
+import { SITE_EN } from '../site';
+
+interface Props {
+  /** The page name without the site suffix. */
+  name: string;
+  /** The share text (the page's og:description). */
+  text: string;
+  /** Unique on the page. */
+  id: string;
+}
+const { name, text, id } = Astro.props;
+---
+<div class="share" data-share data-title={`${name} | ${SITE_EN.name}`} data-text={text} data-copied="Link copied" data-copied-short="Copied">
+  <div class="row share-row">
+    <button type="button" class="btn ghost share-btn" data-share-copy>Copy link</button>
+    <button type="button" class="btn ghost share-btn" data-share-send hidden>Share link</button>
+  </div>
+  <div class="share-fallback" data-share-fallback hidden>
+    <label for={`${id}-field`}>Page address</label>
+    <input class="share-field" id={`${id}-field`} type="text" readonly data-share-field aria-describedby={`${id}-help`}>
+    <p class="level-desc" id={`${id}-help`}>Press and hold, or use Ctrl+C, to copy</p>
+  </div>
+  <p class="visually-hidden" aria-live="polite" data-share-status></p>
+</div>

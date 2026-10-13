@@ -110,3 +110,15 @@
 - 보내는 것은 정해진 값뿐입니다: 도구 이름, 한 일(파일 고름·처리 시작·성공·실패와 오류 종류·내려받음), 고른 설정의 구간(목표 용량 구간, 증명사진 규격, 압축 단계, 처리 방식), 안내 글에서 넘어왔는지, 기기 종류, 실패했을 때 앱 종류와 버전, 사이트 버전. 파일 이름·크기·내용·IP 주소·쿠키·식별값은 보내지 않습니다.
 - 켜면 개인정보 처리방침에 "익명 사용 통계" 항이 생기고, 1항이 "쿠키도 쓰지 않아요."가 되며, 시행일과 변경 이력("익명 사용 통계를 더함")이 바뀝니다. 연락처(`PUBLIC_CONTACT_EMAIL`)가 없으면 빌드가 실패합니다.
 - 관리자 페이지(/admin/)와 주간 성장 리포트의 표 제목·열 이름은 쉬운 말로 씁니다: 도구별(파일 고름, 처리 시작, 성공, 실패, 성공률, 내려받음), 실패 이유, 많이 쓴 설정, 안내 글에서 도구로. 구간 값은 "500KB 이하"처럼 보여 줍니다. 아래에 "기록은 3개월 동안만 남아요."를 둡니다.
+
+## English (EN1, owner 2026-10-13)
+English pages live under /en/ (BaseEn.astro; copy in src/i18n/en/). The Korean rules above do not apply there; these do.
+- **Name:** "Docttak" on English pages only (HTML under /en/, src/i18n/en/, the og-en share images). Never in Korean pages, shared JS, llms.txt or the manifest (dist test).
+- **Voice:** plain English, 6th–8th grade, sentence case, task first. Say what the tool does and that it is free with no sign-up.
+- **Titles:** `<What it does> … | Docttak`, at most 60 characters with the suffix; meta description 70–155; share description at most 155 (check-dist, meta-length.mjs EN_LIMITS).
+- **Privacy is the second message, never the lead:** one line under the drop zone (`Your files stay on your device. Nothing is uploaded.`; photos: `Your photos stay …`), one "why" point (`Nothing is uploaded`), one FAQ (`Are my files uploaded?`), and it may be the second sentence of the meta description.
+- **Words:** "upload" and "browser" are allowed (people search them). No "AI", no "secure" or "military grade". Units MB/KB; numbers en-US (1,500). FAQ numbers come from the tools' limits.ts.
+- **Buttons and states:** Choose PDF files · Add files · Merge {n} PDFs · Compress PDF · Convert {n} photos · Download · Start over · Try another level · Cancel. Results: `Your merged file is ready`, `{n}% smaller · {pages}`, `File name: {name}`. Download names: `{base}_merged.pdf`, `{base}_compressed.pdf`, `{base}_images.pdf`.
+- **Language switch:** Korean twins show `English` (lang="en") in the footer; English pages show `한국어` (lang="ko"). Korean text on an English page sits only inside an element with lang="ko" (check-dist).
+- **Not on English pages (EN1):** next-step buttons, quick links, Korean guides, Coupang or any sponsored link, ads, Google Analytics.
+- **Legal:** /en/privacy/ and /en/terms/ (src/pages/en/) name the same privacy officer and contact as the Korean policy, in the build that publishes them there; governing law Republic of Korea. The owner approves every change before deploy.

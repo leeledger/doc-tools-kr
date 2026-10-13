@@ -196,7 +196,8 @@ export function initImageToJpg(m: Messages, pending?: File[]): { add(files: File
   const saveName = must<HTMLParagraphElement>('ij-save-name');
   const download = must<HTMLAnchorElement>('ij-download');
   const resetBtn = must<HTMLButtonElement>('ij-reset');
-  const nextSlot = must<HTMLDivElement>('ij-next');
+  // The 이어서 하기 group is optional (EN1: the English page has none until EN2).
+  const nextSlot = document.getElementById('ij-next');
 
   let state: State = 'empty';
   let entries: Entry[] = [];
@@ -251,7 +252,7 @@ export function initImageToJpg(m: Messages, pending?: File[]): { add(files: File
     actions.hidden = !has || busy || next === 'done';
     progressBox.hidden = !busy;
     result.hidden = next !== 'done';
-    if (next !== 'done') hideNextSteps(nextSlot);
+    if (next !== 'done' && nextSlot) hideNextSteps(nextSlot);
     renderList();
     updateRun();
   }
@@ -545,7 +546,7 @@ export function initImageToJpg(m: Messages, pending?: File[]): { add(files: File
     summary.textContent = sum;
     setState('done');
     // 이어서 하기: one photo only (a ZIP is not offered).
-    if (out && count === 1) showNextStepsIn(m.next, nextSlot, 'image-to-jpg', [{ blob: out, name }]);
+    if (out && count === 1 && nextSlot) showNextStepsIn(m.next, nextSlot, 'image-to-jpg', [{ blob: out, name }]);
     result.scrollIntoView({ block: 'start' });
     headline.focus({ preventScroll: true });
     status(m.done(head, sum));

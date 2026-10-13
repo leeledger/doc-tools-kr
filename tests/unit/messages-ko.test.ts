@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { ERRORS } from '../../src/lib/image/messages';
 import { MB } from '../../src/lib/ui/device';
-import { ENGINE_KO, engineErrorCopy } from '../../src/lib/ui/engine-load';
+import { ENGINE_KO, engineErrorCopy, pickEngineCopy, type EngineMessages } from '../../src/lib/ui/engine-load';
 import { formatPages } from '../../src/lib/ui/format';
 import { NEXT_GROUP_LABEL, NEXT_KO, NEXT_LABELS, sendFailed } from '../../src/lib/ui/next-steps';
 import { nonPdfMessage } from '../../src/lib/ui/pdf-pick';
@@ -24,6 +24,19 @@ describe('shared catalog entries', () => {
     expect(ENGINE_KO.generic).toEqual({ title: '처리 도구를 불러오지 못했습니다.', body: ENGINE_BODY('잠시 뒤') });
     expect(ENGINE_KO.reload).toBe('새로고침');
     expect(await engineErrorCopy({ online: false })).toEqual(ENGINE_KO.offline);
+  });
+
+  it('EN0 review: pickEngineCopy returns the given catalog per state (a fake non-Korean catalog)', async () => {
+    const FAKE: EngineMessages = {
+      offline: { title: 'offline', body: 'o' },
+      deployed: { title: 'deployed', body: 'd' },
+      generic: { title: 'generic', body: 'g' },
+      reload: 'Reload',
+    };
+    const manifest = (build: string) => async () => new Response(JSON.stringify({ build }), { status: 200 });
+    expect(await pickEngineCopy(FAKE, { online: false })).toBe(FAKE.offline);
+    expect(await pickEngineCopy(FAKE, { online: true, build: 'aaa1111', fetch: manifest('bbb2222') as unknown as typeof fetch })).toBe(FAKE.deployed);
+    expect(await pickEngineCopy(FAKE, { online: true, build: 'aaa1111', fetch: manifest('aaa1111') as unknown as typeof fetch })).toBe(FAKE.generic);
   });
 
   it('NEXT_KO is the next-steps copy', () => {
@@ -149,6 +162,8 @@ describe('PDF 용량 줄이기 KO', () => {
     expect(CMP.reduced(42, '12쪽')).toBe('42% 줄었습니다 · 12쪽');
     expect(CMP.saveName('a_압축.pdf')).toBe('저장될 이름: a_압축.pdf');
     expect(CMP.done('10 MB → 2 MB', '80% 줄었습니다 · 3쪽', '')).toBe('용량을 줄였습니다. 10 MB → 2 MB, 80% 줄었습니다 · 3쪽.');
+    // EN0 review: a non-empty extra follows after one space.
+    expect(CMP.done('10 MB → 2 MB', '80% 줄었습니다 · 3쪽', CMP.noteUnlocked)).toBe('용량을 줄였습니다. 10 MB → 2 MB, 80% 줄었습니다 · 3쪽. 줄인 파일에는 비밀번호가 걸려 있지 않습니다.');
   });
 
   it('limits', () => {

@@ -98,3 +98,15 @@ test('/privacy/ in this build (cloud + usage + GA): section 1 names the cookies,
   await expect(main).toContainText(`${PRIVACY_GA}: Google 애널리틱스(방문 분석, 쿠키)와 국외 이전 내용을 더함`);
   await expect(main.locator('a[href="https://tools.google.com/dlpage/gaoptout?hl=ko"]')).toHaveCount(1);
 });
+
+test('EN1: English pages carry no /ga.js tag and load nothing from Google, also while using a tool', async ({ page, network }) => {
+  await page.route('**/api/usage', (route) => route.fulfill({ status: 204, body: '' }));
+  for (const path of ['/en/', '/en/privacy/', '/en/pdf-compress/']) {
+    await gotoReady(page, path);
+    await expect(page.locator('script[src="/ga.js"]')).toHaveCount(0);
+  }
+  await page.setInputFiles('#cmp-input', fixturePath('gen_already_small.pdf'));
+  await page.waitForTimeout(1500);
+  expect(googleUrls(network)).toEqual([]);
+  expect(await page.evaluate(() => 'dataLayer' in window)).toBe(false);
+});

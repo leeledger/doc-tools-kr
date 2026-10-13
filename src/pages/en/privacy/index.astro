@@ -1,0 +1,69 @@
+---
+// /en/privacy/ (EN1; owner D3): the English privacy policy for the /en/ pages. It names the same privacy officer and
+// contact as the Korean policy, and only in the build that publishes them there (the 배경 지우기 cloud build; the build
+// fails without both values: scripts/lib/bgcloud.mjs privacyGate). The officer's name is Korean text, marked lang="ko".
+// Sections follow what is true of the English pages: files never leave the device, Cloudflare hosting logs, Cloudflare
+// Web Analytics (cookieless) when its token is set, no cookies, no Google Analytics, no usage statistics, no ads.
+import BaseEn from '../../../layouts/BaseEn.astro';
+import { CONTACT_EMAIL, PRIVACY_OFFICER } from '../../../data/site';
+import { ANALYTICS_ON } from '../../../data/analytics';
+import { GA_ON } from '../../../data/ga';
+import { SITE_EN } from '../../../i18n/en/site';
+import { CF_POLICY_EN, EN_LEGAL_EFFECTIVE } from '../../../i18n/en/legal';
+
+const contact = __BG_CLOUD__;
+let n = 0;
+const h = (): number => ++n;
+---
+<BaseEn
+  title={`Privacy Policy | ${SITE_EN.name}`}
+  description={`How ${SITE_EN.name} handles your data on its English pages: no account, files are processed on your device and never uploaded, no cookies.`}
+>
+  <div class="prose">
+    <div class="wrap narrow">
+      <h1>Privacy Policy</h1>
+      <p class="meta-line">Effective: {EN_LEGAL_EFFECTIVE}</p>
+      <p>This policy covers the English pages of {SITE_EN.name} (docttak.com/en/). The Korean pages have their own <a href="/privacy/" hreflang="ko">Korean privacy policy</a>.</p>
+
+      {contact && (
+        <>
+          <h2>{h()}. Who we are</h2>
+          <p>{SITE_EN.name} is run from the Republic of Korea. The person responsible for your data (the data controller and privacy officer) is <span lang="ko">{PRIVACY_OFFICER}</span>. Contact: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+        </>
+      )}
+
+      <h2>{h()}. Your files stay on your device</h2>
+      <p>The tools work inside the page, on your phone or computer. The files you choose and their contents are not uploaded to us or to anyone else, and we do not store them. PDF passwords are used only while the page is open and are never saved or sent. When you close the page, everything is gone.</p>
+
+      <h2>{h()}. No account, no personal details</h2>
+      <p>There is no sign-up. We do not ask for your name, email address or any other personal details.</p>
+
+      <h2>{h()}. Hosting and access logs</h2>
+      <p>The site is hosted by Cloudflare, Inc. When you open a page, Cloudflare may keep a short record of the request (for example your IP address and the type of browser and device) for security and to run the service. We use these records only for those purposes, based on our legitimate interest in a safe, working site (GDPR Article 6(1)(f)). See the <a href={CF_POLICY_EN} rel="noopener">Cloudflare privacy policy</a>.</p>
+      {ANALYTICS_ON && (
+        <p id="analytics">To count visitors and see which pages are read, we use Cloudflare Web Analytics. It sets no cookies. It collects the page address, the page you came from, the type of browser and device, and the country, and we only see totals. It never includes your files. This is also based on our legitimate interest (GDPR Article 6(1)(f)).</p>
+      )}
+
+      <h2>{h()}. Cookies</h2>
+      <p>The English pages set no cookies and use no advertising or tracking tools{ANALYTICS_ON ? ' other than the cookieless visitor count above' : ''}. To open pages faster, your browser may keep a copy of the site's own program files (its cache); this holds no personal data.{GA_ON && ' The Korean pages use Google Analytics, which sets cookies; this is explained in the Korean privacy policy.'}</p>
+
+      <h2>{h()}. Transfers outside your country</h2>
+      <p>Cloudflare, Inc. is based in the United States and processes requests in its data centers around the world. Cloudflare states that it protects data transferred from the EU, the UK and Switzerland under the EU-U.S. Data Privacy Framework and its extensions and under Standard Contractual Clauses; see the Cloudflare privacy policy.</p>
+
+      <h2>{h()}. Ads</h2>
+      <p>There are no ads on the English pages. If we ever add them, we will update this policy first.</p>
+
+      <h2>{h()}. Your rights</h2>
+      <p>Depending on where you live (for example under the GDPR or the UK GDPR), you have the right to ask for access to your data, to have it corrected or erased, to restrict or object to its use, and to receive it in a portable form. You can also complain to the data protection authority of your country. Because we keep no account or files and cannot link the short access records to a person, we usually hold nothing we can find about you{contact ? <>, but you can always write to us at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></> : ''}.</p>
+
+      <h2>{h()}. California residents</h2>
+      <p>We do not sell or share personal information, and we do not collect sensitive personal information.</p>
+
+      <h2>{h()}. Children</h2>
+      <p>The site is not directed to children under 13 (or under 16 in the EU), and we do not knowingly collect their personal information.</p>
+
+      <h2>{h()}. Changes</h2>
+      <p>If we change this policy, we will post the new version on this page with a new effective date.</p>
+    </div>
+  </div>
+</BaseEn>

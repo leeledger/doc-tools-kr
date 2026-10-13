@@ -1,0 +1,60 @@
+---
+// /en/ (EN1): the English home. H1, the English tools and a short FAQ. Privacy is the second message, never the lead.
+import BaseEn from '../../layouts/BaseEn.astro';
+import { homeJsonLdEn } from '../../i18n/en/jsonld';
+import { HOME_DESCRIPTION_EN, HOME_TITLE_EN, TOOLS_EN } from '../../i18n/en/tools';
+
+const jsonLd = homeJsonLdEn(TOOLS_EN, HOME_DESCRIPTION_EN, Astro.site);
+---
+<BaseEn skipTarget="tools" title={HOME_TITLE_EN} description={HOME_DESCRIPTION_EN} jsonLd={jsonLd}>
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">No sign-up · No install · Free</p>
+      <h1>Merge, compress and convert <br>your PDFs and photos</h1>
+      <p class="lead">Simple tools that work on your phone or computer, free and with no sign-up.</p>
+      <div class="hero-cta">
+        <a class="btn primary" href="#tools">See the tools</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="tools" class="tools" aria-labelledby="tools-title">
+    <div class="wrap">
+      <h2 id="tools-title">Tools</h2>
+      <ul class="grid">
+        {TOOLS_EN.map((t) => (
+          <li class="card live">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" set:html={t.icon} />
+            </div>
+            <h3><a class="card-link" href={`/en/${t.slug}/`}>{t.name}</a></h3>
+            <p>{t.summary}</p>
+            <span class="status status-live">Open</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section id="faq" class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">FAQ</h2>
+      <details>
+        <summary>Is it really free?</summary>
+        <p>Yes. Every tool is free, with no sign-up, no install and no watermark.</p>
+      </details>
+      <details>
+        <summary>Are my files uploaded?</summary>
+        <p>No. The tools work inside this page, on your device. Your files are not uploaded to a server, and nothing is kept after you close the page.</p>
+      </details>
+      <details>
+        <summary>Does it work on my phone?</summary>
+        <p>Yes. It works in current phone browsers. On an iPhone, you need iOS 16.4 or later.</p>
+      </details>
+      <details>
+        <summary>Why is there also a Korean site?</summary>
+        <p>Docttak started as a Korean site, and the Korean pages have more tools. The English pages have the tools that are useful everywhere.</p>
+      </details>
+    </div>
+  </section>
+</BaseEn>

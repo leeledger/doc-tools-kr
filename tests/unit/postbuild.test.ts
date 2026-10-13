@@ -645,7 +645,7 @@ describe('built output', () => {
     if (!readdirSync(ROOT).includes('dist')) throw new Error('Run `npm run build` first: these checks read dist/.');
   };
   const walk = (dir: string, re: RegExp): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name), re) : re.test(e.name) ? [join(dir, e.name)] : []));
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? (dir === DIST && e.name === 'en' ? [] : walk(join(dir, e.name), re)) : re.test(e.name) ? [join(dir, e.name)] : [])); // EN1: dist/en/ (English pages) has its own rules: scripts/lib/en-check.mjs
 
   /**
    * The live tools of the build under test: a PUBLIC_BG_REMOVE=1 build (Sprint C, C2; the CI checks job) also has
@@ -851,7 +851,7 @@ describe('built output', () => {
     }
     const widget = readFileSync(join(DIST, 'embed', 'id-photo', 'index.html'), 'utf8');
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
-    const siteScript = /src="(\/_astro\/Base\.astro_astro_type_script[^"]+)"/.exec(home)![1]!;
+    const siteScript = /src="(\/_astro\/SiteScript\.astro_astro_type_script[^"]+)"/.exec(home)![1]!; // EN1: the site script moved to src/components/SiteScript.astro
     expect(widget).not.toContain(siteScript);
     expect(widget).not.toContain('rel="manifest"');
     expect(widget).toContain('data-embed-credit');
@@ -1262,7 +1262,7 @@ describe('built output', () => {
       expect(d).toBeLessThanOrEqual(110);
     }
     const sitemap = readFileSync(join(DIST, 'sitemap.xml'), 'utf8');
-    const locs = [...sitemap.matchAll(/<url><loc>([^<]+)<\/loc><lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod><\/url>/g)].map((m) => new URL(m[1]!).pathname);
+    const locs = [...sitemap.matchAll(/<url><loc>([^<]+)<\/loc><lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>(?:<xhtml:link [^>]+\/>)*<\/url>/g)].map((m) => new URL(m[1]!).pathname); // EN1: hreflang alternates
     expect(locs.length).toBe([...sitemap.matchAll(/<url>/g)].length);
     for (const g of guides) expect(locs, g.slug).toContain(`/guide/${g.slug}/`);
     for (const d of draftSlugs()) expect(locs).not.toContain(`/guide/${d}/`);

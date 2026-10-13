@@ -1,0 +1,25 @@
+---
+// "Related tools" on an English tool page (EN1): English twins only, never a Korean page.
+import { TOOLS_EN } from '../tools';
+
+interface Props {
+  /** The current tool, left out of the list. */
+  current: string;
+}
+const others = TOOLS_EN.filter((t) => t.slug !== Astro.props.current);
+---
+{others.length > 0 && (
+  <section class="related" aria-labelledby="related-title">
+    <div class="wrap narrow">
+      <h2 id="related-title">Related tools</h2>
+      <ul class="related-list">
+        {others.map((t) => (
+          <li>
+            <a href={`/en/${t.slug}/`}>{t.name}</a>
+            <span>{t.summary}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

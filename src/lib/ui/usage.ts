@@ -126,6 +126,8 @@ export interface TrackerDeps {
   origin?: string;
   pathname?: string;
   search?: string;
+  /** The page language (`<html lang>`). */
+  lang?: string;
 }
 
 export interface Tracker {
@@ -137,7 +139,10 @@ export interface Tracker {
 /** A tracker for one page load: sampled once (rate), capped at MAX_EVENTS, never throws. */
 export function createTracker(deps: TrackerDeps = {}): Tracker {
   const rate = deps.rate ?? __USAGE_SAMPLE__;
-  const sampled = (deps.random ?? Math.random)() < rate;
+  // EN1 (brief EN decision 10): only Korean pages report, so the Korean statistics stay clean; EN2 adds a language key.
+  // No document while a page is prerendered (the module is imported there for USAGE_ON): nothing is sent there anyway.
+  const lang = deps.lang ?? (typeof document === 'undefined' ? '' : document.documentElement.lang);
+  const sampled = (deps.random ?? Math.random)() < rate && lang === 'ko';
   const w = sampleWeight(rate);
   let via: Via = 'direct';
   let sent = 0;

@@ -8,6 +8,8 @@ import { GA_LOADER, GA_ON } from '../data/ga';
 import { BUILD_ID } from '../data/build';
 import { LIVE_TOOLS } from '../data/tools';
 import JsonLd from '../components/JsonLd.astro';
+import SiteScript from '../components/SiteScript.astro';
+import { enTwin } from '../i18n/en/tools';
 // Preloaded UI weights (Polish P.12): 400 (body) and 800 (every H1). 700 loads on demand. There is no 600 face: a
 // fourth file on the critical path put home LCP over 2,000 ms (G2 ci-green; BUILD-LOG).
 import uiFont400 from '../generated/anolim-ui-400.woff2?url';
@@ -53,6 +55,8 @@ const share = {
 const nav = isHome ? '' : '/';
 const path = Astro.url.pathname;
 const footOp = footerContact();
+// EN1 (brief EN decision 9): the English twin of this page, if any, in the footer (hreflang pairs: sitemap.xml).
+const english = enTwin(path);
 const favicon =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M10 9h8l4 4v10H10z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M13 18l2.5 2.5L20 16' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 ---
@@ -144,13 +148,12 @@ const favicon =
       <a href="/terms/">이용약관</a>
       <a href="/privacy/">개인정보 처리방침</a>
       <a href="/licenses/">오픈소스 라이선스</a>
+      {english && <a href={english} hreflang="en" lang="en">English</a>}
     </nav>
     <p class="foot-blog">블로그: {BLOGS.map((b, i) => <>{i > 0 && ' · '}<a href={b.url} rel="noopener" aria-label={b.label}>{b.name}</a></>)}</p>
     <p class="foot-copy">© 2026 {SITE.name} · {SITE.tagline}</p>
   </div>
 </footer>
-<script>
-  import '../lib/ui/site';
-</script>
+<SiteScript />
 </body>
 </html>

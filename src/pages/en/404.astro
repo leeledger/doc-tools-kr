@@ -1,0 +1,23 @@
+---
+// /en/404 (EN1): the not-found page for unknown /en/ paths, if Cloudflare Pages serves the nearest 404.html up the tree
+// (brief EN "Unverified"; postbuild places it at dist/en/404.html). Static: no suggestion script.
+import BaseEn from '../../layouts/BaseEn.astro';
+import { SITE_EN } from '../../i18n/en/site';
+import { TOOLS_EN } from '../../i18n/en/tools';
+---
+<BaseEn
+  title={`Page not found | ${SITE_EN.name}`}
+  description={`This page does not exist or has moved. Check the address, or pick one of the free ${SITE_EN.name} tools below to get started.`}
+  noindex
+>
+  <div class="prose">
+    <div class="wrap narrow">
+      <h1>Page not found</h1>
+      <p>The address may have changed, or the page does not exist. Go straight to a tool, or back to the home page.</p>
+      <ul class="nf-tools">
+        {TOOLS_EN.map((t) => <li><a href={`/en/${t.slug}/`}>{t.name}</a></li>)}
+      </ul>
+      <p><a class="btn primary" href="/en/">Go to the home page</a></p>
+    </div>
+  </div>
+</BaseEn>

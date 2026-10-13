@@ -44,6 +44,8 @@ export const CORE_PATHS = [
   'tools/remove-background/page.astro',
   'tools/remove-background/copy.ts',
 ];
+/** The English catalogs, components and pages (paths relative to src/): in neither the core nor the late set. */
+export const EN_DIRS = ['i18n/', 'pages/en/'];
 /** Punctuation used in generated UI strings (progress, separators, quotes). */
 const FORCED = '…·—–‘’“”©';
 
@@ -69,8 +71,10 @@ export function uiCharSets(src) {
       const p = join(dir, e.name);
       if (e.isDirectory()) walk(p);
       else if (/\.(astro|ts|json|css)$/.test(e.name)) {
-        const t = readFileSync(p, 'utf8');
         const rel = relative(src, p).split(sep).join('/');
+        // EN1 (brief EN decision 4): English text renders in the system font (html[lang="en"]), so neither set needs it.
+        if (EN_DIRS.some((d) => rel.startsWith(d))) continue;
+        const t = readFileSync(p, 'utf8');
         const late = LATE_DIRS.includes(rel.split('/')[0]) && !CORE_PATHS.includes(rel);
         (late ? lateTexts : coreTexts).push(e.name.endsWith('.json') ? t : stripComments(t));
       }

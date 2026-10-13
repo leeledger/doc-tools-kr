@@ -53,6 +53,7 @@ export function initShare(el: HTMLElement, env: ShareEnv = { navigator: globalTh
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const copyLabel = copy.textContent;
   async function copyLink(): Promise<void> {
     const url = shareUrl(el, env.location);
     try {
@@ -63,10 +64,11 @@ export function initShare(el: HTMLElement, env: ShareEnv = { navigator: globalTh
       return;
     }
     fallback!.hidden = true;
-    say('링크를 복사했어요');
-    copy!.textContent = '복사했어요';
+    // The English block (EN1) carries its words in data attributes; the Korean block has none and keeps these.
+    say(el.dataset.copied ?? '링크를 복사했어요');
+    copy!.textContent = el.dataset.copiedShort ?? '복사했어요';
     clearTimeout(timer);
-    timer = setTimeout(() => (copy!.textContent = '링크 복사'), COPIED_MS);
+    timer = setTimeout(() => (copy!.textContent = copyLabel), COPIED_MS);
   }
 
   if (typeof nav?.share === 'function') {

@@ -14,6 +14,8 @@ import type { LimitCopy } from './limits';
 import { TARGET_COPY, TARGET_RANGE_MESSAGE } from './target';
 
 export interface Messages {
+  /** The catalog's language mark (scripts/lib/en-check.mjs CATALOG_MARK): check-dist finds a catalog in a page's JS by it. */
+  mark: string;
   errors: Record<PdfErrorCode, string>;
   limits: LimitCopy;
   engine: EngineMessages;
@@ -76,6 +78,7 @@ const MEMORY = '이 기기에서 처리하기에 너무 커서 화면이 멈출 
 const SLOW = '처리할 양이 많아 오래 걸리거나 화면이 멈출 수 있습니다.';
 
 export const KO = {
+  mark: 'catalog-mark:ko',
   errors: {
     'not-pdf': 'PDF 파일이 아닙니다. PDF 파일을 골라 주세요.',
     password: '이 파일은 비밀번호로 보호되어 있습니다. 비밀번호를 입력해 주세요.',

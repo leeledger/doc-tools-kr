@@ -3,7 +3,7 @@
 // Runs first in postbuild, before carry-assets, so the budgets judge the fresh build only.
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
 import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
 import { autoframeOn } from './lib/autoframe.mjs';
 import { BEACON_SRC, analyticsToken } from './lib/analytics.mjs';
@@ -18,6 +18,8 @@ import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fontcover.mjs';
 import { coupangProblems, disclosureStrings, sponsoredProblems } from './lib/out-links-check.mjs';
 import { EMBED_PAGE_RE, embedHeaderProblems, embedPageProblems } from './lib/embed-check.mjs';
+import { EN_PAGE_RE, enProblems } from './lib/en-check.mjs';
+import { precacheList } from './gen-sw.mjs';
 
 const dist = distDir();
 const KB = 1024;
@@ -95,20 +97,26 @@ for (const [p, html] of pageHtml) {
 }
 // SEO-LENGTH: every page (noindex 404/offline included) has a title of at most 40 code points and a description of
 // 40–80, og/twitter consistent with them (scripts/lib/meta-length.mjs).
-const metaMax = { title: { n: 0, p: '' }, description: { n: 0, p: '' } };
+// EN1: English pages have their own limits (meta-length.mjs EN_LIMITS) and their own report line.
+const metaMax = { ko: { title: { n: 0, p: '' }, description: { n: 0, p: '' } }, en: { title: { n: 0, p: '' }, description: { n: 0, p: '' } } };
 for (const [p, html] of pageHtml) {
   errors.push(...metaProblems(p, html));
   const m = headMeta(html);
-  for (const k of ['title', 'description']) if (m[k] && metaLen(m[k]) > metaMax[k].n) metaMax[k] = { n: metaLen(m[k]), p };
+  const max = metaMax[EN_PAGE_RE.test(p) ? 'en' : 'ko'];
+  for (const k of ['title', 'description']) if (m[k] && metaLen(m[k]) > max[k].n) max[k] = { n: metaLen(m[k]), p };
 }
-console.log(`check-dist: meta, longest title ${metaMax.title.n} (${metaMax.title.p}), longest description ${metaMax.description.n} (${metaMax.description.p})`);
+for (const [lang, max] of Object.entries(metaMax)) console.log(`check-dist: meta${lang === 'en' ? ' (en)' : ''}, longest title ${max.title.n} (${max.title.p}), longest description ${max.description.n} (${max.description.p})`);
 // Google Analytics 4: on, every page has exactly one marked /ga.js tag, before its module scripts (so it reads the URL
 // first), and dist/ga.js is the loader for this ID; on or off, no page loads gtag.js itself or calls gtag inline.
 // Off, nothing of it ships at all.
 const GA_TAG = /<script\b[^>]*\bsrc="\/ga\.js"[^>]*>/g;
 for (const [p, html] of pageHtml) {
   const tags = html.match(GA_TAG) ?? [];
-  if (ga && !EMBED_PAGE_RE.test(p)) {
+  // EN1: English pages never carry the tag (scripts/lib/en-check.mjs rule a), GA on or off; the two every-page rules
+  // below still apply to them.
+  if (EN_PAGE_RE.test(p)) {
+    if (tags.length) errors.push(`${p}: Google Analytics tag on an English page`);
+  } else if (ga && !EMBED_PAGE_RE.test(p)) {
     if (tags.length !== 1 || !tags[0].includes(' data-site-ga')) errors.push(`${p}: ${tags.length} Google Analytics tags (expected exactly one ${GA_LOADER} tag with data-site-ga)`);
     else {
       const firstModule = html.indexOf('type="module"');
@@ -129,6 +137,21 @@ if (ga) {
   for (const f of files) if (TEXT.test(f.path) && read(f.path).includes('googletagmanager')) errors.push(`${f.path}: names googletagmanager although PUBLIC_GA_ID is not set`);
 }
 const initialJs = (html) => [...new Set(moduleEntries(html).flatMap((e) => staticClosure(dist, e)))];
+/** The chunks a module imports with a relative import(`./x.js`) (lazy controllers; Vite writes a template literal). */
+const dynamicImports = (path) => [...read(path).toString('utf8').matchAll(/import\(\s*["'`](\.{1,2}\/[^"'`]+\.js)["'`]\s*\)/g)].map((m) => posix.join(posix.dirname(path), m[1]));
+/** Every chunk a page can load: its initial JS and, transitively, every chunk imported dynamically and their imports. */
+const pageGraph = (html) => {
+  const seen = new Set();
+  const visit = (f) => {
+    if (seen.has(f)) return;
+    for (const c of staticClosure(dist, f)) {
+      seen.add(c);
+      for (const d of dynamicImports(c)) visit(d);
+    }
+  };
+  for (const f of initialJs(html)) visit(f);
+  return [...seen];
+};
 
 // 무료 임베드 위젯 (REV5 R5.7): every widget page is noindex with the tool page as canonical, has no link block, share,
 // 이어서 하기, ad, GA or Web Analytics tag, never registers the service worker and is not in the sitemap; only its
@@ -141,6 +164,13 @@ const initialJs = (html) => [...new Set(moduleEntries(html).flatMap((e) => stati
   for (const [p, html] of widgets) errors.push(...embedPageProblems(p, html, { initialJs: initialJs(html).map((f) => read(f).toString('utf8')).join(' '), sitemap }));
   if (files.some((f) => f.path === '_headers')) errors.push(...embedHeaderProblems(read('_headers').toString('utf8')));
   else errors.push('dist/_headers is missing');
+}
+
+// English pages (EN1, brief EN decision 12): every rule in scripts/lib/en-check.mjs.
+{
+  const sitemap = files.some((f) => f.path === 'sitemap.xml') ? read('sitemap.xml').toString('utf8') : '';
+  const graphText = (html) => pageGraph(html).map((f) => read(f).toString('utf8')).join('\n');
+  errors.push(...enProblems(pageHtml, { graphText, sitemap, precache: precacheList(dist).urls }));
 }
 
 // Initial JS of each page: its module scripts plus their static imports (dynamic import() is lazy).
@@ -265,19 +295,23 @@ budget('password.worker*.js (pdf-password)', match(/^_astro\/password\.worker[^/
 // (controller 18.3 KB gzip measured with the shared decode/sniff/strip/raster and fflate's Zip, budget + 20 %; webp.worker
 // 9.3 KB gzip measured, budget + 20 %).
 budget('webp.worker*.js (image-to-jpg WebP fallback)', match(/^_astro\/webp\.worker[^/]*\.js$/), 11.2 * KB);
-{
-  const html = pageHtml.get('image-to-jpg/index.html');
-  if (!html) errors.push('image-to-jpg/index.html: no file found');
-  else {
-    const initial = new Set(initialJs(html));
-    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('ij-quality-group'));
-    if (controller.length !== 1) errors.push(`image-to-jpg controller: ${controller.length} chunk(s) name #ij-quality-group, expected 1`);
-    if (controller.some((f) => initial.has(f))) errors.push('the /image-to-jpg/ controller loads with the page');
-    for (const f of initial) if (/ZipPassThrough|webp_enc|wasm-feature-detect/.test(read(f).toString('utf8'))) errors.push(`${f}: the ZIP code or the WebP encoder in the /image-to-jpg/ initial JS`);
-    const closure = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
-    for (const f of closure) if (/webp_enc|mozjpeg_enc/.test(read(f).toString('utf8'))) errors.push(`${f}: an image codec in the /image-to-jpg/ controller's static imports (the WebP fallback is its own worker)`);
-    budget('image-to-jpg controller (lazy)', closure, 22 * KB);
+// EN1: the Korean and the English page each load their own lazy chunk (ko/controller.ts, en/controller.ts: the shared
+// controller bound to a catalog), found by the page's dynamic import; the budget covers that chunk and what it imports
+// that the page does not, so the catalog counts on both pages.
+for (const page of ['image-to-jpg/index.html', 'en/image-to-jpg/index.html']) {
+  const html = pageHtml.get(page);
+  if (!html) {
+    errors.push(`${page}: no file found`);
+    continue;
   }
+  const initial = new Set(initialJs(html));
+  const lazy = [...new Set([...initial].flatMap(dynamicImports))].filter((f) => staticClosure(dist, f).some((c) => read(c).includes('ij-quality-group')));
+  if (lazy.length !== 1) errors.push(`${page}: ${lazy.length} lazy chunk(s) lead to the controller that names #ij-quality-group, expected 1`);
+  if (lazy.some((f) => initial.has(f)) || [...initial].some((f) => read(f).includes('ij-quality-group'))) errors.push(`the /${page.replace(/index\.html$/, '')} controller loads with the page`);
+  for (const f of initial) if (/ZipPassThrough|webp_enc|wasm-feature-detect/.test(read(f).toString('utf8'))) errors.push(`${f}: the ZIP code or the WebP encoder in the /${page.replace(/index\.html$/, '')} initial JS`);
+  const closure = [...new Set(lazy.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
+  for (const f of closure) if (/webp_enc|mozjpeg_enc/.test(read(f).toString('utf8'))) errors.push(`${f}: an image codec in the /${page.replace(/index\.html$/, '')} controller's static imports (the WebP fallback is its own worker)`);
+  budget(`${page.startsWith('en/') ? 'en/' : ''}image-to-jpg controller (lazy)`, closure, 22 * KB);
 }
 if (!autoframe) {
   for (const f of files) if (/mediapipe|vision_bundle|vision_wasm|face_landmarker/i.test(f.path)) errors.push(`${f.path}: MediaPipe file in a build without auto-framing`);
@@ -446,6 +480,8 @@ const PRELOAD_TRIPWIRE = 94_884;
 const preloadable = uiFonts.filter((f) => /^_astro\/anolim-ui-(400|800)\./.test(f));
 budget('UI fonts preloaded (core 400 + 800)', preloadable, PRELOAD_TRIPWIRE, raw, 'raw');
 for (const [path, html] of pageHtml) {
+  // EN1: English pages have none (system font; scripts/lib/en-check.mjs rule a).
+  if (EN_PAGE_RE.test(path)) continue;
   const preloads = [...html.matchAll(/<link rel="preload"[^>]*as="font"[^>]*>/g)].map((m) => m[0]);
   if (preloads.length !== 2) errors.push(`${path}: ${preloads.length} font preload(s), expected exactly 2 (400 and 800)`);
   for (const l of preloads) if (!/href="\/_astro\/anolim-ui-(400|800)\.[^"/]*\.woff2"/.test(l)) errors.push(`${path}: preload ${l} is not a core UI face (400 or 800)`);
@@ -483,6 +519,8 @@ for (const [path, html] of pageHtml) {
       errors.push(e.message);
     }
     for (const [path, html] of pageHtml) {
+      // EN1: English pages render in the system font (html[lang="en"] rule in app.css), so the core range does not apply.
+      if (EN_PAGE_RE.test(path)) continue;
       const missing = uncovered(visibleText(html, exempt), core);
       if (missing.length) errors.push(`${path}: ${missing.length} character(s) outside the core UI font: ${missing.join('')} (add the rendering src/lib or src/tools file to CORE_PATHS in scripts/lib/ui-font-chars.mjs)`);
     }
