@@ -148,15 +148,21 @@ for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-
   });
 }
 
-test('terms: 200, canonical, the full text with 10 sections and no contact clause (owner, Polish Q)', async ({ page }) => {
+test('terms: 200, canonical, the full text with 11 sections + change history and no contact clause beyond the owner-approved §11 line (owner, Polish Q; REV5)', async ({ page }) => {
   const res = await gotoReady(page, '/terms/');
   expect(res?.status()).toBe(200);
   await expect(page.locator('h1')).toHaveText('이용약관');
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute('href'))!).pathname).toBe('/terms/');
-  await expect(page.locator('.prose h2')).toHaveCount(10);
+  // REV5: §11 「다른 누리집에 넣어 쓰기」 (owner-approved 2026-10-13) and a 「변경 이력」 heading.
+  await expect(page.locator('.prose h2')).toHaveCount(12);
+  await expect(page.locator('.prose h2').nth(10)).toHaveText('11. 다른 누리집에 넣어 쓰기');
   await expect(page.locator('main')).toContainText('다만 운영자의 고의 또는 중대한 과실로 생긴 손해는 예외입니다.');
   await expect(page.locator('main')).toContainText('이 약관은 문서딱(이하 "서비스")의 이용 조건');
-  for (const gone of ['문의', '준비 중', '사이티드']) await expect(page.locator('main')).not.toContainText(gone);
+  for (const gone of ['준비 중', '사이티드']) await expect(page.locator('main')).not.toContainText(gone);
+  // The only 「문의」 is the owner-approved white-label sentence in §11; no general contact clause.
+  const text = (await page.locator('main').innerText()).split('문의');
+  expect(text.length - 1).toBe(1);
+  await expect(page.locator('main')).toContainText('로고를 바꾸거나 문서딱 표시를 빼려면 운영자에게 메일로 문의해 주세요.');
 });
 
 test('privacy: a short plain statement (owner, Polish Q): no sign-up, no personal data, files stay on the device; the access-log note; no officer or contact', async ({ page }) => {
