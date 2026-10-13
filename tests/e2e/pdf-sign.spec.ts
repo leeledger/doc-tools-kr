@@ -100,11 +100,25 @@ async function pickImage(page: Page, path = QUAD): Promise<void> {
   await expect(page.locator('.sign-box')).toHaveCount(1);
 }
 
-/** Waits until the page stops scrolling (the result scrolls into view smoothly). */
+/**
+ * Waits until the page stops scrolling (the result scrolls into view smoothly; focusing 쪽 범위 scrolls it clear of the
+ * actions bar): scrollY unchanged for 250 ms. Two equal reads one or two frames apart are not enough: a smooth scroll
+ * runs on the compositor and reaches the page's scrollY in uneven steps, and it starts a few frames after the focus,
+ * so such a read passed mid-animation or before it began (CI mobile-chrome, 8451ac0).
+ */
 const settled = (page: Page) =>
-  page.waitForFunction(() => new Promise<boolean>((r) => {
-    const y = scrollY;
-    requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y)));
+  page.evaluate(() => new Promise<void>((r) => {
+    let y = scrollY;
+    let since = performance.now();
+    const tick = (now: number) => {
+      if (scrollY !== y) {
+        y = scrollY;
+        since = now;
+      }
+      if (now - since >= 250) r();
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }));
 
 async function save(page: Page): Promise<{ name: string; bytes: Uint8Array }> {
@@ -395,7 +409,7 @@ test('axe: the editor with a picture and the result have no serious or critical 
   await page.locator('#sg-range').fill('9');
   // The focused field is not under the actions bar (sticky at phone widths; scroll-padding-bottom keeps it clear).
   // Measured once the page stops moving: focusing the field scrolls it clear with the site's smooth scrolling, and a
-  // read during that animation sees it on its way (CI mobile-chrome, X1).
+  // read during that animation sees it on its way (CI mobile-chrome, X1; settled() waits out the whole animation).
   await settled(page);
   const field = (await page.locator('#sg-range').boundingBox())!;
   expect(field.y + field.height).toBeLessThanOrEqual((await page.locator('#sg-actions').boundingBox())!.y + 1);
