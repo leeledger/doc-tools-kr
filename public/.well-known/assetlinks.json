@@ -7,7 +7,8 @@
       "namespace": "android_app",
       "package_name": "com.docttak.app",
       "sha256_cert_fingerprints": [
-        "24:B3:94:84:0E:0D:0B:96:0F:D6:3F:10:21:A9:09:02:14:29:B0:26:14:CF:89:EB:FB:0A:D3:FA:EE:D1:BA:C5"
+        "24:B3:94:84:0E:0D:0B:96:0F:D6:3F:10:21:A9:09:02:14:29:B0:26:14:CF:89:EB:FB:0A:D3:FA:EE:D1:BA:C5",
+        "4C:17:B5:D6:77:07:EF:26:73:FD:B8:25:96:EA:2A:7A:87:6C:43:27:13:5C:66:A4:35:3B:9A:57:97:00:36:5B"
       ]
     }
   }
