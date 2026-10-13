@@ -1,10 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.docttak.app",
-      "sha256_cert_fingerprints": []
+      "sha256_cert_fingerprints": [
+        "24:B3:94:84:0E:0D:0B:96:0F:D6:3F:10:21:A9:09:02:14:29:B0:26:14:CF:89:EB:FB:0A:D3:FA:EE:D1:BA:C5"
+      ]
     }
   }
 ]
