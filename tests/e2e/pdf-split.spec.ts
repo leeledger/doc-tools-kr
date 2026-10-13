@@ -32,12 +32,23 @@ async function open(page: Page, path: string): Promise<void> {
 
 /**
  * Waits until the page stops scrolling. The result (and 다시 편집하기) scrolls with `scroll-behavior: smooth`; a click aimed
- * while it moves can land on another element (seen on WebKit under parallel load).
+ * while it moves can land on another element (seen on WebKit under parallel load). Stopped = scrollY unchanged for
+ * 250 ms: a smooth scroll reaches scrollY in uneven steps and starts a few frames late, so two equal reads one or two
+ * frames apart can come mid-animation or before it begins (pdf-sign.spec.ts, CI mobile-chrome on 8451ac0).
  */
 const settled = (page: Page) =>
-  page.waitForFunction(() => new Promise<boolean>((r) => {
-    const y = scrollY;
-    requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y)));
+  page.evaluate(() => new Promise<void>((r) => {
+    let y = scrollY;
+    let since = performance.now();
+    const tick = (now: number) => {
+      if (scrollY !== y) {
+        y = scrollY;
+        since = now;
+      }
+      if (now - since >= 250) r();
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }));
 
 async function save(page: Page): Promise<{ name: string; bytes: Uint8Array }> {
