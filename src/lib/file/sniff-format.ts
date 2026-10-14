@@ -70,8 +70,6 @@ function isText(head: Uint8Array): boolean {
   } catch {
     return false;
   }
-  // An escape, not the literal character: a literal BOM in the source lands in the UI font's late range and makes
-  // Firefox fetch the late face (polish.spec "no late face" on /id-photo/).
   s = s.replace(/^\uFEFF/, '');
   if (!s || s.includes('\0')) return false;
   let ok = 0;
