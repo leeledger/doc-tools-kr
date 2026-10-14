@@ -38,6 +38,7 @@ import { LEVELS } from '../../src/lib/pdf/compress/levels';
 import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { USAGE_ON, UTM_STASH_KEY, UTM_TTL_MS, arrival, browserFamily, buildPayload, createTracker, readUtmStash, startUsage, track, writeUtmStash } from '../../src/lib/ui/usage';
 import { route } from '../../src/sw/sw';
+import { campaignSql } from '../../scripts/lib/campaign.mjs';
 import { FULL } from '../fixtures/usage-rows.mjs';
 import { RUM_EMPTY } from '../fixtures/rum-rows.mjs';
 
@@ -616,7 +617,7 @@ describe('Pages Function /admin/', () => {
   const ENV = { ADMIN_PASSWORD: PW, CF_ACCOUNT_ID: 'acc', AE_API_TOKEN: 'super-secret-token' };
   const auth = (user: string, pw: string) => `Basic ${Buffer.from(`${user}:${pw}`).toString('base64')}`;
   const get = (path: string, authorization?: string) => new Request(`https://docttak.com${path}`, { headers: authorization ? { authorization } : {} });
-  const sqlApi = (rows: Record<string, Record<string, unknown>[]> = {}, status = 200, prevStatus = status) => {
+  const sqlApi = (rows: Record<string, Record<string, unknown>[]> = {}, status = 200, prevStatus = status, campStatus = status) => {
     const bodies: string[] = [];
     const f = vi.fn(async (url: string, init: RequestInit) => {
       // The visits query (Web Analytics GraphQL) is answered empty; only SQL bodies are recorded.
@@ -625,6 +626,8 @@ describe('Pages Function /admin/', () => {
       bodies.push(sql);
       // "AS kind" (the previous-period query) is checked before "AS event".
       if (sql.includes('AS kind')) return prevStatus !== 200 ? new Response('error', { status: prevStatus }) : new Response(JSON.stringify({ data: rows.prev ?? [] }));
+      // "AS camp" (캠페인별 유입, REQ1014-A) is checked before "AS event" too.
+      if (sql.includes('AS camp')) return campStatus !== 200 ? new Response('error', { status: campStatus }) : new Response(JSON.stringify({ data: rows.campaigns ?? [] }));
       if (status !== 200) return new Response('error', { status });
       const key = sql.includes('AS event') ? 'events' : sql.includes('AS code') ? 'fails' : sql.includes('AS setting') ? 'settings' : 'guides';
       return new Response(JSON.stringify({ data: rows[key] ?? [] }));
@@ -679,7 +682,7 @@ describe('Pages Function /admin/', () => {
     for (const [q, days] of [['', 7], ['?days=abc', 7], ['?days=365', 7], ['?days=30', 30], ['?days=1', 1], ['?days=90', 90], ["?days=7'%20OR%201=1", 7]] as const) {
       const { bodies } = sqlApi();
       await adminFn({ request: get(`/admin/${q}`, auth('admin', PW)), env: ENV });
-      const expected = [...Object.values(usageSql('docttak_usage', days)), ...(days === 90 ? [] : [usagePrevSql('docttak_usage', days)])];
+      const expected = [...Object.values(usageSql('docttak_usage', days)), campaignSql('docttak_usage', days), ...(days === 90 ? [] : [usagePrevSql('docttak_usage', days)])];
       expect(bodies.sort(), q).toEqual(expected.sort());
     }
     const { bodies } = sqlApi();
@@ -717,6 +720,22 @@ describe('Pages Function /admin/', () => {
     expect(bodies.some((b) => b.includes('AS kind'))).toBe(true);
     expect(html).toContain('비교 없음');
     expect(html).not.toContain('통계를 불러오지 못했어요');
+  });
+
+  it('REQ1014-A: the campaign table comes from its own query; its failure (400) leaves the usage tables intact', async () => {
+    const events = [{ tool: 'pdf-merge', event: 'start', via: 'direct', n: 4 }];
+    const ok = sqlApi({ events, campaigns: [{ src: 'naver_blog', camp: 'history-exam-photo', event: 'land', n: 3 }] });
+    const html = await (await adminFn({ request: get('/admin/?days=1', auth('admin', PW)), env: ENV })).text();
+    expect(ok.bodies.filter((b) => b.includes('AS camp'))).toEqual(["SELECT blob13 AS src, blob14 AS camp, blob1 AS event, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '1' DAY AND blob13 != '' AND (blob1 = 'land' OR blob1 = 'start' OR blob1 = 'success') GROUP BY blob13, blob14, blob1 ORDER BY n DESC LIMIT 500 FORMAT JSON"]);
+    expect(html).toContain('<td>네이버 블로그</td><td><code>history-exam-photo</code></td><td class="num">3</td>');
+    sqlApi({ events }, 200, 200, 400);
+    const res = await adminFn({ request: get('/admin/?days=1', auth('admin', PW)), env: ENV });
+    expect(res.status).toBe(200);
+    const failed = await res.text();
+    expect(failed).toContain('캠페인 표를 불러오지 못했어요.');
+    expect(failed).toContain('id="s-tools"');
+    expect(failed).not.toContain('도구 사용 통계를 불러오지 못했어요');
+    expect(failed).not.toContain('super-secret-token');
   });
 
   it('90 days: no previous-period query, the KPI says the period before is past retention', async () => {

@@ -4,6 +4,7 @@
 // usage (scripts/lib/usage.mjs shapeUsage). Each block has its own notice. Every string is escaped at the point of
 // output. Plain ESM, no dependencies: the Function, the Node preview (scripts/qa/admin-preview.mjs) and vitest import it.
 import { trendSvg } from './admin-chart.mjs';
+import { CAMPAIGN_HEAD, CAMPAIGN_NOTE } from './campaign.mjs';
 import { COMPARE_PERIODS, PERIODS, TOOLS, escapeHtml, usageSample } from './usage.mjs';
 
 const esc = escapeHtml;
@@ -169,6 +170,18 @@ function viaSection(tools) {
   return section('s-via', '어디서 왔는지에 따른 성공률', ['도구', '안내에서 옴', '바로 옴', '다른 누리집'], rows, [1, 2, 3]);
 }
 
+/** 캠페인별 유입 (REQ1014-A D14): `campaigns` shapeCampaigns rows, or null when its query failed. */
+function campaignSection(campaigns) {
+  if (campaigns === null) {
+    return `<section aria-labelledby="s-campaigns">
+<h2 id="s-campaigns">캠페인별 유입</h2>
+<p class="notice" role="status">캠페인 표를 불러오지 못했어요.</p>
+</section>`;
+  }
+  const rows = campaigns.map((r) => [esc(r.srcLabel), r.campLabel === r.camp ? `<code>${esc(r.camp)}</code>` : esc(r.campLabel), count(r.land), count(r.start), count(r.success)]);
+  return section('s-campaigns', '캠페인별 유입', CAMPAIGN_HEAD, rows, [2, 3, 4], CAMPAIGN_NOTE);
+}
+
 function isEmpty(shaped) {
   return !shaped.tools.length && !shaped.kpi.arrive && !shaped.failRows.length && shaped.tables.every((t) => !t.rows.length);
 }
@@ -319,15 +332,16 @@ footer p{margin:0 0 4px}
  * The whole /admin/ page. The visits block appears when `visits` (shapeVisits) or `visitsNotice` is given; `notice`
  * replaces only the usage block.
  * @param {{ days: number, shaped?: any, prev?: { start: number, success: number, fail: number, arrive: number } | null,
- *   now?: Date, sampleShare?: number | null, notice?: string, visits?: any, visitsNotice?: string }} opts
+ *   now?: Date, sampleShare?: number | null, notice?: string, visits?: any, visitsNotice?: string, campaigns?: any[] | null }} opts
+ * `campaigns`: shapeCampaigns rows (the 캠페인별 유입 section), null when that query failed, undefined for no section.
  */
-export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = null, notice, visits, visitsNotice }) {
+export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = null, notice, visits, visitsNotice, campaigns }) {
   const tabs = PERIODS.map((d) => `<a href="?days=${d}"${d === days ? ' aria-current="page"' : ''}>${d}일</a>`).join('');
   const when = now instanceof Date && !Number.isNaN(now.getTime()) ? ` · ${formatKst(now)} 기준 (한국 시간)` : '';
   let body;
   const usageOk = notice === undefined && Boolean(shaped);
   if (!usageOk) body = `<p class="notice" role="status">도구 사용 통계를 불러오지 못했어요 (${esc(notice ?? '')}).</p>`;
-  else if (isEmpty(shaped)) body = emptyBlock(days);
+  else if (isEmpty(shaped)) body = `${emptyBlock(days)}${campaigns?.length ? `\n${campaignSection(campaigns)}` : ''}`;
   else {
     const [, , settings, guides, , chainPairs, chainTools, outs] = shaped.tables;
     body = [
@@ -336,6 +350,7 @@ export function renderAdminPage({ days, shaped, prev = null, now, sampleShare = 
       failSection(shaped.failRows),
       shapedSection('s-settings', settings, [3]),
       shapedSection('s-guides', guides, [2, 3]),
+      ...(campaigns === undefined ? [] : [campaignSection(campaigns)]),
       viaSection(shaped.tools),
       shapedSection('s-chain', chainPairs, [2], CHAIN_NOTE),
       shapedSection('s-chain-tools', chainTools, [1, 2]),

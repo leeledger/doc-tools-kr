@@ -2,7 +2,8 @@
 // reports/growth/YYYY-WW.md (ISO week of the run) and carries its numbers as one machine-readable line,
 // `<!-- growth-data {json} -->`, which M-3 reads back from the committed reports.
 import { cell } from './common.mjs';
-import { renderTables } from '../../lib/usage.mjs';
+import { EMPTY_TABLE, renderTables } from '../../lib/usage.mjs';
+import { campaignMarkdown } from '../../lib/campaign.mjs';
 
 /** R1 (AdSense) conditions: indexable pages and Search Console clicks per week, for consecutive weeks. */
 export const R1 = { minPages: 15, minWeeklyClicks: 100, weeks: 4 };
@@ -75,7 +76,7 @@ function rowsTable(title, rows, keyName, limit) {
  * notes: string[], r1: r1Status() }.
  */
 export function renderReport(data) {
-  const { week, generated, gsc, cf, usage = null, notes, r1 } = data;
+  const { week, generated, gsc, cf, usage = null, campaigns = null, notes, r1 } = data;
   const lines = [`# 성장 리포트 ${week}`, '', `생성: ${generated} (A-5 자동 작성, docs/OPS-RUNBOOK.md)`, ''];
   if (notes.length) lines.push(...notes.map((x) => `> ${x}`), '');
   lines.push('## 서치콘솔 (구글)');
@@ -101,6 +102,7 @@ export function renderReport(data) {
   lines.push('', '## 도구 사용 (지난 7일)');
   if (usage) lines.push(`성공 ${n(usage.totals.success)}회, 실패 ${n(usage.totals.fail)}회, 성공률 ${usage.totals.rate}. 기록은 3개월 동안만 남아요.`, '', renderTables(usage, 'md', 3));
   else lines.push('건너뜀 (위 메모 참고).');
+  if (campaigns) lines.push('', '### 캠페인별 유입 (7일)', '', campaignMarkdown(campaigns, EMPTY_TABLE));
   lines.push(
     '',
     '## 수익화 R1 조건 (docs/REVENUE-MODEL.md §1)',
