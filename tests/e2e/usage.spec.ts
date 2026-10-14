@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 
 import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
+import { createCanvas } from '@napi-rs/canvas';
 import type { Locator, Page, Request } from '@playwright/test';
 import { validate } from '../../scripts/lib/usage.mjs';
 import { expect, gotoReady, test } from './no-upload';
@@ -575,6 +576,18 @@ test('EN1: an English tool page sends no usage beacon (Korean statistics stay cl
 test.describe('REQ1014-B: 배경 지우기 cloud failures by cause', () => {
   test.use({ allowUpload: [[{ method: 'POST', path: '/api/usage' }, { method: 'POST', path: '/api/remove-bg' }], { scope: 'test' }] });
   const DISC = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'bgcloud', 'disc.webp'));
+  /** A red disc on light grey, 600×400: disc.webp is its alpha (the answer must have the copy's shape). */
+  const SUBJECT = ((): { name: string; mimeType: string; buffer: Buffer } => {
+    const c = createCanvas(600, 400);
+    const g = c.getContext('2d');
+    g.fillStyle = 'rgb(230,230,230)';
+    g.fillRect(0, 0, 600, 400);
+    g.fillStyle = 'rgb(220,30,30)';
+    g.beginPath();
+    g.arc(300, 200, 120, 0, Math.PI * 2);
+    g.fill();
+    return { name: 'ball.png', mimeType: 'image/png', buffer: c.toBuffer('image/png') };
+  })();
 
   async function press(page: Page, answers: { status: number; body: Buffer | string; type: string }[]): Promise<() => number> {
     let n = 0;
@@ -583,7 +596,7 @@ test.describe('REQ1014-B: 배경 지우기 cloud failures by cause', () => {
       return route.fulfill({ status: a.status, headers: { 'content-type': a.type }, body: a.body });
     });
     await gotoReady(page, '/remove-background/');
-    await page.setInputFiles('#bg-input', PORTRAIT);
+    await page.setInputFiles('#bg-input', SUBJECT);
     await expect(page.locator('#bg-ready')).toBeVisible({ timeout: 30_000 });
     await page.locator('#bg-send').click();
     return () => n;

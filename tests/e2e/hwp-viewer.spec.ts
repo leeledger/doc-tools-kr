@@ -442,6 +442,10 @@ test('a JPG renamed .hwp: the photo line, 「사진 PDF 변환으로 열기」 o
   expect(network.requests.map((r) => r.url()).filter((u) => ENGINE_URL.test(u))).toEqual([]);
   await page.locator('#hw-error-actions').getByRole('button', { name: '사진 PDF 변환으로 열기' }).click();
   await expect(page).toHaveURL(/\/jpg-to-pdf\/$/);
+  // Playwright WebKit on Windows has no OffscreenCanvas: /jpg-to-pdf/ shows its unsupported panel there (as in
+  // jpg-to-pdf.spec and chain.spec); the hand-over itself was checked by the URL above.
+  const canDraw = await page.evaluate(() => typeof OffscreenCanvas !== 'undefined' && typeof createImageBitmap === 'function' && new OffscreenCanvas(1, 1).getContext('2d') !== null);
+  test.skip(!canDraw, 'This browser has no OffscreenCanvas (Playwright WebKit on Windows).');
   await expect(page.locator('#jp-notice')).toContainText('방금 만든 파일을 가져왔습니다.');
   await expect(page.locator('#jp-list > li .name')).toHaveText(['photo.hwp']);
 });

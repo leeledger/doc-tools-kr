@@ -167,7 +167,8 @@ test('notice above the picker; a pick sends nothing; 배경 지우기 sends one 
 });
 
 test('a large photo is sent as a 1024 px copy; a GPS-tagged, rotated JPEG leaves without EXIF and upright', async ({ page }) => {
-  const { bodies } = await api(page, { status: 500, body: '{"error":"engine"}' });
+  // 403 is final (REQ1014-B D13: a refusal is not retried), so each press sends exactly one copy.
+  const { bodies } = await api(page, { status: 403, body: '{"error":"origin"}' });
   await gotoReady(page, PATH);
   await pick(page, BIG);
   await ready(page);
