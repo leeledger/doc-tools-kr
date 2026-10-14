@@ -5,11 +5,11 @@ ogDescription: JLPT 원서 사진은 3.5×4.5 cm 비율 JPG, 1 MB 이하예요.
 query: JLPT 사진 규격
 answer: JLPT 온라인 접수 사진은 여권사진 규격(3.5×4.5 cm) 비율의 JPG 파일로 1 MB 이하여야 하고, 이 사진이 합격인정서에 인쇄돼요.
 published: '2026-10-12'
-updated: '2026-10-12'
+updated: '2026-10-14'
 category: 사진
 topic: 시험·자격증
 tools: [id-photo]
-cta: { href: '/id-photo/?preset=passport_online', label: '3.5×4.5 cm 비율로 맞추기' }
+cta: { href: '/id-photo/?preset=jlpt', label: 'JLPT 원서 사진으로 맞추기' }
 related: [teps-photo, passport-photo, id-photo-kb]
 sources:
   - url: https://www.jlpt.or.kr/html/information_01.html
@@ -28,7 +28,7 @@ sources:
     title: JLPT 일본어능력시험 — 시험 실시 안내
     quote: 온라인접수만 가능, 우편접수 없음
     retrieved: '2026-10-12'
-  - preset: passport_online
+  - preset: jlpt
 spec:
   - label: JLPT 원서 사진 (온라인 접수)
     kind: photo
@@ -67,8 +67,8 @@ JLPT는 접수할 때 등록한 사진을 합격인정서에 인쇄해요. 그�
 
 ## 3.5×4.5 cm 비율 JPG로 맞추는 법
 
-1. [여권·증명사진 규격 맞추기](/id-photo/?preset=passport_online)를 열면 제출처가 「여권 (온라인 신청·정부24)」로 골라져 있어요.
+1. [여권·증명사진 규격 맞추기](/id-photo/?preset=jlpt)를 열면 제출처가 「JLPT 원서 (온라인 접수)」로 골라져 있어요.
 2. 사진을 고르고 안내선에 정수리와 턱을 맞춰요.
-3. 저장하면 413×531픽셀 JPG 파일이 만들어져요. 3.5×4.5 cm와 같은 비율이고, 용량은 500 KB 이하라서 1 MB 기준에도 맞아요.
+3. 저장하면 413×531픽셀 JPG 파일이 만들어져요. 3.5×4.5 cm와 같은 비율이고, 용량은 1 MB 이하로 맞춰져요.
 
 얼굴이나 배경은 고치지 않아요. JLPT는 픽셀 크기를 정하지 않았고, 413×531픽셀 파일은 안내한 비율·형식·용량에 들어맞아요.

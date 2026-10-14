@@ -5,11 +5,11 @@ ogDescription: 한자능력검정시험 원서 사진은 230×310픽셀, 100 KB 
 query: 한자능력검정시험 사진 규격
 answer: 한국어문회 한자능력검정시험 원서 사진은 6개월 이내에 찍은 무배경 반명함판으로, 230×310픽셀, 100 KB 이하의 JPG나 PNG 파일이어야 해요.
 published: '2026-10-12'
-updated: '2026-10-12'
+updated: '2026-10-14'
 category: 사진
 topic: 시험·자격증
 tools: [id-photo, photo-compress]
-cta: { href: '/id-photo/', label: '직접 입력으로 사진 맞추기' }
+cta: { href: '/id-photo/?preset=hanja', label: '한자시험 원서 사진으로 맞추기' }
 related: [history-exam-photo, id-photo-kb, id-photo-size]
 sources:
   - url: https://www.hanja.re.kr/kccpt/guide/faq.do?id=91
@@ -32,6 +32,7 @@ sources:
     title: 전국한자능력검정시험 — 접수 방법
     quote: '인터넷접수 시간은 접수시작일 09:00 ~ 접수마감일 18:00 입니다.'
     retrieved: '2026-10-12'
+  - preset: hanja
 spec:
   - label: 한자능력검정시험 원서 사진
     kind: photo
@@ -70,8 +71,8 @@ og: { title: '한자시험 원서 사진', line: '230×310픽셀 · 100 KB 이�
 
 ## 230×310픽셀, 100 KB로 맞추는 법
 
-1. [여권·증명사진 규격 맞추기](/id-photo/)를 열고 제출처에서 「직접 입력」을 골라요.
-2. 가로 230, 세로 310픽셀과 용량 100 KB를 넣어요.
-3. 사진을 고르고 안내선에 정수리와 턱을 맞춘 뒤 저장하면 JPG 파일이 만들어져요.
+1. [여권·증명사진 규격 맞추기](/id-photo/?preset=hanja)를 열면 제출처가 「한자능력검정시험 원서 (한국어문회)」로 골라져 있어요.
+2. 사진을 고르고 안내선에 정수리와 턱을 맞춰요.
+3. 저장하면 230×310픽셀, 100 KB 이하의 JPG 파일이 만들어져요.
 
 얼굴이나 배경은 고치지 않아요. 배경 없이 찍은 반명함판 원본을 고르세요. 이미 크기가 맞는 사진이라면 [사진 용량 줄이기](/photo-compress/?target=100)로 용량만 100 KB 아래로 줄일 수도 있어요.

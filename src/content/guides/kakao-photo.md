@@ -5,11 +5,11 @@ ogDescription: 카톡 사진은 1회 최대 300MB, 묶어보내기는 최대 120
 query: 카톡 사진 용량
 answer: 카카오톡으로 사진은 한 번에 최대 300MB까지 보낼 수 있고, 20MB 이상인 사진은 묶음에 들어가지 않고 따로 가요.
 published: '2026-10-02'
-updated: '2026-10-02'
+updated: '2026-10-14'
 category: 사진
 topic: 사진 보내기
 tools: [photo-compress]
-cta: { href: '/photo-compress/', label: '사진 용량 줄이기' }
+cta: { href: '/photo-compress/?target=2500', label: '카톡 120장 묶음에 맞게 사진 줄이기' }
 related: [photo-kb, email-attachment-limit, id-photo-kb, heic-to-jpg]
 sources:
   - url: https://cs.kakao.com/helps_html/1073209424
@@ -93,4 +93,6 @@ og: { title: '카톡 사진 용량', line: '한 번에 300MB · 묶어서 최대
 
 ## 사진 용량을 줄이고 싶다면
 
-사진이 너무 커서 보내기 힘들면 [사진 용량 줄이기](/photo-compress/)에서 원하는 용량을 정해 여러 장을 한 번에 줄일 수 있어요.
+사진이 너무 커서 보내기 힘들면 [사진 용량 줄이기](/photo-compress/?target=2500)에서 원하는 용량을 정해 여러 장을 한 번에 줄일 수 있어요. 이 링크는 한 장의 목표 용량을 미리 골라 둔 채 열려요.
+
+미리 골라 둔 목표 용량은 카카오가 정한 숫자가 아니라 계산값이에요. 한 번에 보낼 수 있는 300MB를 묶어 보낼 수 있는 최대 개수 120장으로 나눈 값(300MB ÷ 120장)이라, 사진마다 이 용량 아래로 줄여 두면 120장을 꽉 채워도 한 번에 보낼 수 있어요. 20MB보다 훨씬 작아서 모든 사진이 묶음 안에 들어가요.

@@ -50,6 +50,12 @@ describe('deeplink (T1)', () => {
     for (const bad of ['0.45', '100.1', '0.4', '1e1', '10,5', 'abc']) expect(parse('pdf-compress', new URLSearchParams({ target: bad })), bad).toBeNull();
   });
 
+  it('REQ1014-C: the new presets and the 카톡 target round-trip', () => {
+    for (const id of ['police', 'hanja', 'jlpt']) expect(parse('id-photo', `?preset=${id}`), id).toEqual({ preset: id });
+    expect(serialize('photo-compress', { target: 2500 })).toBe('?target=2500');
+    expect(parse('photo-compress', '?target=2500')).toEqual({ target: 2500 });
+  });
+
   it('the id list the deep links check equals the presets (src/data/preset-ids.ts)', () => {
     expect([...PRESET_IDS]).toEqual(PRESETS.map((p) => p.id));
     expect(DEFAULT_PRESET_ID).toBe(DEFAULT_PRESET);

@@ -5,7 +5,7 @@ ogDescription: 휴대폰에서 HWP 파일을 앱 설치 없이 열어요. 받은
 query: 휴대폰 hwp 열기
 answer: 받은 HWP 파일을 휴대폰에 저장한 뒤 문서딱 HWP·HWPX 파일 보기에서 「HWP 파일 열기」로 고르면 앱 설치 없이 바로 열려요.
 published: '2026-10-01'
-updated: '2026-10-01'
+updated: '2026-10-14'
 category: 한글파일
 topic: 한글파일
 tools: [hwp-viewer, hwp-to-pdf]
@@ -28,6 +28,10 @@ sources:
     title: Apple 지원 — iPhone에서 다운로드한 파일 찾기
     quote: 다운로드 폴더를 탭하여 다운로드한 파일을 확인하십시오.
     retrieved: '2026-10-01'
+  - url: https://support.apple.com/ko-kr/guide/iphone/iphc9cd7266c/ios
+    title: Apple 지원 — iPhone에서 다운로드한 파일 찾기
+    quote: '팁: 둘러보기 화면에 다운로드 폴더가 보이지 않는 경우, iCloud Drive를 탭하십시오.'
+    retrieved: '2026-10-14'
 toolFacts:
   - ref: hwp.maxMb.mobile
     value: 25
@@ -66,3 +70,15 @@ og: { title: '휴대폰에서 HWP 열기', line: '앱 설치 없이, 아이폰·
 - 휴대폰에서는 25 MB까지 열 수 있어요. 더 큰 파일은 컴퓨터에서 열어 주세요.
 - 10 MB 또는 60쪽이 넘는 문서는 휴대폰에서 보기만 할 수 있고, PDF로 내려받으려면 컴퓨터를 써요.
 - 앱을 설치하거나 가입하지 않아도 돼요.
+
+## 이럴 때는
+
+- **아이폰 「파일」 앱에 다운로드 폴더가 안 보일 때**: Apple 안내에 따르면 둘러보기 화면에 다운로드 폴더가 없으면 iCloud Drive를 탭해 보세요. 그 안에 다운로드 폴더가 있을 수 있어요.
+- **휴대폰에서 문서를 PDF로 보내야 할 때**: 문서를 연 화면에서 「PDF로 내려받기」를 누르거나, [HWP PDF 변환](/hwp-to-pdf/)에서 파일을 바로 PDF로 바꿔요. 컴퓨터에서 하는 법까지 [HWP PDF 변환 안내](/guide/hwp-to-pdf/)에 정리했어요.
+- **받은 파일 끝이 .hwpx일 때**: 같은 「HWP 파일 열기」로 열려요. 제출처가 HWP 파일만 받는다면 [HWPX HWP 변환](/hwpx-to-hwp/)으로 바꿀 수 있어요. 무엇이 다른지는 [HWPX가 뭔가요?](/guide/what-is-hwpx/)에 있어요.
+- **컴퓨터에도 한글 프로그램이 없을 때**: [한글 없이 HWP 파일 여는 법](/guide/open-hwp-without-hangul/)에서 PC에서 여는 법을 볼 수 있어요.
+- **문서가 열리지 않을 때**: 비밀번호가 걸린 문서는 열 수 없어요. 보낸 사람에게 암호를 푼 파일이나 PDF로 다시 받아 주세요.
+
+## 휴대폰 화면에서 보기 좋게
+
+휴대폰 화면은 작아서 A4 문서 한 쪽이 한눈에 들어오면 글자가 작게 보여요. 두 손가락으로 벌려 크게 보고, 「쪽 목록」으로 원하는 쪽으로 바로 넘어가세요. 표가 많은 문서는 휴대폰을 가로로 돌리면 읽기 편해요. 다 본 문서를 나중에 다시 열려면 처음 저장한 곳(아이폰은 「파일」 앱, 갤럭시는 내 파일의 다운로드 폴더)에서 다시 고르면 돼요.

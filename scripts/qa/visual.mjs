@@ -57,6 +57,9 @@ const PAGES = [
   ['ecfs', '/guide/ecfs-pdf-limit/'],
   ['kakao', '/guide/kakao-photo/'],
   ['yearend', '/guide/yearend-tax-pdf/'],
+  // REQ1014-C: the two new passport guides.
+  ['babypass', '/guide/baby-passport-photo/'],
+  ['reissue', '/guide/passport-reissue-photo/'],
 ];
 const MAIN = PAGES.slice(0, 3);
 const VIEWPORTS = {

@@ -18,6 +18,20 @@ test.describe('deep links (G.5)', () => {
     expect(await search(page)).toBe('?preset=gosi');
   });
 
+  test('REQ1014-C: ?preset=police, hanja and jlpt open with that 시험·원서 option; ?target=2500 picks 2,500 KB', async ({ page }) => {
+    for (const [id, agency] of [['police', '경찰청'], ['hanja', '한국어문회'], ['jlpt', 'JLPT']] as const) {
+      await gotoReady(page, `/id-photo/?preset=${id}`);
+      await expect(page.locator('#idp-preset')).toHaveValue(id);
+      await expect(page.locator(`#idp-preset optgroup[label="시험·원서"] option[value="${id}"]`)).toHaveCount(1);
+      await expect(page.locator('#idp-source')).toContainText(agency);
+      expect(await search(page)).toBe(`?preset=${id}`);
+    }
+    await gotoReady(page, '/photo-compress/?target=2500');
+    await expect(page.locator('input[name="ph-target"][value="custom"]')).toBeChecked();
+    await expect(page.locator('#ph-target-kb')).toHaveValue('2500');
+    expect(await search(page)).toBe('?target=2500');
+  });
+
   test('/photo-compress/: ?target=200 checks the chip, 250 is custom, abc keeps the defaults and is dropped', async ({ page }) => {
     await gotoReady(page, '/photo-compress/?target=200');
     await expect(page.locator('input[name="ph-target"][value="200"]')).toBeChecked();

@@ -5,7 +5,7 @@ ogDescription: 한글 프로그램 없이 HWP·HWPX 파일을 여는 두 가지 
 query: 한글 없이 hwp 열기
 answer: 한글 프로그램이 없으면 문서딱 HWP·HWPX 파일 보기에서 파일을 골라 바로 열거나, 한컴 다운로드 센터의 뷰어를 PC에 설치해 열면 돼요.
 published: '2026-10-01'
-updated: '2026-10-01'
+updated: '2026-10-14'
 category: 한글파일
 topic: 한글파일
 tools: [hwp-viewer, hwp-to-pdf]
@@ -14,12 +14,12 @@ related: [hwp-on-phone, what-is-hwpx, hwp-to-pdf, hwpx-to-hwp]
 sources:
   - url: https://www.hancom.com/support/downloadCenter/download
     title: 한컴 다운로드 센터 — 제품 설치·업데이트 파일
-    quote: 한글, 한셀, 한쇼 뿐만 아니라 MS 워드, 파워포인트, 엑셀 문서를 불러올 수 있는 한컴오피스 통합 뷰어입니다.
-    retrieved: '2026-10-01'
+    quote: 한컴오피스 통합 뷰어에서 한글, 한셀, 한쇼뿐만 아니라 MS 워드, 파워포인트, 엑셀 등 오피스 문서를 불러올 수 있어요.
+    retrieved: '2026-10-14'
   - url: https://www.hancom.com/support/downloadCenter/download
     title: 한컴 다운로드 센터 — 제품 설치·업데이트 파일
-    quote: '운영 체제 : Windows 10 이상'
-    retrieved: '2026-10-01'
+    quote: '* 운영체제: Windows 11 이상'
+    retrieved: '2026-10-14'
   - url: https://www.hancom.com/support/faqCenter/faq/detail/2784
     title: 한컴 지원센터 — HWPX 관련 자주하는 질문 및 답변안내
     quote: 기존 설치된 한글 뷰어에서는 HWP뿐만 아니라 HWPX도 지원하고 있습니다.
@@ -33,7 +33,7 @@ faq:
   - q: 한글 프로그램 없이 HWP 파일을 열 수 있나요?
     a: 네. 문서딱 HWP·HWPX 파일 보기에서 파일을 고르면 설치 없이 바로 열려요. 쪽을 넘겨 보고, 글자를 찾고 복사할 수 있어요.
   - q: 한컴 다운로드 센터의 뷰어는 어디에 설치하나요?
-    a: PC에 설치하는 프로그램이에요. 다운로드 센터 안내에 따르면 Windows 10 이상에서 쓸 수 있어요.
+    a: PC에 설치하는 프로그램이에요. 다운로드 센터 안내에 따르면 Windows 11 이상에서 쓸 수 있어요.
   - q: HWPX 파일도 같은 방법으로 열리나요?
     a: 네. 문서딱에서는 HWP와 HWPX를 같은 방법으로 열어요. 한컴 지원센터 안내에 따르면 설치된 한글 뷰어도 HWPX를 지원해요.
   - q: 맥이나 휴대폰에서도 열 수 있나요?
@@ -53,7 +53,7 @@ PC에서는 150 MB, 휴대폰에서는 25 MB까지 열 수 있어요.
 
 ## 한컴 다운로드 센터의 뷰어로 여는 법
 
-한컴 다운로드 센터에는 한글뿐 아니라 워드·엑셀 문서도 여는 통합 뷰어가 있어요. 다운로드 센터 안내에 따르면 Windows 10 이상의 PC에 설치해 쓰는 프로그램이에요. 설치할 수 없는 회사·학교 PC나 휴대폰이라면 위의 방법이 편해요.
+한컴 다운로드 센터에는 한글뿐 아니라 워드·엑셀 문서도 여는 통합 뷰어가 있어요. 다운로드 센터 안내에 따르면 Windows 11 이상의 PC에 설치해 쓰는 프로그램이에요. 설치할 수 없는 회사·학교 PC나 휴대폰이라면 위의 방법이 편해요.
 
 ## 원본과 다르게 보일 때
 

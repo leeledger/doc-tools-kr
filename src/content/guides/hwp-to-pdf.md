@@ -5,7 +5,7 @@ ogDescription: 한글 프로그램이 없어도 HWP 파일을 PDF로 바꿀 수 
 query: 한글파일 pdf 변환
 answer: 한글 프로그램이 없으면 문서딱 HWP PDF 변환에서 파일을 골라 바로 PDF로 내려받고, 한글이 있으면 [파일 > PDF로 저장하기]를 쓰면 돼요.
 published: '2026-10-01'
-updated: '2026-10-01'
+updated: '2026-10-14'
 category: 한글파일
 topic: 한글파일
 tools: [hwp-to-pdf, pdf-compress]
@@ -28,6 +28,10 @@ sources:
     title: 한컴 지원센터 — 한글 파일 PDF 변환 시 이미지가 엑스박스로 뜰 때
     quote: '2) 인쇄 옵션의 선택 사항 “그림 개체” 체크박스 클릭 (OFF > ON으로 변경)'
     retrieved: '2026-10-01'
+  - url: https://www.hancom.com/support/faqCenter/faq/detail/2413
+    title: 한컴 지원센터 — 한컴오피스 2014 VP는 PDF 문서를 지원하나요?
+    quote: '* PDF 변환만 가능하며 PDF 파일을 편집할 수는 없습니다.'
+    retrieved: '2026-10-14'
 toolFacts:
   - ref: hwp.pdfMb.desktop
     value: 80
@@ -81,3 +85,15 @@ PC에서는 80 MB, 300쪽까지 PDF로 바꿀 수 있어요. 휴대폰에서는 
 ## 바꾼 PDF가 너무 클 때
 
 메일에 붙이거나 제출 사이트에 내기에 PDF가 크면 [PDF 용량 줄이기](/pdf-compress/)로 줄일 수 있어요.
+
+## 이럴 때는
+
+- **PDF로 바꾼 뒤 내용을 고치고 싶을 때**: 한컴 지원센터는 한글의 PDF 기능이 PDF로 바꾸는 것만 되고, 만든 PDF 파일을 편집할 수는 없다고 안내해요. 고칠 일이 남았다면 원본 HWP 파일을 지우지 말고 두었다가, 한글에서 고친 뒤 다시 PDF로 저장하세요.
+- **바꾸기 전에 내용만 먼저 보고 싶을 때**: [HWP·HWPX 파일 보기](/hwp-viewer/)에서 문서를 열어 쪽마다 확인할 수 있어요. 한글 프로그램이 없는 PC나 휴대폰에서 여는 법은 [한글 없이 HWP 파일 여는 법](/guide/open-hwp-without-hangul/)에 정리했어요.
+- **받은 파일 끝이 .hwpx일 때**: 새 한글 형식이에요. PDF로는 같은 방법으로 바꿀 수 있고, 제출처가 HWP 파일만 받는다면 [HWPX HWP 변환](/hwpx-to-hwp/)을 쓰세요. 두 형식의 차이는 [HWPX가 뭔가요?](/guide/what-is-hwpx/)에 있어요.
+- **PDF에 서명이나 도장을 넣어 내야 할 때**: 바꾼 PDF를 [PDF 서명·도장 넣기](/pdf-sign/)에서 열어 원하는 쪽에 넣을 수 있어요.
+- **여러 한글 문서를 한 파일로 내야 할 때**: 문서마다 PDF로 바꾼 뒤 [PDF 합치기](/pdf-merge/)로 원하는 순서대로 묶어요.
+
+## 원본과 모양이 다를 때 확인할 것
+
+문서딱은 문서에 쓴 글꼴이 이 기기에 없으면 비슷한 글꼴로 바꿔 보여 줘요. 그래서 줄바꿈이나 쪽 나눔이 조금 달라질 수 있어요. 표 칸이 넘치거나 쪽 수가 바뀌었다면 내기 전에 PDF를 한 번 넘겨 보며 확인하세요. 모양이 꼭 같아야 하는 서류라면 한글 프로그램이 있는 PC에서 [파일 > PDF로 저장하기]로 저장하는 편이 확실해요.
