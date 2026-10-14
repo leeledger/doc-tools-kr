@@ -3049,3 +3049,19 @@ After GROWTH3: font identical (611 / 608 chars, same KiB), precache 443.5 / 448.
 
 **EN1 — deploy gate (2026-10-13)**
 - Richard: clear (0 Must Fix); both Should Fix applied (every-page GA checks on EN pages + gtag( in rule a; Hangul scan covers JSON-LD and og/twitter image alt). Owner approved the EN privacy/terms text and the CLAUDE.md EN-only brand/copy rule changes. Pushed; live /en/ 404 curl + CI watched.
+
+## REQ1014-A — build (Bob, 2026-10-14; branch req-1014-a off ee4950c) — status DONE_WITH_CONCERNS
+Brief: handoff/ARCHITECT-BRIEF-REQ1014-A.md. Review request: handoff/REVIEW-REQUEST.md (files, line ranges, every gate number).
+- Steps 1–7 as the build order, one commit each (33d180f, 255867c, 6faa664, 8cb0175, 87a0d6c, 6c13225, ea76e07). Every test-map entry checked against the diff: unit (usage, tracker, utm-land, campaign, deeplink, share, visits, admin-view sections, sign-handoff, sniff-format codes, growth, admin Function campaign failure) and e2e T-E1 (site.spec) / T-E2 a–g (usage.spec) are present. No gap.
+- Step 0 (RUM probe) not run: owner Chrome on 127.0.0.1:9333 was down. Defaults built; D11 falls back automatically to one countryPaths node when errors[] names the like/notlike fields. Post-deploy check replaces the probe (log "REQ1014-A probe" then).
+- Decisions beyond the brief: site.ts loads utm-land via `?worker&url` + a module script (an `import()` would pull Vite's preload helper into every page's initial JS); visits.mjs retries with the countryPaths fallback by itself (no Step 0 decision needed).
+- Gate fix d26df38 (DONE): a literal BOM inside a regex in src/lib/file/sniff-format.ts put U+FEFF into the late UI-font range; Firefox then fetched anolim-ui-late-400 on /id-photo/ (polish.spec UI-font test, deterministic; ee4950c passes). Escaped as `﻿`; regression test postbuild.test.ts "no invisible format character" fails before, passes after.
+- Gates: astro check 0 errors; vitest 76 files / 1,600 passed; check:licenses OK; check-dist OK ×5 (precache default 407.8, autoframe 409.8, bg 411.0, cloud 417.3 KB vs 407.3 / 409.5 / 410.5 / 415.4); G3 initial file lists identical to ee4950c (default + cloud), home/guide cloud +114 B gzip; e2e 1,351 passed / 17 flaky / 6 failed → 5 pass on rerun, 1 root-caused (above); lhci median of 5: / 99 1,675 ms, /id-photo/ 100 1,674 ms, guide 100 1,681 ms; qa:admin 18 scenarios × 3 = 54 PNGs, no overflow; qa:visual static 0 hard failures (/privacy/ clean); regress hwp all pass, idphoto 10/11 same as ee4950c.
+- Environment notes: public/vendor keeps mediapipe after an AUTOFRAME=1 build, which makes ga.test / postbuild "check-dist passes" fail until `node scripts/copy-vendor.mjs` runs flag-off; astro check runs out of memory with five dist-* folders in the worktree (keep ≤ 3).
+
+Known Gaps (REQ1014-A)
+- UI font faces changed (core +느붙셉억 from the D18 privacy copy); brief G3 said unchanged. Arch to accept or reword.
+- Step 0 numbers (per-node rows / Σvisits / max sampleInterval, like/notlike acceptance, usBrowsers) still to be recorded post-deploy.
+- Detailed fail-code e2e (cloud usage) belongs to brief B (call sites not wired here).
+- Play listing status (F5): owner confirms in Play Console.
+- origin/main is now 5bac90a (REQ1014-C); merge-tree is clean, gates were run on ee4950c + this branch only.
