@@ -5,7 +5,7 @@ import { TOOL_FACTS } from '../../src/data/tool-facts';
 import { MB } from '../../src/lib/ui/device';
 import { canEmbedRaw } from '../../src/tools/jpg-to-pdf/embed';
 import { A4_H, A4_W, PT_PER_MM, layout, rotatedSize, type LayoutOptions, type Rotation } from '../../src/tools/jpg-to-pdf/layout';
-import { LIMITS, REDUCE_EDGE, planAdd } from '../../src/tools/jpg-to-pdf/limits';
+import { LIMITS, REDUCE_EDGE, autoReduceMessage, originalBlockedMessage, overOriginalTotal, planAdd } from '../../src/tools/jpg-to-pdf/limits';
 import { SCAN_ROWS, bandsHaveTransparency } from '../../src/lib/image/raster';
 
 const A4 = (orient: LayoutOptions['orient'], marginMm: LayoutOptions['marginMm']): LayoutOptions => ({ page: 'a4', orient, marginMm });
@@ -90,21 +90,47 @@ describe('limits', () => {
   });
 
   it('planAdd keeps the order and leaves out what is over a limit, with the numbers in the message', () => {
-    expect(planAdd([1, 2, 3], 0, 0, 'mobile')).toEqual({ accepted: [0, 1, 2], messages: [], codes: [] });
+    expect(planAdd([1, 2, 3], 0, 0, 'mobile')).toEqual({ accepted: [0, 1, 2], messages: [], codes: [], overTotal: 0 });
     const many = planAdd(Array(5).fill(1), 48, 0, 'mobile');
     expect(many.accepted).toEqual([0, 1]);
     expect(many.codes).toEqual(['too-many']);
     expect(many.messages[0]).toBe('한 번에 최대 50장까지 넣을 수 있어 3장은 추가하지 않았습니다. 나머지는 나눠서 만들어 주세요.');
     const big = planAdd([10 * MB, 51 * MB, 10 * MB], 0, 0, 'mobile');
     expect(big.accepted).toEqual([0, 2]);
-    expect(big.codes).toEqual(['too-big']);
+    expect(big.codes).toEqual(['too-big-file']);
     expect(big.messages[0]).toBe('사진 한 장은 휴대폰에서 50 MB까지 넣을 수 있어 1장은 추가하지 않았습니다.');
     const total = planAdd([40 * MB, 40 * MB, 10 * MB], 0, 100 * MB, 'desktop');
-    expect(total).toEqual({ accepted: [0, 1, 2], codes: [], messages: [] });
+    expect(total).toEqual({ accepted: [0, 1, 2], codes: [], messages: [], overTotal: 0 });
     const over = planAdd([60 * MB, 50 * MB], 0, 400 * MB, 'desktop');
     expect(over.accepted).toEqual([0]);
-    expect(over.codes).toEqual(['too-big']);
+    expect(over.codes).toEqual(['too-big-total']);
+    expect(over.overTotal).toBe(1);
     expect(over.messages[0]).toBe('사진 합계가 500 MB를 넘으면 이 기기에서 한 번에 만들 수 없어 1장은 추가하지 않았습니다. 나눠서 만들어 주세요.');
+  });
+
+  it('REQ1014-B D16: 「줄이기」 skips the total cap; the per-photo and count caps stay', () => {
+    const phone = Array(4).fill(45 * MB);
+    const orig = planAdd(phone, 0, 0, 'mobile');
+    expect(orig.accepted).toEqual([0, 1, 2]);
+    expect(orig.codes).toEqual(['too-big-total']);
+    const reduce = planAdd(phone, 0, 0, 'mobile', 'reduce');
+    expect(reduce).toEqual({ accepted: [0, 1, 2, 3], messages: [], codes: [], overTotal: 0 });
+    const both = planAdd([51 * MB, 45 * MB], 0, 0, 'mobile', 'reduce');
+    expect(both.accepted).toEqual([1]);
+    expect(both.codes).toEqual(['too-big-file']);
+    const many = planAdd(Array(52).fill(10 * MB), 0, 0, 'mobile', 'reduce');
+    expect(many.accepted).toHaveLength(50);
+    expect(many.codes).toEqual(['too-many']);
+    const mixed = planAdd([51 * MB, 45 * MB, 45 * MB, 45 * MB, 45 * MB], 0, 0, 'mobile');
+    expect(mixed.codes).toEqual(['too-big-file', 'too-big-total']);
+  });
+
+  it('REQ1014-B D16: the auto 「줄이기」 notice and the disabled 「원본 그대로」 hint, with the device numbers', () => {
+    expect(autoReduceMessage('mobile')).toBe('사진 합계가 150 MB를 넘어 사진 크기를 「줄이기」로 바꿨습니다. 긴 변 2,000픽셀로 줄여 만듭니다.');
+    expect(autoReduceMessage('desktop')).toBe('사진 합계가 500 MB를 넘어 사진 크기를 「줄이기」로 바꿨습니다. 긴 변 2,000픽셀로 줄여 만듭니다.');
+    expect(originalBlockedMessage('mobile')).toBe('사진 합계가 150 MB를 넘어 원본 그대로는 만들 수 없습니다.');
+    expect(overOriginalTotal(150 * MB, 'mobile')).toBe(false);
+    expect(overOriginalTotal(150 * MB + 1, 'mobile')).toBe(true);
   });
 });
 
