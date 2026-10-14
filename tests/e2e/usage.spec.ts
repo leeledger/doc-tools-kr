@@ -640,3 +640,20 @@ test('REQ1014-A utm on the home page: the app link gives land t=home us=play uc=
   }
   expect(beacons.length).toBe(2);
 });
+
+test('REQ1014-A D16 서명·도장 → PDF에 넣기: the stored hand-off sends next (t=stamp-signature, v=pdf-sign) and /pdf-sign/ opens with the picture', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/stamp-signature/');
+  await page.getByRole('tab', { name: '직접 그리기' }).click();
+  const pad = (await page.locator('#ss-pad').boundingBox())!;
+  await page.mouse.move(pad.x + 30, pad.y + 40);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(pad.x + 30 + i * 20, pad.y + 40 + (i % 2 ? 20 : -10));
+  await page.mouse.up();
+  await expect(page.locator('#ss-pad-to-pdf')).toBeEnabled();
+  await Promise.all([page.waitForURL('**/pdf-sign/'), page.locator('#ss-pad-to-pdf').click()]);
+  await expect(page.locator('#sg-notice')).toHaveText('전자서명·도장 이미지 만들기에서 만든 그림을 가져왔습니다. 이제 PDF 파일을 고르세요.');
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'next').length).toBe(1);
+  expectClean(beacons);
+  expect(beacons.find((b) => b.ev.e === 'next')!.ev).toEqual({ e: 'next', t: 'stamp-signature', o: 'next', v: 'pdf-sign', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
+});
