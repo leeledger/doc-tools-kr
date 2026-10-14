@@ -5,9 +5,12 @@
 // (worker terminated, run token bumped, so a stale worker message never lands).
 // Size (hardBytes) and sniff run on the main thread; an HWP 5 / HWP 3 file is redirected (already-hwp). The HWPX
 // goes to the shared HWP worker (one more message, export-hwp), which answers with the HWP bytes only after they
-// reopen with the same page count. Losses rhwp reports are shown above the button, never hidden.
+// reopen within the page tolerance (REQ1014-B D10). Losses rhwp reports are shown above the button, never hidden.
+// REQ1014-B: a file that is not a HWPX gets ../hwp-shared/not-hwp's line and next step (D2); the links after
+// already-hwp / export / unverified hand the picked file to the viewer or HWP PDF 변환 (D7); a watchdog timeout
+// while the engine loads is retried once with a new worker (D9; stage start | engine | parse | export).
 // Imported by ../hwp-shared/boot.ts after the first paint or on the first interaction.
-import type { HwpErrorCode } from '../../lib/hwp/errors';
+import type { HwpErrorCode, HwpErrorDetail } from '../../lib/hwp/errors';
 import type { HwpRequest, HwpResponse } from '../../lib/hwp/hwp.worker';
 import { SNIFF_BYTES, sniffContainer } from '../../lib/hwp/sniff';
 import { prefetchRhwpWasm } from '../../lib/hwp/wasm-browser';
@@ -26,6 +29,18 @@ import { HX_COPY, LOSS_OTHER } from './copy';
 
 type State = 'empty' | 'checking' | 'engine' | 'converting' | 'done' | 'error';
 type Code = Exclude<HwpErrorCode, 'too-large'>;
+/** Where the worker is (D9): open sent, engine downloading, parsing, export-hwp sent. */
+export type Stage = 'start' | 'engine' | 'parse' | 'export';
+type NotHwpModule = typeof import('../hwp-shared/not-hwp');
+
+/** What a watchdog timeout does (D9): one silent retry while the engine loads, else the timeout with its phase. */
+export function onTimeoutPlan(stage: Stage, retried: boolean): 'retry' | UsagePhase {
+  if ((stage === 'start' || stage === 'engine') && !retried) return 'retry';
+  return stage === 'start' || stage === 'engine' ? 'load' : stage === 'parse' ? 'parse' : 'process';
+}
+
+/** The usage code of an unverified result (D10 detail). */
+export const unverifiedCode = (detail: HwpErrorDetail | undefined): string => (detail === 'reopen' ? 'unverified-reopen' : detail === 'bytes' ? 'unverified-bytes' : 'unverified');
 
 const TOOL = 'hwpx-to-hwp';
 /** The type of the downloaded file (an in-page blob: URL; WebKit downloads it like any other type). */
@@ -61,6 +76,8 @@ export function initHwpxTool(start: BootStart = {}): void {
   const lossBox = must<HTMLDivElement>('hx-loss');
   const lossText = must<HTMLParagraphElement>('hx-loss-text');
   const lossList = must<HTMLUListElement>('hx-loss-list');
+  const shiftLine = must<HTMLParagraphElement>('hx-shift');
+  const actionsBox = document.getElementById('hx-error-actions');
   const saveBtn = must<HTMLButtonElement>('hx-save');
   const resetBtn = must<HTMLButtonElement>('hx-reset');
   const done = must<HTMLDivElement>('hx-done');
@@ -73,7 +90,12 @@ export function initHwpxTool(start: BootStart = {}): void {
   let resultUrl: string | null = null;
   let resultName = '';
   let lastProgress = 0;
-  const watchdog = createWatchdog(() => fail('timeout'));
+  /** The picked file, kept until reset: the retry re-reads it, the links and buttons hand it on. */
+  let file: File | null = null;
+  let stage: Stage = 'start';
+  let retried = false;
+  let disposeActions: (() => void) | null = null;
+  const watchdog = createWatchdog(onTimeout);
   const announce = (msg: string): void => live('status', msg, root);
   const prefetch = (): void => {
     if (!preloadSkipped((navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection)) void prefetchRhwpWasm();
@@ -123,6 +145,8 @@ export function initHwpxTool(start: BootStart = {}): void {
     fileName.textContent = '';
     lossText.textContent = '';
     lossList.replaceChildren();
+    shiftLine.textContent = '';
+    shiftLine.hidden = true;
     lossBox.hidden = true;
     doneText.textContent = '';
     done.hidden = true;
@@ -136,10 +160,13 @@ export function initHwpxTool(start: BootStart = {}): void {
     errorBox.hidden = true;
     errorBox.textContent = '';
     errorLinks.hidden = true;
+    disposeActions?.();
+    disposeActions = null;
     clearAlert(root);
     clearStatus(root);
     hideEngineError();
     input.value = '';
+    file = null;
     setState('empty');
     // The hidden file input is the focusable picker (its label shows the focus ring); a label cannot take focus.
     if (focus) input.focus();
@@ -161,9 +188,9 @@ export function initHwpxTool(start: BootStart = {}): void {
     errorBox.focus();
   }
 
-  function fail(code: Code, text: string = code === 'engine' ? '' : ERRORS[code]): void {
-    const phase: UsagePhase = code === 'engine' ? 'load' : state === 'converting' ? 'process' : 'parse';
-    usageFail(code, phase);
+  function fail(code: Code, text: string = code === 'engine' ? '' : ERRORS[code], logged: { c?: string; p?: UsagePhase } = {}): void {
+    const phase: UsagePhase = logged.p ?? (code === 'engine' ? 'load' : state === 'converting' ? 'process' : 'parse');
+    usageFail(logged.c ?? code, phase);
     if (code !== 'engine') {
       showError(text, WITH_LINKS.includes(code));
       return;
@@ -173,6 +200,35 @@ export function initHwpxTool(start: BootStart = {}): void {
     dropResult();
     setState('error');
     void showEngineError();
+  }
+
+  /** D9: a stall while the engine loads is retried once (a stalled download); later stalls are a timeout. */
+  function onTimeout(): void {
+    const plan = onTimeoutPlan(stage, retried);
+    if (plan !== 'retry') {
+      fail('timeout', ERRORS.timeout, { p: plan });
+      return;
+    }
+    retried = true;
+    stopWorker();
+    if (file) void startWorker(file, run);
+  }
+
+  /** D2: ../hwp-shared/not-hwp names the file and offers the next step. `said`: the container the worker refused. */
+  async function notHwp(f: File, said: 'zip' | null, id: number): Promise<void> {
+    stopWorker();
+    let mod: NotHwpModule | null = null;
+    let help: Awaited<ReturnType<NotHwpModule['notHwpHelp']>> | null = null;
+    try {
+      mod = await import('../hwp-shared/not-hwp');
+      help = await mod.notHwpHelp(f, TOOL, said);
+    } catch {
+      // The chunk did not load: the generic line.
+    }
+    if (id !== run) return;
+    usageFail(help?.code ?? 'not-hwp', 'parse');
+    showError(help?.text ?? HX_COPY.notHwpx);
+    if (mod && help && actionsBox) disposeActions = mod.showActions(actionsBox, f, TOOL, help, (m) => live('alert', m, root));
   }
 
   function onHwp(msg: Extract<HwpResponse, { type: 'hwp' }>, source: File): void {
@@ -189,15 +245,22 @@ export function initHwpxTool(start: BootStart = {}): void {
       lossList.replaceChildren(li);
       lossBox.hidden = false;
     }
+    if (msg.pageShift) {
+      shiftLine.textContent = HX_COPY.pageShift;
+      shiftLine.hidden = false;
+      lossBox.hidden = false;
+    }
     setState('done');
     track({ e: 'success', t: TOOL });
-    announce([HX_COPY.ready(resultName), msg.losses > 0 ? lossText.textContent : ''].filter(Boolean).join(' '));
+    announce([HX_COPY.ready(resultName), msg.losses > 0 ? lossText.textContent : '', msg.pageShift ? HX_COPY.pageShift : ''].filter(Boolean).join(' '));
     fileName.focus();
   }
 
   async function convert(f: File): Promise<void> {
     reset(false);
     const id = run;
+    file = f;
+    retried = false;
     device = detectDevice();
     track({ e: 'pick', t: TOOL });
     if (overHardLimit(device, f.size)) {
@@ -223,12 +286,18 @@ export function initHwpxTool(start: BootStart = {}): void {
       return;
     }
     if (kind !== 'zip') {
-      fail('not-hwp', HX_COPY.notHwpx);
+      void notHwp(f, null, id);
       return;
     }
     setState('checking');
     lastProgress = 0;
     progress(HX_COPY.checking, null, true);
+    await startWorker(f, id);
+  }
+
+  /** Reads the file (again on the D9 retry: the first buffer was transferred), starts a worker and sends open. */
+  async function startWorker(f: File, id: number): Promise<void> {
+    stage = 'start';
     let buffer: ArrayBuffer;
     try {
       buffer = await f.arrayBuffer();
@@ -253,13 +322,18 @@ export function initHwpxTool(start: BootStart = {}): void {
       if (msg.type === 'progress') {
         watchdog.kick();
         if (msg.phase === 'engine') {
+          stage = 'engine';
           if (state === 'checking') setState('engine');
           const r = msg.loaded / Math.max(1, msg.total);
           progress(COPY.engine(Math.round(r * 100)), r, r >= 1);
-        } else progress(HX_COPY.checking, null, true);
+        } else {
+          stage = 'parse';
+          progress(HX_COPY.checking, null, true);
+        }
       } else if (msg.type === 'scanned') {
         watchdog.kick();
       } else if (msg.type === 'parsed') {
+        stage = 'export';
         setState('converting');
         progress(HX_COPY.converting, null, true);
         track({ e: 'start', t: TOOL });
@@ -267,7 +341,9 @@ export function initHwpxTool(start: BootStart = {}): void {
       } else if (msg.type === 'hwp') {
         onHwp(msg, f);
       } else if (msg.type === 'error') {
-        fail(msg.code === 'too-large' ? 'corrupt' : msg.code, msg.code === 'not-hwp' ? HX_COPY.notHwpx : undefined);
+        if (msg.code === 'not-hwp') void notHwp(f, 'zip', id);
+        else if (msg.code === 'unverified') fail('unverified', undefined, { c: unverifiedCode(msg.detail) });
+        else fail(msg.code === 'too-large' ? 'corrupt' : msg.code);
       }
     };
     w.onerror = (ev) => {
@@ -323,6 +399,20 @@ export function initHwpxTool(start: BootStart = {}): void {
   cancelBtn.addEventListener('click', () => reset());
   resetBtn.addEventListener('click', () => reset());
   saveBtn.addEventListener('click', save);
+  // D7: the links hand the picked file over (no second pick); a failed store follows the href.
+  errorLinks.addEventListener('click', (ev) => {
+    const a = ev.target instanceof Element ? ev.target.closest<HTMLAnchorElement>('a[data-to]') : null;
+    const to = a?.dataset.to;
+    if (!a || !file || (to !== 'hwp-viewer' && to !== 'hwp-to-pdf')) return;
+    ev.preventDefault();
+    const f = file;
+    void import('../hwp-shared/not-hwp')
+      .then(({ handTo }) => handTo(to, TOOL, f, f.type || 'application/octet-stream'))
+      .catch(() => false)
+      .then((ok) => {
+        if (!ok) window.location.assign(a.href);
+      });
+  });
   window.addEventListener('pagehide', () => {
     run++;
     stopWorker();

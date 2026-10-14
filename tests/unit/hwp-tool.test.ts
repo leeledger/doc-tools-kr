@@ -144,6 +144,70 @@ describe('watchdog (fake timers)', () => {
     expect(fire).toHaveBeenCalledTimes(1);
     expect(WATCHDOG_MS).toBe(90_000);
   });
+  /** A document stand-in: `hidden` plus the visibilitychange listeners. */
+  const fakeDoc = () => {
+    const fns: (() => void)[] = [];
+    const d = {
+      hidden: false,
+      addEventListener: (_t: 'visibilitychange', fn: () => void) => fns.push(fn),
+      set(hidden: boolean) {
+        d.hidden = hidden;
+        for (const f of fns) f();
+      },
+    };
+    return d;
+  };
+
+  it('REQ1014-B D8: paused while hidden; visible again re-arms a full window', () => {
+    vi.useFakeTimers();
+    const fire = vi.fn();
+    const doc = fakeDoc();
+    const w = createWatchdog(fire, WATCHDOG_MS, { doc });
+    w.kick();
+    vi.advanceTimersByTime(WATCHDOG_MS - 10);
+    doc.set(true);
+    vi.advanceTimersByTime(WATCHDOG_MS * 3);
+    expect(fire).not.toHaveBeenCalled();
+    doc.set(false);
+    vi.advanceTimersByTime(WATCHDOG_MS - 1);
+    expect(fire).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(fire).toHaveBeenCalledTimes(1);
+    // After the fire, a visibility change does not arm it again.
+    doc.set(true);
+    doc.set(false);
+    vi.advanceTimersByTime(WATCHDOG_MS * 2);
+    expect(fire).toHaveBeenCalledTimes(1);
+  });
+
+  it('REQ1014-B D8: a kick while hidden waits for visible; stop while hidden stays stopped', () => {
+    vi.useFakeTimers();
+    const fire = vi.fn();
+    const doc = fakeDoc();
+    const w = createWatchdog(fire, WATCHDOG_MS, { doc });
+    doc.set(true);
+    w.kick();
+    vi.advanceTimersByTime(WATCHDOG_MS * 2);
+    expect(fire).not.toHaveBeenCalled();
+    doc.set(false);
+    vi.advanceTimersByTime(WATCHDOG_MS);
+    expect(fire).toHaveBeenCalledTimes(1);
+    w.kick();
+    doc.set(true);
+    w.stop();
+    doc.set(false);
+    vi.advanceTimersByTime(WATCHDOG_MS * 2);
+    expect(fire).toHaveBeenCalledTimes(1);
+  });
+
+  it('REQ1014-B D8: no document (the Node default here) behaves as before', () => {
+    vi.useFakeTimers();
+    const fire = vi.fn();
+    const w = createWatchdog(fire, WATCHDOG_MS, { doc: null });
+    w.kick();
+    vi.advanceTimersByTime(WATCHDOG_MS);
+    expect(fire).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('engine: parse errors and pages (fake rhwp)', () => {

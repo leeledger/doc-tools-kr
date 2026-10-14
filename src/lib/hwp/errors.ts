@@ -16,13 +16,19 @@ export type HwpErrorCode =
 
 export const HWP_ERROR_CODES: readonly HwpErrorCode[] = ['not-hwp', 'unsupported', 'password', 'distribution', 'corrupt', 'too-large', 'oom', 'timeout', 'engine', 'already-hwp', 'unverified', 'export'];
 
+/** Why the HWPX → HWP reload gate failed (REQ1014-B D10): page count, reopen, or not a CFB at all. */
+export type HwpErrorDetail = 'pages' | 'reopen' | 'bytes';
+
 /** A file problem (or a device limit) with its user-facing code. */
 export class HwpError extends Error {
   readonly code: HwpErrorCode;
-  constructor(code: HwpErrorCode, message: string = code, options?: { cause?: unknown }) {
+  /** Only for `unverified`: which check failed (usage statistics; the user sees one line). */
+  readonly detail?: HwpErrorDetail;
+  constructor(code: HwpErrorCode, message: string = code, options?: { cause?: unknown; detail?: HwpErrorDetail }) {
     super(message, options);
     this.name = 'HwpError';
     this.code = code;
+    if (options?.detail) this.detail = options.detail;
   }
 }
 

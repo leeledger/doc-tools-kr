@@ -2,9 +2,13 @@
 // HWPX → HWP export with a reload gate (HWPX2HWP brief decision 4). Pure: rhwp comes in as the open document
 // and the constructor used for the reload, so the unit tests run it with a fake and with the real engine.
 // Order (memory-lean for phones): exportHwpWithReport() → contentLoss() → takeBytes() → free the export →
-// pagesIn = doc.pageCount() → free the source → reload the exact bytes → same page count, > 0, CFB magic.
+// pagesIn = doc.pageCount() → free the source → reload the exact bytes → CFB magic, reopens, page count close.
 // The gate checks the bytes the user gets, not exportHwpVerify() (that serialises a second time).
-// Throws HwpError: export (rhwp threw while exporting), oom (memory), unverified (the gate failed).
+// Page tolerance (REQ1014-B D10): rhwp's page count is its own layout (SPIKE-HWPX-TO-HWP item 6: 1 off from 한글),
+// and a re-laid-out HWP of the same content can land a page off. The gate exists to stop broken files, so it
+// passes within max(1, round(pagesIn × 5 %)) pages and reports `pageShift` (the page shows a warn line).
+// Throws HwpError: export (rhwp threw while exporting), oom (memory), unverified (the gate failed; detail
+// bytes | reopen | pages).
 import { classifyParseError } from './engine';
 import { HwpError } from './errors';
 
@@ -31,7 +35,12 @@ export interface HwpExportResult {
   losses: number;
   /** Pages of the source as rhwp lays it out (never shown as 한글's page count). */
   pagesIn: number;
+  /** The reopened file has a different page count (within the tolerance). */
+  pageShift: boolean;
 }
+
+/** The page difference the gate accepts for `pagesIn` source pages. */
+export const pageTolerance = (pagesIn: number): number => Math.max(1, Math.round(pagesIn * 0.05));
 
 /** The first 8 bytes of every CFB (OLE2) file, so of every HWP 5 file. */
 export const CFB_MAGIC: readonly number[] = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
@@ -88,7 +97,8 @@ export function exportHwp(doc: ExportableDocument, Reload: ReloadCtor): HwpExpor
   } finally {
     doc.free();
   }
-  if (!hasCfbMagic(bytes) || !(pagesIn > 0)) throw new HwpError('unverified', 'the HWP bytes are not a CFB file');
+  if (!hasCfbMagic(bytes)) throw new HwpError('unverified', 'the HWP bytes are not a CFB file', { detail: 'bytes' });
+  if (!(pagesIn > 0)) throw new HwpError('unverified', 'the source has no pages', { detail: 'pages' });
   let pagesOut: number;
   try {
     const again = new Reload(bytes);
@@ -98,8 +108,8 @@ export function exportHwp(doc: ExportableDocument, Reload: ReloadCtor): HwpExpor
       again.free();
     }
   } catch (err) {
-    throw new HwpError(isOom(err) ? 'oom' : 'unverified', 'the HWP bytes did not reopen', { cause: err });
+    throw new HwpError(isOom(err) ? 'oom' : 'unverified', 'the HWP bytes did not reopen', { cause: err, detail: 'reopen' });
   }
-  if (pagesOut !== pagesIn) throw new HwpError('unverified', `pages ${pagesIn} → ${pagesOut}`);
-  return { bytes, losses, pagesIn };
+  if (!(pagesOut >= 1) || Math.abs(pagesOut - pagesIn) > pageTolerance(pagesIn)) throw new HwpError('unverified', `pages ${pagesIn} → ${pagesOut}`, { detail: 'pages' });
+  return { bytes, losses, pagesIn, pageShift: pagesOut !== pagesIn };
 }

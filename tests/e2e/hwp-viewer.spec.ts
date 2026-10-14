@@ -391,16 +391,78 @@ for (const [name, ua, project] of [
 
 // ---------- errors ----------
 
-test('errors: a .txt is not a HWP file; an over-cap phone file gets the converter’s panel', async ({ page, isMobile }) => {
+test('errors: a .txt is named a text file; an over-cap phone file gets the converter’s panel', async ({ page, isMobile }) => {
   test.setTimeout(120_000);
   await open(page, hwpRuntime('notes.txt'), 'error');
-  await expect(page.locator('#hw-error')).toHaveText('한글(HWP·HWPX) 문서가 아닙니다. 확장자가 .hwp 또는 .hwpx인 파일을 골라 주세요.');
+  await expect(page.locator('#hw-error')).toHaveText('글자만 있는 파일입니다. 한글 문서라면 .hwp 또는 .hwpx 파일을 골라 주세요.');
+  await expect(page.locator('#hw-error-actions')).toBeHidden();
   await expect(page.locator('#hv-bar')).toBeHidden();
   if (isMobile) {
     await open(page, hwpRuntime('big-26mb.hwp'), 'error');
     await expect(page.locator('#hw-error')).toHaveText('휴대폰에서는 25 MB까지 열 수 있습니다 (이 파일 26 MB). 컴퓨터에서 열어 주세요.');
   }
 });
+
+// ---------- REQ1014-B: wrong files are named, with the next step ----------
+
+const PICK_HWP = '한글 문서라면 .hwp 또는 .hwpx 파일을 골라 주세요.';
+// The worker script itself may be warmed by the pick (preload, SPIKE-HWP-DIRECT §6.7); the engine (wasm) must not load.
+const ENGINE_URL = /rhwp_bg/;
+
+test('a PDF renamed .hwp: the PDF line, 「PDF 열기」 opens it in a new tab (U1), 「PDF 쪽 보기·나누기」 opens /pdf-split/ with it; no engine download', async ({ page, network }, info) => {
+  await open(page, hwpRuntime('report-pdf.hwp'), 'error');
+  await expect(page.locator('#hw-error')).toHaveText('PDF 파일입니다. PDF는 휴대폰·컴퓨터에서 바로 열 수 있습니다.');
+  const actions = page.locator('#hw-error-actions');
+  await expect(actions.getByRole('link', { name: 'PDF 열기' })).toHaveAttribute('href', /^blob:/);
+  await expect(actions.getByRole('link', { name: 'PDF 열기' })).toHaveAttribute('target', '_blank');
+  expect(network.requests.map((r) => r.url()).filter((u) => ENGINE_URL.test(u))).toEqual([]);
+  // U1: the link opens a new tab. A browser with a PDF viewer shows the blob: PDF there (full Chromium, probed); the
+  // headless test browsers have none and save it instead (a download on all five projects). Both are a clear result.
+  const popupP = page.waitForEvent('popup', { timeout: 10_000 }).catch(() => null);
+  const downloadP = page.waitForEvent('download', { timeout: 10_000 }).then(
+    () => true,
+    () => false,
+  );
+  await actions.getByRole('link', { name: 'PDF 열기' }).click();
+  const [popup, downloaded] = await Promise.all([popupP, downloadP]);
+  const shown = popup?.url().startsWith('blob:') ?? false;
+  info.annotations.push({ type: 'U1', description: `popup=${popup !== null} shown=${shown} downloaded=${downloaded}` });
+  expect(popup, 'the link opens a new tab').not.toBeNull();
+  expect(shown || downloaded, 'the PDF opens or is saved').toBe(true);
+  await popup?.close().catch(() => undefined);
+  await actions.getByRole('button', { name: 'PDF 쪽 보기·나누기' }).click();
+  await expect(page).toHaveURL(/\/pdf-split\/$/);
+  await expect(page.locator('#ps-notice')).toContainText('방금 만든 파일을 가져왔습니다.');
+  await expect(page.locator('#ps-tool')).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+});
+
+test('a JPG renamed .hwp: the photo line, 「사진 PDF 변환으로 열기」 opens /jpg-to-pdf/ with it; no engine download', async ({ page, network }) => {
+  await open(page, hwpRuntime('photo.hwp'), 'error');
+  await expect(page.locator('#hw-error')).toHaveText('사진 파일입니다. 사진을 PDF로 만들려면 아래 버튼을 누르세요.');
+  expect(network.requests.map((r) => r.url()).filter((u) => ENGINE_URL.test(u))).toEqual([]);
+  await page.locator('#hw-error-actions').getByRole('button', { name: '사진 PDF 변환으로 열기' }).click();
+  await expect(page).toHaveURL(/\/jpg-to-pdf\/$/);
+  await expect(page.locator('#jp-notice')).toContainText('방금 만든 파일을 가져왔습니다.');
+  await expect(page.locator('#jp-list > li .name')).toHaveText(['photo.hwp']);
+});
+
+for (const [file, line] of [
+  ['word.docx', `워드 파일(.docx)입니다. ${PICK_HWP}`],
+  ['sheet.xlsx', `엑셀 파일(.xlsx)입니다. ${PICK_HWP}`],
+  ['archive.zip', '압축 파일(ZIP)입니다. 압축을 푼 뒤 안에 있는 .hwp 또는 .hwpx 파일을 골라 주세요.'],
+  ['old-office.hwp', `워드·엑셀 같은 다른 프로그램의 파일입니다. ${PICK_HWP}`],
+] as const) {
+  test(`${file}: named, no buttons`, async ({ page }) => {
+    await open(page, hwpRuntime(file), 'error');
+    await expect(page.locator('#hw-error')).toHaveText(line);
+    await expect(page.locator('#hw-error-actions')).toBeHidden();
+    // A new pick clears the line and the buttons.
+    await open(page, hwpRuntime('report-pdf.hwp'), 'error');
+    await expect(page.locator('#hw-error-actions')).toBeVisible();
+    await open(page, hwpRuntime('notes.txt'), 'error');
+    await expect(page.locator('#hw-error-actions')).toBeHidden();
+  });
+}
 
 test('engine: a wasm 404 shows the engine panel with 새로고침', { tag: '@load-error' }, async ({ page, context }) => {
   test.setTimeout(120_000);
@@ -496,6 +558,10 @@ test('axe: empty, a document with the page list and search open, after a downloa
   expect(await serious(page)).toEqual([]);
   await page.locator('#hw-reset').click();
   await open(page, hwpRuntime('notes.txt'), 'error');
+  expect(await serious(page)).toEqual([]);
+  // REQ1014-B: the PDF error state with its two actions.
+  await open(page, hwpRuntime('report-pdf.hwp'), 'error');
+  await expect(page.locator('#hw-error-actions')).toBeVisible();
   expect(await serious(page)).toEqual([]);
 });
 

@@ -32,6 +32,7 @@ import { createWatchdog } from './watchdog';
 
 type State = 'empty' | 'loading' | Mode | 'exporting' | 'error';
 type Lazy = typeof import('./lazy');
+type NotHwpModule = typeof import('./not-hwp');
 type ExportChunk = typeof import('./export-chunk');
 type Viewer = import('./lazy').Viewer;
 type ViewerOptions = import('./lazy').ViewerOptions;
@@ -140,6 +141,8 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
   const preview = must<HTMLDivElement>('hw-preview');
   // 이어서 하기 slot: /hwp-to-pdf/ only (the viewer's PDF is not offered, brief out of scope).
   const nextSlot = hooks.tool === 'hwp-to-pdf' ? document.getElementById('hw-next') : null;
+  // REQ1014-B D5: the next step after a file that is not a HWP (PDF 열기, 사진 PDF 변환으로 열기); filled by ./not-hwp.
+  const actionsBox = document.getElementById('hw-error-actions');
 
   let state: State = 'empty';
   /** The routed mode of the open document (the state an export returns to). */
@@ -157,6 +160,8 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
   let lastProgress = 0;
   let outstanding = 0;
   let resultUrl: string | null = null;
+  /** Empties the not-hwp buttons and revokes their PDF link (./not-hwp showActions). */
+  let disposeActions: (() => void) | null = null;
   /** Pages awaited by the first-page wait or the export; a cancel or a reset answers them with null. */
   const waiters = new Map<number, (m: PageMsg | null) => void>();
   /** Text requests of the viewer's search, answered in order per page. */
@@ -268,6 +273,8 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
     setInflight(null);
     errorBox.hidden = true;
     errorBox.textContent = '';
+    disposeActions?.();
+    disposeActions = null;
     clearAlert(root);
     clearStatus(root);
     hideEngineError();
@@ -305,6 +312,26 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
     setInflight(null);
     setState('error');
     void showEngineError();
+  }
+
+  /**
+   * A file that is not a HWP (REQ1014-B D2): ./not-hwp names what it is and offers the next step. `said`: the
+   * container the worker refused (null: the page's own sniff found none). The chunk loads only here.
+   */
+  async function notHwp(f: File, said: 'cfb' | 'zip' | null, id: number): Promise<void> {
+    stopWorker();
+    let mod: NotHwpModule | null = null;
+    let help: Awaited<ReturnType<NotHwpModule['notHwpHelp']>> | null = null;
+    try {
+      mod = await import('./not-hwp');
+      help = await mod.notHwpHelp(f, hooks.tool, said);
+    } catch {
+      // The chunk did not load (offline, a new deploy): the generic line.
+    }
+    if (id !== docId) return;
+    usageFail(help?.code ?? 'not-hwp', 'parse');
+    showError(help?.text ?? ERRORS['not-hwp']);
+    if (mod && help && actionsBox) disposeActions = mod.showActions(actionsBox, f, hooks.tool, help, (m) => live('alert', m, root));
   }
 
   // ---------- pages ----------
@@ -408,8 +435,12 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
     }
     if (id !== docId) return;
     const kind = sniffContainer(head);
-    if (kind === 'unsupported' || kind === 'unknown') {
-      fail(kind === 'unsupported' ? 'unsupported' : 'not-hwp');
+    if (kind === 'unsupported') {
+      fail('unsupported');
+      return;
+    }
+    if (kind === 'unknown') {
+      void notHwp(f, null, id);
       return;
     }
     setState('loading');
@@ -466,7 +497,10 @@ export function startHwpSession(start: BootStart, hooks: HwpHooks): void {
       } else if (msg.type === 'parsed') {
         watchdog.stop();
         if (feats) void onParsed(msg, feats, id);
-      } else if (msg.type === 'error') fail(msg.code === 'too-large' ? 'corrupt' : msg.code);
+      } else if (msg.type === 'error') {
+        if (msg.code === 'not-hwp') void notHwp(f, kind === 'cfb' || kind === 'zip' ? kind : null, id);
+        else fail(msg.code === 'too-large' ? 'corrupt' : msg.code);
+      }
     };
     w.onerror = (ev) => {
       ev.preventDefault();

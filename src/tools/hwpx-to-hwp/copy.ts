@@ -15,5 +15,8 @@ export const HX_COPY = {
   ready: (name: string): string => `${josa(`「${name}」`, '을/를')} 만들었어요. 「HWP 내려받기」를 누르세요.`,
   losses: (n: number): string => `HWP로 옮기지 못한 내용이 ${n.toLocaleString('ko-KR')}곳 있어요. 한글에서 꼭 확인한 뒤 내세요.`,
   lossItem: (label: string, n: number): string => `${label} ${n.toLocaleString('ko-KR')}곳`,
+  /** REQ1014-B D10: the reopened file has a different page count (within the gate's tolerance); no numbers (rhwp
+   * counts pages its own way, not as 한글 does). */
+  pageShift: '쪽 나눔이 원본과 조금 다를 수 있어요. 한글에서 꼭 확인한 뒤 내세요.',
   downloaded: (name: string): string => `${josa(`「${name}」`, '을/를')} 내려받았어요. 「다운로드」 폴더를 확인하세요.`,
 } as const;

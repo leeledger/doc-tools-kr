@@ -7,8 +7,13 @@
 // A controller that cannot load (offline, a new deploy) shows the shared engine panel. The two imports below sit
 // in the ui-shared chunk, which the entry loads anyway (it holds Vite's dynamic-import helper); a dynamic import
 // of them would make rolldown build a namespace object with its runtime helper, which lives in the export chunk.
+// REQ1014-B D6: /hwp-viewer/ and /hwp-to-pdf/ take a file handed over by another tool (이어서 하기, from /hwpx-to-hwp/).
+// With a file waiting, the controller loads at once (no after-paint wait) and starts once the file was taken, with
+// it as BootStart.file; otherwise nothing changes (the handoff chunk loads only then, or for the lingering sweep).
+import { announce } from '../../lib/ui/announce';
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
 import { startUsage, track, trackOut } from '../../lib/ui/usage';
 
 /** What happened before the controller ran. */
@@ -68,7 +73,14 @@ export function bootHwpTool(rootId: string, load: () => Promise<BootInit>, tool?
     trackOut(root, tool);
   }
   const start: BootStart = {};
-  let loading: Promise<void> | null = null;
+  let loading: Promise<boolean> | null = null;
+  const receiver = tool === 'hwp-viewer' || tool === 'hwp-to-pdf';
+  /** The ARRIVED notice; only the two receiver pages have it. */
+  const notice = receiver ? document.getElementById('hw-arrived') : null;
+  const pending = !!notice && !!tool && pendingHandoff(tool);
+  /** Resolves once the waiting file was taken (or could not be): the controller starts with it. */
+  let release: () => void = () => undefined;
+  const hold = pending ? new Promise<void>((r) => (release = r)) : null;
 
   const isPicker = (t: EventTarget | null): boolean => t instanceof Element && !!t.closest('label[for], input[type="file"]');
   const onEvent = (ev: Event): void => {
@@ -84,26 +96,59 @@ export function bootHwpTool(rootId: string, load: () => Promise<BootInit>, tool?
       const f = ev.type === 'drop' ? (ev as DragEvent).dataTransfer?.files?.[0] : undefined;
       if (f) start.file = f;
     }
-    run();
+    void run();
   };
   const detach = (): void => {
     for (const t of EVENTS) root.removeEventListener(t, onEvent);
   };
-  function run(): void {
-    loading ??= withEngineRetry(load).then(
-      (init) => {
+  function run(): Promise<boolean> {
+    return (loading ??= withEngineRetry(load).then(
+      async (init) => {
+        if (hold) await hold;
         // From now on the controller's own listeners handle everything.
         detach();
         init(start);
+        return true;
       },
       () => {
         detach();
+        release();
         if (tool) track({ e: 'fail', t: tool, c: 'engine', p: 'load' });
         void showEngineError();
+        return false;
       },
-    );
+    ));
   }
 
   for (const t of EVENTS) root.addEventListener(t, onEvent);
+  if (pending && tool && notice) {
+    void run();
+    void import('../../lib/ui/handoff')
+      .then(({ receiveHandoff }) =>
+        receiveHandoff(
+          tool,
+          root,
+          (f) => {
+            // A file the user picked meanwhile wins.
+            start.file ??= f;
+            release();
+            return run();
+          },
+          {
+            notice,
+            fail: (msg) => {
+              release();
+              announce('alert', msg, root);
+            },
+          },
+        ),
+      )
+      .catch(() => release());
+    return;
+  }
+  if (receiver && sweepDue()) {
+    // A file stored earlier may never have been taken: delete it once it is older than 10 minutes.
+    void import('../../lib/ui/handoff').then(({ sweepLingering }) => sweepLingering()).catch(() => undefined);
+  }
   afterFirstPaint(() => whenIdle(run));
 }

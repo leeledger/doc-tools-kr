@@ -6,10 +6,10 @@
 //      {type:'close'}        (doc.free())
 //      {type:'export-hwp'}   (after open: HWPX → HWP with the reload gate, ./export-hwp; the document is freed)
 //      {type:'warm'}         (preload: answers at once; loading this script was the point, never the 10 MB wasm)
-// Out: progress | scanned | parsed | page | text | hwp {bytes, losses, pagesIn} | error {code} | warm-done
+// Out: progress | scanned | parsed | page | text | hwp {bytes, losses, pagesIn, pageShift} | error {code, detail?} | warm-done
 // The scan runs before the engine loads, so a non-HWP, password or damaged file never downloads the wasm.
 import init, { HwpDocument } from '@rhwp/core';
-import { HwpError, type HwpErrorCode } from './errors';
+import { HwpError, type HwpErrorCode, type HwpErrorDetail } from './errors';
 import { openDocument, pageInfos, renderPage, type PageInfo } from './engine';
 import { exportHwp } from './export-hwp';
 import { glyphText } from './svg-string';
@@ -27,8 +27,8 @@ export type HwpResponse =
   | { type: 'parsed'; pages: number; pageInfos: PageInfo[]; wasmBytes: number; measureCalls: number }
   | { type: 'page'; i: number; svg: string; runs: TextRun[]; failed: boolean; measureCalls: number; ms: number }
   | { type: 'text'; i: number; text: string; failed: boolean }
-  | { type: 'hwp'; bytes: ArrayBuffer; losses: number; pagesIn: number }
-  | { type: 'error'; code: HwpErrorCode }
+  | { type: 'hwp'; bytes: ArrayBuffer; losses: number; pagesIn: number; pageShift: boolean }
+  | { type: 'error'; code: HwpErrorCode; detail?: HwpErrorDetail }
   | { type: 'warm-done' };
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -121,7 +121,7 @@ function exportOpenDocument(): void {
   doc = null;
   const r = exportHwp(source, HwpDocument);
   const buffer = r.bytes.byteOffset === 0 && r.bytes.byteLength === r.bytes.buffer.byteLength ? (r.bytes.buffer as ArrayBuffer) : r.bytes.slice().buffer;
-  post({ type: 'hwp', bytes: buffer, losses: r.losses, pagesIn: r.pagesIn }, [buffer]);
+  post({ type: 'hwp', bytes: buffer, losses: r.losses, pagesIn: r.pagesIn, pageShift: r.pageShift }, [buffer]);
 }
 
 function codeOf(err: unknown): HwpErrorCode {
@@ -149,6 +149,7 @@ self.onmessage = async (ev: MessageEvent<HwpRequest>) => {
       doc = null;
     }
   } catch (err) {
-    post({ type: 'error', code: codeOf(err) });
+    const detail = err instanceof HwpError ? err.detail : undefined;
+    post(detail ? { type: 'error', code: codeOf(err), detail } : { type: 'error', code: codeOf(err) });
   }
 };

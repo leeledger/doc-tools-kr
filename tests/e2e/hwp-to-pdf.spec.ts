@@ -390,11 +390,11 @@ test('glyph fallback: ㊞, ㆍ, ᆞ, ‧ and the extended symbols (═ ∼ ▪ �
 
 // ---------- errors ----------
 
-test('errors: .txt and a renamed .docx are not-hwp; password; truncated is corrupt', async ({ page }) => {
+test('errors: .txt and a renamed .docx are named (REQ1014-B); password; truncated is corrupt', async ({ page }) => {
   test.setTimeout(180_000);
   const cases: [string, string][] = [
-    [hwpRuntime('notes.txt'), '한글(HWP·HWPX) 문서가 아닙니다.'],
-    [hwpRuntime('word-renamed.hwpx'), '한글(HWP·HWPX) 문서가 아닙니다.'],
+    [hwpRuntime('notes.txt'), '글자만 있는 파일입니다. 한글 문서라면 .hwp 또는 .hwpx 파일을 골라 주세요.'],
+    [hwpRuntime('word-renamed.hwpx'), '워드 파일(.docx)입니다. 한글 문서라면 .hwp 또는 .hwpx 파일을 골라 주세요.'],
     [hwpRuntime('law05-password.hwp'), '비밀번호가 걸린 문서는 열 수 없습니다. 한글 프로그램에서 암호를 해제한 뒤 다시 시도해 주세요.'],
     [hwpRuntime('law05-truncated.hwp'), '문서가 손상되었거나 끝까지 내려받아지지 않았습니다.'],
   ];
@@ -403,6 +403,32 @@ test('errors: .txt and a renamed .docx are not-hwp; password; truncated is corru
     await expect(page.locator('#hw-error')).toContainText(text);
     await expect(page.locator('#hw-error')).toBeFocused();
   }
+});
+
+test('REQ1014-B: a PDF is "이미 PDF 파일입니다" with 「PDF 열기」 and 「PDF 쪽 보기·나누기」; no engine download', async ({ page, network }) => {
+  await open(page, hwpRuntime('report.pdf'), 'error');
+  await expect(page.locator('#hw-error')).toHaveText('이미 PDF 파일입니다. 바꾸지 않아도 됩니다.');
+  const actions = page.locator('#hw-error-actions');
+  await expect(actions.getByRole('link', { name: 'PDF 열기' })).toHaveAttribute('href', /^blob:/);
+  await expect(actions.getByRole('button', { name: 'PDF 쪽 보기·나누기' })).toBeVisible();
+  // The worker script may be warmed by the pick (preload); the engine (wasm) must not load.
+  expect(network.requests.map((r) => r.url()).filter((u) => /rhwp_bg/.test(u))).toEqual([]);
+  // A new pick clears the line and the buttons.
+  await page.setInputFiles('#hw-input', fx('law05.hwp'));
+  await expect(tool(page)).toHaveAttribute('data-state', 'convert', { timeout: 150_000 });
+  await expect(actions).toBeHidden();
+});
+
+test('REQ1014-B: a file handed over by HWPX HWP 변환 opens with the arrival notice, no second pick', async ({ page }) => {
+  test.setTimeout(150_000);
+  await gotoReady(page, '/hwpx-to-hwp/');
+  await page.setInputFiles('#hx-input', fx('law05.hwp'));
+  await expect(page.locator('#hx-error-links')).toBeVisible();
+  await page.locator('#hx-error-links').getByRole('link', { name: 'PDF로 바꾸기' }).click();
+  await expect(page).toHaveURL(/\/hwp-to-pdf\/$/);
+  await expect(page.locator('#hw-arrived')).toHaveText('방금 만든 파일을 가져왔습니다.');
+  await expect(tool(page)).toHaveAttribute('data-state', 'convert', { timeout: 120_000 });
+  await expect(page.locator('#hw-file-name')).toContainText('law05.hwp');
 });
 
 test('too large on a phone: a 26 MB file is refused with the numbers before any parse', async ({ page, isMobile, network }) => {
