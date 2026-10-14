@@ -191,6 +191,7 @@ const targets = TARGET_CHIPS;
         <details>
           <summary>{f.q}</summary>
           <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
         </details>
       ))}
     </div>

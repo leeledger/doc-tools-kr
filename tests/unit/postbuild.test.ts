@@ -1280,6 +1280,9 @@ describe('built output', () => {
       else stack.push(m[2]!);
     }
     expect(stack).toEqual([]);
+    // REQ1014-C D7: the feed is fetched by Naver/Google but kept out of the index (no CSP override, no detach).
+    const feedBlock = readFileSync(join(DIST, '_headers'), 'utf8').split(/\r?\n(?=\S)/).find((b) => b.startsWith('/guide/rss.xml'));
+    expect(feedBlock?.replace(/\r\n/g, '\n').trimEnd()).toBe('/guide/rss.xml\n  X-Robots-Tag: noindex');
     const items = [...rss.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => m[1]!);
     const links = items.map((i) => new URL(decode(i.match(/<link>([^<]+)<\/link>/)![1]!)).pathname).sort();
     expect(links).toEqual([...guides.map((g) => `/guide/${g.slug}/`), ...HUB_SLUGS.map((h) => `/guide/${h}/`)].sort());

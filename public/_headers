@@ -18,6 +18,8 @@
   Cache-Control: public, max-age=86400
 /og/*
   Cache-Control: public, max-age=86400
+/guide/rss.xml
+  X-Robots-Tag: noindex
 /favicon.ico
   Cache-Control: public, max-age=86400
 /deploy-manifest.json

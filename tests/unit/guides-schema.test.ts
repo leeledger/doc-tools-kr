@@ -456,3 +456,56 @@ describe('TOOL-GUIDES Part B: a guide behind the 배경 지우기 release flag',
     }
   });
 });
+
+describe('REQ1014-C: deep links, passport guides, 10/10 bodies', () => {
+  const bySlug = (s: string) => published.find((g) => g.slug === s)!;
+  const quotes = (s: string) => bySlug(s).parsed.sources.filter((x): x is Extract<typeof x, { quote: string }> => 'quote' in x);
+  const bodyLinks = (s: string) => [...bySlug(s).body.matchAll(/\]\((\/[^)\s]*)\)/g)].map((m) => m[1]!);
+
+  it('the 카톡 guide opens photo-compress at 2,500 KB; police, hanja and jlpt open their own preset', () => {
+    expect(bySlug('kakao-photo').parsed.cta.href).toBe('/photo-compress/?target=2500');
+    expect(bodyLinks('kakao-photo')).toContain('/photo-compress/?target=2500');
+    for (const [slug, id] of [['police-exam-photo', 'police'], ['hanja-exam-photo', 'hanja'], ['jlpt-photo', 'jlpt']] as const) {
+      expect(bySlug(slug).parsed.cta.href, slug).toBe(`/id-photo/?preset=${id}`);
+      expect(bySlug(slug).parsed.sources, slug).toContainEqual({ preset: id });
+      expect(bySlug(slug).raw, slug).not.toMatch(/half_card|preset=passport_online|직접 입력/);
+    }
+  });
+
+  it('baby-passport-photo and passport-reissue-photo: published, ≥ 3 quotes incl. a non-size fact, 5 FAQ, 3 related, inbound links', () => {
+    for (const slug of ['baby-passport-photo', 'passport-reissue-photo']) {
+      const g = bySlug(slug);
+      expect(g, slug).toBeDefined();
+      expect(quotes(slug).length, slug).toBeGreaterThanOrEqual(3);
+      // A quote with no number-unit fact (a rule, not a size).
+      expect(quotes(slug).some((q) => numberUnits(q.quote).length === 0), slug).toBe(true);
+      expect(g.parsed.faq.length, slug).toBe(5);
+      expect(g.parsed.related.length, slug).toBe(3);
+      expect(g.parsed.cta.href, slug).toBe('/id-photo/?preset=passport_online');
+    }
+    expect(bySlug('passport-photo').parsed.related).toContain('baby-passport-photo');
+    expect(bySlug('passport-photo-error').parsed.related).toContain('passport-reissue-photo');
+    expect(bodyLinks('passport-photo-error')).toContain('/guide/passport-reissue-photo/');
+    // intl-driving-license keeps its required inbound link after passport-photo-error drops it.
+    expect(bySlug('driver-license-photo').parsed.related).toContain('intl-driving-license');
+  });
+
+  it('the five GSC-unindexed guides: ≥ 4 internal body links, a quote read 2026-10-14, updated 2026-10-14', () => {
+    for (const slug of ['hwp-to-pdf', 'yearend-tax-pdf', 'ecfs-pdf-limit', 'pdf-merge', 'hwp-on-phone']) {
+      expect(new Set(bodyLinks(slug)).size, slug).toBeGreaterThanOrEqual(4);
+      expect(quotes(slug).some((q) => q.retrieved === '2026-10-14' && q.via !== 'browser'), slug).toBe(true);
+      expect(bySlug(slug).parsed.updated, slug).toBe('2026-10-14');
+    }
+  });
+
+  it('사진 JPG 변환 names AVIF in its summary and FAQ; PDF 용량 줄이기 links the sourced limit guides without their numbers', () => {
+    const img = getTool('image-to-jpg')!;
+    expect(img.summary).toContain('AVIF');
+    expect(img.faq.some((f) => f.q.includes('AVIF'))).toBe(true);
+    const pdf = getTool('pdf-compress')!;
+    const hrefs = pdf.faq.flatMap((f) => f.links ?? []).map((l) => l.href);
+    expect(hrefs).toContain('/guide/ecfs-pdf-limit/');
+    expect(hrefs).toContain('/pdf-compress/?target=20');
+    for (const f of pdf.faq.filter((x) => x.links)) expect(numberUnits(f.a), f.q).toEqual([]);
+  });
+});

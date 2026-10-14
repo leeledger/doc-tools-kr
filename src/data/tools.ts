@@ -213,7 +213,7 @@ export const TOOLS: Tool[] = [
     summary: '제출 용량 제한에 맞게 PDF를 줄입니다. 글자는 선택·검색 가능한 상태로 유지합니다.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 14l3 3 3-3M12 10v7"/>',
     status: 'live',
-    updated: '2026-09-30',
+    updated: '2026-10-14',
     faq: [
       {
         q: '얼마나 줄어드나요?',
@@ -238,6 +238,21 @@ export const TOOLS: Tool[] = [
       {
         q: '휴대폰에서도 되나요?',
         a: '네. 휴대폰에서도 같은 방법으로 줄일 수 있습니다. 다만 휴대폰은 PC보다 한 번에 처리할 수 있는 양이 적어 20 MB가 넘는 파일은 먼저 확인을 요청하고, 50 MB가 넘는 파일은 PC에서 줄이도록 안내합니다.',
+      },
+      {
+        // REQ1014-C D9: institution numbers stay on the sourced guides; the tool page only links them.
+        q: '내는 곳마다 용량 제한이 다른가요?',
+        a: '네. 전자소송, 이메일 첨부, 회사에 내는 연말정산 서류처럼 내는 곳마다 올릴 수 있는 용량과 방법이 다릅니다. 곳마다 공식 안내를 출처와 확인한 날짜와 함께 정리했습니다.',
+        links: [
+          { href: '/guide/ecfs-pdf-limit/', text: '전자소송 PDF 용량 안내' },
+          { href: '/guide/email-attachment-limit/', text: '메일 첨부파일 용량 안내' },
+          { href: '/guide/yearend-tax-pdf/', text: '연말정산 간소화 PDF 내는 법' },
+        ],
+      },
+      {
+        q: '제출처 기준에 맞춰 바로 줄일 수 있나요?',
+        a: '네. 안내 페이지의 버튼을 누르면 그 제출처의 용량이 목표로 골라진 채 이 화면이 열립니다. 목표 용량을 정해 두면 그 안에 들어오는 가장 선명한 결과를 찾습니다.',
+        links: [{ href: '/pdf-compress/?target=20', text: '전자소송 기준 용량으로 골라 열기' }],
       },
     ],
     keywords: ['pdf 용량 줄이기', 'pdf 압축', 'pdf 파일 용량 줄이기'],
@@ -496,14 +511,19 @@ export const TOOLS: Tool[] = [
     description:
       'HEIC·PNG JPG 변환을 무료로. 아이폰 HEIC 사진·PNG·WebP를 JPG로 바꾸고 여러 장은 ZIP으로 받아요. 가입 없이 바로.',
     h1: '사진 JPG 변환',
-    summary: '아이폰 사진(HEIC)·PNG·WebP를 JPG로 바꿉니다. 여러 장을 한 번에 바꿀 수 있습니다.',
+    summary: '아이폰 사진(HEIC)·PNG·WebP·AVIF를 JPG로 바꿉니다. 여러 장을 한 번에 바꿀 수 있습니다.',
     icon: '<rect x="3" y="4" width="12" height="10" rx="1.5"/><path d="M3 11l3-3 3 3"/><path d="M14 18h7M18 15l3 3-3 3"/>',
     status: 'live',
-    updated: '2026-10-08',
+    updated: '2026-10-14',
     faq: [
       {
         q: '아이폰 사진(HEIC)이 안 열려요.',
         a: '아이폰 사진 형식(HEIC)은 기기나 앱에 따라 열리지 않을 수 있습니다. 그럴 때는 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 고르거나, 사진을 JPG로 내보낸 뒤 다시 선택해 주세요. 열리지 않는 사진만 목록에 표시되고, 나머지 사진은 그대로 바꿉니다.',
+      },
+      {
+        // REQ1014-C D8: an AVIF this device cannot decode is a per-row 'corrupt' (decode.ts), not a batch failure.
+        q: 'AVIF 사진도 JPG로 바꿀 수 있나요?',
+        a: '네. AVIF 사진도 JPG로 바꿉니다. 다만 쓰는 기기나 앱이 AVIF를 열지 못하면 그 사진만 목록에 「사진 파일을 열 수 없습니다」라고 표시되고, 나머지 사진은 그대로 바꿉니다. 그럴 때는 사진을 만든 앱에서 JPG나 PNG로 내보낸 뒤 다시 선택해 주세요.',
       },
       {
         q: 'PNG를 JPG로 바꾸면 투명한 곳은 어떻게 되나요?',
