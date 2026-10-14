@@ -571,3 +571,45 @@ test('EN1: an English tool page sends no usage beacon (Korean statistics stay cl
   await page.setInputFiles('#merge-input', [fixturePath('kr_law_form.pdf'), fixturePath('irs_fw9.pdf')]);
   await expect.poll(() => beacons.length).toBeGreaterThan(0);
 });
+
+test.describe('REQ1014-B: 배경 지우기 cloud failures by cause', () => {
+  test.use({ allowUpload: [[{ method: 'POST', path: '/api/usage' }, { method: 'POST', path: '/api/remove-bg' }], { scope: 'test' }] });
+  const DISC = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'bgcloud', 'disc.webp'));
+
+  async function press(page: Page, answers: { status: number; body: Buffer | string; type: string }[]): Promise<() => number> {
+    let n = 0;
+    await page.route(/\/api\/remove-bg$/, (route) => {
+      const a = answers[Math.min(n++, answers.length - 1)]!;
+      return route.fulfill({ status: a.status, headers: { 'content-type': a.type }, body: a.body });
+    });
+    await gotoReady(page, '/remove-background/');
+    await page.setInputFiles('#bg-input', PORTRAIT);
+    await expect(page.locator('#bg-ready')).toBeVisible({ timeout: 30_000 });
+    await page.locator('#bg-send').click();
+    return () => n;
+  }
+  const e502 = { status: 502, body: '{"error":"engine"}', type: 'application/json' };
+
+  test('two 502s: exactly one fail beacon, c=cloud-server p=process', async ({ page }) => {
+    const beacons = await record(page);
+    const posts = await press(page, [e502]);
+    await expect(page.locator('#bg-error')).toBeVisible({ timeout: 30_000 });
+    expect(posts()).toBe(2);
+    await expect.poll(() => beacons.filter((b) => b.ev.e === 'fail').length).toBe(1);
+    await page.waitForTimeout(1000);
+    const fails = beacons.filter((b) => b.ev.e === 'fail');
+    expect(fails).toHaveLength(1);
+    expect(fails[0]!.ev).toMatchObject({ e: 'fail', t: 'remove-background', c: 'cloud-server', p: 'process' });
+    expectClean(beacons);
+  });
+
+  test('502 then 200: no fail beacon, one success', async ({ page }) => {
+    const beacons = await record(page);
+    const posts = await press(page, [e502, { status: 200, body: DISC, type: 'image/webp' }]);
+    await expect(page.locator('#bg-result')).toBeVisible({ timeout: 30_000 });
+    expect(posts()).toBe(2);
+    await expect.poll(() => beacons.filter((b) => b.ev.e === 'success').length).toBe(1);
+    expect(beacons.filter((b) => b.ev.e === 'fail')).toEqual([]);
+    expectClean(beacons);
+  });
+});

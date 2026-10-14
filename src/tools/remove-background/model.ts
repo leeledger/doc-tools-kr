@@ -56,3 +56,18 @@ export function view(p: Phase): View {
     nosubject: p === 'nosubject',
   };
 }
+
+/**
+ * What a cloud try ends with (REQ1014-B D13); the usage code is cloud-<this>. The first five are the cloud client's
+ * CloudKind (not imported: only bg.ts may import the cloud client, network-guard.test.ts).
+ */
+export type CloudFail = 'timeout' | 'network' | 'server' | 'refused' | 'answer' | 'busy' | 'quota' | 'copy' | 'load';
+
+/**
+ * Whether try number `tries` (1-based) is followed by one more request: only after the first, and only for a
+ * failure a second request can pass (network, 5xx, a broken answer, the cloud chunk not loading). A timeout (the
+ * user already waited 30 s), a refusal (4xx), a copy that could not be made, busy (429) and quota are final.
+ */
+export function cloudRetry(fail: CloudFail, tries: number): boolean {
+  return tries < 2 && (fail === 'network' || fail === 'server' || fail === 'answer' || fail === 'load');
+}

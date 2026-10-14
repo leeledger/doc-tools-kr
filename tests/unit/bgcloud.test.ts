@@ -8,7 +8,7 @@ import { onRequest, MAX_BYTES as FN_MAX } from '../../functions/api/remove-bg';
 import worker, { isQuotaError, sniff, type Env as WorkerEnv } from '../../workers/bg/src/index';
 import { alphaMask, isCleanJpeg, makeCopy, readAnswer, requestCutout, sameShape, SEND_EDGE, type Canvas2d } from '../../src/lib/bgremove/cloud';
 import { chooseDevice, deviceChosen, MODE_KEY } from '../../src/lib/bgremove/mode';
-import { move, view } from '../../src/tools/remove-background/model';
+import { cloudRetry, move, view, type CloudFail } from '../../src/tools/remove-background/model';
 import { CLOUD } from '../../src/tools/remove-background/copy';
 import { route } from '../../src/sw/sw';
 import { bgCloudFlag, bgCloudOn, claimText, EXCEPTION_RE, LOCAL_SCOPE_RE, privacyGate, QUALIFIER_BEFORE, QUALIFIER_RE, unqualifiedClaims } from '../../scripts/lib/bgcloud.mjs';
@@ -283,21 +283,23 @@ describe('cloud client (src/lib/bgremove/cloud.ts)', () => {
     expect(init).toMatchObject({ method: 'POST', body, credentials: 'omit', cache: 'no-store', redirect: 'error', headers: { 'Content-Type': 'image/jpeg' } });
   });
 
-  it('answers: 429 busy, 503 quota, other 503 / 5xx / 4xx / wrong type failed; nothing is retried', async () => {
+  it('answers: 429 busy, 503 quota, other 503 / 5xx server, 4xx refused, wrong type answer (REQ1014-B D13); one request', async () => {
     const ans = (status: number, body = '', type = 'application/json') => readAnswer(new Response(body, { status, headers: { 'content-type': type } }));
     expect(await ans(429, '{"error":"busy"}')).toEqual({ ok: false, why: 'busy' });
     expect(await ans(503, '{"error":"quota"}')).toEqual({ ok: false, why: 'quota' });
     expect(await ans(503, 'error code: 9422', 'text/plain')).toEqual({ ok: false, why: 'quota' });
-    expect(await ans(503, '{"error":"engine"}')).toEqual({ ok: false, why: 'failed' });
-    for (const s of [500, 502, 403, 413, 415]) expect(await ans(s, '{}')).toEqual({ ok: false, why: 'failed' });
-    expect(await ans(200, '<html>', 'text/html')).toEqual({ ok: false, why: 'failed' });
+    expect(await ans(503, '{"error":"engine"}')).toEqual({ ok: false, why: 'failed', kind: 'server' });
+    for (const s of [500, 502]) expect(await ans(s, '{"error":"engine"}')).toEqual({ ok: false, why: 'failed', kind: 'server' });
+    for (const s of [403, 413, 415]) expect(await ans(s, '{}')).toEqual({ ok: false, why: 'failed', kind: 'refused' });
+    expect(await ans(200, '<html>', 'text/html')).toEqual({ ok: false, why: 'failed', kind: 'answer' });
+    expect(await ans(200, 'png', 'image/png')).toEqual({ ok: false, why: 'failed', kind: 'answer' });
     const fetcher = vi.fn(async () => new Response('{"error":"busy"}', { status: 429 }));
     await requestCutout(new Uint8Array(0), new AbortController().signal, fetcher);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it('a network error is failed, the page cancelling is aborted, and 30 s without an answer is failed', async () => {
-    expect(await requestCutout(new Uint8Array(0), new AbortController().signal, async () => Promise.reject(new TypeError('offline')))).toEqual({ ok: false, why: 'failed' });
+  it('a network error is failed/network, the page cancelling is aborted, and 30 s without an answer is failed/timeout', async () => {
+    expect(await requestCutout(new Uint8Array(0), new AbortController().signal, async () => Promise.reject(new TypeError('offline')))).toEqual({ ok: false, why: 'failed', kind: 'network' });
     const hang = (_u: string, init: RequestInit) =>
       new Promise<Response>((_, reject) => init.signal!.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))));
     const page = new AbortController();
@@ -308,7 +310,7 @@ describe('cloud client (src/lib/bgremove/cloud.ts)', () => {
     try {
       const t = requestCutout(new Uint8Array(0), new AbortController().signal, hang);
       await vi.advanceTimersByTimeAsync(30_000);
-      expect(await t).toEqual({ ok: false, why: 'failed' });
+      expect(await t).toEqual({ ok: false, why: 'failed', kind: 'timeout' });
     } finally {
       vi.useRealTimers();
     }
@@ -368,7 +370,8 @@ describe('page states with the cloud path (model.ts)', () => {
   it('the brief §4 lines, word for word', () => {
     expect(CLOUD.busy).toBe('잠시 사용이 많아요. 1분 뒤 다시 해 보세요.');
     expect(CLOUD.quota).toBe('이번 달 무료 처리량이 다 찼어요. 이 기기에서 처리할 수 있어요.');
-    expect(CLOUD.failed).toBe('지금은 처리할 수 없어요. 다시 시도하거나 기기에서 처리해 보세요.');
+    expect(CLOUD.failed).toBe('지금은 처리할 수 없어요. 다시 시도하거나 「이 기기에서 처리」를 눌러 주세요.');
+    expect(CLOUD.deviceButton).toBe('이 기기에서 처리');
     expect([CLOUD.sending, CLOUD.working, CLOUD.refining]).toEqual(['사진을 보내는 중…', '배경을 지우는 중… (보통 5초쯤)', '가장자리를 다듬는 중…']);
     expect(CLOUD.device('약 110 MB')).toBe('사진을 보내지 않고 기기에서 처리 (처음 한 번 약 110 MB 받기)');
     expect(CLOUD.notice).not.toContain('Cloudflare'); // owner 2026-10-05: the company is named in the privacy policy only
@@ -486,5 +489,17 @@ describe('no-upload allowlist (tests/e2e/upload-guard.ts)', () => {
     expect(uploadProblems({ requests: page, responses: [rs(`${base}/remove-background/`)], websockets: [] }, base)).toEqual([]);
     expect(uploadProblems({ requests: page, responses: [rs(`${base}/remove-background/`, 'GET', '')], websockets: [] }, base, allow)).toEqual([`no CSP connect-src 'self' on ${base}/remove-background/`]);
     expect(uploadProblems({ requests: page, responses: [], websockets: ['ws://x'] }, base, allow)).toEqual(['websocket ws://x']);
+  });
+});
+
+describe('REQ1014-B D13: one automatic retry', () => {
+  it('network, 5xx, a broken answer and a cloud chunk that did not load are retried once; nothing else, never twice', () => {
+    const all: CloudFail[] = ['timeout', 'network', 'server', 'refused', 'answer', 'copy', 'load', 'busy', 'quota'];
+    expect(all.filter((f) => cloudRetry(f, 1))).toEqual(['network', 'server', 'answer', 'load']);
+    expect(all.filter((f) => cloudRetry(f, 2))).toEqual([]);
+  });
+  it('429 on the retry is the busy line (final), not a third request', () => {
+    expect(cloudRetry('server', 1)).toBe(true);
+    expect(cloudRetry('busy', 2)).toBe(false);
   });
 });

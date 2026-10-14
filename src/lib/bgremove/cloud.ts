@@ -2,8 +2,8 @@
 // controller after a photo is picked, and only in a build with the cloud path on (__BG_CLOUD__).
 //
 // work copy -> copy at long edge <= 1024 (the model's own size), JPEG q0.9 through a canvas (EXIF/GPS never survive a
-// canvas; checked again before sending) -> one POST /api/remove-bg (same origin, no cookies) per press, never retried
-// here -> RGBA WebP (lossless, 256 alpha levels: spike-2) -> its alpha only, as a float mask; the page scales it up
+// canvas; checked again before sending) -> one POST /api/remove-bg (same origin, no cookies) per call; the page retries
+// a failure once when its kind can pass (REQ1014-B D13, bg.ts sendCloud) -> RGBA WebP (lossless, 256 alpha levels: spike-2) -> its alpha only, as a float mask; the page scales it up
 // and runs its own blur-fusion on the full-size work copy, so the colours always come from the device.
 import { capSize } from '../image/decode';
 import { sniffImage } from '../image/sniff';
@@ -18,7 +18,13 @@ export const TIMEOUT_MS = 30_000;
 export const MAX_SEND_BYTES = 2_000_000;
 
 export type CloudFailure = 'busy' | 'quota' | 'failed';
-export type CloudResult = { ok: true; blob: Blob } | { ok: false; why: CloudFailure | 'aborted' };
+/**
+ * Why a request 'failed' (REQ1014-B D13; the usage code is cloud-<kind>): timeout (30 s), network (no answer),
+ * server (5xx, 503 non-quota included), refused (4xx except 429, e.g. 403 origin, 413, 415), answer (200 that is
+ * not a WebP).
+ */
+export type CloudKind = 'timeout' | 'network' | 'server' | 'refused' | 'answer';
+export type CloudResult = { ok: true; blob: Blob } | { ok: false; why: 'busy' | 'quota' | 'aborted' } | { ok: false; why: 'failed'; kind: CloudKind };
 
 /** The JPEG segment markers up to the first scan. */
 function jpegMarkers(b: Uint8Array): number[] {
@@ -89,18 +95,24 @@ export async function readAnswer(res: Response): Promise<CloudResult> {
     const body = await res.text().catch(() => '');
     if (/"error"\s*:\s*"quota"|9422/.test(body)) return { ok: false, why: 'quota' };
   }
-  return { ok: false, why: 'failed' };
+  const kind: CloudKind = res.status >= 500 ? 'server' : res.status >= 400 ? 'refused' : 'answer';
+  return { ok: false, why: 'failed', kind };
 }
 
 /**
  * One request. `signal`: the page's 취소 / new photo. A timeout (30 s), a network error or a broken answer is
- * 'failed'; nothing is retried here, because each try costs one of the month's free transformations.
+ * 'failed' with its kind; nothing is retried here (each try costs one of the month's free transformations): the
+ * page decides (bg.ts sendCloud, at most one retry).
  */
 export async function requestCutout(copy: Uint8Array<ArrayBuffer>, signal: AbortSignal, fetcher: FetchLike = (u, i) => fetch(u, i), timeoutMs = TIMEOUT_MS): Promise<CloudResult> {
   const ctl = new AbortController();
   const stop = (): void => ctl.abort();
   signal.addEventListener('abort', stop, { once: true });
-  const timer = setTimeout(stop, timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    stop();
+  }, timeoutMs);
   try {
     const res = await fetcher(API_PATH, {
       method: 'POST',
@@ -113,7 +125,8 @@ export async function requestCutout(copy: Uint8Array<ArrayBuffer>, signal: Abort
     });
     return await readAnswer(res);
   } catch {
-    return { ok: false, why: signal.aborted ? 'aborted' : 'failed' };
+    if (signal.aborted) return { ok: false, why: 'aborted' };
+    return { ok: false, why: 'failed', kind: timedOut ? 'timeout' : 'network' };
   } finally {
     clearTimeout(timer);
     signal.removeEventListener('abort', stop);
