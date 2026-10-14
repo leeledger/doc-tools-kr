@@ -663,6 +663,8 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
           return;
         }
         if (!cloudRetry(out.fail, tries)) return cloudFail(my, out.fail);
+        // A decode failure left the phase at 'working'; the second request is a send again.
+        setPhase('sending');
         busy(CLOUD.working);
         // 취소 or a new photo during the wait bumps the run: no second request.
         await new Promise((r) => setTimeout(r, RETRY_WAIT_MS));
