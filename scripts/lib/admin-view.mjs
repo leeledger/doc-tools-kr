@@ -204,6 +204,9 @@ export function startsPer100(start, visits) {
 export const VISITS_NOTE = '방문 수는 2026년 10월 7일부터 집계했어요. 봇은 대부분 빠지지만 같은 사람의 재방문도 각각 세므로, 실제 사람 수보다 조금 많을 수 있어요.';
 const VISITS_ESTIMATE = '일부 숫자는 Cloudflare가 표본으로 세어 보정한 추정치예요.';
 const APPROX_TOPS = '7일씩 나눠 받은 순위를 더한 값이라 순위는 대략적이에요.';
+export const MISMATCH_NOTE = '표마다 Cloudflare가 따로 세어(표본) 합이 방문 수와 다를 수 있어요.';
+export const PAGES_MISSING = 'Cloudflare가 이 기간의 페이지 목록을 보내지 않았어요. 7일 보기에서 확인해 주세요.';
+export const EN_COUNTRIES_NOTE = '영어판은 2026년 10월 13일에 열었어요.';
 
 /**
  * The ratio card's change in its own unit (회 per 100 visits, one decimal): { text, sr } like delta().
@@ -256,11 +259,37 @@ ${head}
 ${visitsKpis(visits, kpi, prevUsage, days)}
 <p class="muted ratio-note">${esc(RATIO_NOTE)}</p>
 ${chart}
-${section('s-pages', '많이 본 페이지', ['페이지', '주소', '방문', '페이지뷰'], visits.pages.map((r) => [esc(r.label), `<code>${esc(r.path)}</code>`, n(r.visits), n(r.pageViews)]), [2, 3])}
+${pagesSection(visits)}
 ${section('s-referrers', '들어온 곳', ['들어온 곳', '방문', '페이지뷰'], visits.referrers.map((r) => [esc(r.label), n(r.visits), n(r.pageViews)]), [1, 2])}
-${section('s-countries', '나라', ['나라', '방문'], visits.countries.map((r) => [esc(r.label), n(r.visits)]), [1])}
-${section('s-devices', '기기', ['기기', '방문'], visits.devices.map((r) => [esc(r.label), n(r.visits)]), [1])}${visits.approxTops ? `\n<p class="muted ratio-note">${esc(APPROX_TOPS)}</p>` : ''}
+${section('s-countries', '나라 (한국어 페이지)', ['나라', '방문'], visits.countriesKo.map((r) => [esc(r.label), n(r.visits)]), [1])}
+${section('s-countries-en', '나라 (영어 페이지 /en/)', ['나라', '방문'], visits.countriesEn.map((r) => [esc(r.label), n(r.visits)]), [1], EN_COUNTRIES_NOTE)}
+${section('s-devices', '기기', ['기기', '방문'], visits.devices.map((r) => [esc(r.label), n(r.visits)]), [1])}${visits.approxTops ? `\n<p class="muted ratio-note">${esc(APPROX_TOPS)}</p>` : ''}${visits.mismatch ? `\n<p class="muted ratio-note">${esc(MISMATCH_NOTE)}</p>` : ''}${diagDetails(visits.diag)}
 </div>`;
+}
+
+/** 많이 본 페이지 (REQ1014-A D10): never "기록 없음" when Cloudflare counted page views but sent no page list. */
+function pagesSection(visits) {
+  const rows = visits.pages.map((r) => [esc(r.label), `<code>${esc(r.path)}</code>`, count(r.visits), count(r.pageViews)]);
+  const html = section('s-pages', '많이 본 페이지', ['페이지', '주소', '방문', '페이지뷰'], rows, [2, 3]);
+  return visits.pagesMissing ? html.replace(EMPTY_SECTION, `<p class="muted">${esc(PAGES_MISSING)}</p>`) : html;
+}
+
+/** 집계 정보 (REQ1014-A D12): rows and largest sample interval of every Cloudflare node, folded. */
+function diagDetails(diag) {
+  if (!Array.isArray(diag) || !diag.length) return '';
+  const rows = diag.map((d) => `<tr><td>${esc(d.node)}</td><td class="num">${count(d.rows)}</td><td class="num">${d.maxSi === null ? '-' : esc(d.maxSi)}</td></tr>`).join('\n');
+  return `
+<details class="diag">
+<summary>집계 정보</summary>
+<div class="scroll" role="region" aria-label="집계 정보" tabindex="0">
+<table class="muted">
+<thead><tr><th scope="col">항목</th><th scope="col" class="num">행</th><th scope="col" class="num">표본 간격</th></tr></thead>
+<tbody>
+${rows}
+</tbody>
+</table>
+</div>
+</details>`;
 }
 
 const STYLE = `
@@ -323,8 +352,8 @@ footer p{margin:0 0 4px}
 .chart .grid{stroke:var(--line);stroke-width:1}
 .chart .base{stroke:var(--muted);stroke-width:1}
 .chart-x{grid-column:2;display:flex;justify-content:space-between;gap:8px;margin:4px 0 0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
-.chart-table summary{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;color:var(--brand);font-weight:600}
-.chart-table summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.chart-table summary,.diag summary{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;color:var(--brand);font-weight:600}
+.chart-table summary:focus-visible,.diag summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
 @media (max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}.card.wide{grid-column:span 2}.card .value{font-size:22px}section[aria-labelledby]{padding:12px}}
 `;
 

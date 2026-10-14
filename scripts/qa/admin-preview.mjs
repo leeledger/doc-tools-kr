@@ -3,7 +3,9 @@
 // tests/fixtures/rum-rows.mjs for the Web Analytics GraphQL API) into OUT/LABEL/SCENARIO.html: full-7, full-90,
 // empty, error (SQL API 500), xss, visits-7, visits-1 (hourly), visits-90, visits-error (HTTP 200 + errors[]),
 // visits-empty, visits-sampled (sampleInterval 10 -> 추정), usage-error-visits-ok, campaigns (캠페인별 유입, 1 and 7
-// days), campaigns-error (its SQL 400 only; REQ1014-A). With --shots each page is opened in
+// days), campaigns-error (its SQL 400 only), pages-empty (Cloudflare sends no page list but counted page views),
+// mismatch (total far from the device sum), countries-fallback (like / notlike refused -> countryPaths); every visits
+// page has the two country tables and the 집계 정보 details (REQ1014-A). With --shots each page is opened in
 // Playwright chromium and saved as PNG at 1280x900 light, 360x780 light and 360x780 dark; the 360 px document
 // scrollWidth is printed (it must stay <= 360). Writes to the OS temp folder by default, never the repo.
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -12,7 +14,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { onRequest } from '../../functions/admin/[[path]].ts';
 import { EMPTY, FULL, PREV, XSS } from '../../tests/fixtures/usage-rows.mjs';
-import { RUM_EMPTY, RUM_ERRORS, XSS_TOPS, rumAnswer } from '../../tests/fixtures/rum-rows.mjs';
+import { RUM_EMPTY, RUM_ERRORS, TOPS, XSS_TOPS, rumAnswer } from '../../tests/fixtures/rum-rows.mjs';
 
 const args = process.argv.slice(2);
 const arg = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
@@ -73,6 +75,9 @@ const SCENARIOS = [
   ['campaigns', 7, FULL, PREV, 200, full, { camp: CAMP }],
   ['campaigns-1', 1, FULL, PREV, 200, full, { camp: CAMP }],
   ['campaigns-error', 7, FULL, PREV, 200, full, { campStatus: 400 }],
+  ['pages-empty', 1, FULL, PREV, 200, (body) => rumAnswer(body, { tops: { ...TOPS, pages: [], pagesByVisits: [] } })],
+  ['mismatch', 1, FULL, PREV, 200, (body) => rumAnswer(body, { total: { count: 420, visits: 210 } })],
+  ['countries-fallback', 7, FULL, PREV, 200, (body) => rumAnswer(body, { likeRefused: true })],
 ];
 
 const files = [];
