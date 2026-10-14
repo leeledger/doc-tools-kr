@@ -1,5 +1,7 @@
 // Worker-side decode (brief Step 3 §2): EXIF orientation and colour management by the browser, with an
 // optional long-edge cap applied on decode. Errors map to `heic` (the sniff said HEIC) or `corrupt`.
+// REQ1014-B D11: a decode that rejects only with the resize options (non-RangeError) falls through to the plain
+// decode + canvas shrink; only a failure of the plain decode is heic/corrupt.
 import type { Decoded } from './engine';
 import { PhotoError } from './messages';
 import { orientedSize, type Sniff } from './sniff';
@@ -44,11 +46,14 @@ export async function decodeImage(blob: Blob, sniff: Sniff, opts: { maxLongEdge:
   let natural: { width: number; height: number } | null = null;
   if (cap && expected && Math.max(expected.width, expected.height) > cap) {
     const want = capSize(expected.width, expected.height, cap);
-    bm = await bitmap(blob, sniff, { resizeWidth: want.width, resizeHeight: want.height, resizeQuality: 'high' });
+    bm = await bitmap(blob, sniff, { resizeWidth: want.width, resizeHeight: want.height, resizeQuality: 'high' }).catch((err: unknown) => {
+      if (err instanceof RangeError) throw err;
+      return null;
+    });
     natural = expected;
     // A browser that resized before orienting gives the wrong aspect: decode again at full size and
     // downscale on a canvas instead.
-    if (Math.abs(bm.width / bm.height - want.width / want.height) > 0.02) {
+    if (bm && Math.abs(bm.width / bm.height - want.width / want.height) > 0.02) {
       bm.close();
       bm = null;
     }

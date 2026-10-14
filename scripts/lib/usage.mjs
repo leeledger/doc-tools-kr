@@ -369,6 +369,18 @@ export const FAIL_LABELS = {
   'already-hwp': '이미 HWP 파일',
   unverified: '바꾼 파일 다시 열기 확인 실패',
   export: 'HWP로 바꾸기 실패',
+  // REQ1014-B: 배경 지우기 cloud failures by cause, HWPX→HWP check details, 사진 PDF caps.
+  'cloud-timeout': '서버 응답 30초 넘김',
+  'cloud-network': '보내다 인터넷 끊김',
+  'cloud-server': '서버 오류(5xx)',
+  'cloud-refused': '서버가 거절(4xx)',
+  'cloud-answer': '서버 결과를 읽지 못함',
+  'cloud-copy': '보낼 사본 만들기 실패',
+  'cloud-load': '보내기 기능 불러오기 실패',
+  'unverified-reopen': '바꾼 파일이 다시 열리지 않음',
+  'unverified-bytes': '바꾼 파일이 HWP 형식 아님',
+  'too-big-file': '사진 한 장이 너무 큼',
+  'too-big-total': '사진 합계가 너무 큼',
 };
 /** Admin and weekly-report labels of OUT_DESTS. */
 export const OUT_LABELS = {
