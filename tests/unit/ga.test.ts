@@ -11,7 +11,7 @@ import { withAnalyticsCsp } from '../../scripts/lib/analytics.mjs';
 import { GA_CONNECT_SRC, GA_COOKIE_EXPIRES, GA_ID_RE, GA_IMG_SRC, GA_SCRIPT_SRC, gaId, loaderSource, withGaCsp } from '../../scripts/lib/ga.mjs';
 import { precacheList } from '../../scripts/gen-sw.mjs';
 import { route } from '../../src/sw/sw';
-import { PRIVACY_CHAIN, PRIVACY_GA, PRIVACY_REVISED } from '../../src/data/legal';
+import { PRIVACY_CHAIN, PRIVACY_GA, PRIVACY_REVISED, PRIVACY_TERMS_UPDATED } from '../../src/data/legal';
 import { isGaRequest, uploadProblems, type RequestLike, type ResponseLike } from '../e2e/upload-guard';
 
 const ROOT = join(import.meta.dirname, '..', '..');
@@ -290,7 +290,7 @@ describe('GA-on build (PUBLIC_GA_ID=G-TEST000000)', { timeout: 300_000 }, () => 
     ]) expect(text, s).toContain(s);
     expect(html).toContain('href="https://support.google.com/policies/contact/general_privacy_form?hl=ko"');
     expect(html).toContain('href="https://tools.google.com/dlpage/gaoptout?hl=ko"');
-    expect(page('sitemap.xml')).toMatch(/<loc>[^<]*\/privacy\/<\/loc><lastmod>2026-10-13<\/lastmod>/);
+    expect(page('sitemap.xml')).toMatch(new RegExp(`<loc>[^<]*/privacy/</loc><lastmod>${PRIVACY_TERMS_UPDATED}</lastmod>`));
   });
 
   it('check-dist: an invalid ID, a missing or altered ga.js, or the ID unset on this build fail', () => {

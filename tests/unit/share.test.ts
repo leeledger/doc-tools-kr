@@ -34,6 +34,9 @@ describe('share (T2)', () => {
     expect(shareUrl(el, loc('?name=my-photo.jpg'))).toBe('https://docttak.com/photo-compress/');
     expect(shareUrl(el, loc('?target=200&file=x.pdf'))).toBe('https://docttak.com/photo-compress/');
     expect(shareUrl(el, loc('?preset=blob:https://x'))).toBe('https://docttak.com/photo-compress/');
+    // REQ1014-A: a marked link (utm_*) is never shared, with or without a deep link.
+    expect(shareUrl(el, loc('?preset=history&utm_source=x'))).toBe('https://docttak.com/photo-compress/');
+    expect(shareUrl(el, loc('?utm_source=naver_blog&utm_campaign=y'))).toBe('https://docttak.com/photo-compress/');
     document.body.innerHTML = markup('https://docttak.com/guide/pdf-merge/');
     const g = document.querySelector<HTMLElement>('[data-share]')!;
     expect(shareUrl(g, loc('?target=200'))).toBe('https://docttak.com/guide/pdf-merge/');

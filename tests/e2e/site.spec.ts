@@ -303,3 +303,21 @@ test('REV3: the default build (PUBLIC_AFF_COUPANG off) has no affiliate block, s
     await expect(page.locator('.out-links'), path).toHaveCount(path === '/id-photo/' ? 1 : 0);
   }
 });
+
+// REQ1014-A T-E1: a marked blog/app link (utm_*) never reaches canonical or og:url, and a deep link still applies.
+for (const [url, path] of [
+  ['/id-photo/?preset=history&utm_source=naver_blog&utm_medium=blog&utm_campaign=history-exam-photo', '/id-photo/'],
+  ['/guide/history-exam-photo/?utm_source=tistory&utm_campaign=x', '/guide/history-exam-photo/'],
+  ['/?utm_source=play&utm_medium=twa', '/'],
+] as const) {
+  test(`utm link ${url}: canonical and og:url are the clean path`, async ({ page }) => {
+    await gotoReady(page, url);
+    const canonical = (await page.locator('link[rel="canonical"]').getAttribute('href'))!;
+    const u = new URL(canonical);
+    expect(u.pathname).toBe(path);
+    expect(u.search).toBe('');
+    expect(canonical).toBe(`${u.origin}${path}`);
+    expect(await page.locator('meta[property="og:url"]').getAttribute('content')).toBe(canonical);
+    if (path === '/id-photo/') await expect(page.locator('#idp-preset')).toHaveValue('history');
+  });
+}

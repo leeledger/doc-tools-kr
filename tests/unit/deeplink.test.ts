@@ -26,6 +26,12 @@ describe('deeplink (T1)', () => {
     expect(serialize('pdf-merge', { target: 5 })).toBe('');
   });
 
+  it('REQ1014-A: utm_* next to the deep param does not change it', () => {
+    expect(parse('id-photo', '?preset=history&utm_source=naver_blog&utm_medium=blog&utm_campaign=history-exam-photo')).toEqual({ preset: 'history' });
+    expect(parse('id-photo', '?utm_source=naver_blog&preset=history')).toEqual({ preset: 'history' });
+    expect(parse('pdf-compress', '?target=10&utm_source=tistory&utm_campaign=x')).toEqual({ target: 10 });
+  });
+
   it('invalid, oversized and unknown params give null', () => {
     expect(parse('id-photo', '?preset=../../x')).toBeNull();
     expect(parse('id-photo', '?preset=custom')).toBeNull();

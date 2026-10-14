@@ -24,6 +24,7 @@ const PRIVACY_USAGE = /PRIVACY_USAGE = '([^']+)'/.exec(readFileSync('src/data/le
 const PRIVACY_OUT = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_OUT_ID_PHOTO = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_EMBED = /PRIVACY_EMBED = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_UTM = /PRIVACY_UTM = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'us', 'uc', 'w']);
 
 interface Beacon {
@@ -426,7 +427,12 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   // REV5: the embed widget count (via=embed) is the newest change.
   await expect(main).toContainText('안내 글에서 넘어왔는지, 다른 누리집에 넣은 도구에서 쓴 것인지, 기기 종류');
   await expect(main).toContainText(`${PRIVACY_EMBED}: 익명 사용 통계에 다른 누리집에 넣은 도구에서 쓴 것인지를 더함`);
-  await expect(main).toContainText(`시행일: ${PRIVACY_EMBED}`);
+  // REQ1014-A D18: the link marker (no "utm" on the page) and its 3-hour tab storage are the newest change.
+  await expect(main).toContainText("어느 링크로 들어왔는지: 블로그 등 링크 주소에 붙은 표시 중 정해진 이름(예: 네이버 블로그, 티스토리, 문서딱 앱)과 글 이름. 정해진 형식이 아니면 '기타'로만 셉니다.");
+  await expect(main).toContainText('이 표시는 이 창을 닫으면 지워지는 저장 공간에 최대 3시간 기억해, 같은 창에서 이어서 쓴 도구에도 함께 셉니다.');
+  await expect(main).toContainText(`${PRIVACY_UTM}: 익명 사용 통계에 어느 링크로 들어왔는지(정해진 링크 표시)를 더함`);
+  await expect(main).not.toContainText(/utm/i);
+  await expect(main).toContainText(`시행일: ${PRIVACY_UTM}`);
   // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence wins then (ga.cloud.spec.ts
   // checks it); without it, the cookieless sentence. The date is the embed count's (REV5) in both.
   if ((await page.locator('#ga').count()) === 0) {
