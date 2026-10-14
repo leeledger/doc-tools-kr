@@ -29,7 +29,8 @@ const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-
  * sendBeacon only in the usage tracker, which is off (and dropped from the bundle) unless PUBLIC_USAGE_STATS=1, and in
  * its guide twin (REV3; rendered only in a PUBLIC_USAGE_STATS=1 build, src/layouts/Guide.astro).
  */
-const BEACON_ALLOWLIST: string[] = ['lib/ui/guide-out.ts', 'lib/ui/usage.ts'];
+// utm-land.ts (REQ1014-A): the home/guide landing beacon, its own file that imports nothing (tests/unit/utm-land.test.ts).
+const BEACON_ALLOWLIST: string[] = ['lib/ui/guide-out.ts', 'lib/ui/usage.ts', 'lib/ui/utm-land.ts'];
 
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((d) => {

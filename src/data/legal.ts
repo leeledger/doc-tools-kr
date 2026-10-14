@@ -25,8 +25,13 @@ export const PRIVACY_OUT = '2026년 10월 13일';
  * (via=embed). Only in a build with PUBLIC_USAGE_STATS=1. The REV5 deploy date (re-confirmed at the deploy gate).
  */
 export const PRIVACY_EMBED = '2026년 10월 13일';
-/** The newest change in this build: the embed widget count (REV5) in a usage-stats build, else 이어서 하기 (every build, newer than every other flagged section). */
-export const PRIVACY_REVISED = __USAGE_STATS__ ? PRIVACY_EMBED : PRIVACY_CHAIN;
+/**
+ * 링크 표시 (REQ1014-A D18): the usage statistics also count which marked link (blog, app) a visit came from, kept in this
+ * tab for at most 3 hours. Only in a build with PUBLIC_USAGE_STATS=1. The REQ1014-A deploy date (re-confirmed at the gate).
+ */
+export const PRIVACY_UTM = '2026년 10월 14일';
+/** The newest change in this build: the link-marker count (REQ1014-A) in a usage-stats build, else 이어서 하기 (every build, newer than every other flagged section). */
+export const PRIVACY_REVISED = __USAGE_STATS__ ? PRIVACY_UTM : PRIVACY_CHAIN;
 /**
  * 이용약관 11항 「다른 누리집에 넣어 쓰기」 (REV5 Decision 7; wording awaits the owner). Terms 9항: a change is posted 7 days
  * before it takes effect, so this is the REV5 deploy date plus 7 days (re-confirmed at the deploy gate). Every build.
@@ -41,6 +46,6 @@ export const LEGAL_UPDATED = '2026-09-30';
  * The sitemap lastmod of /privacy/ and /terms/: the 배경 지우기 wording (C2-cloud), plainer headings (2026-10-05), then
  * the anonymous usage statistics and visitor-count sections (turned on 2026-10-07), then Google Analytics (with PUBLIC_GA_ID),
  * then 이어서 하기 (CHAIN, every build), then the 인화·사진관 링크 count (REV2, with PUBLIC_USAGE_STATS), then every link
- * block counted (REV3, with PUBLIC_USAGE_STATS; PRIVACY_OUT).
+ * block counted (REV3, with PUBLIC_USAGE_STATS; PRIVACY_OUT), then the link-marker count (REQ1014-A, PRIVACY_UTM).
  */
-export const PRIVACY_TERMS_UPDATED = '2026-10-13';
+export const PRIVACY_TERMS_UPDATED = '2026-10-14';

@@ -500,6 +500,7 @@ describe('growth report run (A-5)', () => {
         const sql = String(init!.body);
         expect(sql).toContain("INTERVAL '7' DAY");
         expect(sql).toContain('FROM docttak_usage');
+        if (sql.includes('AS camp')) return new Response(JSON.stringify({ data: [{ src: 'naver_blog', camp: 'history-exam-photo', event: 'land', n: 7 }, { src: 'naver_blog', camp: 'history-exam-photo', event: 'success', n: 2 }] }));
         if (sql.includes('AS event')) return new Response(JSON.stringify({ data: [{ tool: 'photo-compress', event: 'success', via: 'direct', n: 30 }, { tool: 'photo-compress', event: 'fail', via: 'direct', n: 10 }] }));
         return new Response(JSON.stringify({ data: [] }));
       }
@@ -535,6 +536,10 @@ describe('growth report run (A-5)', () => {
     expect(md).toContain('### 실패 이유\n\n기록이 아직 없어요.');
     expect(parseReportData(md).usage).toEqual({ success: 30, fail: 10, rate: '75%' });
     expect(gh.create.mock.calls[0]![0].body).toContain('- 도구 사용 7일: 성공 30회, 성공률 75%');
+    // REQ1014-A D15: the campaign table after the usage tables (7 days).
+    expect(md).toContain('### 캠페인별 유입 (7일)\n\n| 들어온 곳 | 캠페인 | 방문 | 처리 시작 | 성공 |\n|---|---|---:|---:|---:|\n| 네이버 블로그 | history-exam-photo | 7 | 0 | 2 |');
+    expect(md.indexOf('### 캠페인별 유입 (7일)')).toBeGreaterThan(md.indexOf('### 상품·사진관 링크'));
+    expect(md.indexOf('### 캠페인별 유입 (7일)')).toBeLessThan(md.indexOf('## 수익화 R1 조건'));
     // Visits (brief ADMIN-VISITS step 8): one summary line after the Cloudflare line, numbers as returned, one
     // request (7 days, no comparison).
     const w = windows(7, new Date('2026-10-01T00:00:00Z')).cur;
@@ -561,6 +566,19 @@ describe('growth report run (A-5)', () => {
     expect(gh.create.mock.calls[0]![0].title).toBe('성장 리포트 2026-40');
     expect(gh.create.mock.calls[0]![0].body).not.toContain('- 방문 7일');
   });
+  it('REQ1014-A campaign table: its SQL failing is one note line; the usage tables stay and the run is not marked', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'growth-'));
+    const { fetchImpl } = apis();
+    const failing = vi.fn(async (u: string | URL, init?: RequestInit) => (String(init?.body ?? '').includes('AS camp') ? new Response('no', { status: 400 }) : fetchImpl(u, init)));
+    const gh = fakeGitHub();
+    await growth(['--reports', dir], { ...quiet, env: { OPS_TODAY: '2026-10-01', AE_API_TOKEN: 'ae', CF_ACCOUNT_ID: 'acc' }, fetchImpl: failing as unknown as typeof fetch, wait: noWait, github: gh });
+    const md = readFileSync(join(dir, '2026-40.md'), 'utf8');
+    expect(md.match(/캠페인 표 오류: analytics engine SQL API: HTTP 400/g)).toHaveLength(1);
+    expect(md).toContain('| 사진 용량 줄이기 | 0 | 0 | 30 | 10 | 75% | 0 |');
+    expect(md).not.toContain('### 캠페인별 유입');
+    expect(gh.create.mock.calls[0]![0].title).toBe('성장 리포트 2026-40');
+  });
+
   it('usage statistics: skipped with a note without AE_API_TOKEN / CF_ACCOUNT_ID; an SQL API error is a note and marks the run', async () => {
     const skipDir = mkdtempSync(join(tmpdir(), 'growth-'));
     const { fetchImpl } = apis();

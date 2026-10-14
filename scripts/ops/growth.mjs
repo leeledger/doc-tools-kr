@@ -19,6 +19,7 @@ import { PROPERTY, accessToken, fetchGrowth, gscClient, parseServiceAccount } fr
 import { sitemapEntries } from './lib/html.mjs';
 import { isoWeek, parseReportData, r1Status, renderReport } from './lib/report.mjs';
 import { datasetName, fetchUsage, shapeUsage } from '../lib/usage.mjs';
+import { fetchCampaigns, shapeCampaigns } from '../lib/campaign.mjs';
 import { fetchVisits, shapeVisits, siteTagOf } from '../lib/visits.mjs';
 
 export const LABEL = 'ops:growth';
@@ -80,6 +81,15 @@ export async function collect({ env, now, fetchImpl = fetch, wait }) {
       notes.push(`도구 사용 통계 오류: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+  // 캠페인별 유입 (REQ1014-A D15): one more SQL call; a failure is one note line and does not mark the run.
+  let campaigns = null;
+  if (usage) {
+    try {
+      campaigns = shapeCampaigns(await fetchCampaigns({ accountId: env.CF_ACCOUNT_ID, token: env.AE_API_TOKEN, dataset: datasetName(env.USAGE_DATASET), days: 7, fetch: fetchImpl }), 10);
+    } catch (err) {
+      notes.push(`캠페인 표 오류: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   let visits = null;
   if (!env.AE_API_TOKEN || !env.CF_ACCOUNT_ID) notes.push('AE_API_TOKEN 또는 CF_ACCOUNT_ID 비밀값이 없어 방문 부분을 건너뛰었습니다.');
   else {
@@ -99,7 +109,7 @@ export async function collect({ env, now, fetchImpl = fetch, wait }) {
     failed = true;
     notes.push(`sitemap 오류: ${err instanceof Error ? err.message : String(err)}`);
   }
-  return { gsc, cf, usage, visits, notes, failed, sitemapCount };
+  return { gsc, cf, usage, campaigns, visits, notes, failed, sitemapCount };
 }
 
 export function summaryBody(data, file, failed) {
@@ -126,7 +136,7 @@ export async function run(argv, io = {}) {
   const previous = readReports(dir).filter((d) => d.week !== week);
   const current = { week, generated: isoDate(now), sitemapCount: c.sitemapCount, gsc: c.gsc, cf: c.cf, usage: c.usage };
   const r1 = r1Status(c.sitemapCount, [...previous, current]);
-  const data = { ...current, notes: c.notes, r1 };
+  const data = { ...current, campaigns: c.campaigns, notes: c.notes, r1 };
   // GROWTH3 G4: the 11-10 search indicators, compared with the latest earlier report that has them.
   const indicators = c.gsc ? computeIndicators(c.gsc, { paths: clusterPaths(io.root), tools: toolSlugs(io.root) }) : null;
   const before = [...previous].reverse().find((d) => d.indicators)?.indicators ?? null;

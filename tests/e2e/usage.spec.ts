@@ -25,7 +25,8 @@ const PRIVACY_USAGE = /PRIVACY_USAGE = '([^']+)'/.exec(readFileSync('src/data/le
 const PRIVACY_OUT = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_OUT_ID_PHOTO = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_EMBED = /PRIVACY_EMBED = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
-const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'w']);
+const PRIVACY_UTM = /PRIVACY_UTM = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'us', 'uc', 'w']);
 
 interface Beacon {
   method: string;
@@ -427,7 +428,12 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   // REV5: the embed widget count (via=embed) is the newest change.
   await expect(main).toContainText('안내 글에서 넘어왔는지, 다른 누리집에 넣은 도구에서 쓴 것인지, 기기 종류');
   await expect(main).toContainText(`${PRIVACY_EMBED}: 익명 사용 통계에 다른 누리집에 넣은 도구에서 쓴 것인지를 더함`);
-  await expect(main).toContainText(`시행일: ${PRIVACY_EMBED}`);
+  // REQ1014-A D18: the link marker (no "utm" on the page) and its 3-hour tab storage are the newest change.
+  await expect(main).toContainText("어느 링크로 들어왔는지: 블로그 등 링크 주소에 붙은 표시 중 정해진 이름(예: 네이버 블로그, 티스토리, 문서딱 앱)과 글 이름. 정해진 형식이 아니면 '기타'로만 셉니다.");
+  await expect(main).toContainText('이 표시는 이 창을 닫으면 지워지는 저장 공간에 최대 3시간 기억해, 같은 창에서 이어서 쓴 도구에도 함께 셉니다.');
+  await expect(main).toContainText(`${PRIVACY_UTM}: 익명 사용 통계에 어느 링크로 들어왔는지(정해진 링크 표시)를 더함`);
+  await expect(main).not.toContainText(/utm/i);
+  await expect(main).toContainText(`시행일: ${PRIVACY_UTM}`);
   // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence wins then (ga.cloud.spec.ts
   // checks it); without it, the cookieless sentence. The date is the embed count's (REV5) in both.
   if ((await page.locator('#ga').count()) === 0) {
@@ -625,4 +631,90 @@ test.describe('REQ1014-B: 배경 지우기 cloud failures by cause', () => {
     expect(beacons.filter((b) => b.ev.e === 'fail')).toEqual([]);
     expectClean(beacons);
   });
+});
+
+// ---------- REQ1014-A: link markers (utm) -> land, and start/success attributed in the same tab ----------
+
+/** id-photo with the preset of the address: pick, confirm, save; resolves when the result shows. */
+async function makeIdPhoto(page: Page): Promise<void> {
+  await page.setInputFiles('#idp-input', PORTRAIT);
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', /^(adjust|blocked)$/, { timeout: 90_000 });
+  await page.locator('#idp-confirm').check();
+  await page.locator('#idp-save').click();
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+}
+
+/** Waits until the page is idle and a lazy chunk had its chance to send. */
+async function settle(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(400);
+}
+
+const MARK_ID_PHOTO = { us: 'naver_blog', uc: 'history-exam-photo' };
+
+test('REQ1014-A utm on a tool: one land (t=id-photo), start and success carry us/uc, the address keeps only ?preset=history', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/id-photo/?preset=history&utm_source=naver_blog&utm_medium=blog&utm_campaign=history-exam-photo');
+  await expect(page.locator('#idp-preset')).toHaveValue('history');
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['land']);
+  expect(beacons[0]!.ev).toEqual({ e: 'land', t: 'id-photo', ...MARK_ID_PHOTO, via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
+  expect(new URL(page.url()).search).toBe('?preset=history');
+  await makeIdPhoto(page);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toContain('success');
+  expectClean(beacons);
+  expect(beacons.filter((b) => b.ev.e === 'land')).toHaveLength(1);
+  for (const b of beacons) {
+    if (b.ev.e === 'start' || b.ev.e === 'success' || b.ev.e === 'land') expect(b.ev, b.body).toMatchObject(MARK_ID_PHOTO);
+    else expect(b.ev, b.body).not.toHaveProperty('us');
+  }
+  expect(beacons.find((b) => b.ev.e === 'start')!.ev).toMatchObject({ o: 'preset', v: 'history' });
+});
+
+test('REQ1014-A utm on a guide (campaign outside the rule): land t=guide with g, uc=other; the tool opened from it sends start/success with us/uc and no land', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/guide/history-exam-photo/?utm_source=tistory&utm_campaign=Bad%20Name');
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['land']);
+  expect(beacons[0]!.ev).toEqual({ e: 'land', t: 'guide', g: 'history-exam-photo', us: 'tistory', uc: 'other', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
+  await page.locator('.guide-cta a').click();
+  await page.waitForURL(/\/id-photo\/\?preset=history$/);
+  await makeIdPhoto(page);
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toContain('success');
+  expectClean(beacons);
+  expect(beacons.filter((b) => b.ev.e === 'land')).toHaveLength(1);
+  expect(beacons.find((b) => b.ev.e === 'arrive')!.ev).toMatchObject({ t: 'id-photo', g: 'history-exam-photo' });
+  expect(beacons.find((b) => b.ev.e === 'start')!.ev).toMatchObject({ t: 'id-photo', us: 'tistory', uc: 'other', via: 'guide' });
+  expect(beacons.find((b) => b.ev.e === 'success')!.ev).toMatchObject({ us: 'tistory', uc: 'other' });
+});
+
+test('REQ1014-A utm on the home page: the app link gives land t=home us=play uc=none; an unknown source is other; no utm or an English page sends nothing', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/?utm_source=play&utm_medium=twa');
+  await expect.poll(() => beacons.map((b) => b.ev.e)).toEqual(['land']);
+  expect(beacons[0]!.ev).toEqual({ e: 'land', t: 'home', us: 'play', uc: 'none', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
+  await gotoReady(page, '/?utm_source=evil&utm_campaign=spring-sale');
+  await expect.poll(() => beacons.length).toBe(2);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'land', t: 'home', us: 'other', uc: 'spring-sale' });
+  expectClean(beacons);
+  for (const path of ['/', '/guide/history-exam-photo/', '/en/?utm_source=play&utm_medium=twa', '/en/pdf-merge/?utm_source=naver_blog', '/privacy/?utm_source=play']) {
+    await gotoReady(page, path);
+    await settle(page);
+  }
+  expect(beacons.length).toBe(2);
+});
+
+test('REQ1014-A D16 서명·도장 → PDF에 넣기: the stored hand-off sends next (t=stamp-signature, v=pdf-sign) and /pdf-sign/ opens with the picture', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/stamp-signature/');
+  await page.getByRole('tab', { name: '직접 그리기' }).click();
+  const pad = (await page.locator('#ss-pad').boundingBox())!;
+  await page.mouse.move(pad.x + 30, pad.y + 40);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(pad.x + 30 + i * 20, pad.y + 40 + (i % 2 ? 20 : -10));
+  await page.mouse.up();
+  await expect(page.locator('#ss-pad-to-pdf')).toBeEnabled();
+  await Promise.all([page.waitForURL('**/pdf-sign/'), page.locator('#ss-pad-to-pdf').click()]);
+  await expect(page.locator('#sg-notice')).toHaveText('전자서명·도장 이미지 만들기에서 만든 그림을 가져왔습니다. 이제 PDF 파일을 고르세요.');
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'next').length).toBe(1);
+  expectClean(beacons);
+  expect(beacons.find((b) => b.ev.e === 'next')!.ev).toEqual({ e: 'next', t: 'stamp-signature', o: 'next', v: 'pdf-sign', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
 });

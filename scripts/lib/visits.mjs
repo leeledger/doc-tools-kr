@@ -9,6 +9,13 @@
 // already extrapolated, and hour groups there even return visits 0. So every period is split into windows of at most
 // RUM_MAX_WINDOW_DAYS, one POST per window, and the rows are summed by key. Numbers are used as returned (never
 // multiplied); a sampleInterval above 1 only marks them as estimates.
+//
+// REQ1014-A (2026-10-14): the 방문/페이지뷰 totals come from a dimensionless `total` node (the hour groups lose
+// visits under sampling while the dimension nodes extrapolate, so their sum disagreed with the tables); the previous
+// period asks for `total` only. `pagesByVisits` backs up an empty `pages` answer. Countries are split into Korean pages
+// and /en/ by two filters (`requestPath_notlike` / `requestPath_like "/en/%"`); if the API refuses those filter
+// fields, every window is asked again with one `countryPaths` node (country × path) split here. Each node's row count
+// and largest sampleInterval are kept for the 집계 정보 table.
 import { COMPARE_PERIODS, GUIDE_TITLES, PERIODS, TOOLS, TOOL_LABELS } from './usage.mjs';
 
 export const GRAPHQL_URL = 'https://api.cloudflare.com/client/v4/graphql';
@@ -31,24 +38,41 @@ const DAY = 86_400_000;
 const HOUR = 3_600_000;
 const KST_OFFSET = 9 * HOUR;
 
-const FIELDS = 'count sum { visits } avg { sampleInterval }';
-const group = (alias, limit, dim, order) => `${alias}: rumPageloadEventsAdaptiveGroups(limit: ${limit}, filter: $filter${order ? `, orderBy: [${order}]` : ''}) { ${FIELDS} dimensions { ${dim} } }`;
-const ALIASES = { trend: 'datetimeHour', pages: 'requestPath', referrers: 'refererHost', countries: 'countryName', devices: 'deviceType' };
-const LIMITS = { trend: TREND_LIMIT, pages: CHUNK_TOP, referrers: CHUNK_TOP, countries: CHUNK_TOP, devices: TOP_N };
-const TREND = group('trend', TREND_LIMIT, 'datetimeHour');
-const TOPS = [
-  group('pages', CHUNK_TOP, 'requestPath', 'count_DESC'),
-  group('referrers', CHUNK_TOP, 'refererHost', 'sum_visits_DESC'),
-  group('countries', CHUNK_TOP, 'countryName', 'sum_visits_DESC'),
-  group('devices', TOP_N, 'deviceType', 'sum_visits_DESC'),
-];
-const HEAD = 'query Visits($accountTag: string, $filter: AccountRumPageloadEventsAdaptiveGroupsFilter_InputObject) { viewer { accounts(filter: {accountTag: $accountTag}) {';
-const QUERY_FULL = `${HEAD}\n  ${[TREND, ...TOPS].join('\n  ')}\n} } }`;
-const QUERY_TREND = `${HEAD}\n  ${TREND}\n} } }`;
+/** Rows of the countryPaths fallback node per window (country × path). */
+export const COUNTRY_PATHS_LIMIT = 1000;
+/** Paths of the English pages (REQ1014-A D11). */
+export const EN_PATH_LIKE = '/en/%';
+/** The device sum may differ from the total by this share before the page says why (REQ1014-A D9). */
+export const MISMATCH_SHARE = 0.1;
+/** Our own Android app (TWA) as a referrer -> its name (REQ1014-A D13). Other package names stay as they are. */
+export const REFERRER_LABELS = { 'com.docttak.app': '문서딱 앱(안드로이드)' };
 
-/** One of two constant query strings: "full" (trend + top tables, current period) or "trend" (previous period). */
+const FIELDS = 'count sum { visits } avg { sampleInterval }';
+const group = (alias, limit, dim, order, filter = '$filter') => `${alias}: rumPageloadEventsAdaptiveGroups(limit: ${limit}, filter: ${filter}${order ? `, orderBy: [${order}]` : ''}) { ${FIELDS} dimensions { ${dim} } }`;
+const ALIASES = { trend: 'datetimeHour', pages: 'requestPath', pagesByVisits: 'requestPath', referrers: 'refererHost', countriesKo: 'countryName', countriesEn: 'countryName', countryPaths: 'countryName', devices: 'deviceType' };
+const LIMITS = { trend: TREND_LIMIT, pages: CHUNK_TOP, pagesByVisits: CHUNK_TOP, referrers: CHUNK_TOP, countriesKo: CHUNK_TOP, countriesEn: CHUNK_TOP, countryPaths: COUNTRY_PATHS_LIMIT, devices: TOP_N };
+const TOTAL = `total: rumPageloadEventsAdaptiveGroups(limit: 1, filter: $filter) { ${FIELDS} }`;
+const TREND = group('trend', TREND_LIMIT, 'datetimeHour');
+const PAGES = [group('pages', CHUNK_TOP, 'requestPath', 'count_DESC'), group('pagesByVisits', CHUNK_TOP, 'requestPath', 'sum_visits_DESC'), group('referrers', CHUNK_TOP, 'refererHost', 'sum_visits_DESC')];
+const COUNTRIES_SPLIT = [group('countriesKo', CHUNK_TOP, 'countryName', 'sum_visits_DESC', '$filterKo'), group('countriesEn', CHUNK_TOP, 'countryName', 'sum_visits_DESC', '$filterEn')];
+const COUNTRIES_PATHS = [group('countryPaths', COUNTRY_PATHS_LIMIT, 'countryName requestPath', 'sum_visits_DESC')];
+const DEVICES = group('devices', TOP_N, 'deviceType', 'sum_visits_DESC');
+const FILTER_TYPE = 'AccountRumPageloadEventsAdaptiveGroupsFilter_InputObject';
+const HEAD = `query Visits($accountTag: string, $filter: ${FILTER_TYPE}) { viewer { accounts(filter: {accountTag: $accountTag}) {`;
+const HEAD_SPLIT = `query Visits($accountTag: string, $filter: ${FILTER_TYPE}, $filterKo: ${FILTER_TYPE}, $filterEn: ${FILTER_TYPE}) { viewer { accounts(filter: {accountTag: $accountTag}) {`;
+const queryOf = (head, nodes) => `${head}\n  ${nodes.join('\n  ')}\n} } }`;
+const QUERIES = {
+  full: queryOf(HEAD_SPLIT, [TOTAL, TREND, ...PAGES, ...COUNTRIES_SPLIT, DEVICES]),
+  'full-paths': queryOf(HEAD, [TOTAL, TREND, ...PAGES, ...COUNTRIES_PATHS, DEVICES]),
+  prev: queryOf(HEAD, [TOTAL]),
+};
+
+/**
+ * One of three constant query strings: "full" (current period: total, trend, top tables, countries split by filter),
+ * "full-paths" (the same with the countryPaths fallback) or "prev" (previous period: total only).
+ */
 export function visitsQuery(kind = 'full') {
-  return kind === 'trend' ? QUERY_TREND : QUERY_FULL;
+  return Object.hasOwn(QUERIES, kind) ? QUERIES[kind] : QUERIES.full;
 }
 
 /** RUM_SITE_TAG: 32 lowercase hex -> it; unset/empty -> SITE_TAG; anything else -> null (the page shows a notice). */
@@ -95,7 +119,12 @@ export function chunks(w) {
   }
 }
 
-const filterOf = (w, siteTag) => ({ AND: [{ datetime_geq: w.start, datetime_leq: w.end }, { bot: 0 }, { siteTag_in: [siteTag] }] });
+/** The variables' filters of a window: the base, and for the split query the Korean-page and /en/ ones (constants only). */
+export function filterOf(w, siteTag, kind = 'full') {
+  const filter = { AND: [{ datetime_geq: w.start, datetime_leq: w.end }, { bot: 0 }, { siteTag_in: [siteTag] }] };
+  if (kind !== 'full') return { filter };
+  return { filter, filterKo: { AND: [...filter.AND, { requestPath_notlike: EN_PATH_LIKE }] }, filterEn: { AND: [...filter.AND, { requestPath_like: EN_PATH_LIKE }] } };
+}
 
 /** Thrown by fetchVisits: status 0 = network / timeout. The message never holds the token. */
 export class VisitsApiError extends Error {
@@ -107,8 +136,10 @@ export class VisitsApiError extends Error {
 
 /**
  * @typedef {{ key: string, pageViews: number, visits: number }} Group
- * @typedef {{ trend: Group[], pages: Group[], referrers: Group[], countries: Group[], devices: Group[] }} CurGroups
- * @typedef {{ cur: CurGroups, prev: Group[] | null, estimated: boolean, approxTops: boolean, requests: number }} RawVisits
+ * @typedef {{ visits: number, pageViews: number }} Totals
+ * @typedef {{ node: string, rows: number, maxSi: number | null }} Diag
+ * @typedef {{ total: Totals, trend: Group[], pages: Group[], pagesByVisits: Group[], referrers: Group[], countriesKo: Group[], countriesEn: Group[], devices: Group[] }} CurGroups
+ * @typedef {{ cur: CurGroups, prev: Totals | null, estimated: boolean, approxTops: boolean, requests: number, diag?: Diag[] }} RawVisits
  */
 
 const BAD_SHAPE = '응답 형식이 올바르지 않음';
@@ -121,21 +152,39 @@ const finite = (x) => typeof x === 'number' && Number.isFinite(x) && x >= 0;
 
 /**
  * One alias's groups -> { rows: [{ key, pageViews: count, visits: sum.visits }] as returned (never multiplied),
- * sampled: some group's avg.sampleInterval is above 1 }. Missing count or visits is a schema change: throws.
- * @returns {{ rows: Group[], sampled: boolean }}
+ * sampled: some group's avg.sampleInterval is above 1, maxSi: the largest sampleInterval (null without one) }.
+ * Missing count or visits is a schema change: throws.
+ * @returns {{ rows: Group[], sampled: boolean, maxSi: number | null }}
  */
 export function readGroups(groups, dim) {
   if (!Array.isArray(groups)) throw new VisitsApiError(200, BAD_SHAPE);
-  let sampled = false;
+  /** @type {number | null} */
+  let maxSi = null;
   const rows = groups.map((g) => {
     if (!finite(g?.count) || !finite(g?.sum?.visits) || !g.dimensions || typeof g.dimensions !== 'object') throw new VisitsApiError(200, BAD_SHAPE);
     const si = g.avg?.sampleInterval;
-    if (finite(si) && si > 1) sampled = true;
+    if (finite(si)) maxSi = Math.max(maxSi ?? 0, si);
     const raw = g.dimensions[dim];
     return { key: typeof raw === 'string' ? raw : '', pageViews: g.count, visits: g.sum.visits };
   });
-  return { rows, sampled };
+  return { rows, sampled: maxSi !== null && maxSi > 1, maxSi };
 }
+
+/**
+ * The dimensionless `total` node -> { visits, pageViews, rows, sampled, maxSi } (no group = zeros; readGroups needs
+ * dimensions). More than one group or a missing count / visits is a schema change: throws.
+ */
+export function readTotal(groups) {
+  if (!Array.isArray(groups) || groups.length > 1) throw new VisitsApiError(200, BAD_SHAPE);
+  const g = groups[0];
+  if (!g) return { visits: 0, pageViews: 0, rows: 0, sampled: false, maxSi: null };
+  if (!finite(g?.count) || !finite(g?.sum?.visits)) throw new VisitsApiError(200, BAD_SHAPE);
+  const si = finite(g.avg?.sampleInterval) ? g.avg.sampleInterval : null;
+  return { visits: g.sum.visits, pageViews: g.count, rows: 1, sampled: si !== null && si > 1, maxSi: si };
+}
+
+/** errors[] text saying the API refused the requestPath like / notlike filter fields (REQ1014-A D11 fallback). */
+export const isLikeRefused = (err) => err instanceof VisitsApiError && err.status === 200 && /requestPath_(not)?like|filterKo|filterEn/i.test(err.message);
 
 /**
  * Rows of several windows summed by key (first-seen order).
@@ -164,7 +213,7 @@ async function post({ accountId, token, siteTag, f, signal, timeoutMs }, w, kind
     res = await f(GRAPHQL_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: visitsQuery(kind), variables: { accountTag: accountId, filter: filterOf(w, siteTag) } }),
+      body: JSON.stringify({ query: visitsQuery(kind), variables: { accountTag: accountId, ...filterOf(w, siteTag, kind) } }),
       signal,
     });
   } catch (err) {
@@ -206,12 +255,14 @@ async function pool(tasks, limit) {
 }
 
 /**
- * The visits of the period ending `now`: one POST per window of at most RUM_MAX_WINDOW_DAYS (current period: trend +
- * top tables; previous period, when `compare` and windows() allow it: trend only), at most MAX_IN_FLIGHT at once,
- * all under one TIMEOUT_MS deadline. Rows are summed by key across windows. Resolves to { cur, prev, estimated (some
- * group had sampleInterval > 1), approxTops (a window's top table came back full, so the summed ranking may miss
- * rows), requests }; rejects with VisitsApiError on HTTP != 200, errors[], bad JSON or missing nodes, a full trend
- * answer, a network error or the deadline. `fetch` is injectable.
+ * The visits of the period ending `now`: one POST per window of at most RUM_MAX_WINDOW_DAYS (current period: total,
+ * trend and top tables; previous period, when `compare` and windows() allow it: total only), at most MAX_IN_FLIGHT at
+ * once, all under one TIMEOUT_MS deadline. Rows are summed by key across windows. If the API refuses the country split
+ * filters (errors[] naming them), every window is asked again with the countryPaths fallback. Resolves to { cur, prev,
+ * estimated (some group had sampleInterval > 1), approxTops (a top table came back full, so the ranking may miss
+ * rows), requests, diag (per node: rows over all windows and the largest sampleInterval) }; rejects with
+ * VisitsApiError on HTTP != 200, other errors[], bad JSON or missing nodes, a full trend answer, a network error or
+ * the deadline. `fetch` is injectable.
  * @returns {Promise<RawVisits>}
  */
 export async function fetchVisits({ accountId, token, siteTag, days, now, compare = true, fetch: f = fetch, timeoutMs = TIMEOUT_MS }) {
@@ -219,30 +270,76 @@ export async function fetchVisits({ accountId, token, siteTag, days, now, compar
   const curChunks = chunks(w.cur);
   const prevChunks = compare && w.prev ? chunks(w.prev) : [];
   const ctx = { accountId, token, siteTag, f, signal: AbortSignal.timeout(timeoutMs), timeoutMs };
-  const tasks = [...curChunks.map((c) => () => post(ctx, c, 'full')), ...prevChunks.map((c) => () => post(ctx, c, 'trend'))];
-  const accs = await pool(tasks, MAX_IN_FLIGHT);
+  const tasksOf = (kind) => [...curChunks.map((c) => () => post(ctx, c, kind)), ...prevChunks.map((c) => () => post(ctx, c, 'prev'))];
+  let kind = 'full';
+  let requests = curChunks.length + prevChunks.length;
+  let accs;
+  try {
+    accs = await pool(tasksOf(kind), MAX_IN_FLIGHT);
+  } catch (err) {
+    if (!isLikeRefused(err)) throw err;
+    kind = 'full-paths';
+    requests *= 2;
+    accs = await pool(tasksOf(kind), MAX_IN_FLIGHT);
+  }
   let estimated = false;
   let approxTops = false;
+  /** @type {Map<string, Diag>} */
+  const diag = new Map();
+  const note = (node, rows, maxSi) => {
+    const d = diag.get(node) ?? { node, rows: 0, maxSi: null };
+    d.rows += rows;
+    if (maxSi !== null) d.maxSi = Math.max(d.maxSi ?? 0, maxSi);
+    diag.set(node, d);
+  };
   /** @param {any} acc @param {keyof typeof ALIASES} alias */
   const read = (acc, alias) => {
     const raw = acc[alias];
-    const { rows, sampled } = readGroups(raw, ALIASES[alias]);
+    const { rows, sampled, maxSi } = readGroups(raw, ALIASES[alias]);
     if (alias === 'trend' && raw.length >= TREND_LIMIT) throw new VisitsApiError(200, '시간대 행이 너무 많음');
-    if (alias !== 'trend' && curChunks.length > 1 && raw.length >= LIMITS[alias]) approxTops = true;
+    // countryPaths is one window's whole country × path list: a full answer means rows were cut even for one window.
+    if (alias !== 'trend' && (curChunks.length > 1 || alias === 'countryPaths') && raw.length >= LIMITS[alias]) approxTops = true;
     if (sampled) estimated = true;
+    note(alias, rows.length, maxSi);
     return rows;
   };
-  const curAccs = accs.slice(0, curChunks.length);
-  /** @type {CurGroups} */
-  const cur = {
-    trend: mergeRows(curAccs.map((a) => read(a, 'trend'))),
-    pages: mergeRows(curAccs.map((a) => read(a, 'pages'))),
-    referrers: mergeRows(curAccs.map((a) => read(a, 'referrers'))),
-    countries: mergeRows(curAccs.map((a) => read(a, 'countries'))),
-    devices: mergeRows(curAccs.map((a) => read(a, 'devices'))),
+  const totalOf = (list, node) => {
+    const t = { visits: 0, pageViews: 0 };
+    for (const acc of list) {
+      const x = readTotal(acc.total);
+      if (x.sampled) estimated = true;
+      note(node, x.rows, x.maxSi);
+      t.visits += x.visits;
+      t.pageViews += x.pageViews;
+    }
+    return t;
   };
-  const prev = prevChunks.length ? mergeRows(accs.slice(curChunks.length).map((a) => read(a, 'trend'))) : null;
-  return { cur, prev, estimated, approxTops, requests: tasks.length };
+  const curAccs = accs.slice(0, curChunks.length);
+  const merged = (alias) => mergeRows(curAccs.map((a) => read(a, alias)));
+  const total = totalOf(curAccs, 'total');
+  const trend = merged('trend');
+  const pages = merged('pages');
+  const pagesByVisits = merged('pagesByVisits');
+  const referrers = merged('referrers');
+  let countriesKo;
+  let countriesEn;
+  if (kind === 'full') {
+    countriesKo = merged('countriesKo');
+    countriesEn = merged('countriesEn');
+  } else {
+    const ko = [];
+    const en = [];
+    for (const acc of curAccs) {
+      const rows = read(acc, 'countryPaths');
+      rows.forEach((r, i) => (String(acc.countryPaths[i].dimensions.requestPath ?? '').startsWith('/en/') ? en : ko).push(r));
+    }
+    countriesKo = mergeRows([ko]);
+    countriesEn = mergeRows([en]);
+  }
+  /** @type {CurGroups} */
+  const cur = { total, trend, pages, pagesByVisits, referrers, countriesKo, countriesEn, devices: merged('devices') };
+  const prev = prevChunks.length ? totalOf(accs.slice(curChunks.length), 'total (직전 기간)') : null;
+  return { cur, prev, estimated, approxTops, requests, diag: [...diag.values()] };
 }
 
 // ---------- shaping ----------
@@ -318,10 +415,25 @@ export const deviceLabel = (d) => (Object.hasOwn(DEVICE_LABELS, d) ? DEVICE_LABE
 
 const byVisits = (a, b) => b.visits - a.visits || b.pageViews - a.pageViews;
 
+/** A referrer host -> its label: our app's name (REFERRER_LABELS, any case), 직접 방문·알 수 없음 for none, else the host. */
+export function referrerLabel(host) {
+  if (host === '') return '직접 방문·알 수 없음';
+  const k = host.toLowerCase();
+  return Object.hasOwn(REFERRER_LABELS, k) ? REFERRER_LABELS[k] : host;
+}
+
+/** True when the device rows' visits differ from the total by more than MISMATCH_SHARE of it (REQ1014-A D9). */
+export function mismatchOf(totalVisits, deviceVisits) {
+  return Math.abs(deviceVisits - totalVisits) > MISMATCH_SHARE * totalVisits;
+}
+
 /**
- * fetchVisits output -> the admin page's numbers (not yet escaped): totals and prevTotals, the trend buckets, the top
- * tables with Korean labels, and the flags estimated (Cloudflare sampled some rows), approxTops (summed ranking may
- * miss rows) and prevBeforeStart (the comparison window starts before RUM_START).
+ * fetchVisits output -> the admin page's numbers (not yet escaped): totals (the dimensionless total node, never the
+ * trend sum) and prevTotals, the trend buckets (chart only), the top tables with Korean labels, and the flags
+ * estimated (Cloudflare sampled some rows), approxTops (summed ranking may miss rows), prevBeforeStart (the comparison
+ * window starts before RUM_START), mismatch (the device sum is off the total by more than 10 %) and diag (per node
+ * rows and largest sample interval). Pages come from `pages`, or from `pagesByVisits` when Cloudflare sent no `pages`
+ * rows (pagesSource count | visits | none); pagesMissing: both empty while there were page views.
  * @param {RawVisits} raw
  * @param {number} days
  * @param {Date} now
@@ -329,23 +441,30 @@ const byVisits = (a, b) => b.visits - a.visits || b.pageViews - a.pageViews;
 export function shapeVisits(raw, days, now) {
   const { cur, prev } = raw;
   const w = windows(days, now);
+  const totals = { visits: cur.total.visits, pageViews: cur.total.pageViews };
+  const pagesSource = cur.pages.length ? 'count' : cur.pagesByVisits.length ? 'visits' : 'none';
+  const pageRows = pagesSource === 'count' ? [...cur.pages].sort((a, b) => b.pageViews - a.pageViews || b.visits - a.visits) : [...cur.pagesByVisits].sort(byVisits);
+  const devices = [...cur.devices].sort(byVisits);
+  const countries = (list) => [...list].sort(byVisits).slice(0, TOP_N).map((g) => ({ label: countryLabel(g.key), visits: g.visits }));
   return {
     estimated: Boolean(raw.estimated),
     approxTops: Boolean(raw.approxTops),
-    totals: sum(cur.trend),
-    prevTotals: prev ? sum(prev) : null,
+    totals,
+    prevTotals: prev ? { visits: prev.visits, pageViews: prev.pageViews } : null,
     prevBeforeStart: w.prevBeforeStart,
     trend: trendBuckets(cur.trend, days, now),
-    pages: [...cur.pages]
-      .sort((a, b) => b.pageViews - a.pageViews || b.visits - a.visits)
-      .slice(0, TOP_N)
-      .map((g) => ({ label: pageLabel(g.key), path: g.key.slice(0, PATH_MAX), visits: g.visits, pageViews: g.pageViews })),
+    pagesSource,
+    pagesMissing: pagesSource === 'none' && totals.pageViews > 0,
+    pages: pageRows.slice(0, TOP_N).map((g) => ({ label: pageLabel(g.key), path: g.key.slice(0, PATH_MAX), visits: g.visits, pageViews: g.pageViews })),
     referrers: cur.referrers
       .filter((g) => !SELF.test(g.key.toLowerCase()))
       .sort(byVisits)
       .slice(0, TOP_N)
-      .map((g) => ({ label: g.key === '' ? '직접 방문·알 수 없음' : g.key, visits: g.visits, pageViews: g.pageViews })),
-    countries: [...cur.countries].sort(byVisits).slice(0, TOP_N).map((g) => ({ label: countryLabel(g.key), visits: g.visits })),
-    devices: [...cur.devices].sort(byVisits).map((g) => ({ label: deviceLabel(g.key), visits: g.visits })),
+      .map((g) => ({ label: referrerLabel(g.key), visits: g.visits, pageViews: g.pageViews })),
+    countriesKo: countries(cur.countriesKo),
+    countriesEn: countries(cur.countriesEn),
+    devices: devices.map((g) => ({ label: deviceLabel(g.key), visits: g.visits })),
+    mismatch: mismatchOf(totals.visits, sum(devices).visits),
+    diag: Array.isArray(raw.diag) ? raw.diag.map((d) => ({ node: d.node, rows: d.rows, maxSi: d.maxSi })) : [],
   };
 }

@@ -1,6 +1,7 @@
 // 전자서명·도장 이미지 만들기 → PDF 서명·도장 넣기 (TOOLS5 U3, brief decision 10): the made PNG travels in this tab's
 // sessionStorage as a data URL, is read once by /pdf-sign/ and removed. Nothing leaves the device; a full or blocked
 // storage (QuotaExceeded, private mode) is reported so the page can ask for the download path instead.
+import { track as trackUsage, type UsageEvent } from './usage';
 
 export const SIGN_PNG_KEY = 'docttak:sign-png';
 export const PDF_SIGN_PATH = '/pdf-sign/';
@@ -73,8 +74,11 @@ export function takeSignPng(store: Store | null = session()): Blob | 'invalid' |
   }
 }
 
-/** Stores `png` and opens /pdf-sign/; false (nothing opened) when it could not be stored. */
-export async function sendToPdfSign(png: Blob, go: (path: string) => void = (p) => window.location.assign(p)): Promise<boolean> {
+/**
+ * Stores `png` and opens /pdf-sign/; false (nothing opened) when it could not be stored. A stored hand-off counts as
+ * 이어서 하기 (REQ1014-A D16: next stamp-signature -> pdf-sign), sent before the navigation (the beacon survives it).
+ */
+export async function sendToPdfSign(png: Blob, go: (path: string) => void = (p) => window.location.assign(p), track: (ev: UsageEvent) => void = trackUsage): Promise<boolean> {
   let url: string;
   try {
     url = await blobToDataUrl(png);
@@ -82,6 +86,7 @@ export async function sendToPdfSign(png: Blob, go: (path: string) => void = (p) 
     return false;
   }
   if (!storeSignPng(url)) return false;
+  track({ e: 'next', t: 'stamp-signature', o: 'next', v: 'pdf-sign' });
   go(PDF_SIGN_PATH);
   return true;
 }

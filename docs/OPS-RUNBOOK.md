@@ -98,6 +98,12 @@ Actions에서는 각 워크플로의 **Run workflow**에 “Dry run” 체크박
 
 - **끄기:** `PUBLIC_USAGE_STATS`를 지우고 다시 배포합니다(통계 코드가 사이트에서 빠집니다). 쌓인 기록은 3개월 안에 지워집니다.
 - **요청 한도:** `/api/usage`와 배경 지우기(`/api/remove-bg`), `/admin/`은 Workers 무료 한도(하루 10만 요청)를 함께 씁니다. 방문이 늘어 한도에 가까워지면 `PUBLIC_USAGE_SAMPLE`을 낮춥니다(예: 0.2). Analytics Engine은 하루 기록 10만 건·조회 1만 건까지 포함입니다.
+- **캠페인별 유입 (블로그·앱 링크, REQ1014-A):** 블로그 글이나 앱에서 거는 링크 끝에 표시를 붙이면 `/admin/`의 「캠페인별 유입」 표와 주간 리포트에 들어온 곳·글별로 셉니다.
+  - 형식: `https://docttak.com/<도구나 안내 글 주소>/?utm_source=<들어온 곳>&utm_campaign=<글 이름>`. 도구 설정이 있으면 앞에 둡니다: `https://docttak.com/id-photo/?preset=history&utm_source=naver_blog&utm_campaign=history-exam-photo`.
+  - `utm_source`는 정해진 것만 이름으로 셉니다: `naver_blog`(네이버 블로그), `tistory`(티스토리), `play`(문서딱 앱, 이미 앱 시작 주소에 들어 있음). 그 밖의 값은 「기타」. 새 곳을 더하려면 `scripts/lib/usage.mjs` `UTM_SOURCES`와 `src/lib/ui/utm-land.ts`를 함께 고칩니다(단위 테스트가 둘을 맞춥니다).
+  - `utm_campaign`은 영어 소문자·숫자·`-`로 60자까지(예: `history-exam-photo`). 대문자는 소문자로 바꿔 세고, 한글·띄어쓰기·61자 이상이면 「(목록 밖 이름)」, 없으면 「(캠페인 없음)」으로 셉니다. `utm_medium`·`utm_content`·`utm_term`은 읽지 않습니다(구글 애널리틱스는 그대로 받습니다).
+  - 표 읽기: 「방문」은 표시가 붙은 링크로 홈·안내 글·도구를 연 횟수, 「처리 시작」·「성공」은 같은 탭에서 3시간 안에 이어진 도구 사용입니다. 위 방문(Cloudflare) 숫자와는 세는 방법이 달라 서로 맞지 않습니다. 영어 페이지(/en/)와 임베드 위젯은 세지 않습니다. 링크 공유 버튼은 표시를 떼고 공유합니다.
+- **방문 표 읽기 (REQ1014-A):** 방문·페이지뷰 합계는 Cloudflare의 합계 노드, 표는 각자 따로 센 값이라 표본이 섞이면 합이 다를 수 있습니다(10%를 넘으면 표 아래 한 줄로 알려 줍니다). 「집계 정보」를 펼치면 노드마다 받은 행 수와 표본 간격이 보입니다. 「나라」는 한국어 페이지와 영어 페이지(/en/)로 나눕니다.
 - **표가 비어 있을 때:** 1번 바인딩이 빠지면 `/api/usage`가 503을 돌려주고 아무것도 쌓이지 않습니다. `/admin/`에 "통계를 불러오지 못했어요 (HTTP 403)"이 보이면 토큰 권한이나 Account ID를 확인합니다.
 
 ## 9. 자동화 트래픽 제외 (2026-10-10, INTERNAL-TRAFFIC)

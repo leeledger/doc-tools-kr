@@ -1,51 +1,48 @@
-# Review Request — REQ1014-B (fewer tool failures)
+# Review Request — REQ1014-A (analytics / admin: 캠페인별 유입, 방문 합계·나라 분리, 서명 넘김, 실패 세부 코드)
 Date: 2026-10-14
 Ready for Review: YES
-Status: DONE_WITH_CONCERNS (see Open Questions 1–2)
-Branch: req-1014-b (base ee4950c), commits 25a2c3d..HEAD (7). Merges cleanly onto origin/main 5bac90a (REQ1014-C), checked with `git merge-tree`.
-Brief: handoff/ARCHITECT-BRIEF-REQ1014-B.md (D1–D16 all built).
+Status: DONE_WITH_CONCERNS (Step 0 RUM probe not run: owner Chrome on 127.0.0.1:9333 was down; the defaults were built and the post-deploy check replaces the probe, as the brief's decision tree allows)
+Branch: req-1014-a (worktree C:\dev\doc-tools\req-a), base ee4950c, commits 33d180f..(this request). Brief: handoff/ARCHITECT-BRIEF-REQ1014-A.md.
+Note: origin/main has moved to 5bac90a (REQ1014-C merged). `git merge-tree` HEAD vs origin/main: clean (shared files: scripts/lib/usage.mjs and 4 test files, no textual conflict). Gates below are on ee4950c + this branch, not on the merge.
+
+## Commits (build order, one per step, each reversible)
+- 33d180f step 1 sniff-format + codes · 255867c step 2 usage.mjs whitelist · 6faa664 step 3 tracker / utm-land / site hook · 8cb0175 step 4 sign hand-off `next` · 87a0d6c step 5 campaign table · 6c13225 step 6 visits.mjs D9–D13 (revert this one alone if a RUM node errors live) · ea76e07 step 7 privacy / runbook / T-E1 · d26df38 gate fix (below) · then this request + BUILD-LOG.
 
 ## Files Changed
-- src/lib/file/sniff-format.ts (new) — byte-identical to req-a d26df38 (blob 651e149): FileFamily, sniffFormat(head, tail?), notHwpCode, corruptCode. D1.
-- src/tools/hwp-shared/not-hwp.ts (new, lazy) — notHwpHelp (64 KB head + tail, never throws), D3 lines per tool, familyOf (CFB + worker not-hwp = office-old), showActions (「PDF 열기」 blob link revoked on reset/pick/pagehide, 「PDF 쪽 보기·나누기」 → pdf-split, 「사진 PDF 변환으로 열기」 → jpg-to-pdf), handTo (tracks next only after the store). D2–D4.
-- src/tools/hwp-shared/session.ts — not-hwp path (page sniff unknown, or worker not-hwp with its container) → notHwp(); #hw-error-actions disposal on reset. D2/D5.
-- src/tools/hwp-shared/boot.ts — receivers: pendingHandoff → start at once, receiveHandoff via dynamic import, file held until taken, sweepDue sweep. D6.
-- src/tools/hwp-shared/watchdog.ts — deps.doc; hidden clears, visible re-arms a full window, stop() disarms; no doc = old behaviour. D8.
-- src/tools/hwpx-to-hwp/controller.ts — keeps the picked File; stage start/engine/parse/export; onTimeoutPlan (one silent retry in start/engine, else phase load/parse/process); notHwp; #hx-error-links hand the file on (fallback: follow href); pageShift line; unverifiedCode. D2/D7/D9/D10.
-- src/tools/hwpx-to-hwp/copy.ts — HX_COPY.pageShift.
-- src/lib/hwp/export-hwp.ts, errors.ts, hwp.worker.ts — tolerance max(1, round(pagesIn × 5 %)), pagesOut ≥ 1, pageShift, HwpError.detail (pages | reopen | bytes) carried in the worker error. D10.
-- src/pages/hwp-viewer, hwp-to-pdf, hwpx-to-hwp index.astro — #hw-arrived, #hw-error-actions; 「바로 보기」「PDF로 바꾸기」 links with data-to, #hx-error-actions, #hx-shift. D5–D7.
-- src/lib/bgremove/cloud.ts — CloudKind on failed results (readAnswer 5xx/4xx/200-not-webp; requestCutout timeout vs network). D13.
-- src/tools/remove-background/bg.ts, model.ts, copy.ts — cloudOnce + one retry after 1,200 ms for network/server/answer/load (cloudRetry, pure), run token checked after the wait; one cloud-<kind> fail; deviceOnce for #bg-device-retry (not remembered); new failed/deviceButton copy. D13/D14.
-- src/tools/stamp-signature/auto.ts (new), photo.ts, copy.ts, src/pages/stamp-signature/index.astro — tip; ladder on the first result of a new photo at 진하기 0; a user change stops it. D15.
-- src/tools/jpg-to-pdf/limits.ts, controller.ts, src/pages/jpg-to-pdf/index.astro — planAdd size param, too-big-file/too-big-total, auto 「줄이기」 notice, 「원본 그대로」 disabled + #jp-size-hint while over the cap. D16.
-- src/lib/image/decode.ts — a resize-option non-RangeError rejection falls through to plain decode + shrink. D11.
-- scripts/lib/usage.mjs — one `// REQ1014-B` block at the end of FAIL_LABELS (11 labels). D12.
-- tests: unit not-hwp, stamp-auto, decode-fallback (new); hwp-tool (watchdog), hwp-export-hwp, hwpx-to-hwp, bgcloud, jpg-to-pdf (extended); e2e hwp-fixtures, helpers/hwp.ts, hwp-viewer, hwp-to-pdf, hwpx-to-hwp, remove-background.cloud, stamp-signature, usage.
+- src/lib/file/sniff-format.ts (new, 1-141) — `FileFamily`, `sniffFormat(head, tail?)` per brief B D1, `notHwpCode`, `corruptCode` (pure, never throws). Not imported by any page yet (brief B wires the call sites).
+- scripts/lib/usage.mjs:9-10,18,24-25,30,47,80-104,106,109,195,206-207,236-238,295,404-419,513-514 — BLOB_KEYS + us/uc (blob13/14), EVENTS + land, UTM_SOURCES / LAND_PAGES / CAMPAIGN_RE / labels, `utmOf()`, ONLY map, validate land + `t` rule, shapeUsage skips land, `export runSql`, FAIL_LABELS for every not-hwp-* / corrupt-* code. All additive (merge note).
+- src/lib/ui/usage.ts:7,45-48,56-57,78,93-103,132-175,189-191,195,210-214,224-225,236-241,244 — stash `docttak:utm` {s,c,at} on start (always, ko only, not /embed/), land when sampled, us/uc read at send time on start/success only, 3 h TTL, storage errors swallowed.
+- src/lib/ui/utm-land.ts (new, 1-103) — home/guide landing; no runtime imports (own copies of the constants, parity test).
+- src/lib/ui/site.ts:5,12-21 — guarded hook (see Open Question 1: `?worker&url` + module script instead of `import()`).
+- src/lib/ui/sign-handoff.ts:4,77-81,89 — `track({ e:'next', t:'stamp-signature', o:'next', v:'pdf-sign' })` after a successful store, before `go()`; optional `track` dep.
+- scripts/lib/campaign.mjs (new, 1-57) — `campaignSql`, `fetchCampaigns` (via runSql), `shapeCampaigns`, `campaignMarkdown`, CAMPAIGN_NOTE / CAMPAIGN_TOP.
+- functions/admin/[[path]].ts:13,101-103,114 — fetchCampaigns inside usageTask's Promise.all with its own `.catch(() => null)`.
+- scripts/lib/admin-view.mjs:7,173-184,207-209,262-266,270-294,355-382 — 캠페인별 유입 section (or "캠페인 표를 불러오지 못했어요."), 나라 (한국어 페이지) / 나라 (영어 페이지 /en/) + note, pages honest message, mismatch line, 집계 정보 details, `.diag summary` style.
+- scripts/lib/visits.mjs:12-18,41-81,122-126,139-186,216,258-342,418-468 — `total` node drives totals, prev = total only (QUERY_PREV, readTotal), pagesByVisits fallback + pagesSource, countriesKo/En via filterOf (constants only), automatic countryPaths fallback when the API names the like/notlike fields in errors[], REFERRER_LABELS, diag {node, rows, maxSi}, `mismatchOf` (10 %).
+- scripts/ops/growth.mjs:22,84-92,112,139 and scripts/ops/lib/report.mjs:5-6,79,105 — "캠페인별 유입 (7일)" table, top 10, a failure is one note line.
+- scripts/qa/admin-preview.mjs:5-8,17,35,43,50-61,75-80,84,86 — stubs for total / pagesByVisits / countriesKo / countriesEn and the campaign SQL; scenarios campaigns, campaigns-1, campaigns-error, pages-empty, mismatch, countries-fallback.
+- src/data/legal.ts:28-34,49,51 and src/pages/privacy/index.astro:5,104,118 — PRIVACY_UTM (2026년 10월 14일, re-confirm at the gate), PRIVACY_REVISED / PRIVACY_TERMS_UPDATED, link-marker field, 3-hour tab storage sentence, change-history line (usage build only).
+- docs/OPS-RUNBOOK.md:101-106 — §8 utm link format for the blog team, sources list, how to read the table.
+- Tests: tests/unit/{campaign,sniff-format,utm-land}.test.ts (new); usage.test.ts:1115-1318 (+ admin Function campaign failure 725-740); visits.test.ts:87-104,564-683; pdf-sign.test.ts:405-426; deeplink.test.ts:29-34; share.test.ts:37-39; ops.test.ts:539-581; postbuild.test.ts:455-461 (new, gate fix); ga.test.ts / network-guard.test.ts / ga.cloud.spec.ts (privacy date constant, utm-land on the beacon allowlist); tests/fixtures/rum-rows.mjs; admin-full-7 snapshot (+2 lines CSS); tests/e2e/site.spec.ts:306-323 (T-E1); tests/e2e/usage.spec.ts:580-665 (T-E2 a–g).
+- d26df38 gate fix — src/lib/file/sniff-format.ts:73: a literal BOM inside a regex (`/^<U+FEFF>/`) became `/^\uFEFF/`. Root cause of a deterministic firefox failure in polish.spec "UI font … no late face" on /id-photo/: gen-ui-font reads every src/lib file, so U+FEFF entered the late face's unicode-range and Firefox fetched anolim-ui-late-400 on /id-photo/. Proven: ee4950c passes, head failed (2 runs), the fix passes on firefox, chromium and webkit. Regression test postbuild.test.ts:455 (no U+FEFF / U+200B–200F in either UI-font set) fails with the BOM and passes after.
 
-## Gates (real numbers)
-- astro check: 0 errors, 0 warnings, 6 hints (pre-existing).
-- vitest (default dist, rebuilt last): 76 files, 1,555 / 1,555 passed.
-- Build + check-dist OK: default precache 408.1 KB (base 407.3, +0.8), cloud flag-on (BG_REMOVE, BG_CLOUD, officer, contact, USAGE, GA test id, AFF_COUPANG=1) 416.2 KB (base 415.4), autoframe 410.3 KB (base 409.5), noauto 408.1, bg 411.3; all / 450.
-- Budgets (base → now, from an ee4950c build on the same machine): jpg-to-pdf controller (lazy) 12.2 → 12.5 / 13.1 KB; stamp-signature controls 12.5 → 12.7 / 13.5 KB; initial JS /hwp-viewer/ 8.0 → 8.6, /hwp-to-pdf/ 8.1 → 8.6, /hwpx-to-hwp/ 8.0 → 8.5, /stamp-signature/ 8.7 → 9.2, /jpg-to-pdf/ 9.1 → 9.1 (all / 30 KB).
-- UI font: core 613 → 614 (+펜, the D15 tip text from the brief), late 37 → 39 (+듭 「만듭니다」, +엑 「엑셀」). No U+FEFF.
-- check:licenses OK (54 packages, 5 components, 0 exceptions).
-- e2e full sweep (13 projects: 5 + manual-chromium + bg-chromium/bg-mobile-safari + cloud ×5; specs hwp-viewer, hwp-to-pdf, hwpx-to-hwp, chain, preload, site, polish, sw, id-photo, image-to-jpg, jpg-to-pdf, pdf-split, stamp-signature, remove-background, remove-background.cloud, usage; 4 workers, machine shared with other builders): 1,693 passed, 15 failed, 12 flaky, 158 skipped. The 15: 10 were B's own test bugs (cloud spec :169 ×5 used a 500 that is now retried; usage "502 then 200" ×5 used a photo whose shape disc.webp does not match) → fixed, re-run 15/15 passed; 2 = hwp-viewer JPG → jpg-to-pdf on webkit/mobile-safari (no OffscreenCanvas in Playwright WebKit on Windows) → skip like jpg-to-pdf/chain specs; 3 firefox (polish:330 UI font = the U+FEFF bug, fixed; image-to-jpg:224 and pdf-split:282 timeouts under load) → re-run 9/9 passed on firefox/chromium/webkit.
-- e2e re-run after the fixes (hwp-viewer, hwp-to-pdf, hwpx-to-hwp, polish × 5 projects): 622 passed, 0 failed, 5 flaky (firefox axe / engine panel / footer timeouts; mobile-chrome hwpx-to-hwp:127 stayed "empty" once, passed on retry), 58 skipped.
-- LHCI local, median of 5, default build, all assertions pass: LCP /hwp-viewer/ 1,670, /hwp-to-pdf/ 1,671, /hwpx-to-hwp/ 1,671, /stamp-signature/ 1,675, /jpg-to-pdf/ 1,671 ms; CLS max 0.0003.
-- qa:visual: 472 PNGs, 0 hard failures.
-- regress:hwp --fixtures-only: all pass (a first run under e2e load failed rule 6 timing, law10 8,696 ms > 4,000; idle re-run all pass). regress:ink 101/101. regress:photo 11/11 rows, 18/18 rules.
+## Gates (2026-10-14, local, Windows; other builders ran e2e on the same machine)
+- G1: `astro check` 0 errors / 0 warnings / 6 hints (517 files). `vitest` 76 files / 1,600 tests passed (1,599 before the regression test). `check:licenses` OK (54 packages, 5 components).
+- G2: `PUBLIC_SITE_URL=https://docttak.com`, check-dist OK on all five builds. Precache vs ee4950c: default 407.3 → 407.8 KB; AUTOFRAME=1 409.5 → 409.8; BG_REMOVE 410.5 → 411.0; cloud flag-on (BG_REMOVE, BG_CLOUD, officer, contact, USAGE=1, GA test id, AFF_COUPANG=1) 415.4 → 417.3; noauto 407.8. All under 450 KB.
+- G3 chunk graph (module scripts + modulepreload + static imports, hashes normalised), ee4950c vs head, home, the history-exam-photo guide and every tool page: file lists identical in default and cloud builds. Initial gzip: default unchanged everywhere except pdf-sign +77 B (sign-handoff's track call) and stamp-signature −1 B; cloud home / guide +114 B (≤ 150 B), cloud tool pages +574…+578 B (pdf-sign +645 B) = the tracker's stash / attribution code in usage.ts. utm-land-*.js exists only in the usage build and is referenced from site.ts only (lazy). Fonts: not unchanged — see Open Question 2.
+- G4 e2e (E2E_PORT 4273 / 4281 / 4282 / 4283), specs site, usage, id-photo, stamp-signature, pdf-sign, chain, growth, en, polish, sw, ga, ga.cloud on chromium, firefox, webkit, mobile-chrome, mobile-safari, manual-chromium and cloud ×5: 1,351 passed, 95 skipped, 17 flaky (passed on retry; firefox page.goto 20 s timeouts and 3 cloud usage specs, under machine load), 6 failed. `--last-failed --workers=2`: 5 of 6 passed (pdf-sign from-stamp chromium, firefox polish merge, webkit site related-tools, webkit site REV3 affiliate, webkit sw offline); the 6th was the firefox UI-font failure, root-caused and fixed in d26df38 (now passes on firefox, chromium, webkit).
+- G5 Lighthouse (lhci, median of 5, own server on dist-bg like the CI checks job, CI assertions): all assertions pass. / perf 99, LCP 1,675 ms, CLS 0; /id-photo/ perf 100, LCP 1,674 ms, CLS 0; /guide/history-exam-photo/ perf 100, LCP 1,681 ms, CLS 0. The CI runner remains the source of truth.
+- G6: `qa:admin --shots` 18 scenarios (full-7/90, empty, error, xss, visits-1/7/90/error/empty/sampled, usage-error-visits-ok, campaigns, campaigns-1, campaigns-error, pages-empty, mismatch, countries-fallback) × 1280 light, 360 light, 360 dark = 54 PNGs, every 360 px page scrollWidth 360; 1 day = 2 POSTs (current + previous total), 7 days = 1, 90 days = 13. `qa:visual --only static` on the usage build: 402 shots, 0 hard failures; /privacy/ 14 shots, 0 overflow, 0 console errors, max CLS 0.0003; the page shows 시행일 2026년 10월 14일, the link-marker item and the 3-hour sentence.
+- G7: `regress:hwp --fixtures-only` 10/10 conversions, pass rules all pass (same as ee4950c). `regress:idphoto --fixtures-only` 10/11; the one FAIL "2 landmarks … misses committed/p07" is identical on ee4950c (pre-existing).
 
 ## Open Questions
-1. ui-shared chunk +0.5 KB gzip: boot.ts (in ui-shared via astro.config manualChunks) now imports handoff-marker and announce statically (D6 asked for a static pendingHandoff). Every page that loads ui-shared pays it (stamp-signature 8.7 → 9.2 KB, not a receiver). Within all budgets and LHCI; the alternative is to keep handoff-marker out of ui-shared (a tiny chunk on the 2 receiver pages, +1 request). Arch call.
-2. Merge with -A: sniff-format.ts is identical (no conflict). scripts/lib/usage.mjs (both append a FAIL_LABELS block at the end) and tests/e2e/usage.spec.ts (both append at the end) conflict textually in `git merge-tree` against req-a HEAD; resolution is "keep both". No conflict with origin/main 5bac90a (C).
-3. Codes follow -A's notHwpCode, not the brief's fallback list: text → not-hwp-text, xlsx/pptx → not-hwp-office, CFB → not-hwp-cfb (labels are in -A's block). The brief said to use -A's when it exists.
-4. jpg-to-pdf total-cap auto 「줄이기」: unit only (planAdd, messages, codes); no e2e (the spec has no cheap way past 150 MB).
-
-## Unverified claims
-- U1 (blob PDF tab): the e2e accepts "opens a blob: tab OR downloads" on all 5 projects and records an annotation `U1 popup=… shown=… downloaded=…`; all 5 passed, so the `download` fallback was not added.
-- U2 (Android Chrome blob PDF), U3 (iOS < 16.4 403 origin, now visible as cloud-refused): owner phone / post-deploy admin.
-- The 85 % success targets: 7-day admin after deploy.
+1. site.ts deviates from D6's wording: instead of `import('./utm-land')` it imports `./utm-land?worker&url` and appends a `<script type="module">` when the guard holds. Reason (code comment): a dynamic `import()` in site.ts pulls Vite's preload helper (in ui-shared) into every page's initial JS, which broke the guide budget / G3. The file still imports nothing at runtime and is compiled with the build constants; usage-off builds have no utm-land file. Please confirm.
+2. G3 says "Fonts unchanged (core chars)". The core face gained 느붙셉억 and the late face lost 느억 because the new /privacy/ copy (D18, a core page) uses them, so the face files have new hashes. Direct consequence of D18's text; postbuild font budget tests and Lighthouse pass. Arch: accept, or reword the privacy lines?
+3. Step 0 not run. D11 is built with an automatic fallback (if errors[] names `requestPath_like` / `_notlike`, each window is asked again with one countryPaths node, split client-side; qa:admin scenario countries-fallback), so no decision is pending. Post-deploy (owner Chrome): /admin/?days=1 and 7 — KPI vs device sum, pages rows or the honest message, two country tables, app label, 집계 정보 sample intervals; log as "REQ1014-A probe", usBrowsers numbers as a Known Gap.
+4. F5: Play listing status (public production vs internal test track) is for the owner to confirm in Play Console.
+5. PRIVACY_UTM / PRIVACY_TERMS_UPDATED = 2026년 10월 14일 — re-confirm at the deploy gate if deploy slips.
+6. Brief B owns the detailed fail-code call sites; sniff-format.ts exists here first, so B only adds members (no rename). The cloud usage e2e for the detailed codes is a Known Gap handed to B.
 
 ## Out of Scope (logged in BUILD-LOG)
-- Temporary C:\dev\doc-tools\reqb-base (ee4950c checkout for the font/size A/B) could not be deleted: a serve.mjs on :4391 holds it. Worktree registration removed; delete the folder once that process ends.
+- Bot heuristics, per-country page tables, EN/embed UTM, utm_medium/content/term, other app referrer labels, GA4 changes (brief Out of scope).
+- Firefox page.goto timeouts under parallel machine load (17 flaky) are environmental; no test change.

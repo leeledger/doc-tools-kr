@@ -6,8 +6,10 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   CHUNK_TOP,
+  COUNTRY_PATHS_LIMIT,
   GRAPHQL_URL,
   MAX_IN_FLIGHT,
+  REFERRER_LABELS,
   RUM_START,
   SITE_TAG,
   TREND_LIMIT,
@@ -16,6 +18,11 @@ import {
   countryLabel,
   deviceLabel,
   fetchVisits,
+  filterOf,
+  isLikeRefused,
+  mismatchOf,
+  readTotal,
+  referrerLabel,
   mergeRows,
   pageLabel,
   readGroups,
@@ -32,7 +39,7 @@ import { guideTitles } from '../../scripts/ops/lib/guides.mjs';
 import { serialize } from '../../scripts/gen-guide-titles.mjs';
 import { onRequest as adminFn } from '../../functions/admin/[[path]]';
 import { FULL, PREV } from '../fixtures/usage-rows.mjs';
-import { RUM_EMPTY, RUM_ERRORS, TOPS, XSS_TOPS, g, rumAnswer, rumBody, trendRows, windowOf } from '../fixtures/rum-rows.mjs';
+import { RUM_EMPTY, RUM_ERRORS, RUM_LIKE_REFUSED, TOPS, XSS_TOPS, g, rumAnswer, rumBody, trendRows, windowOf } from '../fixtures/rum-rows.mjs';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -53,27 +60,48 @@ const api = (answer: (init: Init) => Response | Promise<Response>) => {
 const fixture = (opts: Parameters<typeof rumAnswer>[1] = {}) => api((init) => ok(rumAnswer(init.body, opts)));
 const args = (f: unknown, days = 7, extra: Record<string, unknown> = {}) => ({ accountId: 'acc-tag', token: 'secret-token-xyz', siteTag: SITE_TAG, days, now: NOW, fetch: f as typeof fetch, ...extra });
 const DAY = 86_400_000;
+const EMPTY_CUR = { total: { visits: 0, pageViews: 0 }, trend: [], pages: [], pagesByVisits: [], referrers: [], countriesKo: [], countriesEn: [], devices: [] };
 const sumRows = (rows: ReturnType<typeof trendRows>) => rows.reduce((t, r) => ({ visits: t.visits + r.sum.visits, pageViews: t.pageViews + r.count }), { visits: 0, pageViews: 0 });
 
 describe('query, windows and chunks', () => {
-  it('two constant query strings; values only as variables; verified names only', () => {
+  it('three constant query strings; values only as variables; verified names only', () => {
     const full = visitsQuery('full');
-    const trend = visitsQuery('trend');
+    const paths = visitsQuery('full-paths');
+    const prev = visitsQuery('prev');
     expect(visitsQuery()).toBe(full);
-    for (const s of [full, trend]) {
+    for (const s of [full, paths, prev]) {
       expect(s).not.toMatch(/\d{4}-\d{2}-\d{2}/);
       expect(s).not.toContain(SITE_TAG);
+      expect(s).not.toContain('/en/');
       expect(s).toContain('$accountTag: string');
       expect(s).toContain('$filter: AccountRumPageloadEventsAdaptiveGroupsFilter_InputObject');
-      expect(s).toContain(`trend: rumPageloadEventsAdaptiveGroups(limit: ${TREND_LIMIT}, filter: $filter)`);
+      // REQ1014-A D9: the dimensionless total node (shape verified 2026-10-08) in every query.
+      expect(s).toContain('total: rumPageloadEventsAdaptiveGroups(limit: 1, filter: $filter) { count sum { visits } avg { sampleInterval } }');
       for (const o of s.match(/orderBy: \[(\w+)\]/g) ?? []) expect(['orderBy: [count_DESC]', 'orderBy: [sum_visits_DESC]']).toContain(o);
-      for (const d of s.match(/dimensions \{ (\w+) \}/g) ?? []) expect(['datetimeHour', 'requestPath', 'refererHost', 'countryName', 'deviceType'].map((x) => `dimensions { ${x} }`)).toContain(d);
+      for (const d of s.match(/dimensions \{ ([\w ]+) \}/g) ?? []) expect(['datetimeHour', 'requestPath', 'refererHost', 'countryName', 'deviceType', 'countryName requestPath'].map((x) => `dimensions { ${x} }`)).toContain(d);
     }
-    for (const alias of ['pages', 'referrers', 'countries', 'devices']) {
-      expect(full).toContain(`${alias}: rumPageloadEventsAdaptiveGroups(`);
-      expect(trend).not.toContain(`${alias}:`);
+    for (const s of [full, paths]) {
+      expect(s).toContain(`trend: rumPageloadEventsAdaptiveGroups(limit: ${TREND_LIMIT}, filter: $filter)`);
+      for (const alias of ['pages', 'pagesByVisits', 'referrers', 'devices']) expect(s).toContain(`${alias}: rumPageloadEventsAdaptiveGroups(`);
     }
-    expect(full.match(/avg \{ sampleInterval \}/g)).toHaveLength(5);
+    expect(full).toContain(`pagesByVisits: rumPageloadEventsAdaptiveGroups(limit: ${CHUNK_TOP}, filter: $filter, orderBy: [sum_visits_DESC]) { count sum { visits } avg { sampleInterval } dimensions { requestPath } }`);
+    expect(full).toContain(`countriesKo: rumPageloadEventsAdaptiveGroups(limit: ${CHUNK_TOP}, filter: $filterKo, orderBy: [sum_visits_DESC])`);
+    expect(full).toContain(`countriesEn: rumPageloadEventsAdaptiveGroups(limit: ${CHUNK_TOP}, filter: $filterEn, orderBy: [sum_visits_DESC])`);
+    expect(full).toContain('$filterKo: AccountRumPageloadEventsAdaptiveGroupsFilter_InputObject, $filterEn: AccountRumPageloadEventsAdaptiveGroupsFilter_InputObject');
+    expect(full).not.toContain('countryPaths');
+    expect(paths).toContain(`countryPaths: rumPageloadEventsAdaptiveGroups(limit: ${COUNTRY_PATHS_LIMIT}, filter: $filter, orderBy: [sum_visits_DESC])`);
+    expect(paths).not.toMatch(/filterKo|filterEn|countriesKo|countriesEn/);
+    expect(prev).not.toMatch(/trend:|pages:|referrers:|countr|devices:/);
+    expect(full.match(/avg \{ sampleInterval \}/g)).toHaveLength(8);
+    expect(visitsQuery('nonsense')).toBe(full);
+  });
+
+  it('filterOf: the base filter; the split query adds the /en/ notlike and like filters (constants and the window only)', () => {
+    const w = { start: '2026-10-18T05:03:20Z', end: '2026-10-25T05:03:20Z' };
+    const base = { AND: [{ datetime_geq: w.start, datetime_leq: w.end }, { bot: 0 }, { siteTag_in: [SITE_TAG] }] };
+    expect(filterOf(w, SITE_TAG, 'prev')).toEqual({ filter: base });
+    expect(filterOf(w, SITE_TAG, 'full-paths')).toEqual({ filter: base });
+    expect(filterOf(w, SITE_TAG)).toEqual({ filter: base, filterKo: { AND: [...base.AND, { requestPath_notlike: '/en/%' }] }, filterEn: { AND: [...base.AND, { requestPath_like: '/en/%' }] } });
   });
 
   it('rolling windows; prev ends 1 s before cur starts; prev only for 1/7/30 from RUM_START on; bad period throws', () => {
@@ -129,8 +157,11 @@ describe('fetchVisits', () => {
     }
     const bodies = calls.map((c) => JSON.parse(c.init.body));
     expect(bodies[0].query).toBe(visitsQuery('full'));
-    expect(bodies[0].variables).toEqual({ accountTag: 'acc-tag', filter: { AND: [{ datetime_geq: '2026-10-18T05:03:20Z', datetime_leq: '2026-10-25T05:03:20Z' }, { bot: 0 }, { siteTag_in: [SITE_TAG] }] } });
-    expect(bodies[1].query).toBe(visitsQuery('trend'));
+    const w7 = { start: '2026-10-18T05:03:20Z', end: '2026-10-25T05:03:20Z' };
+    expect(bodies[0].variables).toEqual({ accountTag: 'acc-tag', ...filterOf(w7, SITE_TAG) });
+    expect(bodies[0].variables.filter).toEqual({ AND: [{ datetime_geq: '2026-10-18T05:03:20Z', datetime_leq: '2026-10-25T05:03:20Z' }, { bot: 0 }, { siteTag_in: [SITE_TAG] }] });
+    expect(bodies[1].query).toBe(visitsQuery('prev'));
+    expect(Object.keys(bodies[1].variables)).toEqual(['accountTag', 'filter']);
     expect(bodies[1].variables.filter.AND[0]).toEqual({ datetime_geq: '2026-10-11T05:03:20Z', datetime_leq: '2026-10-18T05:03:19Z' });
     expect(raw.prev).not.toBeNull();
   });
@@ -162,7 +193,9 @@ describe('fetchVisits', () => {
     expect(readGroups([g('datetimeHour', 'h', 70, 40, 10), { count: 4, sum: { visits: 2 }, dimensions: { datetimeHour: 'k' } }], 'datetimeHour')).toEqual({
       rows: [{ key: 'h', pageViews: 70, visits: 40 }, { key: 'k', pageViews: 4, visits: 2 }],
       sampled: true,
+      maxSi: 10,
     });
+    expect(readGroups([], 'deviceType')).toEqual({ rows: [], sampled: false, maxSi: null });
     expect(readGroups([g('deviceType', 'mobile', 3, 2, 1)], 'deviceType').sampled).toBe(false);
     const w = windows(7, NOW).cur;
     const sampled = await fetchVisits(args(fixture({ si: 10 }).f, 7, { compare: false }));
@@ -228,7 +261,12 @@ describe('fetchVisits', () => {
     ];
     for (const b of bad) await expect(fetchVisits(args(api(b).f, 7))).rejects.toMatchObject({ message: '응답 형식이 올바르지 않음' });
     const many = Array.from({ length: TREND_LIMIT }, (_, i) => g('datetimeHour', new Date(Date.UTC(2026, 9, 1) + i * 3_600_000).toISOString(), 1, 1));
-    await expect(fetchVisits(args(api(() => ok(rumBody({ trend: many, pages: [], referrers: [], countries: [], devices: [] }))).f, 7))).rejects.toMatchObject({ message: '시간대 행이 너무 많음' });
+    const answer = (trend: unknown[], total: unknown) => ok(rumBody({ total, trend, pages: [], pagesByVisits: [], referrers: [], countriesKo: [], countriesEn: [], devices: [] }));
+    await expect(fetchVisits(args(api(() => answer(many, [])).f, 7))).rejects.toMatchObject({ message: '시간대 행이 너무 많음' });
+    // The total node: missing, two groups, or a group without count -> the same shape error.
+    for (const total of [undefined, [{ count: 1, sum: { visits: 1 } }, { count: 1, sum: { visits: 1 } }], [{ sum: { visits: 1 } }]]) {
+      await expect(fetchVisits(args(api(() => answer([], total)).f, 7, { compare: false }))).rejects.toMatchObject({ message: '응답 형식이 올바르지 않음' });
+    }
   });
 
   it('network error -> 네트워크 오류; the deadline while sending or while reading the body -> 시간 초과', async () => {
@@ -272,7 +310,8 @@ describe('shapeVisits', () => {
     expect(s.pages[1]).toEqual({ label: '사진 용량 줄이기', path: '/photo-compress/', visits: 14, pageViews: 22 });
     expect(s.pages[6]!.path).toHaveLength(80);
     expect(s.referrers.map((r) => r.label)).toEqual(['직접 방문·알 수 없음', 'search.example.kr', 'blog.example.com']);
-    expect(s.countries.map((c) => c.label)).toEqual(['대한민국', '일본', countryLabel('ZZ'), '알 수 없음']);
+    expect(s.countriesKo.map((c) => c.label)).toEqual(['대한민국', '일본', countryLabel('ZZ'), '알 수 없음']);
+    expect(s.countriesEn).toEqual([{ label: '미국', visits: 6 }, { label: '대한민국', visits: 1 }]);
     expect(s.devices.map((d) => d.label)).toEqual(['휴대폰', '컴퓨터', '태블릿', 'smarttv']);
     expect(s.prevTotals).not.toBeNull();
     expect(pageLabel('/pdf-merge/')).toBe('PDF 합치기');
@@ -281,7 +320,7 @@ describe('shapeVisits', () => {
   });
 
   it('prev window before RUM_START -> prevTotals null, prevBeforeStart', () => {
-    const s = shapeVisits({ cur: { trend: [], pages: [], referrers: [], countries: [], devices: [] }, prev: null, estimated: false, approxTops: false, requests: 1 }, 7, new Date('2026-10-08T05:00:00Z'));
+    const s = shapeVisits({ cur: EMPTY_CUR, prev: null, estimated: false, approxTops: false, requests: 1 }, 7, new Date('2026-10-08T05:00:00Z'));
     expect(s.prevTotals).toBeNull();
     expect(s.prevBeforeStart).toBe(true);
   });
@@ -361,7 +400,7 @@ describe('admin page visits block', () => {
     expect(both).toContain('<h2 class="group-title">도구 사용</h2>');
     expect(both.indexOf('방문</h2>')).toBeLessThan(both.indexOf('도구 사용</h2>'));
     expect(both).not.toContain('불러오지 못했어요');
-    for (const t of ['많이 본 페이지', '들어온 곳', '나라', '기기', '방문 추이']) expect(both).toContain(`>${t}</h2>`);
+    for (const t of ['많이 본 페이지', '들어온 곳', '나라 (한국어 페이지)', '나라 (영어 페이지 /en/)', '기기', '방문 추이']) expect(both).toContain(`>${t}</h2>`);
 
     const visitsOnly = page({ notice: 'HTTP 500', visits: v });
     expect(visitsOnly).toContain('도구 사용 통계를 불러오지 못했어요 (HTTP 500).');
@@ -410,7 +449,7 @@ describe('admin page visits block', () => {
     expect(fine).not.toContain('순위는 대략적이에요');
     const many = { ...TOPS, pages: Array.from({ length: CHUNK_TOP }, (_, i) => g('requestPath', `/p${i}/`, 100 - i, 50)) };
     expect(page({ notice: 'x', days: 30, visits: await shaped({ tops: many }, 30) })).toContain('7일씩 나눠 받은 순위를 더한 값이라 순위는 대략적이에요.');
-    const early = shapeVisits({ cur: { trend: [], pages: [], referrers: [], countries: [], devices: [] }, prev: null, estimated: false, approxTops: false, requests: 1 }, 7, new Date('2026-10-08T05:00:00Z'));
+    const early = shapeVisits({ cur: EMPTY_CUR, prev: null, estimated: false, approxTops: false, requests: 1 }, 7, new Date('2026-10-08T05:00:00Z'));
     expect(page({ visits: early, notice: 'x' })).toContain('<dd class="delta">비교 없음 (집계 시작 전)</dd>');
     for (const h of [fine, sampled, page({ visitsNotice: 'x', notice: 'y' }), page({ visits: await empty(), notice: 'y' })]) {
       expect(h).not.toContain('방문자');
@@ -520,5 +559,125 @@ describe('guide titles and preset labels', () => {
       expect(VALUE_LABELS[id as keyof typeof VALUE_LABELS], id).toBe(labels[id]);
     }
     expect(VALUE_LABELS.custom).toBe('직접 입력');
+  });
+});
+
+describe('REQ1014-A visits: total node, pages fallback, country split, labels, diagnostics', () => {
+  const shaped = async (opts: Parameters<typeof rumAnswer>[1] = {}, days = 7, extra: Record<string, unknown> = {}) => shapeVisits(await fetchVisits(args(fixture(opts).f, days, extra)), days, NOW);
+  const page = (visits: unknown) => renderAdminPage({ days: 1, now: NOW, notice: 'x', visits });
+
+  it('the total node drives 방문/페이지뷰 even when the hourly trend sums to less (sampling); the previous period is total only', async () => {
+    const s = await shaped({ total: { count: 420, visits: 210 } }, 1);
+    expect(s.totals).toEqual({ visits: 210, pageViews: 420 });
+    expect(s.trend.reduce((t, b) => t + b.visits, 0)).not.toBe(210);
+    expect(s.prevTotals).toEqual({ visits: 210, pageViews: 420 });
+    expect(readTotal([])).toEqual({ visits: 0, pageViews: 0, rows: 0, sampled: false, maxSi: null });
+    expect(readTotal([{ count: 5, sum: { visits: 3 }, avg: { sampleInterval: 10 } }])).toEqual({ visits: 3, pageViews: 5, rows: 1, sampled: true, maxSi: 10 });
+    // A sampled total marks the numbers as estimates like any other node.
+    const { f } = api((init) => {
+      const body = rumAnswer(init.body) as { data: { viewer: { accounts: { total: { avg: { sampleInterval: number } }[] }[] } } };
+      body.data.viewer.accounts[0]!.total[0]!.avg.sampleInterval = 3;
+      return ok(body);
+    });
+    expect((await fetchVisits(args(f, 7, { compare: false }))).estimated).toBe(true);
+  });
+
+  it('pages: from `pages`; from `pagesByVisits` (sorted by visits) when `pages` is empty; the honest message when both are empty with page views', async () => {
+    expect((await shaped()).pagesSource).toBe('count');
+    const byVisits = await shaped({ tops: { ...TOPS, pages: [], pagesByVisits: [g('requestPath', '/a/', 1, 1), g('requestPath', '/id-photo/', 9, 7)] } });
+    expect(byVisits.pagesSource).toBe('visits');
+    expect(byVisits.pages.map((p) => p.path)).toEqual(['/id-photo/', '/a/']);
+    expect(byVisits.pagesMissing).toBe(false);
+    const none = await shaped({ tops: { ...TOPS, pages: [], pagesByVisits: [] } });
+    expect(none).toMatchObject({ pagesSource: 'none', pagesMissing: true, pages: [] });
+    const html = page(none);
+    expect(html).toContain('<h2 id="s-pages">많이 본 페이지</h2>\n<p class="muted">Cloudflare가 이 기간의 페이지 목록을 보내지 않았어요. 7일 보기에서 확인해 주세요.</p>');
+    const empty = shapeVisits(await fetchVisits(args(api(() => ok(RUM_EMPTY)).f)), 7, NOW);
+    expect(empty).toMatchObject({ pagesSource: 'none', pagesMissing: false });
+    expect(page(empty)).toMatch(/<h2 id="s-pages">많이 본 페이지<\/h2>\n<p class="muted">이 기간에는 기록이 없어요.<\/p>/);
+  });
+
+  it('countries: two sections (Korean pages, /en/ with its opening note), from the two filtered nodes', async () => {
+    const s = await shaped();
+    const html = page(s);
+    expect(html).toContain('<h2 id="s-countries">나라 (한국어 페이지)</h2>');
+    expect(html).toContain('<h2 id="s-countries-en">나라 (영어 페이지 /en/)</h2>\n<p class="muted kpi-note">영어판은 2026년 10월 13일에 열었어요.</p>');
+    expect(html.indexOf('s-countries"')).toBeLessThan(html.indexOf('s-countries-en"'));
+    expect(html).toContain('<td>미국</td><td class="num">6</td>');
+  });
+
+  it('like / notlike refused (errors[] naming the field): every window again with countryPaths, split by /en/ here; other errors still fail', async () => {
+    expect(isLikeRefused(new VisitsApiError(200, 'unknown field "requestPath_like"'))).toBe(true);
+    expect(isLikeRefused(new VisitsApiError(200, 'cannot request data older than 31d'))).toBe(false);
+    expect(isLikeRefused(new VisitsApiError(400, 'requestPath_like'))).toBe(false);
+    const { f, calls } = fixture({ likeRefused: true });
+    const raw = await fetchVisits(args(f, 7));
+    expect(calls.map((c) => JSON.parse(c.init.body).query)).toEqual(expect.arrayContaining([visitsQuery('full'), visitsQuery('full-paths'), visitsQuery('prev')]));
+    expect(raw.requests).toBe(4);
+    const s = shapeVisits(raw, 7, NOW);
+    expect(s.countriesKo).toEqual([
+      { label: '대한민국', visits: 40 },
+      { label: '일본', visits: 4 },
+      { label: countryLabel('ZZ'), visits: 2 },
+      { label: '알 수 없음', visits: 1 },
+    ]);
+    expect(s.countriesEn).toEqual([{ label: '미국', visits: 6 }, { label: '대한민국', visits: 1 }]);
+    expect(s.diag.map((d) => d.node)).toContain('countryPaths');
+    expect(raw.approxTops).toBe(false);
+    const full = Array.from({ length: COUNTRY_PATHS_LIMIT }, (_, i) => ({ avg: { sampleInterval: 1 }, count: 1, dimensions: { countryName: 'KR', requestPath: `/p${i}/` }, sum: { visits: 1 } }));
+    const cut = api((init) => {
+      const w = windowOf(init.body);
+      if (w.split) return ok(RUM_LIKE_REFUSED);
+      const body = rumAnswer(init.body) as { data: { viewer: { accounts: Record<string, unknown>[] } } };
+      if (w.paths) body.data.viewer.accounts[0]!.countryPaths = full;
+      return ok(body);
+    });
+    expect((await fetchVisits(args(cut.f, 1))).approxTops).toBe(true);
+    await expect(fetchVisits(args(api(() => ok(RUM_ERRORS)).f))).rejects.toMatchObject({ message: 'cannot request data older than 31d <b>"x"</b>' });
+  });
+
+  it('referrers: our app package is named (any case); other packages and hosts stay as they are', async () => {
+    expect(REFERRER_LABELS).toEqual({ 'com.docttak.app': '문서딱 앱(안드로이드)' });
+    expect(referrerLabel('com.docttak.app')).toBe('문서딱 앱(안드로이드)');
+    expect(referrerLabel('COM.DOCTTAK.APP')).toBe('문서딱 앱(안드로이드)');
+    expect(referrerLabel('com.kakao.talk')).toBe('com.kakao.talk');
+    expect(referrerLabel('')).toBe('직접 방문·알 수 없음');
+    const s = await shaped({ tops: { ...TOPS, referrers: [g('refererHost', 'com.docttak.app', 11, 11), g('refererHost', 'com.nhn.android.search', 3, 3)] } });
+    expect(s.referrers.map((r) => r.label)).toEqual(['문서딱 앱(안드로이드)', 'com.nhn.android.search']);
+  });
+
+  it('mismatch: the device sum off the total by more than 10 % (boundary exact) shows one muted line', async () => {
+    expect(mismatchOf(100, 110)).toBe(false);
+    expect(mismatchOf(100, 90)).toBe(false);
+    expect(mismatchOf(100, 110.01)).toBe(true);
+    expect(mismatchOf(100, 89.99)).toBe(true);
+    expect(mismatchOf(0, 0)).toBe(false);
+    expect(mismatchOf(0, 1)).toBe(true);
+    // TOPS devices sum to 53 visits.
+    const off = await shaped({ total: { count: 300, visits: 110 } }, 1);
+    expect(off.mismatch).toBe(true);
+    expect(page(off)).toContain('<p class="muted ratio-note">표마다 Cloudflare가 따로 세어(표본) 합이 방문 수와 다를 수 있어요.</p>');
+    const near = await shaped({ total: { count: 100, visits: 53 } }, 1);
+    expect(near.mismatch).toBe(false);
+    expect(page(near)).not.toContain('표마다 Cloudflare가 따로 세어');
+  });
+
+  it('diag: rows and the largest sampleInterval per node over all windows, in a folded 집계 정보 table at the end of the block', async () => {
+    const s = await shaped({ si: 10 }, 30);
+    const node = (n: string) => s.diag.find((d) => d.node === n)!;
+    expect(s.diag.map((d) => d.node)).toEqual(['total', 'trend', 'pages', 'pagesByVisits', 'referrers', 'countriesKo', 'countriesEn', 'devices']);
+    expect(node('total')).toEqual({ node: 'total', rows: 5, maxSi: 10 });
+    expect(node('pages')).toEqual({ node: 'pages', rows: 5 * TOPS.pages.length, maxSi: 1 });
+    expect(node('trend').maxSi).toBe(10);
+    const one = await shaped({}, 1);
+    expect(one.diag.find((d) => d.node === 'total (직전 기간)')).toEqual({ node: 'total (직전 기간)', rows: 1, maxSi: 1 });
+    const html = page(one);
+    expect(html).toMatch(/<details class="diag">\n<summary>집계 정보<\/summary>[\s\S]*<th scope="col">항목<\/th><th scope="col" class="num">행<\/th><th scope="col" class="num">표본 간격<\/th>/);
+    expect(html).toContain('<tr><td>total</td><td class="num">1</td><td class="num">1</td></tr>');
+    expect(html.indexOf('집계 정보')).toBeGreaterThan(html.indexOf('id="s-devices"'));
+    expect(html.indexOf('집계 정보')).toBeLessThan(html.indexOf('<h2 class="group-title">도구 사용</h2>'));
+    const empty = shapeVisits(await fetchVisits(args(api(() => ok(RUM_EMPTY)).f, 7, { compare: false })), 7, NOW);
+    expect(empty.diag.find((d) => d.node === 'total')).toEqual({ node: 'total', rows: 0, maxSi: null });
+    expect(page(empty)).toContain('<tr><td>total</td><td class="num">0</td><td class="num">-</td></tr>');
   });
 });

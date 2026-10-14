@@ -10,6 +10,7 @@
 import { COMPARE_PERIODS, DEFAULT_DAYS, PERIODS, UsageApiError, datasetName, fetchPrevTotals, fetchUsage, shapeUsage } from '../../scripts/lib/usage.mjs';
 import { VisitsApiError, fetchVisits, shapeVisits, siteTagOf } from '../../scripts/lib/visits.mjs';
 import { renderAdminPage, sampleShareOf } from '../../scripts/lib/admin-view.mjs';
+import { fetchCampaigns, shapeCampaigns } from '../../scripts/lib/campaign.mjs';
 
 export interface Env {
   ADMIN_PASSWORD?: string;
@@ -97,8 +98,9 @@ export async function onRequest({ request, env }: Ctx): Promise<Response> {
   const usageTask = async () => {
     if (!dataset) return { error: 'USAGE_DATASET 이름이 올바르지 않음' };
     const api = { accountId, token, dataset, days };
-    const [rows, prev] = await Promise.all([fetchUsage(api), COMPARE_PERIODS.includes(days) ? fetchPrevTotals(api).catch(() => null) : null]);
-    return { shaped: shapeUsage(rows), prev };
+    // 캠페인별 유입 (REQ1014-A Decision 14): its failure only replaces that section with a notice.
+    const [rows, prev, camp] = await Promise.all([fetchUsage(api), COMPARE_PERIODS.includes(days) ? fetchPrevTotals(api).catch(() => null) : null, fetchCampaigns(api).catch(() => null)]);
+    return { shaped: shapeUsage(rows), prev, campaigns: camp === null ? null : shapeCampaigns(camp) };
   };
   const visitsTask = async () => {
     if (!siteTag) return { error: 'RUM_SITE_TAG 형식이 올바르지 않음' };
@@ -109,7 +111,7 @@ export async function onRequest({ request, env }: Ctx): Promise<Response> {
     u.status === 'fulfilled'
       ? 'error' in u.value
         ? { notice: u.value.error }
-        : { shaped: u.value.shaped, prev: u.value.prev }
+        : { shaped: u.value.shaped, prev: u.value.prev, campaigns: u.value.campaigns }
       : { notice: u.reason instanceof UsageApiError ? `HTTP ${u.reason.status}` : '알 수 없는 오류' };
   const visits =
     v.status === 'fulfilled'

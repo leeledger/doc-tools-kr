@@ -9,6 +9,7 @@ import { deflateSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { signPdf } from '../../src/lib/pdf/sign';
 import { MB } from '../../src/lib/ui/device';
+import { validate } from '../../scripts/lib/usage.mjs';
 import { HANDOFF_FAILED, PDF_SIGN_PATH, SIGN_PNG_KEY, hasSignPng, sendToPdfSign, storeSignPng, takeSignPng } from '../../src/lib/ui/sign-handoff';
 import { LIMITS, fileLimitMessage, imageLimitMessage } from '../../src/tools/pdf-sign/limits';
 import { LIMITS as SPLIT_LIMITS } from '../../src/tools/pdf-split/limits';
@@ -397,6 +398,28 @@ describe('/stamp-signature/ → /pdf-sign/ hand-over (sessionStorage)', () => {
       store.m.clear();
       expect(await sendToPdfSign(new Blob([png() as Uint8Array<ArrayBuffer>], { type: 'image/png' }), (p) => opened.push(p))).toBe(false);
       expect(opened).toEqual([PDF_SIGN_PATH]);
+    } finally {
+      g.window = before;
+    }
+  });
+
+  it('REQ1014-A D16: a stored hand-off tracks next stamp-signature -> pdf-sign once, before go(); a failed store tracks nothing', async () => {
+    const log: string[] = [];
+    const g = globalThis as { window?: unknown };
+    const before = g.window;
+    const store = new Store();
+    g.window = { sessionStorage: store };
+    const blob = (): Blob => new Blob([png() as Uint8Array<ArrayBuffer>], { type: 'image/png' });
+    const track = (ev: unknown): void => void log.push(`track ${JSON.stringify(ev)}`);
+    try {
+      expect(await sendToPdfSign(blob(), (p) => log.push(`go ${p}`), track)).toBe(true);
+      expect(log).toEqual([`track ${JSON.stringify({ e: 'next', t: 'stamp-signature', o: 'next', v: 'pdf-sign' })}`, `go ${PDF_SIGN_PATH}`]);
+      expect(validate(JSON.stringify({ e: 'next', t: 'stamp-signature', o: 'next', v: 'pdf-sign', via: 'direct', d: 'mobile', b: 'dev', w: 1 }))).not.toBeNull();
+      log.length = 0;
+      store.full = true;
+      store.m.clear();
+      expect(await sendToPdfSign(blob(), (p) => log.push(`go ${p}`), track)).toBe(false);
+      expect(log).toEqual([]);
     } finally {
       g.window = before;
     }

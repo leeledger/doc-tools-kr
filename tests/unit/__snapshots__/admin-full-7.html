@@ -66,8 +66,8 @@ footer p{margin:0 0 4px}
 .chart .grid{stroke:var(--line);stroke-width:1}
 .chart .base{stroke:var(--muted);stroke-width:1}
 .chart-x{grid-column:2;display:flex;justify-content:space-between;gap:8px;margin:4px 0 0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
-.chart-table summary{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;color:var(--brand);font-weight:600}
-.chart-table summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.chart-table summary,.diag summary{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;color:var(--brand);font-weight:600}
+.chart-table summary:focus-visible,.diag summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
 @media (max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}.card.wide{grid-column:span 2}.card .value{font-size:22px}section[aria-labelledby]{padding:12px}}
 </style>
 </head>
