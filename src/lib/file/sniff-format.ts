@@ -70,7 +70,7 @@ function isText(head: Uint8Array): boolean {
   } catch {
     return false;
   }
-  s = s.replace(/^﻿/, '');
+  s = s.replace(/^\uFEFF/, '');
   if (!s || s.includes('\0')) return false;
   let ok = 0;
   for (const ch of s) {

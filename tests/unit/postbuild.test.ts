@@ -452,6 +452,13 @@ describe('UI font static instances (P.12)', () => {
     expect([...new Set([...core, ...late])].sort((a, b) => a - b)).toEqual(sets.all);
   });
 
+  it('REQ1014-A: no invisible format character (BOM U+FEFF, zero-width U+200B-U+200F) in either set: write it as an escape', () => {
+    // A literal BOM in a regex in src/lib put U+FEFF in the late range, and Firefox then fetched the late face on /id-photo/.
+    const { core, late } = uiCharSets(join(ROOT, 'src'));
+    const invisible = (cp: number) => cp === 0xfeff || (cp >= 0x200b && cp <= 0x200f);
+    expect([...core, ...late].filter(invisible)).toEqual([]);
+  });
+
   it('core scope: tools and libs are late unless listed in CORE_PATHS; every CORE_PATHS entry exists', () => {
     for (const p of CORE_PATHS) {
       expect(p).toMatch(/^(tools|lib)\//);
