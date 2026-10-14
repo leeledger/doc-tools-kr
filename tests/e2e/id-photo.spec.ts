@@ -226,8 +226,8 @@ test('every shipped preset and a custom size: exact px, ≤ limit, the dpi, the 
   expectSpec(bytes, 200, 250, 50_000, 96);
 });
 
-// G2 A2: each new preset opened from its guide's deep link is selected at load and saves its exact file.
-for (const id of ['history', 'korcham', 'teps', 'kuksiwon']) {
+// G2 A2 (REQ1014-C adds police, hanja, jlpt): each new preset opened from its guide's deep link is selected at load and saves its exact file.
+for (const id of ['history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', 'jlpt']) {
   test(`?preset=${id}: selected at load; exact px, ≤ limit, the dpi, the file tag`, async ({ page }) => {
     const p = PRESETS.find((x) => x.id === id)!;
     await open(page, `/id-photo/?preset=${id}`);
@@ -248,6 +248,7 @@ test('presets in groups; ?preset=id_card: print preset, exact px, the print note
   await expect(sel).toHaveValue('id_card');
   expect(await sel.locator('optgroup').evaluateAll((gs) => gs.map((g) => (g as HTMLOptGroupElement).label))).toEqual(['여권·신분증', '시험·원서', '이력서', '기타']);
   expect(await sel.locator('optgroup').first().locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value))).toEqual(['passport_online', 'id_card', 'driver_license']);
+  expect(await sel.locator('optgroup[label="시험·원서"] option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value))).toEqual(['gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', 'jlpt']);
   expect(await sel.locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value))).toEqual([...PRESETS.map((p) => p.id), 'custom']);
   await pick(page, PORTRAIT);
   await expect(tool(page)).toHaveAttribute('data-state', 'adjust');

@@ -107,6 +107,11 @@ describe('whitelist (scripts/lib/usage.mjs)', () => {
     expect(validate(body({ ...BASE, e: 'arrive', g: 'a', dl: '0' }))).not.toBeNull();
   });
 
+  it('REQ1014-C: the new id-photo presets validate; an unknown preset id does not', () => {
+    for (const v of ['police', 'hanja', 'jlpt']) expect(validate(body({ ...BASE, e: 'start', o: 'preset', v })), v).not.toBeNull();
+    for (const v of ['visa_us', 'youth_card', 'POLICE']) expect(validate(body({ ...BASE, e: 'start', o: 'preset', v })), v).toBeNull();
+  });
+
   it('validate returns every blob key in schema order, missing ones empty', () => {
     const ev = validate(body({ ...BASE, e: 'fail', c: 'oom', p: 'process', br: 'chrome 131', via: 'guide' }))!;
     expect(toDataPoint(ev)).toEqual({ indexes: ['pdf-merge'], blobs: ['fail', 'pdf-merge', 'oom', 'process', '', '', '', '', 'guide', 'desktop', 'chrome 131', 'dev'], doubles: [1] });

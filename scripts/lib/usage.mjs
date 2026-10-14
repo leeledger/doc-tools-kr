@@ -50,7 +50,7 @@ export const DEVICES = ['mobile', 'tablet', 'desktop'];
 export const KB_BUCKETS = ['le100', 'le200', 'le300', 'le500', 'le1000', 'gt1000'];
 export const MB_BUCKETS = ['le1', 'le2', 'le5', 'le10', 'gt10'];
 /** Equal to PRESET_IDS in src/data/preset-ids.ts (a unit test keeps them equal), plus "custom". */
-export const PRESETS = ['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea', 'half_card', 'custom'];
+export const PRESETS = ['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', 'jlpt', 'saramin', 'jobkorea', 'half_card', 'custom'];
 /** Equal to the keys of LEVELS in src/lib/pdf/compress/levels.ts (unit test). */
 export const LEVEL_IDS = ['high', 'recommended', 'strong'];
 export const MODES = ['cloud', 'device'];
@@ -412,6 +412,9 @@ export const VALUE_LABELS = {
   korcham: '대한상공회의소 자격시험 원서',
   teps: 'TEPS 원서',
   kuksiwon: '보건의료인 국가시험 원서',
+  police: '경찰공무원 채용 원서',
+  hanja: '한자능력검정시험 원서 (한국어문회)',
+  jlpt: 'JLPT 원서 (온라인 접수)',
   saramin: '사람인 이력서',
   jobkorea: '잡코리아 이력서',
   half_card: '반명함판 3×4 cm (일반 크기, 기관 규격 아님)',

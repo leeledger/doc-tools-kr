@@ -246,7 +246,7 @@ describe('guide and preset data', () => {
   });
   it('reads the official and print presets with resolved URLs and quotes', () => {
     const presets = readPresets();
-    expect(presets.map((p) => p.id)).toEqual(['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea']);
+    expect(presets.map((p) => p.id)).toEqual(['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', 'jlpt', 'saramin', 'jobkorea']);
     for (const p of presets) {
       expect(p.urls.length, p.id).toBeGreaterThan(0);
       for (const u of p.urls) expect(u, p.id).toMatch(/^https:\/\//);

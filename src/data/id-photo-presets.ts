@@ -4,7 +4,8 @@
 // Known Gaps. G2 A2 added history, korcham, teps, kuksiwon (no print size where the source's pixels do not match
 // it within 1.5 %, or where it says "약"). TOOLS4 T1 added the `print` kind (주민등록증: the source states only a
 // paper size), 운전면허증 (official: the 도로교통공단 photo rule, read from its image alt text) and the select
-// groups; no visa preset (BUILD-LOG "TOOLS4 Step 0"; owner decision 2026-10-06).
+// groups; no visa preset (BUILD-LOG "TOOLS4 Step 0"; owner decision 2026-10-06). REQ1014-C added police, hanja and
+// jlpt to 시험·원서 (sources re-read 2026-10-14; 청소년증·국제운전면허 skipped: same output as id_card/passport_online).
 
 import { DEFAULT_PRESET_ID } from './preset-ids';
 
@@ -64,6 +65,8 @@ export const RETRIEVED = '2026-09-29';
 export const A2_RETRIEVED = '2026-10-02';
 /** The TOOLS4 T1 presets (id_card, driver_license) were read on this date. */
 export const T1_RETRIEVED = '2026-10-06';
+/** The REQ1014-C presets (police, hanja, jlpt) were read on this date. */
+export const R1014_RETRIEVED = '2026-10-14';
 /** 32–36 mm of a 45 mm-high photo (passport.go.kr menuPos=32). */
 export const PASSPORT_BAND = { minFrac: 32 / 45, maxFrac: 36 / 45 } as const;
 const reference: HeadBand = { kind: 'reference', measure: 'crown', ...PASSPORT_BAND };
@@ -267,6 +270,61 @@ export const PRESETS: readonly IdPreset[] = [
     note: '276×354는 최소 크기입니다.',
   },
   {
+    id: 'police',
+    label: '경찰공무원 채용 원서',
+    source: '경찰청 인터넷 원서접수',
+    outW: printPx(30),
+    outH: printPx(40),
+    limitRule: null,
+    mm: { w: 30, h: 40 },
+    headBand: reference,
+    dpi: PRINT_PPI,
+    fileTag: 'police',
+    status: 'official',
+    group: '시험·원서',
+    sourceUrls: ['https://public.jinhakapply.com/PoliceV2/useinfo/useinfo02_2.aspx'],
+    quote: '최근 1년 이내에 촬영한 상반신 컬러사진(3cm X 4cm)을 업로드 해주세요.',
+    retrieved: R1014_RETRIEVED,
+    note: '사진등록안내는 3×4 cm만 정합니다. 픽셀 크기는 해상도 300으로 계산한 값입니다.',
+  },
+  {
+    id: 'hanja',
+    label: '한자능력검정시험 원서 (한국어문회)',
+    source: '한국어문회',
+    outW: 230,
+    outH: 310,
+    limitBytes: limitBytes(100, 'le'),
+    limitRule: 'le',
+    mm: { w: 30, h: 40 },
+    headBand: reference,
+    dpi: dpiFor(230, 30),
+    fileTag: 'hanja',
+    status: 'official',
+    group: '시험·원서',
+    sourceUrls: ['https://www.hanja.re.kr/kccpt/guide/faq.do?id=91'],
+    quote: '원본 : 6개월 이내 촬영한 반명함판(3㎝x4㎝, 본인, 탈모, 무배경) - 픽셀 : 가로 230픽셀 x 세로 310픽셀 - 용량 : 100KB 이하 - 파일 : .JPG 또는 .PNG 확장자인 파일만 가능',
+    retrieved: R1014_RETRIEVED,
+  },
+  {
+    id: 'jlpt',
+    label: 'JLPT 원서 (온라인 접수)',
+    source: 'JLPT 일본어능력시험',
+    outW: 413,
+    outH: 531,
+    limitBytes: limitBytes(1000, 'le'),
+    limitRule: 'le',
+    mm: { w: 35, h: 45 },
+    headBand: reference,
+    dpi: 300,
+    fileTag: 'jlpt',
+    status: 'official',
+    group: '시험·원서',
+    sourceUrls: ['https://www.jlpt.or.kr/html/information_01.html'],
+    quote: '온라인접수 사진파일 등록 - 파일 형식: JPG 형식만 가능 여권사진규격(3.5 x 4.5cm) 비율 파일 용량: 1MB이하',
+    retrieved: R1014_RETRIEVED,
+    note: 'JLPT는 비율만 정하고 픽셀 크기는 정하지 않아 여권 온라인 규격(413×531)으로 맞춥니다.',
+  },
+  {
     id: 'saramin',
     label: '사람인 이력서',
     source: '사람인 고객센터',
@@ -358,9 +416,10 @@ const PASSPORT_ASPECT = 35 / 45;
 /**
  * Presets shipped before TOOLS4 with the reference band on a portrait aspect other than 35:45 (3:4, 4:5, 5:7).
  * Any new preset with a reference band must be within 1.5 % of 35:45 (brief TOOLS4 decision 6: a passport band on
- * another shape, such as a square visa photo, would be a made-up guide).
+ * another shape, such as a square visa photo, would be a made-up guide). REQ1014-C added police and hanja: a 3:4
+ * portrait from an official cm size (3×4 cm), the same family as history, teps and half_card.
  */
-const REFERENCE_ASPECT_EXEMPT: ReadonlySet<string> = new Set(['history', 'korcham', 'teps', 'saramin', 'jobkorea', 'half_card']);
+const REFERENCE_ASPECT_EXEMPT: ReadonlySet<string> = new Set(['history', 'korcham', 'teps', 'saramin', 'jobkorea', 'half_card', 'police', 'hanja']);
 
 /** Schema problems of a shipped preset (empty when valid). The build and the unit tests run this. */
 export function validatePreset(p: IdPreset): string[] {

@@ -74,7 +74,7 @@ describe('jfif', () => {
 describe('presets', () => {
   it('every shipped preset passes the schema', () => {
     for (const p of PRESETS) expect(validatePreset(p), p.id).toEqual([]);
-    expect(PRESETS.map((p) => p.id)).toEqual(['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'saramin', 'jobkorea', 'half_card']);
+    expect(PRESETS.map((p) => p.id)).toEqual(['passport_online', 'id_card', 'driver_license', 'gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', 'jlpt', 'saramin', 'jobkorea', 'half_card']);
   });
 
   it('rejects a secondary status and a missing quote or URL', () => {
@@ -102,6 +102,8 @@ describe('presets', () => {
     expect(validatePreset({ ...square, quote: `정사각형 ${rule}`, headBand: { kind: 'official', measure: 'hair', minFrac: 0.5, maxFrac: 0.69, bandQuote: rule } })).toEqual([]);
     // Shipped before TOOLS4 (3:4, 4:5, 5:7 reference bands) stay valid; 직접 입력 has any shape.
     for (const id of ['history', 'korcham', 'teps', 'saramin', 'jobkorea', 'half_card']) expect(validatePreset(getPreset(id)!), id).toEqual([]);
+    // REQ1014-C: police and hanja are 3:4 from an official 3×4 cm size (exempt); jlpt is 35:45 (no exemption needed).
+    for (const id of ['police', 'hanja', 'jlpt']) expect(validatePreset(getPreset(id)!), id).toEqual([]);
     expect(validatePreset(customPreset(600, 600)!)).toEqual([]);
   });
 
@@ -153,7 +155,12 @@ describe('presets', () => {
     expect(saramin.limitBytes).toBe(10_000_000);
     expect(getPreset('jobkorea')!.limitBytes).toBe(5_000_000);
     expect(getPreset('half_card')!.limitBytes).toBeUndefined();
+    const police = getPreset('police')!;
+    expect([police.outW, police.outH, police.mm, police.dpi]).toEqual([354, 472, { w: 30, h: 40 }, 300]);
     expect(getPreset('teps')!.limitBytes).toBe(50_000);
+    expect(getPreset('hanja')!.limitBytes).toBe(100_000);
+    expect(getPreset('jlpt')!.limitBytes).toBe(1_000_000);
+    expect(getPreset('police')!.limitBytes).toBeUndefined();
     for (const id of ['history', 'korcham', 'kuksiwon']) expect(getPreset(id)!.limitBytes, id).toBeUndefined();
     expect(limitBytes(350, 'lt')).toBe(349_999);
     expect(limitLabel(gosi)).toBe('350 KB 미만');
@@ -171,7 +178,7 @@ describe('presets', () => {
   });
 
   it('file names are ASCII preset tags', () => {
-    expect(PRESETS.map(outputName)).toEqual(['passport_413x531.jpg', 'idcard_413x531.jpg', 'license_413x531.jpg', 'gosi_137x177.jpg', 'qnet_413x531.jpg', 'history_120x160.jpg', 'korcham_400x500.jpg', 'teps_126x165.jpg', 'kuksiwon_276x354.jpg', 'saramin_100x140.jpg', 'jobkorea_150x210.jpg', 'halfcard_354x472.jpg']);
+    expect(PRESETS.map(outputName)).toEqual(['passport_413x531.jpg', 'idcard_413x531.jpg', 'license_413x531.jpg', 'gosi_137x177.jpg', 'qnet_413x531.jpg', 'history_120x160.jpg', 'korcham_400x500.jpg', 'teps_126x165.jpg', 'kuksiwon_276x354.jpg', 'police_354x472.jpg', 'hanja_230x310.jpg', 'jlpt_413x531.jpg', 'saramin_100x140.jpg', 'jobkorea_150x210.jpg', 'halfcard_354x472.jpg']);
     expect(outputName(customPreset(200, 250, 50)!)).toBe('photo_200x250.jpg');
     for (const p of PRESETS) expect(outputName(p)).toMatch(/^[a-z0-9_]+\.jpg$/);
   });
@@ -191,7 +198,7 @@ describe('presets', () => {
   });
 
   it('dpi values: 300, 99, 200, 96', () => {
-    expect(Object.fromEntries(PRESETS.map((p) => [p.id, p.dpi]))).toEqual({ passport_online: 300, id_card: 300, driver_license: 300, gosi: 99, qnet: 300, history: 96, korcham: 96, teps: 96, kuksiwon: 200, saramin: 96, jobkorea: 96, half_card: 300 });
+    expect(Object.fromEntries(PRESETS.map((p) => [p.id, p.dpi]))).toEqual({ passport_online: 300, id_card: 300, driver_license: 300, gosi: 99, qnet: 300, history: 96, korcham: 96, teps: 96, kuksiwon: 200, police: 300, hanja: 195, jlpt: 300, saramin: 96, jobkorea: 96, half_card: 300 });
     expect(customPreset(200, 250)!.dpi).toBe(96);
   });
 
@@ -209,6 +216,7 @@ describe('presets', () => {
     const of = (g: string) => PRESETS.filter((p) => p.group === g).map((p) => p.id);
     expect(of('여권·신분증')).toEqual(['passport_online', 'id_card', 'driver_license']);
     expect(of('비자')).toEqual([]);
+    expect(of('시험·원서')).toEqual(['gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', 'jlpt']);
     expect(of('이력서')).toEqual(['saramin', 'jobkorea']);
     expect(of('기타')).toEqual(['half_card']);
     // PRESETS is in group order, so the select lists the presets in the same order as PRESET_IDS.
