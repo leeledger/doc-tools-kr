@@ -102,7 +102,7 @@ export function utmOf(search) {
   return { us: UTM_SOURCES.includes(src) ? src : 'other', uc: !camp ? 'none' : CAMPAIGN_RE.test(camp) ? camp : 'other' };
 }
 
-/** Keys in Analytics Engine blob order (blob1 .. blob12). */
+/** Keys in Analytics Engine blob order (blob1 .. blob14). */
 export const BLOB_KEYS = ['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'us', 'uc'];
 const KEYS = new Set([...BLOB_KEYS, 'w']);
 /** Keys allowed on the listed event types only. */
