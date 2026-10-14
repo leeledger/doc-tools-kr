@@ -1,7 +1,7 @@
 // REQ1014-A D17 / REQ1014-B D1: what a picked file really is (sniffFormat) and the usage fail codes built from it.
 import { strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { CODE_RE } from '../../scripts/lib/usage.mjs';
+import { CODE_RE, FAIL_LABELS } from '../../scripts/lib/usage.mjs';
 import { corruptCode, notHwpCode, sniffFormat, type FileFamily } from '../../src/lib/file/sniff-format';
 import type { ImageFormat } from '../../src/lib/image/sniff';
 
@@ -112,10 +112,11 @@ describe('notHwpCode / corruptCode', () => {
     });
   });
 
-  it('every code passes the usage CODE_RE (at most 24 chars)', () => {
+  it('every code passes the usage CODE_RE (at most 24 chars) and has an admin label', () => {
     for (const c of codes) {
       expect(c.length).toBeLessThanOrEqual(24);
       expect(c).toMatch(CODE_RE);
+      expect(Object.hasOwn(FAIL_LABELS, c), c).toBe(true);
     }
   });
 });

@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   BLOB_KEYS,
+  CAMPAIGN_LABELS,
   EVENTS,
   FAIL_LABELS,
   GUIDE_OUT,
@@ -13,6 +14,8 @@ import {
   PRESETS,
   TOOLS,
   TOOL_OUT,
+  UTM_SOURCES,
+  UTM_SOURCE_LABELS,
   bucketKB,
   bucketMB,
   datasetName,
@@ -25,6 +28,7 @@ import {
   usageSample,
   usagePrevSql,
   usageSql,
+  utmOf,
   validate,
 } from '../../scripts/lib/usage.mjs';
 import { onRequest as usageFn } from '../../functions/api/usage';
@@ -109,8 +113,10 @@ describe('whitelist (scripts/lib/usage.mjs)', () => {
 
   it('validate returns every blob key in schema order, missing ones empty', () => {
     const ev = validate(body({ ...BASE, e: 'fail', c: 'oom', p: 'process', br: 'chrome 131', via: 'guide' }))!;
-    expect(toDataPoint(ev)).toEqual({ indexes: ['pdf-merge'], blobs: ['fail', 'pdf-merge', 'oom', 'process', '', '', '', '', 'guide', 'desktop', 'chrome 131', 'dev'], doubles: [1] });
-    expect(BLOB_KEYS).toEqual(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b']);
+    expect(toDataPoint(ev)).toEqual({ indexes: ['pdf-merge'], blobs: ['fail', 'pdf-merge', 'oom', 'process', '', '', '', '', 'guide', 'desktop', 'chrome 131', 'dev', '', ''], doubles: [1] });
+    // REQ1014-A D1: us/uc appended as blob13/blob14; the first 12 never move (every existing SQL reads them).
+    expect(BLOB_KEYS).toEqual(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'us', 'uc']);
+    expect(BLOB_KEYS.length).toBeLessThanOrEqual(20);
   });
 
   it.each([
@@ -547,7 +553,7 @@ describe('Pages Function /api/usage', () => {
     expect(res.headers.get('x-robots-tag')).toBe('noindex');
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(writeDataPoint).toHaveBeenCalledTimes(1);
-    expect(writeDataPoint.mock.calls[0]![0]).toEqual({ indexes: ['id-photo'], blobs: ['start', 'id-photo', '', '', 'preset', 'gosi', '', '', 'guide', 'mobile', '', 'abc1234'], doubles: [2] });
+    expect(writeDataPoint.mock.calls[0]![0]).toEqual({ indexes: ['id-photo'], blobs: ['start', 'id-photo', '', '', 'preset', 'gosi', '', '', 'guide', 'mobile', '', 'abc1234', '', ''], doubles: [2] });
     expect(JSON.stringify(writeDataPoint.mock.calls[0])).not.toMatch(/203\.0\.113|KR|Seoul|Chrome/);
   });
 
@@ -1085,5 +1091,86 @@ describe('링크 누름 out event (REV2 decision 7, REV3 decision 6)', () => {
     expect(shapeUsage({ outs: [{ dest: 'photo-studio', n: 2 }] }).outs).toEqual({ total: 0, rows: [] });
     expect(shapeUsage({ outs: [{ tool: '__proto__', guide: 'x', dest: 'cp-mfp', n: 2 }] }).outs).toEqual({ total: 0, rows: [] });
     expect(shapeUsage({}).outs).toEqual({ total: 0, rows: [] });
+  });
+});
+
+describe('link markers: land event, us/uc (REQ1014-A D1-D4)', () => {
+  const LAND = { e: 'land', t: 'id-photo', us: 'naver_blog', uc: 'history-exam-photo', via: 'direct', d: 'mobile', b: 'dev', w: 1 };
+
+  it('land: a tool, home or guide as t; g only with t=guide (optional); us/uc on start and success too', () => {
+    expect(EVENTS.at(-1)).toBe('land');
+    expect(validate(body(LAND))).not.toBeNull();
+    expect(validate(body({ ...LAND, t: 'home', uc: 'none' }))).not.toBeNull();
+    expect(validate(body({ ...LAND, t: 'guide', g: 'history-exam-photo', us: 'tistory', uc: 'other' }))).not.toBeNull();
+    expect(validate(body({ ...LAND, t: 'guide' }))).not.toBeNull();
+    for (const us of [...UTM_SOURCES, 'other']) expect(validate(body({ ...LAND, us })), us).not.toBeNull();
+    for (const e of ['start', 'success']) expect(validate(body({ ...BASE, e, us: 'play', uc: 'none' })), e).not.toBeNull();
+    const ev = validate(body({ ...LAND, t: 'guide', g: 'x' }))!;
+    expect(toDataPoint(ev)).toEqual({ indexes: ['guide'], blobs: ['land', 'guide', '', '', '', '', 'x', '', 'direct', 'mobile', '', 'dev', 'naver_blog', 'history-exam-photo'], doubles: [1] });
+  });
+
+  it.each([
+    ['land without us/uc', { ...LAND, us: undefined, uc: undefined }],
+    ['land without uc', { ...LAND, uc: undefined }],
+    ['start with us only', { ...BASE, e: 'start', us: 'play' }],
+    ['us on pick', { ...BASE, us: 'play', uc: 'none' }],
+    ['us on fail', { ...BASE, e: 'fail', c: 'oom', p: 'load', us: 'play', uc: 'none' }],
+    ['us on next', { ...BASE, e: 'next', o: 'next', v: 'pdf-sign', us: 'play', uc: 'none' }],
+    ['us on out', { ...BASE, t: 'id-photo', e: 'out', o: 'out', v: 'photo-studio', us: 'play', uc: 'none' }],
+    ['us on arrive', { ...BASE, e: 'arrive', g: 'x', dl: '0', us: 'play', uc: 'none' }],
+    ['us on download', { ...BASE, e: 'download', us: 'play', uc: 'none' }],
+    ['us outside the list', { ...LAND, us: 'facebook' }],
+    ['uc with upper case', { ...LAND, uc: 'History' }],
+    ['uc with Hangul', { ...LAND, uc: '한능검' }],
+    ['uc of 61 chars', { ...LAND, uc: 'a'.repeat(61) }],
+    ['empty uc', { ...LAND, uc: '' }],
+    ['home on start', { ...BASE, e: 'start', t: 'home' }],
+    ['guide on pick', { ...BASE, t: 'guide' }],
+    ['g on land of a tool', { ...LAND, g: 'x' }],
+    ['g on land of home', { ...LAND, t: 'home', g: 'x' }],
+    ['land via guide', { ...LAND, via: 'guide' }],
+    ['land with o/v', { ...LAND, o: 'preset', v: 'history' }],
+    ['land with dl', { ...LAND, dl: '1' }],
+  ])('validate refuses %s', (_name, o) => {
+    expect(validate(body(o))).toBeNull();
+  });
+
+  it.each([
+    ['?utm_source=naver_blog&utm_campaign=history-exam-photo', { us: 'naver_blog', uc: 'history-exam-photo' }],
+    ['?preset=history&utm_source=naver_blog&utm_medium=blog&utm_campaign=history-exam-photo&utm_content=a&utm_term=b', { us: 'naver_blog', uc: 'history-exam-photo' }],
+    ['?utm_source=NAVER_BLOG&utm_campaign=History-Exam', { us: 'naver_blog', uc: 'history-exam' }],
+    ['?utm_source=play&utm_medium=twa', { us: 'play', uc: 'none' }],
+    ['?utm_source=tistory&utm_campaign=', { us: 'tistory', uc: 'none' }],
+    ['?utm_source=evil&utm_campaign=x', { us: 'other', uc: 'x' }],
+    ['?utm_source=tistory&utm_campaign=%ED%95%9C%EB%8A%A5%EA%B2%80', { us: 'tistory', uc: 'other' }],
+    ['?utm_source=tistory&utm_campaign=a+b', { us: 'tistory', uc: 'other' }],
+    ['?utm_source=tistory&utm_campaign=a%20b', { us: 'tistory', uc: 'other' }],
+    [`?utm_source=tistory&utm_campaign=${'a'.repeat(61)}`, { us: 'tistory', uc: 'other' }],
+    [`?utm_source=tistory&utm_campaign=${'a'.repeat(60)}`, { us: 'tistory', uc: 'a'.repeat(60) }],
+    ['?utm_campaign=x', null],
+    ['?utm_source=&utm_campaign=x', null],
+    ['', null],
+    ['?preset=history', null],
+  ])('utmOf(%s)', (search, want) => {
+    expect(utmOf(search)).toEqual(want);
+  });
+
+  it("shapeUsage ignores land rows (a tool's and home's): funnels, totals and arrive unchanged", () => {
+    const events = [
+      { tool: 'id-photo', event: 'start', via: 'direct', n: '2' },
+      { tool: 'id-photo', event: 'success', via: 'direct', n: '1' },
+    ];
+    const plain = shapeUsage({ events });
+    const withLand = shapeUsage({ events: [...events, { tool: 'id-photo', event: 'land', via: 'direct', n: '7' }, { tool: 'home', event: 'land', via: 'direct', n: '5' }] });
+    expect(withLand.tools).toEqual(plain.tools);
+    expect(withLand.kpi).toEqual(plain.kpi);
+    expect(withLand.tables).toEqual(plain.tables);
+  });
+
+  it('labels: every source and both campaign placeholders; the old fail codes stay labelled', () => {
+    for (const s of [...UTM_SOURCES, 'other']) expect(UTM_SOURCE_LABELS[s as keyof typeof UTM_SOURCE_LABELS], s).toBeTruthy();
+    expect(CAMPAIGN_LABELS).toEqual({ none: '(캠페인 없음)', other: '(목록 밖 이름)' });
+    expect(FAIL_LABELS['not-hwp']).toBeTruthy();
+    expect(FAIL_LABELS.corrupt).toBeTruthy();
   });
 });

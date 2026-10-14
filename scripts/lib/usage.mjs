@@ -6,8 +6,8 @@
 // of page loads that report, a number in [0.01, 1] (default 1); every event carries the weight 1/share.
 //
 // Payload (client -> server): JSON text of at most 512 bytes with these short keys only (an unknown key is rejected):
-//   e   event       pick | start | success | fail | download | arrive | next | out
-//   t   tool        one of TOOLS
+//   e   event       pick | start | success | fail | download | arrive | next | out | land
+//   t   tool        one of TOOLS; on land also one of LAND_PAGES (home | guide)
 //   c   fail code   fail only, ^[a-z-]{1,24}$
 //   p   phase       fail only, load | parse | process | save
 //   br  browser     fail only, family and major version ("chrome 131")
@@ -15,17 +15,19 @@
 //                   next (CHAIN 이어서 하기, required): o = "next", v = the tool the result was handed to (one of TOOLS)
 //                   out (REV2/REV3 링크 누름, required): o = "out", v = a dest of TOOL_OUT[t] (a result screen) or, with g,
 //                   of GUIDE_OUT[t] (a guide; t = its tools[0]); never the href
-//   g   guide slug  arrive, and out from a guide
+//   g   guide slug  arrive, and out from a guide; land with t = guide (optional: the /guide/ index has none)
 //   dl  deep link   arrive only, "0" | "1"
 //   via             every event, guide | direct | embed (the embed widget /embed/..., REV5)
 //   d   device      mobile | tablet | desktop
 //   b   build id    ^([0-9a-f]{7,40}|dev)$
 //   w   weight      integer 1-100 (1 / sample share)
+//   us  utm source  land (required), start/success (with uc, when the tab came from a marked link): UTM_SOURCES or other
+//   uc  utm campaign  with us: CAMPAIGN_RE (lowercased), 'none' (absent) or 'other' (fails the rule) (REQ1014-A Decisions 1-2)
 // Never: file name, size, page count, dimensions, content, URL query, referrer, user agent, timestamps, ids.
 //
 // Analytics Engine row (fixed order; the SQL below depends on it):
 //   indexes: [t]
-//   blobs:   [e, t, c, p, o, v, g, dl, via, d, br, b]   -> blob1 .. blob12 (missing -> '')
+//   blobs:   [e, t, c, p, o, v, g, dl, via, d, br, b, us, uc]   -> blob1 .. blob14 (missing -> '')
 //   doubles: [w]                                         -> double1
 // Counts are always SUM(_sample_interval * double1) (Cloudflare samples at high volume; we sample on the page).
 import GUIDE_TITLES from './guide-titles.mjs';
@@ -42,7 +44,7 @@ export const DEFAULT_DAYS = 7;
 /** Periods the admin page compares with the period before (90 days: the one before is past the 3-month retention). */
 export const COMPARE_PERIODS = [1, 7, 30];
 
-export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out'];
+export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out', 'land'];
 export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct', 'embed'];
@@ -75,11 +77,36 @@ export const BROWSER_RE = /^[a-z]{2,10}( [0-9]{1,4})?$/;
 export const BUILD_RE = /^([0-9a-f]{7,40}|dev)$/;
 export const DATASET_RE = /^[a-z0-9_]{1,64}$/;
 
+/**
+ * Link markers (REQ1014-A Decisions 1-2): the utm_source values we count by name (anything else present is 'other') and the
+ * campaign rule (lowercased first; failing it is 'other', absent is 'none'). medium/content/term are never read.
+ */
+export const UTM_SOURCES = ['naver_blog', 'tistory', 'play'];
+export const CAMPAIGN_RE = /^[a-z0-9-]{1,60}$/;
+/** Pages without a tool that send `land` (home `/`, a guide `/guide/...`); valid as t on land only. */
+export const LAND_PAGES = ['home', 'guide'];
+export const UTM_SOURCE_LABELS = { naver_blog: '네이버 블로그', tistory: '티스토리', play: '문서딱 앱(안드로이드)', other: '기타' };
+export const CAMPAIGN_LABELS = { none: '(캠페인 없음)', other: '(목록 밖 이름)' };
+
+/** The link marker of a page's `location.search`, or null without a utm_source (a bare utm_campaign is ignored). */
+export function utmOf(search) {
+  let q;
+  try {
+    q = new URLSearchParams(typeof search === 'string' ? search : '');
+  } catch {
+    return null;
+  }
+  const src = (q.get('utm_source') ?? '').trim().toLowerCase();
+  if (!src) return null;
+  const camp = (q.get('utm_campaign') ?? '').trim().toLowerCase();
+  return { us: UTM_SOURCES.includes(src) ? src : 'other', uc: !camp ? 'none' : CAMPAIGN_RE.test(camp) ? camp : 'other' };
+}
+
 /** Keys in Analytics Engine blob order (blob1 .. blob12). */
-export const BLOB_KEYS = ['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b'];
+export const BLOB_KEYS = ['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'us', 'uc'];
 const KEYS = new Set([...BLOB_KEYS, 'w']);
 /** Keys allowed on the listed event types only. */
-const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'next', 'out'], v: ['start', 'next', 'out'], g: ['arrive', 'out'], dl: ['arrive'] };
+const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'next', 'out'], v: ['start', 'next', 'out'], g: ['arrive', 'out', 'land'], dl: ['arrive'], us: ['land', 'start', 'success'], uc: ['land', 'start', 'success'] };
 /** The o of a next event (its v is a tool). */
 export const NEXT_KEY = 'next';
 /** The o of an out event (its v is one of OUT_DESTS). */
@@ -165,7 +192,7 @@ export function datasetName(value) {
 const isStr = (x) => typeof x === 'string';
 const VALUE_CHECKS = {
   e: (x) => EVENTS.includes(x),
-  t: (x) => TOOLS.includes(x),
+  t: (x) => TOOLS.includes(x) || LAND_PAGES.includes(x), // a LAND_PAGES value only on land (checked below)
   c: (x) => CODE_RE.test(x),
   p: (x) => PHASES.includes(x),
   o: (x) => Object.hasOwn(SETTINGS, x) || x === NEXT_KEY || x === OUT_KEY,
@@ -176,6 +203,8 @@ const VALUE_CHECKS = {
   d: (x) => DEVICES.includes(x),
   br: (x) => BROWSER_RE.test(x),
   b: (x) => BUILD_RE.test(x),
+  us: (x) => UTM_SOURCES.includes(x) || x === 'other',
+  uc: (x) => CAMPAIGN_RE.test(x),
 };
 const REQUIRED = ['e', 't', 'via', 'd', 'b', 'w'];
 
@@ -204,6 +233,9 @@ export function validate(text) {
   if (o.e === 'fail' && !(Object.hasOwn(o, 'c') && Object.hasOwn(o, 'p'))) return null;
   if (o.e === 'arrive' && !(Object.hasOwn(o, 'g') && Object.hasOwn(o, 'dl'))) return null;
   if (Object.hasOwn(o, 'o') !== Object.hasOwn(o, 'v')) return null;
+  if (Object.hasOwn(o, 'us') !== Object.hasOwn(o, 'uc')) return null;
+  if (LAND_PAGES.includes(o.t) && o.e !== 'land') return null;
+  if (o.e === 'land' && (!Object.hasOwn(o, 'us') || o.via !== 'direct' || (Object.hasOwn(o, 'g') && o.t !== 'guide'))) return null;
   if (o.e === 'next') {
     if (o.o !== NEXT_KEY || !TOOLS.includes(o.v)) return null;
   } else if (o.e === 'out') {
@@ -260,7 +292,7 @@ export class UsageApiError extends Error {
  * Posts one query to the Analytics Engine SQL API and resolves to its rows; rejects with UsageApiError (status 0:
  * network). Shared by fetchUsage and fetchPrevTotals.
  */
-async function runSql({ accountId, token, fetch: f }, q) {
+export async function runSql({ accountId, token, fetch: f }, q) {
   const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/analytics_engine/sql`;
   let res;
   try {
@@ -369,6 +401,22 @@ export const FAIL_LABELS = {
   'already-hwp': '이미 HWP 파일',
   unverified: '바꾼 파일 다시 열기 확인 실패',
   export: 'HWP로 바꾸기 실패',
+  // REQ1014-A Decision 17: what a file a HWP tool could not read really was, and what a photo that did not decode was
+  // (src/lib/file/sniff-format.ts notHwpCode / corruptCode). This is the one block for them (REQ1014-B Decision 12).
+  'not-hwp-pdf': 'HWP 아님: PDF',
+  'not-hwp-hwpx': 'HWP 아님: HWPX로 보이나 읽지 못함',
+  'not-hwp-docx': 'HWP 아님: 워드(DOCX)',
+  'not-hwp-office': 'HWP 아님: 엑셀·파워포인트',
+  'not-hwp-cfb': 'HWP 아님: 옛 오피스 문서(DOC·XLS 등)',
+  'not-hwp-zip': 'HWP 아님: ZIP 압축 파일',
+  'not-hwp-img': 'HWP 아님: 사진',
+  'not-hwp-text': 'HWP 아님: 글자 파일(TXT 등)',
+  'not-hwp-other': 'HWP 아님: 알 수 없는 형식',
+  'corrupt-heic': '손상된 사진: HEIC',
+  'corrupt-jpg': '손상된 사진: JPG',
+  'corrupt-png': '손상된 사진: PNG',
+  'corrupt-webp': '손상된 사진: WebP',
+  'corrupt-other': '손상된 사진: 기타 형식',
 };
 /** Admin and weekly-report labels of OUT_DESTS. */
 export const OUT_LABELS = {
@@ -462,7 +510,8 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
   for (const r of events) {
     if (TOOLS.includes(r.tool) && r.event === 'arrive') arrive += num(r.n);
     // next is counted from the chains query and out from the outs query: neither is a step of the tool's own funnel.
-    if (!TOOLS.includes(r.tool) || !EVENTS.includes(r.event) || r.event === 'arrive' || r.event === 'next' || r.event === 'out') continue;
+    // land (a marked-link landing, REQ1014-A D4) is read by the campaign table only.
+    if (!TOOLS.includes(r.tool) || !EVENTS.includes(r.event) || r.event === 'arrive' || r.event === 'next' || r.event === 'out' || r.event === 'land') continue;
     const c = cell(r.tool);
     const n = num(r.n);
     c[r.event] += n;
