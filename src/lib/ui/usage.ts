@@ -4,7 +4,7 @@
 // navigator.sendBeacon. The payload is built field by field from the whitelist in scripts/lib/usage.mjs; nothing
 // about the file (name, size, content) is ever part of it. Sampling is decided once per page load; at most 40 events
 // leave one page load.
-import { BUILD_RE, CODE_RE, MAX_EVENTS, USAGE_PATH, sampleWeight } from '../../../scripts/lib/usage.mjs';
+import { BUILD_RE, CAMPAIGN_RE, CODE_RE, MAX_EVENTS, USAGE_PATH, UTM_SOURCES, sampleWeight, utmOf } from '../../../scripts/lib/usage.mjs';
 import { parse as parseDeep } from './deeplink';
 import { detectDevice, type Device } from './device';
 
@@ -42,6 +42,10 @@ export type UsageEvent =
 
 type Via = 'guide' | 'direct' | 'embed';
 type Arrive = { e: 'arrive'; t: UsageTool; g: string; dl: '0' | '1' };
+/** A link marker (REQ1014-A D2): utm_source and utm_campaign, already whitelisted. */
+export type Utm = { us: string; uc: string };
+/** A marked-link landing (REQ1014-A D3); home and guides send it from src/lib/ui/utm-land.ts. */
+type Land = { e: 'land'; t: UsageTool | 'home' | 'guide'; g?: string } & Utm;
 
 export interface PayloadContext {
   via: Via;
@@ -49,6 +53,8 @@ export interface PayloadContext {
   device: Device;
   build: string;
   w: number;
+  /** The tab's link marker (stash), carried by start and success only. */
+  utm?: Utm | null;
 }
 
 /** Browser family and major version only ("chrome 131"), never the full user agent. */
@@ -69,7 +75,7 @@ export function browserFamily(ua: string): string {
 }
 
 /** The whitelisted payload, field by field (never spread from the input). */
-export function buildPayload(ev: UsageEvent | Arrive, ctx: PayloadContext): Record<string, string | number> {
+export function buildPayload(ev: UsageEvent | Arrive | Land, ctx: PayloadContext): Record<string, string | number> {
   const p: Record<string, string | number> = { e: ev.e, t: ev.t };
   if (ev.e === 'fail') {
     p.c = CODE_RE.test(ev.c) ? ev.c : 'unknown';
@@ -84,9 +90,17 @@ export function buildPayload(ev: UsageEvent | Arrive, ctx: PayloadContext): Reco
   } else if (ev.e === 'arrive') {
     p.g = ev.g;
     p.dl = ev.dl;
+  } else if (ev.e === 'land') {
+    if (ev.t === 'guide' && ev.g !== undefined) p.g = ev.g;
+    p.us = ev.us;
+    p.uc = ev.uc;
   }
-  // A guide's link block (REV3): the click happens on the guide itself, so it is via=guide.
-  p.via = ev.e === 'out' && ev.g !== undefined ? 'guide' : ctx.via;
+  if ((ev.e === 'start' || ev.e === 'success') && ctx.utm) {
+    p.us = ctx.utm.us;
+    p.uc = ctx.utm.uc;
+  }
+  // A guide's link block (REV3): the click happens on the guide itself, so it is via=guide. A landing is always direct.
+  p.via = ev.e === 'out' && ev.g !== undefined ? 'guide' : ev.e === 'land' ? 'direct' : ctx.via;
   p.d = ctx.device;
   p.b = BUILD_RE.test(ctx.build) ? ctx.build : 'dev';
   p.w = ctx.w;
@@ -115,6 +129,50 @@ export function arrival(referrer: string, origin: string, pathname: string, deep
   return m ? { via: 'guide', arrive: { g: m[1]!, dl: deepValid ? '1' : '0' } } : direct;
 }
 
+/** The tab's link marker in sessionStorage (REQ1014-A D7): {s, c, at}; `at` (ms) is never sent. */
+export const UTM_STASH_KEY = 'docttak:utm';
+/** A marker older than this no longer attributes a start or success. */
+export const UTM_TTL_MS = 3 * 60 * 60 * 1000;
+type StashStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+/** Writes the marker (last link wins); a storage error (private mode, quota) means no attribution, nothing else. */
+export function writeUtmStash(storage: StashStorage | null, utm: Utm, now: number): void {
+  try {
+    storage?.setItem(UTM_STASH_KEY, JSON.stringify({ s: utm.us, c: utm.uc, at: now }));
+  } catch {
+    // No attribution.
+  }
+}
+
+/** The marker of this tab, or null; a malformed, unknown or expired entry is removed. Never throws. */
+export function readUtmStash(storage: StashStorage | null, now: number): Utm | null {
+  try {
+    const raw = storage?.getItem(UTM_STASH_KEY);
+    if (raw == null) return null;
+    let o: { s?: unknown; c?: unknown; at?: unknown } | null = null;
+    try {
+      o = JSON.parse(raw);
+    } catch {
+      // Malformed: removed below.
+    }
+    const age = typeof o?.at === 'number' ? now - o.at : NaN;
+    const ok = typeof o?.s === 'string' && (UTM_SOURCES.includes(o.s) || o.s === 'other') && typeof o.c === 'string' && CAMPAIGN_RE.test(o.c) && age >= 0 && age <= UTM_TTL_MS;
+    if (ok) return { us: o!.s as string, uc: o!.c as string };
+    storage!.removeItem(UTM_STASH_KEY);
+  } catch {
+    // No attribution.
+  }
+  return null;
+}
+
+function sessionStore(): StashStorage | null {
+  try {
+    return typeof sessionStorage === 'undefined' ? null : sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 export interface TrackerDeps {
   rate?: number;
   random?: () => number;
@@ -128,10 +186,13 @@ export interface TrackerDeps {
   search?: string;
   /** The page language (`<html lang>`). */
   lang?: string;
+  /** Where the tab's link marker lives (sessionStorage); null: none. */
+  storage?: StashStorage | null;
+  now?: () => number;
 }
 
 export interface Tracker {
-  /** Once at tool entry: decides via and sends the arrive. */
+  /** Once at tool entry, before anything rewrites the address (quicklinks): stashes a link marker, decides via, sends arrive and land. */
   start(tool: UsageTool): void;
   track(ev: UsageEvent): void;
 }
@@ -146,7 +207,11 @@ export function createTracker(deps: TrackerDeps = {}): Tracker {
   const w = sampleWeight(rate);
   let via: Via = 'direct';
   let sent = 0;
-  const send = (ev: UsageEvent | Arrive): void => {
+  const storage = (): StashStorage | null => (deps.storage !== undefined ? deps.storage : sessionStore());
+  const now = (): number => (deps.now ?? Date.now)();
+  // Link markers (REQ1014-A D7): Korean pages only, never the embed widget.
+  const marks = (): boolean => lang === 'ko' && !(deps.pathname ?? location.pathname).startsWith('/embed/');
+  const send = (ev: UsageEvent | Arrive | Land): void => {
     if (!sampled || sent >= MAX_EVENTS) return;
     sent++;
     try {
@@ -156,6 +221,8 @@ export function createTracker(deps: TrackerDeps = {}): Tracker {
         device: deps.device ?? detectDevice(),
         build: deps.build ?? document.querySelector('meta[name="build-id"]')?.getAttribute('content') ?? 'dev',
         w,
+        // Read at send time: a later page load of this tab may carry the marker of an earlier landing.
+        utm: (ev.e === 'start' || ev.e === 'success') && marks() ? readUtmStash(storage(), now()) : null,
       };
       const body = JSON.stringify(buildPayload(ev, ctx));
       (deps.send ?? ((p: string, d: string) => navigator.sendBeacon(p, d)))(USAGE_PATH, body);
@@ -165,11 +232,16 @@ export function createTracker(deps: TrackerDeps = {}): Tracker {
   };
   return {
     start(tool) {
-      if (!sampled) return;
       try {
-        const a = arrival(deps.referrer ?? document.referrer, deps.origin ?? location.origin, deps.pathname ?? location.pathname, parseDeep(tool, deps.search ?? location.search) !== null);
+        const search = deps.search ?? location.search;
+        // Stashed whether or not this load is sampled: a later, sampled load of the tab still attributes.
+        const utm = marks() ? utmOf(search) : null;
+        if (utm) writeUtmStash(storage(), utm, now());
+        if (!sampled) return;
+        const a = arrival(deps.referrer ?? document.referrer, deps.origin ?? location.origin, deps.pathname ?? location.pathname, parseDeep(tool, search) !== null);
         via = a.via;
         if (a.arrive) send({ e: 'arrive', t: tool, g: a.arrive.g, dl: a.arrive.dl });
+        if (utm) send({ e: 'land', t: tool, ...utm });
       } catch {
         // As above.
       }

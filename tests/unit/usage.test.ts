@@ -36,7 +36,7 @@ import { onRequest as adminFn, MIN_PASSWORD, REALM } from '../../functions/admin
 import { PRESET_IDS } from '../../src/data/preset-ids';
 import { LEVELS } from '../../src/lib/pdf/compress/levels';
 import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
-import { USAGE_ON, arrival, browserFamily, buildPayload, createTracker, startUsage, track } from '../../src/lib/ui/usage';
+import { USAGE_ON, UTM_STASH_KEY, UTM_TTL_MS, arrival, browserFamily, buildPayload, createTracker, readUtmStash, startUsage, track, writeUtmStash } from '../../src/lib/ui/usage';
 import { route } from '../../src/sw/sw';
 import { FULL } from '../fixtures/usage-rows.mjs';
 import { RUM_EMPTY } from '../fixtures/rum-rows.mjs';
@@ -1172,5 +1172,128 @@ describe('link markers: land event, us/uc (REQ1014-A D1-D4)', () => {
     expect(CAMPAIGN_LABELS).toEqual({ none: '(캠페인 없음)', other: '(목록 밖 이름)' });
     expect(FAIL_LABELS['not-hwp']).toBeTruthy();
     expect(FAIL_LABELS.corrupt).toBeTruthy();
+  });
+});
+
+describe('page tracker: link markers (REQ1014-A D5/D7)', () => {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36';
+  const T0 = 1_760_000_000_000;
+  const memory = () => {
+    const m = new Map<string, string>();
+    return { m, storage: { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) } };
+  };
+  const setup = (over: Record<string, unknown> = {}) => {
+    const send = vi.fn((_p: string, _b: string) => true);
+    const mem = memory();
+    const d = { rate: 1, random: () => 0, send, ua: UA, device: 'mobile' as const, build: 'abc1234', referrer: '', origin: 'https://docttak.com', pathname: '/id-photo/', search: '?preset=history&utm_source=naver_blog&utm_medium=blog&utm_campaign=history-exam-photo', lang: 'ko', storage: mem.storage, now: () => T0, ...over };
+    return { send, mem, d };
+  };
+  const bodies = (send: ReturnType<typeof vi.fn>) => send.mock.calls.map((c) => JSON.parse(c[1] as string) as Record<string, unknown>);
+  const MARK = { us: 'naver_blog', uc: 'history-exam-photo' };
+
+  it('start() stashes the marker and sends one land; start and success carry us/uc, pick/download/fail/next/out never', () => {
+    const { send, mem, d } = setup();
+    const t = createTracker(d);
+    t.start('id-photo');
+    expect(JSON.parse(mem.m.get(UTM_STASH_KEY)!)).toEqual({ s: 'naver_blog', c: 'history-exam-photo', at: T0 });
+    t.track({ e: 'pick', t: 'id-photo' });
+    t.track({ e: 'start', t: 'id-photo', o: 'preset', v: 'history' });
+    t.track({ e: 'success', t: 'id-photo' });
+    t.track({ e: 'download', t: 'id-photo' });
+    t.track({ e: 'fail', t: 'id-photo', c: 'corrupt', p: 'parse' });
+    t.track({ e: 'next', t: 'id-photo', o: 'next', v: 'pdf-sign' });
+    t.track({ e: 'out', t: 'id-photo', o: 'out', v: 'photo-studio' });
+    const b = bodies(send);
+    expect(b[0]).toEqual({ e: 'land', t: 'id-photo', ...MARK, via: 'direct', d: 'mobile', b: 'abc1234', w: 1 });
+    expect(b[2]).toEqual({ e: 'start', t: 'id-photo', o: 'preset', v: 'history', ...MARK, via: 'direct', d: 'mobile', b: 'abc1234', w: 1 });
+    expect(b[3]).toMatchObject({ e: 'success', ...MARK });
+    for (const x of [b[1], ...b.slice(4)]) expect(x).not.toHaveProperty('us');
+    expect(b.filter((x) => x.e === 'land')).toHaveLength(1);
+    for (const c of send.mock.calls) {
+      expect(validate(c[1] as string), c[1] as string).not.toBeNull();
+      expect(new TextEncoder().encode(c[1] as string).length).toBeLessThanOrEqual(512);
+    }
+  });
+
+  it('stashes even when this load is not sampled (no land, no beacon)', () => {
+    const { send, mem, d } = setup({ rate: 0.5, random: () => 0.9 });
+    createTracker(d).start('id-photo');
+    expect(send).not.toHaveBeenCalled();
+    expect(mem.m.has(UTM_STASH_KEY)).toBe(true);
+  });
+
+  it('a later page load of the tab (no utm in its address) attributes start/success from the stash, without a land', () => {
+    const { send, mem, d } = setup({ search: '', pathname: '/pdf-sign/' });
+    mem.m.set(UTM_STASH_KEY, JSON.stringify({ s: 'tistory', c: 'other', at: T0 - 60_000 }));
+    const t = createTracker(d);
+    t.start('pdf-sign');
+    t.track({ e: 'start', t: 'pdf-sign', o: 'place', v: 'one' });
+    expect(bodies(send)).toEqual([{ e: 'start', t: 'pdf-sign', o: 'place', v: 'one', us: 'tistory', uc: 'other', via: 'direct', d: 'mobile', b: 'abc1234', w: 1 }]);
+  });
+
+  it('the stash is read at send time (written after the tracker was made)', () => {
+    const { send, mem, d } = setup({ search: '' });
+    const t = createTracker(d);
+    t.track({ e: 'start', t: 'id-photo' });
+    mem.m.set(UTM_STASH_KEY, JSON.stringify({ s: 'play', c: 'none', at: T0 }));
+    t.track({ e: 'success', t: 'id-photo' });
+    expect(bodies(send)[0]).not.toHaveProperty('us');
+    expect(bodies(send)[1]).toMatchObject({ us: 'play', uc: 'none' });
+  });
+
+  it.each([
+    ['older than 3 h', JSON.stringify({ s: 'play', c: 'none', at: T0 - UTM_TTL_MS - 1 })],
+    ['from the future', JSON.stringify({ s: 'play', c: 'none', at: T0 + 1000 })],
+    ['not JSON', '{'],
+    ['unknown source', JSON.stringify({ s: 'evil', c: 'none', at: T0 })],
+    ['bad campaign', JSON.stringify({ s: 'play', c: 'A B', at: T0 })],
+    ['no time', JSON.stringify({ s: 'play', c: 'none' })],
+  ])('a stash %s is ignored and removed', (_name, raw) => {
+    const { send, mem, d } = setup({ search: '' });
+    mem.m.set(UTM_STASH_KEY, raw);
+    createTracker(d).track({ e: 'start', t: 'id-photo' });
+    expect(bodies(send)[0]).not.toHaveProperty('us');
+    expect(mem.m.has(UTM_STASH_KEY)).toBe(false);
+  });
+
+  it('exactly 3 h old still counts', () => {
+    expect(readUtmStash({ getItem: () => JSON.stringify({ s: 'play', c: 'none', at: T0 - UTM_TTL_MS }), setItem: () => undefined, removeItem: () => undefined }, T0)).toEqual({ us: 'play', uc: 'none' });
+  });
+
+  it('storage that throws (private mode, quota): no attribution, the land is still sent, nothing throws', () => {
+    const boom = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('quota'); }, removeItem: () => { throw new Error('denied'); } };
+    const { send, d } = setup({ storage: boom });
+    const t = createTracker(d);
+    expect(() => t.start('id-photo')).not.toThrow();
+    t.track({ e: 'start', t: 'id-photo' });
+    expect(bodies(send).map((b) => b.e)).toEqual(['land', 'start']);
+    expect(bodies(send)[1]).not.toHaveProperty('us');
+    expect(() => writeUtmStash(null, MARK, T0)).not.toThrow();
+  });
+
+  it('English pages and the embed widget: no stash, no land, no attribution', () => {
+    const en = setup({ lang: 'en', pathname: '/en/pdf-merge/' });
+    createTracker(en.d).start('pdf-merge');
+    expect(en.send).not.toHaveBeenCalled();
+    expect(en.mem.m.size).toBe(0);
+    const emb = setup({ pathname: '/embed/id-photo/' });
+    emb.mem.m.set(UTM_STASH_KEY, JSON.stringify({ s: 'play', c: 'none', at: T0 }));
+    const t = createTracker(emb.d);
+    t.start('id-photo');
+    t.track({ e: 'start', t: 'id-photo' });
+    expect(bodies(emb.send)).toEqual([{ e: 'start', t: 'id-photo', via: 'embed', d: 'mobile', b: 'abc1234', w: 1 }]);
+    expect(JSON.parse(emb.mem.m.get(UTM_STASH_KEY)!).s).toBe('play');
+  });
+
+  it('no utm_source: no land and no stash; a guide referrer still sends arrive, and land stays via=direct', () => {
+    const none = setup({ search: '?preset=history&utm_campaign=x' });
+    createTracker(none.d).start('id-photo');
+    expect(none.send).not.toHaveBeenCalled();
+    expect(none.mem.m.size).toBe(0);
+    const g = setup({ referrer: 'https://docttak.com/guide/history-exam-photo/' });
+    const t = createTracker(g.d);
+    t.start('id-photo');
+    expect(bodies(g.send).map((b) => [b.e, b.via])).toEqual([['arrive', 'guide'], ['land', 'direct']]);
+    for (const c of g.send.mock.calls) expect(validate(c[1] as string)).not.toBeNull();
   });
 });
