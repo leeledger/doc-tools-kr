@@ -1,9 +1,9 @@
 // HWP e2e files generated at test time (brief Step 5 "Generated at test time, not committed").
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DISTRIBUTION_BIT, PASSWORD_BIT, docxLikeZip, hwpFixture, padHwp, padHwpxBinData, patchHwpFlags } from '../helpers/hwp';
+import { DISTRIBUTION_BIT, PASSWORD_BIT, cfbNotHwp, docxLikeZip, hwpFixture, padHwp, padHwpxBinData, patchHwpFlags, plainZip, xlsxLikeZip } from '../helpers/hwp';
 import { passwordHwpx } from '../helpers/rhwp-node';
-import { RUNTIME_DIR } from './paths';
+import { FIXTURES, RUNTIME_DIR } from './paths';
 
 export const HWP_RUNTIME_DIR = join(RUNTIME_DIR, 'hwp');
 export const hwpRuntime = (name: string): string => join(HWP_RUNTIME_DIR, name);
@@ -22,6 +22,14 @@ export function makeHwpRuntimeFixtures(dir: string = HWP_RUNTIME_DIR): void {
     'adm14-images.hwpx': () => padHwpxBinData(hwpFixture('adm14.hwpx'), 9_000_000),
     // Over the 25 MB mobile hard limit: rejected before any read beyond the size.
     'big-26mb.hwp': () => new Uint8Array(26_000_000),
+    // REQ1014-B: wrong files the HWP tools name (a PDF and a photo renamed .hwp, an .xlsx, a plain zip, old Office).
+    'report-pdf.hwp': () => new Uint8Array(readFileSync(join(FIXTURES, 'gen_already_small.pdf'))),
+    'report.pdf': () => new Uint8Array(readFileSync(join(FIXTURES, 'gen_already_small.pdf'))),
+    'photo.hwp': () => new Uint8Array(readFileSync(join(FIXTURES, 'photo', 'scene_cc0.jpg'))),
+    'word.docx': () => docxLikeZip(),
+    'sheet.xlsx': () => xlsxLikeZip(),
+    'archive.zip': () => plainZip(),
+    'old-office.hwp': () => cfbNotHwp(),
   };
   for (const [name, make] of Object.entries(files)) {
     const p = join(dir, name);

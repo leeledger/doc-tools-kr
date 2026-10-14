@@ -110,3 +110,32 @@ export function hwpxZipBomb(outBytes: number): Uint8Array {
   }
   return zip;
 }
+
+/** REQ1014-B: an .xlsx-shaped zip ([Content_Types].xml first, then xl/workbook.xml). */
+export function xlsxLikeZip(): Uint8Array {
+  return zipSync({
+    '[Content_Types].xml': strToU8('<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>'),
+    'xl/workbook.xml': strToU8('<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>'),
+  });
+}
+
+/** REQ1014-B: a plain zip with one text file. */
+export function plainZip(): Uint8Array {
+  return zipSync({ 'a.txt': strToU8('hello') });
+}
+
+/**
+ * REQ1014-B: a CFB that is not a HWP (old .doc/.xls shape): law05.hwp with the ASCII "HWP Document File" of its
+ * FileHeader stream overwritten, so the worker's scan says not-hwp.
+ */
+export function cfbNotHwp(): Uint8Array {
+  const bytes = hwpFixture('law05.hwp').slice();
+  const sig = strToU8('HWP Document File');
+  for (let i = 0; i + sig.length <= bytes.length; i++) {
+    if (sig.every((v, j) => bytes[i + j] === v)) {
+      bytes.set(strToU8('XYZ Document File'), i);
+      return bytes;
+    }
+  }
+  throw new Error('law05.hwp has no FileHeader signature');
+}

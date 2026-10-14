@@ -42,6 +42,7 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
     <div class="wrap">
       <div id="hwp-tool" class="hwp hv" data-state="empty">
         <p class="notice" id="hw-notice" role="status" hidden></p>
+        <p class="notice" id="hw-arrived" hidden></p>
         <div class="drop" id="hw-drop">
           <input id="hw-input" class="file-input" type="file" accept={accept}>
           <label class="btn primary" for="hw-input" id="hw-pick">HWP 파일 열기</label>
@@ -58,6 +59,7 @@ const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application
 
         <EngineError />
         <p class="error-box" id="hw-error" role="alert" data-live="alert" tabindex="-1" hidden></p>
+        <p class="hint" id="hw-error-actions" hidden></p>
 
         <div class="hw-result" id="hw-result" hidden>
           <p class="result-title" id="hw-file-name" tabindex="-1"></p>

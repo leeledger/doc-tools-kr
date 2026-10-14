@@ -17,7 +17,7 @@ import { startRowDrag } from '../../lib/ui/reorder';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { ACCEPTED_FORMATS, type SizeOption } from './embed';
 import { rotatedSize, type LayoutOptions, type Orient, type PageMode, type Rotation } from './layout';
-import { LIMITS, REDUCE_EDGE, planAdd } from './limits';
+import { LIMITS, REDUCE_EDGE, autoReduceMessage, originalBlockedMessage, overOriginalTotal, planAdd } from './limits';
 
 type State = 'empty' | 'listing' | 'building' | 'done' | 'error';
 type RowError = 'heic' | 'not-image' | 'corrupt' | 'truncated' | 'empty';
@@ -120,6 +120,9 @@ export function initJpgToPdf(pending?: File[]): { add(files: File[]): void } | n
   const download = must<HTMLAnchorElement>('jp-download');
   const resetBtn = must<HTMLButtonElement>('jp-reset');
   const nextSlot = must<HTMLDivElement>('jp-next');
+  const sizeOriginal = root.querySelector<HTMLInputElement>('input[name="jp-size"][value="original"]');
+  const sizeReduce = root.querySelector<HTMLInputElement>('input[name="jp-size"][value="reduce"]');
+  const sizeHint = document.getElementById('jp-size-hint');
 
   let state: State = 'empty';
   let entries: Entry[] = [];
@@ -190,6 +193,22 @@ export function initJpgToPdf(pending?: File[]): { add(files: File[]): void } | n
     runBtn.disabled = why !== null || !entries.length || state === 'building';
     hint.textContent = why ?? '';
     removeBad.hidden = errorRows().length < 2;
+    syncSize();
+  }
+
+  const listBytes = (): number => entries.reduce((a, e) => a + e.file.size, 0);
+
+  /** REQ1014-B D16: while the list is over the total cap, 「원본 그대로」 is disabled (removing photos enables it). */
+  function syncSize(): void {
+    if (!sizeOriginal || !sizeReduce) return;
+    const device = detectDevice();
+    const over = overOriginalTotal(listBytes(), device);
+    sizeOriginal.disabled = over;
+    if (over && sizeOriginal.checked) sizeReduce.checked = true;
+    if (sizeHint) {
+      sizeHint.textContent = over ? originalBlockedMessage(device) : '';
+      sizeHint.hidden = !over;
+    }
   }
 
   function syncOptions(): void {
@@ -346,19 +365,28 @@ export function initJpgToPdf(pending?: File[]): { add(files: File[]): void } | n
     clearAlert(root);
     track({ e: 'pick', t: 'jpg-to-pdf' });
     loadDynamicFont();
-    const plan = planAdd(
-      picked.map((f) => f.size),
-      entries.length,
-      entries.reduce((a, e) => a + e.file.size, 0),
-      detectDevice(),
-    );
+    const device = detectDevice();
+    const sizes = picked.map((f) => f.size);
+    const size = radio('jp-size') === 'reduce' ? 'reduce' : 'original';
+    let plan = planAdd(sizes, entries.length, listBytes(), device, size);
+    let reduced = false;
+    if (size === 'original' && plan.overTotal > 0 && sizeReduce) {
+      // REQ1014-B D16: over the total cap, 「줄이기」 takes the photos 「원본 그대로」 would leave out.
+      const withReduce = planAdd(sizes, entries.length, listBytes(), device, 'reduce');
+      if (withReduce.accepted.length > plan.accepted.length) {
+        plan = withReduce;
+        sizeReduce.checked = true;
+        reduced = true;
+      }
+    }
     for (const c of plan.codes) usageFail(c, 'parse');
-    showNotice(plan.messages.length ? plan.messages.join(' ') : null);
+    const lines = reduced ? [autoReduceMessage(device), ...plan.messages] : plan.messages;
+    showNotice(lines.length ? lines.join(' ') : null);
     const accepted = plan.accepted.map(
       (i): Entry => ({ id: nextId++, file: picked[i]!, rotation: 0, checking: true, error: null, message: '', thumb: null }),
     );
     if (!accepted.length) {
-      status(plan.messages.join(' '));
+      status(lines.join(' '));
       return;
     }
     entries.push(...accepted);

@@ -73,8 +73,9 @@ export const CLOUD = {
   refining: '가장자리를 다듬는 중…',
   busy: '잠시 사용이 많아요. 1분 뒤 다시 해 보세요.',
   quota: '이번 달 무료 처리량이 다 찼어요. 이 기기에서 처리할 수 있어요.',
-  failed: '지금은 처리할 수 없어요. 다시 시도하거나 기기에서 처리해 보세요.',
-  deviceButton: '기기에서 처리',
+  failed: '지금은 처리할 수 없어요. 다시 시도하거나 「이 기기에서 처리」를 눌러 주세요.',
+  /** REQ1014-B D14: this photo only, never remembered (the remembered choice is #bg-device). */
+  deviceButton: '이 기기에서 처리',
   /** Builder copy (not in the brief): 취소 while sending, and the remembered choice with its way back. */
   sendCancelled: '보내기를 멈췄어요.',
   modeLine: '사진을 보내지 않고 기기에서 처리하도록 골라 두었어요.',

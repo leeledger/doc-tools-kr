@@ -4,13 +4,22 @@ import { createHash } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { openCfb } from '../../src/lib/hwp/cfb';
 import { HwpError } from '../../src/lib/hwp/errors';
-import { CFB_MAGIC, countLosses, exportHwp, hasCfbMagic, type ExportableDocument, type ReloadCtor, type RhwpExport } from '../../src/lib/hwp/export-hwp';
+import { CFB_MAGIC, countLosses, exportHwp, hasCfbMagic, pageTolerance, type ExportableDocument, type ReloadCtor, type RhwpExport } from '../../src/lib/hwp/export-hwp';
 import { glyphText } from '../../src/lib/hwp/svg-string';
 import { hwpFixture } from '../helpers/hwp';
 import { loadRhwp } from '../helpers/rhwp-node';
 
 const sha = (b: Uint8Array): string => createHash('sha256').update(b).digest('hex');
 const CFB = Uint8Array.from([...CFB_MAGIC, 0, 0, 0, 0]);
+
+const detailOf = (fn: () => unknown): string | undefined => {
+  try {
+    fn();
+    return 'no error';
+  } catch (err) {
+    return err instanceof HwpError ? err.detail : 'not an HwpError';
+  }
+};
 
 const codeOf = (fn: () => unknown): string => {
   try {
@@ -131,17 +140,37 @@ describe('export-hwp with a fake rhwp', () => {
     const doc = fakeDoc();
     const Reload = fakeReload(3);
     const r = exportHwp(doc, Reload);
-    expect(r).toEqual({ bytes: CFB, losses: 0, pagesIn: 3 });
+    expect(r).toEqual({ bytes: CFB, losses: 0, pagesIn: 3, pageShift: false });
     expect(doc.log).toEqual(['take', 'export.free', 'doc.free']);
     expect(Reload.freed).toBe(1);
   });
 
-  it('reload with another page count → unverified', () => {
-    expect(codeOf(() => exportHwp(fakeDoc({ pages: 3 }), fakeReload(4)))).toBe('unverified');
+  it('page tolerance (REQ1014-B D10): max(1, round(5 %)) pages pass with pageShift; beyond is unverified/pages', () => {
+    const shift = (pin: number, pout: number): boolean | string => {
+      try {
+        return exportHwp(fakeDoc({ pages: pin }), fakeReload(pout)).pageShift;
+      } catch (err) {
+        return err instanceof HwpError ? `${err.code}/${err.detail}` : String(err);
+      }
+    };
+    expect(shift(3, 3)).toBe(false);
+    expect(shift(3, 4)).toBe(true);
+    expect(shift(3, 2)).toBe(true);
+    expect(shift(100, 105)).toBe(true);
+    expect(shift(100, 95)).toBe(true);
+    expect(shift(100, 106)).toBe('unverified/pages');
+    expect(shift(1, 2)).toBe(true);
+    expect(shift(1, 3)).toBe('unverified/pages');
+    expect(shift(3, 5)).toBe('unverified/pages');
+    expect(shift(1, 0)).toBe('unverified/pages');
+    expect(pageTolerance(1)).toBe(1);
+    expect(pageTolerance(30)).toBe(2);
+    expect(pageTolerance(100)).toBe(5);
   });
 
-  it('reload throws → unverified; reload out of memory → oom', () => {
+  it('reload throws → unverified (detail reopen); reload out of memory → oom', () => {
     expect(codeOf(() => exportHwp(fakeDoc(), fakeReload(() => { throw new Error('유효하지 않은 파일'); })))).toBe('unverified');
+    expect(detailOf(() => exportHwp(fakeDoc(), fakeReload(() => { throw new Error('유효하지 않은 파일'); })))).toBe('reopen');
     expect(codeOf(() => exportHwp(fakeDoc(), fakeReload(() => { throw new RangeError('Out of memory'); })))).toBe('oom');
   });
 
@@ -150,7 +179,9 @@ describe('export-hwp with a fake rhwp', () => {
     expect(codeOf(() => exportHwp(doc, fakeReload(3)))).toBe('unverified');
     expect(doc.log).toContain('doc.free');
     expect(codeOf(() => exportHwp(fakeDoc({ bytes: Uint8Array.from([0x50, 0x4b, 3, 4, 0, 0, 0, 0]) }), fakeReload(3)))).toBe('unverified');
+    expect(detailOf(() => exportHwp(fakeDoc({ bytes: Uint8Array.from([0x50, 0x4b, 3, 4, 0, 0, 0, 0]) }), fakeReload(3)))).toBe('bytes');
     expect(codeOf(() => exportHwp(fakeDoc({ pages: 0 }), fakeReload(0)))).toBe('unverified');
+    expect(detailOf(() => exportHwp(fakeDoc({ pages: 0 }), fakeReload(0)))).toBe('pages');
   });
 
   it('export throws → export; RangeError → oom; takeBytes throws → export (export and source freed)', () => {

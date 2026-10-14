@@ -3,6 +3,8 @@
 // phone), handed once to the ink worker (src/lib/ink/ink.worker.ts), and each control change re-runs the key there
 // with the options only (debounced 150 ms). The worker's cropped, sized RGBA is drawn on two previews (on a
 // checkerboard and on white) and saved as PNG on 내려받기.
+// REQ1014-B D15: when the first result of a new photo finds no ink (or only paper) at 진하기 보통, the 진하기 ladder
+// (./auto) re-runs the key at the next steps and keeps the first that passes; the slider then shows that step.
 import { sizeOptions, type InkColor, type InkMode, type InkSize, type Rgba } from '../../lib/ink/key';
 import type { InkRequest, InkResponse } from '../../lib/ink/worker-core';
 import { decodeImage } from '../../lib/image/decode';
@@ -12,6 +14,7 @@ import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
 import { track, type UsagePhase } from '../../lib/ui/usage';
+import { autoLadder } from './auto';
 import { COPY, areaMessage, dims, strengthLabel } from './copy';
 import { checkDims, checkFileBytes, LIMITS } from './limits';
 import { HANDOFF_FAILED, sendToPdfSign } from '../../lib/ui/sign-handoff';
@@ -82,6 +85,10 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     else usageFail(code, 'process');
   };
   let timer: ReturnType<typeof setTimeout> | undefined;
+  /** The next result is the first of a newly loaded photo (the only one the ladder may follow). */
+  let firstResult = false;
+  /** The user changed a control since the ladder started: their own run wins. */
+  let touched = false;
   const waiting = new Map<number, (r: Result | null) => void>();
 
   const say = (msg: string): void => live('status', msg, root);
@@ -114,14 +121,16 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
 
   const checked = (name: string): string => root.querySelector<HTMLInputElement>(`input[name="${name}"]:checked`)?.value ?? '';
 
-  function options(size?: InkSize): Extract<InkRequest, { type: 'run' }>['opts'] {
+  type Opts = Extract<InkRequest, { type: 'run' }>['opts'];
+  function options(over: Partial<Opts> = {}): Opts {
     const s = checked('ss-size');
     return {
       mode: (checked('ss-mode') || 'auto') as InkMode,
       strength: Number(strength.value) || 0,
       color: (checked('ss-color') || 'original') as InkColor,
-      size: size !== undefined ? size : s === '' || s === '0' ? null : (Number(s) as InkSize),
+      size: s === '' || s === '0' ? null : (Number(s) as InkSize),
       noPad: noPad.checked,
+      ...over,
     };
   }
 
@@ -217,20 +226,24 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     worker.postMessage({ type: 'run', run: runId, opts: options() } satisfies InkRequest);
   }
 
-  /** One extra run at another size (the export retry); resolves with its result, or null. */
-  function runAt(size: InkSize): Promise<Result | null> {
+  /** One extra run with other options (the export retry's size, the ladder's 진하기); its result, or null. */
+  function runWith(over: Partial<Opts>): Promise<Result | null> {
     if (!worker || !loaded) return Promise.resolve(null);
     const id = ++runId;
     return new Promise((resolve) => {
       waiting.set(id, resolve);
-      worker!.postMessage({ type: 'run', run: id, opts: options(size) } satisfies InkRequest);
+      worker!.postMessage({ type: 'run', run: id, opts: options(over) } satisfies InkRequest);
     });
   }
 
   const schedule = (): void => {
+    touched = true;
+    firstResult = false;
     clearTimeout(timer);
     timer = setTimeout(run, DEBOUNCE_MS);
   };
+
+  const passes = (m: Result): boolean => !areaMessage(m.status) && Boolean(m.out && m.rect);
 
   function onResult(m: Result): void {
     const wait = waiting.get(m.run);
@@ -240,6 +253,37 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
       return;
     }
     if (m.run !== runId) return;
+    if (firstResult) {
+      firstResult = false;
+      const steps = Number(strength.value) === 0 && !passes(m) ? autoLadder(m.status) : [];
+      if (steps.length) {
+        void ladder(m, steps);
+        return;
+      }
+    }
+    show(m);
+  }
+
+  /** D15: the first passing step wins (slider moved, status line); none: the original result and message. */
+  async function ladder(first: Result, steps: readonly number[]): Promise<void> {
+    const my = photoRun;
+    touched = false;
+    for (const step of steps) {
+      const r = await runWith({ strength: step });
+      // A new photo, or the user's own change (their run shows): the ladder stops.
+      if (my !== photoRun || touched) return;
+      if (r && passes(r)) {
+        strength.value = String(step);
+        strengthOut.value = strengthLabel(step);
+        show(r);
+        say(`${COPY.autoStrength} ${COPY.ready(r.out!.width, r.out!.height)}`);
+        return;
+      }
+    }
+    show(first);
+  }
+
+  function show(m: Result): void {
     delete root.dataset.busy;
     setPhase('work');
     const msg = areaMessage(m.status);
@@ -343,6 +387,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
       return fail('dims', d2);
     }
     bitmap = d.src;
+    firstResult = true;
     loadingText.textContent = COPY.keying;
     say(COPY.keying);
     startWorker();
@@ -387,7 +432,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
     const { px } = current;
     setSaveable(false);
     const blob = await encodeWithRetry(px, async (size) => {
-      const r = await runAt(size);
+      const r = await runWith({ size });
       return r?.out ? { data: new Uint8ClampedArray(r.out.pixels), width: r.out.width, height: r.out.height } : null;
     });
     setSaveable(Boolean(current));

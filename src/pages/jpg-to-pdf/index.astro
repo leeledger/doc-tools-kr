@@ -63,6 +63,7 @@ const groups = [
                   <label class="chip"><input type="radio" name={g.name} value={o.value} checked={i === 0}><span>{o.label}</span></label>
                 ))}
               </div>
+              {g.name === 'jp-size' && <p class="hint" id="jp-size-hint" hidden></p>}
             </fieldset>
           ))}
           <p class="hint" id="jp-hint"></p>

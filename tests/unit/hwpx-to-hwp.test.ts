@@ -86,3 +86,30 @@ describe('HWPX HWP 변환: usage whitelist (no file data)', () => {
     expect(validate(body({ ...BASE, e: 'start', o: 'pages', v: '9' }))).toBeNull();
   });
 });
+
+describe('REQ1014-B: HWPX HWP 변환 timeout plan, unverified detail, new copy', () => {
+  it('D9: a stall in start/engine is retried once, then timeout phase load; parse and export are never retried', async () => {
+    const { onTimeoutPlan } = await import('../../src/tools/hwpx-to-hwp/controller');
+    expect(onTimeoutPlan('start', false)).toBe('retry');
+    expect(onTimeoutPlan('engine', false)).toBe('retry');
+    expect(onTimeoutPlan('start', true)).toBe('load');
+    expect(onTimeoutPlan('engine', true)).toBe('load');
+    expect(onTimeoutPlan('parse', false)).toBe('parse');
+    expect(onTimeoutPlan('export', false)).toBe('process');
+  });
+  it('D10: unverified codes by detail; the pageShift line', async () => {
+    const { unverifiedCode } = await import('../../src/tools/hwpx-to-hwp/controller');
+    expect([unverifiedCode('pages'), unverifiedCode('reopen'), unverifiedCode('bytes'), unverifiedCode(undefined)]).toEqual(['unverified', 'unverified-reopen', 'unverified-bytes', 'unverified']);
+    expect(HX_COPY.pageShift).toBe('쪽 나눔이 원본과 조금 다를 수 있어요. 한글에서 꼭 확인한 뒤 내세요.');
+  });
+  it('D12: every new code fits CODE_RE and has an admin label', async () => {
+    const { CODE_RE } = await import('../../scripts/lib/usage.mjs');
+    const codes = ['cloud-timeout', 'cloud-network', 'cloud-server', 'cloud-refused', 'cloud-answer', 'cloud-copy', 'cloud-load', 'unverified-reopen', 'unverified-bytes', 'too-big-file', 'too-big-total'];
+    for (const c of codes) {
+      expect(CODE_RE.test(c), c).toBe(true);
+      expect((FAIL_LABELS as Record<string, string>)[c], c).toBeTruthy();
+    }
+    // History rows keep their labels.
+    for (const c of ['too-big', 'cloud-failed', 'unverified']) expect((FAIL_LABELS as Record<string, string>)[c]).toBeTruthy();
+  });
+});

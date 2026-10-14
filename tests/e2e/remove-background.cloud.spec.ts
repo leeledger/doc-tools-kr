@@ -167,7 +167,8 @@ test('notice above the picker; a pick sends nothing; 배경 지우기 sends one 
 });
 
 test('a large photo is sent as a 1024 px copy; a GPS-tagged, rotated JPEG leaves without EXIF and upright', async ({ page }) => {
-  const { bodies } = await api(page, { status: 500, body: '{"error":"engine"}' });
+  // 403 is final (REQ1014-B D13: a refusal is not retried), so each press sends exactly one copy.
+  const { bodies } = await api(page, { status: 403, body: '{"error":"origin"}' });
   await gotoReady(page, PATH);
   await pick(page, BIG);
   await ready(page);
@@ -279,18 +280,20 @@ test('503 quota with the engine ready: the device result shows without the quota
   await expect(page.locator('#bg-download')).toBeEnabled();
 });
 
-test('5xx, a dropped connection and 30 s without an answer: the "지금은 처리할 수 없어요" line with both buttons', async ({ page }) => {
+test('a dropped connection twice, then 30 s without an answer: the "지금은 처리할 수 없어요" line with both buttons; the timeout is not retried', async ({ page }) => {
   await page.clock.install();
-  const { bodies, held } = await api(page, { status: 502, body: '{"error":"engine"}' }, 'abort', 'hold');
+  const { bodies, held } = await api(page, 'abort', 'abort', 'hold');
   await gotoReady(page, PATH);
   await pick(page, SUBJECT);
   await ready(page);
   await page.locator('#bg-send').click();
-  await expect(page.locator('#bg-error')).toHaveText(CLOUD.failed, { timeout: 30_000 });
-  await expect(page.locator('#bg-device-retry')).toBeVisible();
-  await page.locator('#bg-retry').click();
+  // REQ1014-B D13: a dropped connection is retried once after 1.2 s, with the 지우는 중 line.
+  await expect.poll(() => bodies.length).toBe(1);
+  await expect(page.locator('#bg-progress-text')).toHaveText(CLOUD.working);
+  await page.clock.runFor(1_200);
   await expect.poll(() => bodies.length).toBe(2);
   await expect(page.locator('#bg-error')).toHaveText(CLOUD.failed, { timeout: 30_000 });
+  await expect(page.locator('#bg-device-retry')).toHaveText('이 기기에서 처리');
   await page.locator('#bg-retry').click();
   await expect.poll(() => held.length).toBe(1);
   await expect(page.locator('#bg-progress-text')).toHaveText(CLOUD.sending);
@@ -300,8 +303,67 @@ test('5xx, a dropped connection and 30 s without an answer: the "지금은 처�
   await expect(page.locator('#bg-error')).toHaveText(CLOUD.failed, { timeout: 30_000 });
   await expect(page.locator('#bg-retry')).toBeVisible();
   await expect(page.locator('#bg-device-retry')).toBeVisible();
+  await page.clock.runFor(5_000);
   expect(bodies).toHaveLength(3);
   await held[0]!.abort().catch(() => undefined);
+});
+
+test('REQ1014-B D13: 502 then 200: the result, exactly 2 requests, no error', async ({ page }) => {
+  const { bodies } = await api(page, { status: 502, body: '{"error":"engine"}' }, ok);
+  await gotoReady(page, PATH);
+  await pick(page, SUBJECT);
+  await ready(page);
+  await page.locator('#bg-send').click();
+  await expect(page.locator('#bg-result')).toBeVisible({ timeout: 30_000 });
+  expect(bodies).toHaveLength(2);
+  await expect(page.locator('#bg-error')).toBeHidden();
+});
+
+test('REQ1014-B D13/D14: 502 twice: the failed line; 「이 기기에서 처리」 opens the device path for this photo only (not remembered)', async ({ page }) => {
+  const { bodies } = await api(page, { status: 502, body: '{"error":"engine"}' });
+  await gotoReady(page, PATH);
+  await pick(page, SUBJECT);
+  await ready(page);
+  await page.locator('#bg-send').click();
+  await expect(page.locator('#bg-error')).toHaveText(CLOUD.failed, { timeout: 30_000 });
+  expect(bodies).toHaveLength(2);
+  await page.locator('#bg-device-retry').click();
+  await expect(page.locator('#bg-consent')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#bg-error')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('docttak-bg-mode'))).toBeNull();
+  await expect(page.locator('#bg-mode')).toBeHidden();
+  await gotoReady(page, PATH);
+  await expect(page.locator('#bg-mode')).toBeHidden();
+  await pick(page, SUBJECT);
+  await ready(page);
+  expect(bodies).toHaveLength(2);
+});
+
+test('REQ1014-B D13: 403 (refused) is final: 1 request and the failed line', async ({ page }) => {
+  const { bodies } = await api(page, { status: 403, body: '{"error":"origin"}' });
+  await gotoReady(page, PATH);
+  await pick(page, SUBJECT);
+  await ready(page);
+  await page.locator('#bg-send').click();
+  await expect(page.locator('#bg-error')).toHaveText(CLOUD.failed, { timeout: 30_000 });
+  await page.waitForTimeout(2_000);
+  expect(bodies).toHaveLength(1);
+});
+
+test('REQ1014-B D13: 취소 during the retry wait: no second request', async ({ page }) => {
+  await page.clock.install();
+  const { bodies } = await api(page, { status: 502, body: '{"error":"engine"}' }, ok);
+  await gotoReady(page, PATH);
+  await pick(page, SUBJECT);
+  await ready(page);
+  await page.locator('#bg-send').click();
+  await expect.poll(() => bodies.length).toBe(1);
+  await expect(page.locator('#bg-progress-text')).toHaveText(CLOUD.working);
+  await page.locator('#bg-cancel').click();
+  await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'empty');
+  await page.clock.runFor(5_000);
+  expect(bodies).toHaveLength(1);
+  await expect(page.locator('#bg-result')).toBeHidden();
 });
 
 test('취소 while sending: back to the picker, no result', async ({ page }) => {

@@ -117,8 +117,9 @@ test('an .hwp is already HWP (no worker, no engine): the message, links to the v
   await convert(page, fx('law05.hwp'), 'error');
   await expect(page.locator('#hx-error')).toHaveText('이미 HWP 파일이에요. 바꾸지 않아도 되고, 아래에서 열어 보거나 PDF로 바꿀 수 있어요.');
   await expect(page.locator('#hx-error')).toBeFocused();
-  await expect(page.locator('#hx-error-links a')).toHaveText(['HWP·HWPX 파일 보기', 'HWP PDF 변환']);
+  await expect(page.locator('#hx-error-links a')).toHaveText(['바로 보기', 'PDF로 바꾸기']);
   await expect(page.locator('#hx-error-links a').first()).toHaveAttribute('href', '/hwp-viewer/');
+  await expect(page.locator('#hx-error-links a').last()).toHaveAttribute('href', '/hwp-to-pdf/');
   await expect(page.locator('#hx-drop')).toBeVisible();
   expect(network.requests.map((r) => r.url()).filter((u) => WORKER_RE.test(u) || WASM_RE.test(u))).toEqual([]);
 });
@@ -129,6 +130,7 @@ test('noise and a text file are not HWPX; a password HWPX is refused before the 
     await convert(page, f, 'error');
     await expect(page.locator('#hx-error')).toHaveText('HWPX 파일이 아니에요. 확장자가 .hwpx인 한글 파일을 골라 주세요.');
     await expect(page.locator('#hx-error-links')).toBeHidden();
+    await expect(page.locator('#hx-error-actions')).toBeHidden();
   }
   await convert(page, hwpRuntime('adm14-password.hwpx'), 'error');
   await expect(page.locator('#hx-error')).toHaveText(PASSWORD);
@@ -151,6 +153,45 @@ test('engine: a wasm 404 shows the engine panel with 새로고침, not a file er
   await expect(page.locator('#engine-error')).toBeVisible();
   await expect(page.locator('#engine-error').getByRole('button', { name: '새로고침' })).toBeFocused();
   await expect(page.locator('#hx-error')).toBeHidden();
+});
+
+// ---------- REQ1014-B: wrong files, the chain to the HWP pages ----------
+
+test('a PDF and a Word file are named (PDF with 「PDF 열기」); no worker, no engine for the PDF', async ({ page, network }) => {
+  await convert(page, hwpRuntime('report.pdf'), 'error');
+  await expect(page.locator('#hx-error')).toHaveText('PDF 파일이에요. HWP로 바꿀 필요 없이 바로 열 수 있어요.');
+  await expect(page.locator('#hx-error-actions').getByRole('link', { name: 'PDF 열기' })).toHaveAttribute('href', /^blob:/);
+  await expect(page.locator('#hx-error-actions').getByRole('button', { name: 'PDF 쪽 보기·나누기' })).toBeVisible();
+  await expect(page.locator('#hx-error-links')).toBeHidden();
+  expect(network.requests.map((r) => r.url()).filter((u) => WORKER_RE.test(u) || WASM_RE.test(u))).toEqual([]);
+  await convert(page, hwpRuntime('word.docx'), 'error');
+  await expect(page.locator('#hx-error')).toHaveText('워드 파일(.docx)이에요. 확장자가 .hwpx인 한글 파일을 골라 주세요.');
+  await expect(page.locator('#hx-error-actions')).toBeHidden();
+  expect(network.requests.filter((r) => WASM_RE.test(r.url()))).toEqual([]);
+});
+
+test('「바로 보기」 hands the picked .hwp to /hwp-viewer/: it opens there without a second pick', async ({ page }) => {
+  test.setTimeout(150_000);
+  await convert(page, fx('law05.hwp'), 'error');
+  await page.locator('#hx-error-links').getByRole('link', { name: '바로 보기' }).click();
+  await expect(page).toHaveURL(/\/hwp-viewer\/$/);
+  await expect(page.locator('#hw-arrived')).toHaveText('방금 만든 파일을 가져왔습니다.');
+  await expect(page.locator('#hwp-tool')).toHaveAttribute('data-state', 'convert', { timeout: 120_000 });
+  await expect(page.locator('#hw-preview .page').first()).toBeVisible();
+  await expect(page.locator('#hw-file-name')).toContainText('law05.hwp');
+});
+
+test('a store failure on 「바로 보기」 follows the link (pick again there)', async ({ page }) => {
+  await gotoReady(page, '/hwpx-to-hwp/');
+  // IndexedDB refused (private mode): sendTo answers false.
+  await page.evaluate(() => {
+    Object.defineProperty(window, 'indexedDB', { configurable: true, get: () => ({ open: () => { throw new DOMException('denied', 'SecurityError'); } }) });
+  });
+  await convert(page, fx('law05.hwp'), 'error');
+  await page.locator('#hx-error-links').getByRole('link', { name: '바로 보기' }).click();
+  await expect(page).toHaveURL(/\/hwp-viewer\/$/);
+  await expect(page.locator('#hwp-tool')).toHaveAttribute('data-state', 'empty');
+  await expect(page.locator('#hw-arrived')).toBeHidden();
 });
 
 // ---------- losses, a new pick mid-run ----------
@@ -194,6 +235,91 @@ test('a worker that cannot export is 「바꾸지 못했어요」 with the viewe
   await convert(page, fx('adm14.hwpx'), 'error');
   await expect(page.locator('#hx-error')).toHaveText('바꾼 파일을 다시 열어 확인하지 못해 내려받지 않았어요. 아래에서 원본을 열어 보거나 PDF로 바꿀 수 있어요.');
   await expect(page.locator('#hx-save')).toBeHidden();
+});
+
+/** A stand-in HWP worker: open answers scanned + parsed, export-hwp answers `hwp` with the given fields or an error. */
+const exportStub = (answer: string): string =>
+  `self.onmessage=(e)=>{const m=e.data;if(m.type==='open'){self.postMessage({type:'scanned',format:'hwpx',equations:0,textboxes:0,imageBytes:0,distribution:false});self.postMessage({type:'parsed',pages:11,pageInfos:[],wasmBytes:0,measureCalls:0});}else if(m.type==='export-hwp'){${answer}}};`;
+
+test('REQ1014-B D10: a 1-page shift (worker stub) passes with the page warning; the download works', async ({ page, context }) => {
+  const hwp = await nodeHwp('adm14.hwpx');
+  const body = `const B=Uint8Array.from(atob(${JSON.stringify(Buffer.from(hwp).toString('base64'))}),c=>c.charCodeAt(0));` + exportStub(`const b=B.slice().buffer;self.postMessage({type:'hwp',bytes:b,losses:0,pagesIn:11,pageShift:true},[b]);`);
+  await context.route(WORKER_RE, (route) => route.fulfill({ status: 200, contentType: 'text/javascript', headers: { 'Content-Security-Policy': CSP }, body }));
+  await convert(page, fx('adm14.hwpx'), 'done');
+  await expect(page.locator('#hx-loss')).toBeVisible();
+  await expect(page.locator('#hx-shift')).toHaveText('쪽 나눔이 원본과 조금 다를 수 있어요. 한글에서 꼭 확인한 뒤 내세요.');
+  await expect(page.locator('#hx-loss-text')).toHaveText('');
+  expect(await serious(page)).toEqual([]);
+  const { d, bytes } = await save(page);
+  expect(d.suggestedFilename()).toBe('adm14.hwp');
+  expect(sha(bytes)).toBe(sha(hwp));
+});
+
+test('REQ1014-B D10: an unverified detail (reopen) shows the unverified line with the links, no download', async ({ page, context }) => {
+  const body = exportStub(`self.postMessage({type:'error',code:'unverified',detail:'reopen'});`);
+  await context.route(WORKER_RE, (route) => route.fulfill({ status: 200, contentType: 'text/javascript', headers: { 'Content-Security-Policy': CSP }, body }));
+  await convert(page, fx('adm14.hwpx'), 'error');
+  await expect(page.locator('#hx-error')).toHaveText('바꾼 파일을 다시 열어 확인하지 못해 내려받지 않았어요. 아래에서 원본을 열어 보거나 PDF로 바꿀 수 있어요.');
+  await expect(page.locator('#hx-error-links')).toBeVisible();
+  await expect(page.locator('#hx-save')).toBeHidden();
+});
+
+// ---------- REQ1014-B D8/D9: the watchdog (page.clock drives the 90 s; stand-in workers) ----------
+
+/** Open answers scanned + one engine progress, then (unless `silent`) parsed; export answers the adm14 HWP. */
+const stallStub = (hwp: Uint8Array, silent: boolean, parsedAfterMs = 0): string =>
+  `const B=Uint8Array.from(atob(${JSON.stringify(Buffer.from(hwp).toString('base64'))}),c=>c.charCodeAt(0));
+self.onmessage=(e)=>{const m=e.data;
+if(m.type==='open'){self.postMessage({type:'scanned',format:'hwpx',equations:0,textboxes:0,imageBytes:0,distribution:false});self.postMessage({type:'progress',phase:'engine',loaded:1,total:100});
+${silent ? '' : `setTimeout(()=>self.postMessage({type:'parsed',pages:11,pageInfos:[],wasmBytes:0,measureCalls:0}),${parsedAfterMs});`}}
+else if(m.type==='export-hwp'){const b=B.slice().buffer;self.postMessage({type:'hwp',bytes:b,losses:0,pagesIn:11,pageShift:false},[b]);}};`;
+
+async function stallRun(page: Page, context: import('@playwright/test').BrowserContext, plan: boolean[], parsedAfterMs = 0): Promise<() => number> {
+  const hwp = await nodeHwp('adm14.hwpx');
+  let n = 0;
+  await context.route(WORKER_RE, (route) => {
+    const silent = plan[Math.min(n, plan.length - 1)]!;
+    n++;
+    return route.fulfill({ status: 200, contentType: 'text/javascript', headers: { 'Content-Security-Policy': CSP }, body: stallStub(hwp, silent, parsedAfterMs) });
+  });
+  await page.clock.install();
+  await gotoReady(page, '/hwpx-to-hwp/');
+  await page.setInputFiles('#hx-input', fx('adm14.hwpx'));
+  await expect(tool(page)).toHaveAttribute('data-state', 'engine');
+  return () => n;
+}
+
+test('D9: the engine stage silent for 90 s once: a new worker opens the file again and the conversion succeeds', async ({ page, context }) => {
+  const workers = await stallRun(page, context, [true, false]);
+  await page.clock.fastForward(90_001);
+  await expect(tool(page)).toHaveAttribute('data-state', 'done', { timeout: 30_000 });
+  expect(workers()).toBe(2);
+  await expect(page.locator('#hx-error')).toBeHidden();
+});
+
+test('D9: silent twice: the timeout line after the second 90 s', async ({ page, context }) => {
+  const workers = await stallRun(page, context, [true, true]);
+  await page.clock.fastForward(90_001);
+  await expect.poll(workers).toBe(2);
+  await expect(tool(page)).toHaveAttribute('data-state', 'engine');
+  await page.clock.fastForward(90_001);
+  await expect(tool(page)).toHaveAttribute('data-state', 'error');
+  await expect(page.locator('#hx-error')).toHaveText('문서를 여는 데 너무 오래 걸려 멈췄습니다. 컴퓨터에서 열거나 Chrome·삼성 인터넷 등 다른 앱으로 열어 주세요.');
+});
+
+test('D8: hidden past 90 s, then visible: no timeout and no retry; the conversion finishes', async ({ page, context }) => {
+  const workers = await stallRun(page, context, [false], 3000);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.clock.fastForward(200_000);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(tool(page)).toHaveAttribute('data-state', 'done', { timeout: 30_000 });
+  expect(workers()).toBe(1);
 });
 
 test('a new pick while the first file still waits for the engine: only the second result shows', async ({ page, context }) => {

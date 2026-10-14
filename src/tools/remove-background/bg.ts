@@ -48,13 +48,15 @@ import { hideEngineError } from '../../lib/ui/engine-error';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { BG_COLORS, CLOUD, COPY, dims, fileName, saveLabel, type BgChoice, type SaveFormat } from './copy';
 import { checkDims, checkFileBytes, LIMITS, LOW_DEVICE_MEMORY } from './limits';
-import { move, view, type Phase } from './model';
+import { cloudRetry, move, view, type CloudFail, type Phase } from './model';
 
 const createInferWorker = (): WorkerLike => new Worker(new URL('../../lib/bgremove/infer.worker.ts', import.meta.url), { type: 'module' }) as unknown as WorkerLike;
 const createFusionWorker = (): Worker => new Worker(new URL('../../lib/bgremove/fusion.worker.ts', import.meta.url), { type: 'module' });
 type CloudModule = typeof import('../../lib/bgremove/cloud');
 /** After this long without an answer the line says the photo is being worked on (fetch reports no upload progress). */
 const SENT_AFTER_MS = 1500;
+/** REQ1014-B D13: the wait before the one automatic second request. */
+const RETRY_WAIT_MS = 1200;
 
 function must<T extends HTMLElement>(id: string): T {
   const e = document.getElementById(id);
@@ -607,7 +609,37 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     void process(my, backend, input);
   }
 
-  /** C2-cloud: one press of 배경 지우기 = one request. Errors offer 다시 시도 and 기기에서 처리; nothing is retried here. */
+  /** One cloud try: the alpha mask, a failure kind, or null when this photo's run is over (취소, a new photo). */
+  async function cloudOnce(my: number, bm: ImageBitmap, signal: AbortSignal): Promise<{ mask: Mask } | { fail: CloudFail } | null> {
+    let mod: CloudModule;
+    try {
+      mod = await loadCloud();
+    } catch {
+      return { fail: 'load' };
+    }
+    if (my !== run) return null;
+    const copy = await mod.makeCopy(bm, (w, h) => {
+      const k = canvas2d(w, h);
+      return k && { canvas: k.c, g: k.g };
+    });
+    if (my !== run) return null;
+    if (!copy) return { fail: 'copy' };
+    const r = await mod.requestCutout(copy.bytes, signal);
+    if (my !== run) return null;
+    if (!r.ok) return r.why === 'aborted' ? null : { fail: r.why === 'failed' ? r.kind : r.why };
+    setPhase('working');
+    busy(CLOUD.refining);
+    const m = await mod.decodeAlpha(r.blob, copy);
+    if (my !== run) return null;
+    return m ? { mask: m } : { fail: 'answer' };
+  }
+
+  /**
+   * C2-cloud: one press of 배경 지우기 = at most two requests (REQ1014-B D13). A failure that can pass (network, 5xx, a
+   * broken answer, the cloud chunk not loading) is retried once after RETRY_WAIT_MS; a timeout (the user already waited
+   * 30 s), a refusal (4xx), a copy that could not be made, busy and quota are not. Errors offer 다시 시도 and 이 기기에서
+   * 처리. One fail event, only for the failure the user sees.
+   */
   async function sendCloud(my: number): Promise<void> {
     const bm = bitmap;
     if (!bm || my !== run) return;
@@ -616,40 +648,34 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
     hideError();
     setPhase('sending');
     busy(CLOUD.sending);
-    abort = new AbortController();
-    const signal = abort.signal;
+    const ctl = new AbortController();
+    abort = ctl;
     const later = setTimeout(() => {
       if (my === run && phase === 'sending') busy(CLOUD.working);
     }, SENT_AFTER_MS);
     try {
-      let mod: CloudModule;
-      try {
-        mod = await loadCloud();
-      } catch {
-        return cloudFail(my, 'failed');
+      for (let tries = 1; ; tries++) {
+        const out = await cloudOnce(my, bm, ctl.signal);
+        if (!out || my !== run) return;
+        if ('mask' in out) {
+          abort = null;
+          await finish(my, out.mask, CLOUD.refining);
+          return;
+        }
+        if (!cloudRetry(out.fail, tries)) return cloudFail(my, out.fail);
+        // A decode failure left the phase at 'working'; the second request is a send again.
+        setPhase('sending');
+        busy(CLOUD.working);
+        // 취소 or a new photo during the wait bumps the run: no second request.
+        await new Promise((r) => setTimeout(r, RETRY_WAIT_MS));
+        if (my !== run) return;
       }
-      const copy = await mod.makeCopy(bm, (w, h) => {
-        const k = canvas2d(w, h);
-        return k && { canvas: k.c, g: k.g };
-      });
-      if (my !== run) return;
-      if (!copy) return cloudFail(my, 'failed');
-      const r = await mod.requestCutout(copy.bytes, signal);
-      if (my !== run) return;
-      abort = null;
-      if (!r.ok) return r.why === 'aborted' ? undefined : cloudFail(my, r.why);
-      setPhase('working');
-      busy(CLOUD.refining);
-      const m = await mod.decodeAlpha(r.blob, copy);
-      if (my !== run) return;
-      if (!m) return cloudFail(my, 'failed');
-      await finish(my, m, CLOUD.refining);
     } finally {
       clearTimeout(later);
     }
   }
 
-  function cloudFail(my: number, why: 'busy' | 'quota' | 'failed'): void {
+  function cloudFail(my: number, why: CloudFail): void {
     if (my !== run) return;
     abort = null;
     usageFail(`cloud-${why}`, 'process');
@@ -668,6 +694,11 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   function toDevice(): void {
     chooseDevice(true);
     if (modeLine) modeLine.hidden = false;
+    deviceOnce();
+  }
+
+  /** 「이 기기에서 처리」 after a cloud error (REQ1014-B D14): this photo only, nothing remembered. */
+  function deviceOnce(): void {
     hideError();
     if (!bitmap) return toEmpty();
     run++;
@@ -714,7 +745,7 @@ export function initBgTool(pending?: File): { open(file: File): void } | null {
   if (__BG_CLOUD__) {
     document.getElementById('bg-send')?.addEventListener('click', () => void sendCloud(run));
     document.getElementById('bg-device')?.addEventListener('click', toDevice);
-    deviceRetry?.addEventListener('click', toDevice);
+    deviceRetry?.addEventListener('click', deviceOnce);
     document.getElementById('bg-ready-cancel')?.addEventListener('click', () => {
       toEmpty();
       input.focus();

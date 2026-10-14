@@ -183,6 +183,45 @@ test('area check: blank paper and a dark page get their message and no download'
   await expect(page.locator('#ss-previews')).toBeHidden();
 });
 
+/** REQ1014-B D15: a faint pencil-grey signature (ink about 31 % darker than the paper): found only at 진하기 +2. */
+const FAINT = { name: 'faint.png', mimeType: 'image/png', buffer: png(400, 300, (x, y) => (y >= 140 && y < 150 && x > 50 && x < 350 ? 158 : 230)) };
+
+test('REQ1014-B D15: the shooting tip sits above the picker', async ({ page }) => {
+  await gotoReady(page, '/stamp-signature/');
+  await expect(page.locator('#ss-tip')).toHaveText('흰 종이에 진한 펜으로 쓰고, 그림자가 지지 않게 가까이 찍어 주세요.');
+  const before = await page.evaluate(() => document.getElementById('ss-tip')!.compareDocumentPosition(document.getElementById('ss-input')!) & Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(before).toBeTruthy();
+});
+
+test('REQ1014-B D15: a faint signature: 진하기 is raised by itself, the result shows with the status line', async ({ page }) => {
+  await gotoReady(page, '/stamp-signature/');
+  await open(page, FAINT);
+  await ready(page);
+  await expect(page.locator('#ss-error')).toBeHidden();
+  await expect(page.locator('#ss-strength')).toHaveValue(/^[12]$/);
+  await expect(page.locator('#ss-strength-out')).toHaveText(/^(진하게|아주 진하게)$/);
+  await expect(page.locator('#ss-status')).toContainText(COPY.autoStrength);
+  expect(await save(page)).toMatchObject({ name: '서명.png', type: 6 });
+  // A new photo starts again from 보통.
+  await page.locator('#ss-new').click();
+  await open(page, STAMP);
+  await ready(page);
+  await expect(page.locator('#ss-strength')).toHaveValue('0');
+});
+
+test('REQ1014-B D15: a slider move by the user on a no-ink photo never jumps the slider', async ({ page }) => {
+  await gotoReady(page, '/stamp-signature/');
+  await open(page, BLANK);
+  await expect(page.locator('#ss-error')).toHaveText(COPY.noink, { timeout: 30_000 });
+  await expect(page.locator('#ss-strength')).toHaveValue('0');
+  await page.locator('#ss-strength').fill('-1');
+  await expect(page.locator('#ss-strength-out')).toHaveText('연하게');
+  await page.waitForTimeout(1000);
+  await expect(page.locator('#ss-strength')).toHaveValue('-1');
+  await expect(page.locator('#ss-error')).toHaveText(COPY.noink);
+  await expect(page.locator('#ss-download')).toBeDisabled();
+});
+
 test('not a photo, and a worker that cannot load: clear messages', async ({ page }) => {
   await gotoReady(page, '/stamp-signature/');
   await open(page, { name: 'note.png', mimeType: 'image/png', buffer: Buffer.from('not an image at all') });
