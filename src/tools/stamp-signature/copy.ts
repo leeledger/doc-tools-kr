@@ -14,6 +14,8 @@ export const COPY = {
   /** canvas.toBlob gave nothing twice (the next smaller size was tried once). */
   encode: 'PNG 파일을 만들지 못했습니다. 더 작은 크기를 골라 다시 내려받아 주세요.',
   padEmpty: '서명을 먼저 그려 주세요.',
+  /** REQ1014-B D15: the 진하기 ladder found a step that works. */
+  autoStrength: '진하기를 자동으로 맞췄습니다.',
   saved: (name: string) => `${name} 파일을 내려받습니다.`,
   ready: (w: number, h: number) => `배경을 지웠습니다. ${dims(w, h)}`,
 } as const;
