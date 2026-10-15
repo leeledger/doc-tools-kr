@@ -12,8 +12,10 @@ import {
   dotDate,
   emInk,
   fontOf,
+  graphemes,
   layoutStamp,
   normalize,
+  scriptOf,
   todayDot,
   type Face,
   type Ink,
@@ -182,14 +184,14 @@ export function initStampMaker(pending?: StyleId): void {
   };
 
   // ---------- tiles (static in the page: names, empty canvases; painted here) ----------
-  const tiles = new Map<StyleId, { btn: HTMLButtonElement; canvas: HTMLCanvasElement; over: HTMLSpanElement }>();
+  const tiles = new Map<StyleId, { btn: HTMLButtonElement; canvas: HTMLCanvasElement; over: HTMLSpanElement; sample: HTMLImageElement | null }>();
   for (const id of STYLE_IDS) {
     const btn = grid.querySelector<HTMLButtonElement>(`.sm-tile[data-style="${id}"]`);
     const canvas = btn?.querySelector('canvas');
     const over = btn?.querySelector<HTMLSpanElement>('.sm-tile-over');
     if (!btn || !canvas || !over) throw new Error(`tile ${id} missing`);
     btn.addEventListener('click', () => pick(id));
-    tiles.set(id, { btn, canvas, over });
+    tiles.set(id, { btn, canvas, over, sample: btn.querySelector('img') });
   }
 
   const enabled = (): StyleId[] => STYLE_IDS.filter((id) => tiles.get(id)!.btn.getAttribute('aria-disabled') !== 'true');
@@ -323,6 +325,8 @@ export function initStampMaker(pending?: StyleId): void {
       t.btn.setAttribute('aria-disabled', String(!ok));
       if (r?.ok) paintInto(t.canvas, r.layout, TILE_CSS);
       else t.canvas.getContext('2d')?.clearRect(0, 0, t.canvas.width, t.canvas.height);
+      // The build-time sample picture gives way to the live tile.
+      if (t.sample) t.sample.hidden = true;
     }
     paintSelected();
   }
@@ -376,14 +380,22 @@ export function initStampMaker(pending?: StyleId): void {
     clearAlert(root);
     sample.hidden = typed;
     sample.textContent = typed ? '' : COPY.sample;
-    const texts = [textFor('round'), textFor('corp-round'), '인지印之', st.center, st.label, st.date];
+    // Only the slices the painted text needs (D5): 印之 only for a Hanja name, 인지 otherwise.
+    const suffixChars = typed && scriptOf(graphemes(normalize(raw, false))) === 'hanja' ? '印之' : '인지';
+    const texts = [textFor('round'), textFor('corp-round'), suffixChars, st.center, st.label, st.date];
     const weight = st.weight === 'light' ? 400 : 700;
     const { ok, late } = await loadFaces(facesFor(texts, st.face, weight));
     if (id !== run) return;
     if (!ok) {
-      void late.then((arrived) => arrived && id === run && void refresh());
-      if (!fontReported) track({ e: 'fail', t: 'stamp-maker', c: 'font', p: 'load' });
-      fontReported = true;
+      // Slow: repaint in the web face when it still arrives. Failed: report once (a late success is not a failure).
+      void late.then((arrived) => {
+        if (arrived) {
+          if (id === run) void refresh();
+        } else if (!fontReported) {
+          fontReported = true;
+          track({ e: 'fail', t: 'stamp-maker', c: 'font', p: 'load' });
+        }
+      });
     }
     inks.clear();
     note.hidden = ok;

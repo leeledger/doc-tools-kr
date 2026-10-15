@@ -31,6 +31,7 @@ import {
 import { PPI_1X, PPI_2X, SIZES_MM, STRETCH_MAX, STRETCH_MIN, mmToPx } from '../../src/tools/stamp-maker/limits';
 import { crc32, ppiToPpm, readPhys, withPhys } from '../../src/tools/stamp-maker/png';
 import { COLORS, paintStamp, pixelSize } from '../../src/tools/stamp-maker/render';
+import samples from '../../src/tools/stamp-maker/samples.json';
 import { STYLES, STYLE_IDS, type StyleId } from '../../src/tools/stamp-maker/styles';
 import { emMeasure, inkMeasure, sliceFont } from '../helpers/stamp-fonts';
 
@@ -210,11 +211,17 @@ describe('stamp-maker grids (D3 / D4)', () => {
     expect(at['홍']!.x).toBeCloseTo(at['길']!.x, 9);
     expect(at['홍']!.y).toBeLessThan(at['길']!.y);
     expect(at['동']!.y).toBeLessThan(at['인']!.y);
+    // Round 2 (review Should Fix 3): no suffix → the surname alone in the right column, tall; the given name on the left.
     const none = layout('square-seal', '홍길동', { suffix: 'none' });
     expect(none.glyphs.map((g) => g.text)).toEqual(['홍', '길', '동']);
-    // The single glyph of the left column is the tall one.
-    const d = none.glyphs[2]!;
-    expect(d.hh).toBeGreaterThan(none.glyphs[0]!.hh);
+    const [h, g1, g2] = none.glyphs;
+    expect(h!.x).toBeGreaterThan(g1!.x);
+    expect(g1!.x).toBeCloseTo(g2!.x, 9);
+    expect(g1!.y).toBeLessThan(g2!.y);
+    expect(h!.hh).toBeGreaterThan(g1!.hh);
+    for (const id of ['square-round', 'square-inverse'] as const) expect(layout(id, '洪吉童', { suffix: 'none' }).glyphs[0]!.hh).toBeGreaterThan(layout(id, '洪吉童', { suffix: 'none' }).glyphs[1]!.hh);
+    // 가로 and corp-square keep the plain order.
+    expect(layout('corp-square', '문서딱', { suffix: 'none' }).glyphs[2]!.hh).toBeGreaterThan(layout('corp-square', '문서딱', { suffix: 'none' }).glyphs[0]!.hh);
   });
 
   it('가로 toggle: rows top->bottom, left->right', () => {
@@ -312,7 +319,7 @@ describe('stamp-maker grids (D3 / D4)', () => {
 });
 
 describe('stamp-maker fonts (probe e)', () => {
-  it('every KS X 1001 한자 (4,888) is allowed after normalize() and painted from a face that has it (Serif all; Sans all but \u9699 -> Serif)', () => {
+  it('every KS X 1001 한자 (4,888) is allowed after normalize() and painted from a face that has it, 400 and 700 (Serif all; Sans all but \u9699 -> Serif)', () => {
     const dec = new TextDecoder('euc-kr');
     const hanja: string[] = [];
     for (let a = 0xca; a <= 0xfd; a++) for (let b = 0xa1; b <= 0xfe; b++) hanja.push(dec.decode(new Uint8Array([a, b])));
@@ -322,19 +329,22 @@ describe('stamp-maker fonts (probe e)', () => {
     expect(norm.every((h) => badChar(h) === null && graphemes(h).length === 1)).toBe(true);
     // NFC alone would send \u90CE / \u96B8 to U+90CE / U+96B8, which neither face has.
     expect(normalize('\uF92C\u90CE\uF9B8', false)).toBe('\uF92C\uF92C\uF9B8');
-    const slices = (pkg: string): { hasGlyphForCodePoint(cp: number): boolean }[] => {
+    const slices = (pkg: string, weight: 400 | 700): { hasGlyphForCodePoint(cp: number): boolean }[] => {
       const dir = join('node_modules', '@fontsource', pkg, 'files');
       return readdirSync(dir)
-        .filter((f) => /^[a-z-]+-\d+-700-normal\.woff$/.test(f))
+        .filter((f) => new RegExp(`^[a-z-]+-\\d+-${weight}-normal\\.woff$`).test(f))
         .map((f) => fontkit.create(readFileSync(join(dir, f)) as never) as unknown as { hasGlyphForCodePoint(cp: number): boolean });
     };
-    const faces = { serif: slices('noto-serif-kr'), sans: slices('noto-sans-kr') };
-    for (const face of ['serif', 'sans', 'myeongjo', 'gothic'] as const) {
-      const missing = norm.filter((h) => {
-        const f = faceFor(face, h);
-        return !(f === 'sans' ? faces.sans : faces.serif).some((x) => x.hasGlyphForCodePoint(h.codePointAt(0)!));
-      });
-      expect(missing, face).toEqual([]);
+    // Round 2 (review Should Fix 5): 가늘게 paints from the 400 slices, 보통 / 굵게 from the 700 ones.
+    for (const weight of [400, 700] as const) {
+      const faces = { serif: slices('noto-serif-kr', weight), sans: slices('noto-sans-kr', weight) };
+      for (const face of ['serif', 'sans', 'myeongjo', 'gothic'] as const) {
+        const missing = norm.filter((h) => {
+          const f = faceFor(face, h);
+          return !(f === 'sans' ? faces.sans : faces.serif).some((x) => x.hasGlyphForCodePoint(h.codePointAt(0)!));
+        });
+        expect(missing, `${face} ${weight}`).toEqual([]);
+      }
     }
     expect(faceFor('sans', '\u9699')).toBe('serif');
   });
@@ -476,5 +486,28 @@ describe('stamp-maker render (node, D4 / D6)', () => {
     expect(pixelSize(layout('rect-h', '홍길동'), 425)).toEqual({ w: 425, h: 177 });
     expect(pixelSize(layout('oval', '홍길동'), 425)).toEqual({ w: 306, h: 425 });
     expect(pixelSize(layout('round', '홍길동'), 850)).toEqual({ w: 850, h: 850 });
+  });
+});
+
+describe('stamp-maker sample pictures (round 2, review Must Fix 1)', () => {
+  it('are current: samples.json hash = the hash of styles / layout / render / limits (run npm run gen:stamp-samples after changing them)', async () => {
+    const { samplesHash } = await import('../../scripts/gen-stamp-samples.mjs');
+    expect(samples.hash, 'run: npm run gen:stamp-samples').toBe(samplesHash());
+  });
+
+  it('12 committed indexed PNGs, 176 × 176, named with the hash, 30 KB at most together', () => {
+    expect(Object.keys(samples.files).sort()).toEqual([...STYLE_IDS].sort());
+    let total = 0;
+    for (const id of STYLE_IDS) {
+      const path = samples.files[id as keyof typeof samples.files];
+      expect(path).toBe(`/stamp-samples/${id}.${samples.hash.slice(0, 8)}.png`);
+      const png = readFileSync(join('public', path));
+      total += png.length;
+      expect(Array.from(png.subarray(0, 8))).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      expect([png.readUInt32BE(16), png.readUInt32BE(20), png[25]]).toEqual([176, 176, 3]);
+    }
+    expect(readdirSync(join('public', 'stamp-samples'))).toHaveLength(12);
+    expect(total).toBe(samples.bytes);
+    expect(total).toBeLessThanOrEqual(30 * 1024);
   });
 });

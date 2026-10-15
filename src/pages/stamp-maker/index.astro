@@ -1,7 +1,8 @@
 ---
 // /stamp-maker/ (STAMP1015): 도장 만들기. A typed name is painted in 12 stamp frames at once; one is picked, fine-tuned and
 // saved as a transparent PNG (with its density in pHYs) or handed to /pdf-sign/. The page ships the input, the tiles and empty
-// containers: the 12 tiles are static (names and empty canvases; their names use preloaded UI-font glyphs only); the
+// containers: the 12 tiles are static (names, empty canvases and sample pictures of 「홍길동」/「문서딱」 drawn at build time
+// by scripts/gen-stamp-samples.mjs; the names use preloaded UI-font glyphs only); the
 // controller (entry.ts: the first user signal on the page + idle, or at once on a focus or press in the tool) paints them,
 // builds the fine-tune panel, whose labels are late copy, and injects the HWP font CSS that is already served.
 import Base from '../../layouts/Base.astro';
@@ -16,6 +17,9 @@ import OutLinks from '../../components/OutLinks.astro';
 import { affBlock, affOn } from '../../data/affiliate';
 import { INPUT_MAX } from '../../tools/stamp-maker/limits';
 import { STYLES, STYLE_IDS } from '../../tools/stamp-maker/styles';
+// Sample pictures shown until the controller paints the tiles (scripts/gen-stamp-samples.mjs; committed, hash-checked).
+// data-src: entry.ts sets src after the first contentful paint, so the 12 requests stay out of the hero text's LCP.
+import samples from '../../tools/stamp-maker/samples.json';
 // Page-only styles, inlined (the /pdf-sign/ pattern): no other page carries them.
 import smCss from '../../tools/stamp-maker/stamp-maker.css?inline';
 
@@ -46,7 +50,10 @@ const jsonLd = toolJsonLd(tool, Astro.site);
           <div class="sm-grid" id="sm-grid" role="radiogroup" aria-label="도장 모양">
             {STYLE_IDS.map((id, i) => (
               <button type="button" class="sm-tile" role="radio" aria-checked="false" tabindex={i === 0 ? 0 : -1} data-style={id}>
-                <canvas width="88" height="88" aria-hidden="true"></canvas>
+                <span class="sm-art">
+                  <canvas width="88" height="88" aria-hidden="true"></canvas>
+                  <img data-src={samples.files[id]} width="88" height="88" alt="" decoding="async" loading="lazy">
+                </span>
                 <span class="sm-tile-name">{STYLES[id].name}</span>
                 <span class="sm-tile-over" hidden>글자가 많아 이 모양에는 넣지 못해요</span>
               </button>

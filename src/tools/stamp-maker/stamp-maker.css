@@ -14,7 +14,11 @@
   display: grid; justify-items: center; gap: 4px; padding: 8px 4px 6px; margin: 0; min-width: 0;
   border: 2px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer;
 }
+.sm-art { display: grid; width: 88px; height: 88px; }
+.sm-art > * { grid-area: 1 / 1; }
 .sm-tile canvas { display: block; width: 88px; height: 88px; background: #ffffff; border-radius: 8px; }
+.sm-art img { display: block; width: 88px; height: 88px; }
+.sm-art img[hidden] { display: none; }
 .sm-tile-name { font-size: 14.5px; font-weight: 800; line-height: 1.3; text-align: center; }
 .sm-tile-over { font-size: 13px; color: var(--muted); line-height: 1.3; text-align: center; }
 .sm-tile[aria-checked="true"] { border-color: var(--brand); background: var(--brand-soft); }

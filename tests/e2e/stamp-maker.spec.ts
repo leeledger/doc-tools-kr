@@ -82,17 +82,31 @@ test('홍길동: 12 tiles painted in the web face, all different; the sample sho
   expect(await page.locator('link[href*="/fonts/hwp/"]').count()).toBe(1);
 });
 
-test('static tiles: nothing loads before a user signal; a tile pressed first is picked once the controller starts', async ({ page }) => {
+test('static tiles: sample pictures and nothing else before a user signal; a tile pressed first is picked once the controller starts', async ({ page }) => {
+  const fontRequests: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/fonts/hwp/')) fontRequests.push(r.url());
+  });
   await gotoReady(page, '/stamp-maker/');
   await expect(page.locator('.sm-tile')).toHaveCount(12);
   await expect(page.locator('.sm-tile-name')).toHaveText(['원형', '겹원', '타원', '사각 인감', '라운드 사각', '사각 음각', '세로 직사각', '가로 직사각', '선 없는 이름', '법인 직인', '사각 직인', '날짜 도장']);
+  // Round 2 (review Must Fix 1): every tile shows its build-time sample picture before any signal, with no HWP font request.
+  await expect.poll(() => page.$$eval('.sm-art img', (imgs) => (imgs as HTMLImageElement[]).map((i) => i.complete && i.naturalWidth))).toEqual(Array(12).fill(176));
   await page.waitForTimeout(1500);
   expect(await page.locator('#sm-tool').getAttribute('data-painted')).toBeNull();
   expect(await page.locator('link[href*="/fonts/hwp/"]').count()).toBe(0);
+  expect(fontRequests).toEqual([]);
+  await expect(page.locator('.sm-art img:visible')).toHaveCount(12);
   await tile(page, 'oval').click();
   await expect(tile(page, 'oval')).toHaveAttribute('aria-checked', 'true');
   await expect(page.locator('#sm-panel')).toBeVisible();
   await expect(page.locator('#sm-tool')).toHaveAttribute('data-painted', /\d+/);
+  // Live tiles replace the pictures: hidden, and every canvas has ink.
+  await expect(page.locator('.sm-art img:visible')).toHaveCount(0);
+  const inked = await page.$$eval('.sm-tile canvas', (cs) =>
+    (cs as HTMLCanvasElement[]).map((c) => c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data.some((v, i) => i % 4 === 3 && v > 0)),
+  );
+  expect(inked).toEqual(Array(12).fill(true));
 });
 
 test('limits: 7 syllables disable the round styles with their text; Hanja paints; an emoji is named and blocks the grid and save', async ({ page }) => {

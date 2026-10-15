@@ -1,0 +1,19 @@
+{
+  "hash": "87a67c267a6b",
+  "size": 176,
+  "bytes": 27805,
+  "files": {
+    "round": "/stamp-samples/round.87a67c26.png",
+    "round-double": "/stamp-samples/round-double.87a67c26.png",
+    "oval": "/stamp-samples/oval.87a67c26.png",
+    "square-seal": "/stamp-samples/square-seal.87a67c26.png",
+    "square-round": "/stamp-samples/square-round.87a67c26.png",
+    "square-inverse": "/stamp-samples/square-inverse.87a67c26.png",
+    "rect-v": "/stamp-samples/rect-v.87a67c26.png",
+    "rect-h": "/stamp-samples/rect-h.87a67c26.png",
+    "plain": "/stamp-samples/plain.87a67c26.png",
+    "corp-round": "/stamp-samples/corp-round.87a67c26.png",
+    "corp-square": "/stamp-samples/corp-square.87a67c26.png",
+    "date-round": "/stamp-samples/date-round.87a67c26.png"
+  }
+}

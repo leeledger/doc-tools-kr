@@ -292,7 +292,8 @@ budget('password.worker*.js (pdf-password)', match(/^_astro\/password\.worker[^/
 // 도장 만들기 (STAMP1015 S2): the controller (the controller*.js chunk that owns #sm-panel-note, and what only it imports)
 // loads after load + idle or on the first interaction, never with the page; the HWP font CSS is injected by it, so the
 // page HTML has no hwp-fonts link and no /fonts/hwp/ preload, and no initial script names them. The page never says what
-// the tool does not do (D9 / Trust row: no 「법적 효력이 있습니다」, 「인감 대신」, 「인감 등록」). Budget: controller
+// the tool does not do (D9 / Trust row: no 「법적 효력이 있습니다 / 있어요 / 있는」, 「인감 대신」, 「인감 등록」, 「인감으로 쓸 수」;
+// FAQ 2's question 「…있나요?」 passes). Budget: controller
 // STAMP_CONTROLLER_KB gzip (measured + 20 %, BUILD-LOG STAMP1015 S2).
 {
   const html = pageHtml.get('stamp-maker/index.html');
@@ -305,8 +306,22 @@ budget('password.worker*.js (pdf-password)', match(/^_astro\/password\.worker[^/
     if (/hwp-fonts|\/fonts\/hwp\//.test(html)) errors.push('stamp-maker/index.html: links or preloads the HWP fonts (the controller injects them)');
     for (const f of initial) if (/\/fonts\/hwp\/|Anolim HWP/.test(read(f).toString('utf8'))) errors.push(`${f}: the HWP fonts in the /stamp-maker/ initial JS`);
     const text = html.replace(/<[^>]+>/g, '');
-    for (const bad of ['법적 효력이 있습니다', '인감 대신', '인감 등록']) if (text.includes(bad)) errors.push(`stamp-maker/index.html: says 「${bad}」 (brief D9)`);
+    for (const bad of ['법적 효력이 있습니다', '법적 효력이 있어요', '법적 효력이 있는', '인감 대신', '인감 등록', '인감으로 쓸 수']) if (text.includes(bad)) errors.push(`stamp-maker/index.html: says 「${bad}」 (brief D9)`);
     budget('stamp-maker controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), STAMP_CONTROLLER_KB * KB);
+    // Round 2 (review Must Fix 1): every tile shows a build-time sample picture until the controller paints it; 12 files,
+    // 30 KB at most, each referenced by its tile and by no other page (so none can enter the precache through a precached
+    // page; /stamp-maker/ itself is not precached).
+    const samples = match(/^stamp-samples\/[a-z-]+\.[0-9a-f]{8}\.png$/);
+    if (samples.length !== 12) errors.push(`stamp-samples: ${samples.length} file(s), expected 12`);
+    const tiles = [...html.matchAll(/<button[^>]*class="sm-tile"[^>]*>[\s\S]*?<\/button>/g)].map((m) => m[0]);
+    if (tiles.length !== 12) errors.push(`stamp-maker/index.html: ${tiles.length} tile(s), expected 12`);
+    for (const t of tiles) {
+      const src = /<img data-src="\/(stamp-samples\/[^"]+)"[^>]*>/.exec(t);
+      if (!src || !samples.includes(src[1])) errors.push(`stamp-maker/index.html: a tile without its sample picture (${/data-style="([^"]+)"/.exec(t)?.[1]})`);
+      else if (!/width="88"/.test(src[0]) || !/height="88"/.test(src[0]) || !/alt=""/.test(src[0]) || !/loading="lazy"/.test(src[0])) errors.push(`stamp-maker/index.html: ${src[1]} needs width/height 88, alt="" and loading="lazy"`);
+    }
+    for (const [p, h] of pageHtml) if (p !== 'stamp-maker/index.html' && h.includes('/stamp-samples/')) errors.push(`${p}: references the stamp-maker sample pictures`);
+    budget('stamp-samples/*.png (12 tile pictures)', samples, 30 * KB, raw, 'raw');
   }
 }
 // PDF 글자 넣기·편집 (TOOLS1015 E1): the controller (the controller*.js chunk that owns #ed-text-error, and what only it

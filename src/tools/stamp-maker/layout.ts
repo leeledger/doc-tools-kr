@@ -235,10 +235,10 @@ export function distribute(n: number, k: number): number[] {
 }
 
 /** Splits graphemes into lines in reading order: vertical = column-major right->left, horizontal = row-major. */
-export function toLines(gs: readonly string[], k: number): string[][] {
+export function toLines(gs: readonly string[], k: number, counts: readonly number[] = distribute(gs.length, k)): string[][] {
   const out: string[][] = [];
   let i = 0;
-  for (const c of distribute(gs.length, k)) {
+  for (const c of counts) {
     out.push(gs.slice(i, i + c));
     i += c;
   }
@@ -303,9 +303,9 @@ function fitLine(gs: readonly string[], cells: readonly Box[], o: StampOptions, 
 }
 
 /** Lays `gs` out in `box` as `k` lines (vertical: columns right->left; horizontal: rows top->bottom). */
-function fitGrid(gs: readonly string[], k: number, vertical: boolean, box: Box, o: StampOptions, measure: Measure, region: Region): GlyphItem[] {
+function fitGrid(gs: readonly string[], k: number, vertical: boolean, box: Box, o: StampOptions, measure: Measure, region: Region, counts?: readonly number[]): GlyphItem[] {
   const out: GlyphItem[] = [];
-  toLines(gs, k).forEach((line, i) => {
+  toLines(gs, k, counts).forEach((line, i) => {
     const total = line.reduce((s, g) => s + cellWeight(g), 0);
     const cells: Box[] = [];
     let at = 0;
@@ -487,7 +487,10 @@ export function layoutStamp(style: StyleId, raw: string, o: StampOptions, measur
       const box = { x: inset, y: inset, w: w - 2 * inset, h: h - 2 * inset };
       const k = style === 'rect-v' || style === 'rect-h' ? 1 : lineCount(style, gs.length, vertical);
       const region: Region = { k: 'rect', x: lw, y: lw, w: w - 2 * lw, h: h - 2 * lw, r: Math.max(0, corner - lw) };
-      glyphs = fitGrid(gs, k, vertical, box, o, measure, region);
+      // A personal 3-glyph seal with no suffix: the surname alone in the right column (tall), the given name on the left
+      // (홍 | 길동), as seal makers cut it. A company name (corp-square) reads straight through.
+      const counts = def.kind === 'personal' && vertical && k === 2 && gs.length === 3 ? [1, 2] : undefined;
+      glyphs = fitGrid(gs, k, vertical, box, o, measure, region, counts);
       break;
     }
     case 'corp-round': {

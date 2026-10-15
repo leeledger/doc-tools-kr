@@ -53,7 +53,10 @@ export async function loadFaces(need: Map<string, string>): Promise<{ ok: boolea
         const font = `${weight} 16px "${FACE_FAMILY[face]}"`;
         try {
           const faces = await document.fonts.load(font, chars);
-          return faces.length > 0 && faces.every((f) => f.status === 'loaded') && document.fonts.check(font, chars);
+          // No slice covers these characters (a rare Hanja outside the faces): nothing failed to load; the system face
+          // draws them. Only a face that was needed and did not load is a failure.
+          if (!faces.length) return document.fonts.check(font, chars);
+          return faces.every((f) => f.status === 'loaded') && document.fonts.check(font, chars);
         } catch {
           return false;
         }
