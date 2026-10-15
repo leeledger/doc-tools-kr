@@ -574,6 +574,11 @@ for (const [path, html] of pageHtml) {
 }
 if (![...pageHtml.keys()].some((p) => /^guide\/[^/]+\/index\.html$/.test(p))) errors.push('no guide page in dist/guide/');
 for (const img of match(/^og\/guide\/[^/]+\.png$/)) budget(img, [img], 80 * KB, raw, 'raw');
+// REQ1015 D-H10: HEIC opens only where the device decodes it, so no page or llms.txt promises it unconditionally.
+for (const p of ['guide/heic-to-jpg/index.html', 'llms.txt']) {
+  if (!files.some((f) => f.path === p)) errors.push(`${p}: missing`);
+  else if (read(p).toString('utf8').includes('HEIC 사진을 고르고 변환하기를 누르면 JPG로 저장되고')) errors.push(`${p}: the unconditional HEIC promise is back (REQ1015 D-H10)`);
+}
 {
   // G2 A1: no two guide or hub articles are near-duplicates (5-char shingles, Jaccard < DUP_LIMIT; rewrite, never raise).
   const pages = [...pageHtml].filter(([p]) => /^guide\/[^/]+\/index\.html$/.test(p)).map(([p, html]) => [p.split('/')[1], articleText(html)]);

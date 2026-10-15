@@ -13,7 +13,7 @@ const DAMAGED = 'The photo cannot be opened. The file may be damaged; save the o
 export const EN = {
   mark: EN_CATALOG_MARK,
   errors: {
-    heic: 'This browser cannot open iPhone photos (HEIC). On the iPhone, go to Settings > Camera > Formats and choose "Most Compatible", or export the photo as JPG and pick it again.',
+    heic: 'This device cannot open iPhone photos (HEIC) here; Chrome and Edge on a PC often cannot. Open this page on the iPhone and convert there, or on the iPhone go to Settings > Camera > Formats and choose "Most Compatible" for new photos.',
     'not-image': 'This is not a photo. Please pick a JPG, PNG or WebP file.',
     empty: 'The file is empty. Save the original again and pick it.',
     corrupt: DAMAGED,

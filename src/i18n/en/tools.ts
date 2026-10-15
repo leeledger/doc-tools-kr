@@ -102,16 +102,16 @@ export const TOOLS_EN: ToolEn[] = [
     slug: 'image-to-jpg',
     name: 'HEIC to JPG',
     title: 'HEIC to JPG Converter, also PNG and WebP, Free | Docttak',
-    description: 'Convert iPhone HEIC photos, PNG and WebP to JPG online. Your photos are never uploaded. Convert many at once and get one ZIP file. Free, no sign-up.',
+    description: 'Convert iPhone HEIC photos, PNG and WebP to JPG. HEIC opens on iPhone and Mac Safari; Chrome and Edge on a PC often cannot. Free, no sign-up.',
     h1: 'Convert HEIC, PNG and WebP to JPG',
     lead: 'Convert iPhone photos (HEIC), PNG and WebP to JPG. Convert many at once, or save as PNG or WebP. Free, no sign-up.',
-    summary: 'Convert iPhone photos (HEIC), PNG and WebP to JPG, many at once.',
+    summary: 'Convert PNG, WebP and iPhone photos (HEIC) to JPG, many at once. HEIC opens on iPhone and Mac Safari; Chrome and Edge on a PC often cannot open it yet.',
     icon: getTool('image-to-jpg').icon,
     updated: UPDATED,
     faq: [
       {
         q: 'My iPhone photo (HEIC) does not open.',
-        a: 'Some browsers cannot open HEIC photos. On the iPhone, go to Settings > Camera > Formats and choose "Most Compatible", or export the photo as JPG and pick it again. Only the photos that do not open are marked; the others are converted.',
+        a: 'HEIC photos open on iPhone and Mac Safari; Chrome and Edge on a PC often cannot open them yet. Then open this page on the iPhone and convert there, or on the iPhone go to Settings > Camera > Formats and choose "Most Compatible" so new photos are saved as JPG. Only the photos that do not open are marked; the others are converted.',
       },
       {
         q: 'What happens to transparent areas when I convert PNG to JPG?',

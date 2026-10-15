@@ -39,7 +39,7 @@ export function photoErrorCode(err: unknown): PhotoErrorCode {
 }
 
 export const ERRORS = {
-  heic: '아이폰 사진 형식(HEIC)은 지금 쓰는 앱에서 열 수 없습니다. 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 고르거나 사진을 JPG로 내보낸 뒤 다시 선택해 주세요.',
+  heic: '아이폰 사진(HEIC)을 이 기기에서 열지 못했습니다. 아이폰에서 이 페이지를 열어 바꿔 보세요. 앞으로 찍을 사진은 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 고르면 JPG로 저장됩니다.',
   animated: '움직이는 이미지(GIF·WebP·PNG)는 아직 줄일 수 없습니다. 움직이지 않는 사진 파일을 선택해 주세요.',
   'not-image': '사진 파일이 아닙니다. JPG·PNG·WebP 파일을 선택해 주세요.',
   empty: '빈 파일입니다. 원본을 다시 저장해 선택해 주세요.',
