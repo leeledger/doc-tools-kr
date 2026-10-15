@@ -3126,3 +3126,15 @@ Known Gaps (REQ1015 steps 1–4)
 - Logged, not fixed (Richard: non-blocking): visits.mjs `partial` is computed on the merged rows, so a multi-chunk view can over-warn (safe direction); a 「JPG로 변환」 click while a cancelled reopen is still settling does nothing (`opened` null until it settles; no leak, no loop).
 - Orchestrator decisions recorded: deviations 1, 3, 4 accepted; font budget unchanged; the /image-to-jpg/ lead stays until step 7.
 - Gates: check:quotes --exact 241 verbatim; check-dist OK default (PUBLIC_SITE_URL), BG_REMOVE and cloud flag-on (precache 421.8 KB); vitest 79 files / 1,676 passed; astro check 0 errors.
+
+## TOOLS1015 — brief (log notes from handoff/ARCHITECT-BRIEF-TOOLS1015.md, copied by Bob when C1 started)
+- 2026-10-15 Arch: TOOLS1015 brief (owner: maximize traffic; scout 2026-10-15 + official Naver keyword table). Order C1
+  /char-count/, I0-I2 /id-copy/ + guide id-card-copy, E0 refactor, E1 /pdf-edit/, E2 「가린 쪽을 그림으로」 option.
+- Locked: zero new core UI-font glyphs (missing on this base: 뒷 덮 띄 왜 콘 앞 굳 완 얗 랑 좌 융 킹 ○ ● ✓); no new deps,
+  wasm or font files; pdf-edit reuses the HWP PDF face list (Noto Sans KR WOFF 1.0 slices, subset embed) in a new
+  edit.worker; id-copy reuses decode + images.worker, opaque fill + tiled watermark burned into one JPEG; char-count
+  stores nothing.
+- 사람인 / 잡코리아 counter pages state no per-character byte rule (fetched 2026-10-15) → copy shows both rules, claims
+  neither. 보안뉴스 2026-08-12 names no official body → not a guide source.
+- QR코드 만들기: 4th candidate, out of scope (Known Gaps "next candidates" with 문서 스캔).
+- Open: O1-O3. Owner (2026-10-15, via orchestrator): O1 slugs as proposed (/char-count/, /id-copy/, /pdf-edit/); O2 deploy after Richard clear + gates approved.
