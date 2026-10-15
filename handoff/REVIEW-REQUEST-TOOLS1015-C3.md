@@ -4,6 +4,15 @@ Ready for Review: YES
 Branch: tools-1015. Commits: d10488c (E0 refactor only), 75f9bcf (E1 tool), 644ff5a (E2 option, default off). Not pushed.
 Status: DONE (BUILD-LOG "TOOLS1015 E0", "E1", "E2" have gates, probes and decisions).
 
+## Round 2 (after REVIEW-FEEDBACK-TOOLS1015-C3.md) — one commit on top of 259202c; BUILD-LOG "TOOLS1015 C3 round 2"
+- src/lib/pdf/edit.ts flattenPdf + dropFields + dropUnreachable — Must Fix 1: the replaced pages' widgets leave /AcroForm /Fields (fields left without widgets go, /V with them), then every object unreachable from trailer /Root and /Info is deleted before save.
+- tests/helpers/pdf-traces.ts — raw bytes + every object + every decoded stream; hasSecret checks literal and hex.
+- tests/unit/pdf-edit.test.ts — 「flattenPdf (round 2)」: SECRETWORD (content) and FIELDSECRET (field) gone, KEEPME and FIELDKEEP kept, only the kept field left; fails on 644ff5a, passes now.
+- src/tools/pdf-edit/flatten.ts renderFlat(…, paint) + controller paintOver — Must Fix 2a (Arch): white boxes painted after pdf.js drew the annotations, overlapping text items painted again on top.
+- src/tools/pdf-edit/controller.ts loadAnnots / onAnnot / FIELD_NOTE / FIELD_RESULT_NOTE, src/pages/pdf-edit/index.astro #ed-item-note (empty) — Must Fix 2b: the note on the selected item and in the result; nothing deleted on a normal save. Late face only, 0 new core glyphs.
+- tests/e2e/pdf-edit.spec.ts — Must Fix 2c: field-form.pdf fixture; the warning test (value still in the file) and the E2 test (FIELDSECRET and COVERTEXT gone from the whole file, FIELDKEEP stays); the old E2 test also checks OLDTEXT is gone from the file.
+- Questions for round 2: the item note shows for any annotation that draws (not Link/Popup), not only form widgets — stamps and comments behave the same in viewers, so the same words fit; OK? pdf-edit controller is 17.8 / 18.5 KB (0.7 KB headroom).
+
 ## Files Changed
 E0 (no visible change on /pdf-sign/)
 - src/lib/pdf/page-stage.ts:1-318 — createPageStage: page geometry, page drawing, overlay boxes (drag, corner resize aspect/free, arrows 1/10 pt, Delete), selection, focus kept; E1 added render(el, scale, shown) and the 24 px minimum target (boxStyle 159-174, targetPad).

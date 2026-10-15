@@ -20,7 +20,7 @@ import { bindPasswordToggle } from '../../lib/ui/password';
 import { isPdfFile } from '../../lib/ui/pdf-pick';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { loadHwpFonts } from '../hwp-shared/fonts';
-import type { PageInfo } from '../pdf-sign/place';
+import { clampBox, type Box, type PageInfo } from '../pdf-sign/place';
 import {
   ASCENT,
   CSS_COLOR,
@@ -69,6 +69,15 @@ const SIGNATURE_NOTE = '전자서명이 들어 있는 문서입니다. 글자를
 /** Next to the 흰 상자 button while a white box exists (brief: honest scope), with the E2 option right below it. */
 const WHITE_NOTE = '흰 상자는 위에 덮는 것이라 밑의 글자는 파일 안에 남습니다. 남지 않게 하려면 아래 「그림으로 바꿔 저장」을 켜세요.';
 const WHITE_RESULT_NOTE = '흰 상자로 가린 곳의 원래 글자는 파일 안에 그대로 남아 있습니다.';
+/**
+ * An item over an annotation (a form field, a note, a stamp): viewers paint those over the page content, so in the saved
+ * file the field shows over a white box, or hides inserted text (E2 round 2, Arch: say so; nothing is deleted).
+ */
+const FIELD_NOTE = {
+  white: '이 자리에 입력 칸이 있어 저장한 파일에서는 칸 내용이 흰 상자 위에 보일 수 있어요. 완전히 가리려면 「흰 상자로 가린 쪽은 그림으로 바꿔 저장」을 켜 주세요.',
+  text: '이 자리에 입력 칸이 있어 저장한 파일에서는 넣은 글자가 칸에 가려질 수 있어요.',
+} as const;
+const FIELD_RESULT_NOTE = '입력 칸과 겹친 흰 상자나 글자가 있어요. 저장한 파일에서는 칸 내용이 위에 보이거나 넣은 글자가 가려질 수 있어요.';
 const PLACEHOLDER = '글자를 쓰세요';
 const COLOR_LABELS: Record<TextColor, string> = { black: '검정', blue: '파랑' };
 /** Item names (each takes 를). */
@@ -143,6 +152,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
   const addDate = must<HTMLButtonElement>('ed-add-date');
   const addWhite = must<HTMLButtonElement>('ed-add-white');
   const whiteNote = must<HTMLParagraphElement>('ed-white-note');
+  const itemNote = must<HTMLParagraphElement>('ed-item-note');
   const flattenBox = must<HTMLLabelElement>('ed-flatten-box');
   const flattenInput = must<HTMLInputElement>('ed-flatten');
   const stage = must<HTMLDivElement>('ed-stage');
@@ -240,6 +250,29 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
       });
   }
 
+  /**
+   * A text item's lines from the canvas origin, `pxPerPt` canvas pixels per point. Drawn at the measuring size and scaled
+   * down: small canvas text snaps its advances to whole pixels, which would make it wider or narrower than the PDF
+   * (pdf-lib uses the font's exact advances, as measured here).
+   */
+  function paintLines(g: CanvasRenderingContext2D, it: TextItem, pxPerPt: number, placeholder: boolean): void {
+    g.save();
+    const k = (pxPerPt * it.size) / MEASURE_PX;
+    g.scale(k, k);
+    setFont(g, MEASURE_PX);
+    g.textBaseline = 'alphabetic';
+    if (!it.text.trim()) {
+      if (placeholder) {
+        g.fillStyle = '#80868b';
+        g.fillText(PLACEHOLDER, 0, baselineOf(0, MEASURE_PX));
+      }
+    } else {
+      g.fillStyle = CSS_COLOR[it.color];
+      linesOf(it.text).forEach((line, i) => g.fillText(line, 0, baselineOf(i, MEASURE_PX)));
+    }
+    g.restore();
+  }
+
   function renderText(it: TextItem, b: HTMLButtonElement, scale: number, shown: { w: number; h: number }): void {
     drawnW.set(it.id, shown.w);
     const c = el('canvas', 'edit-fill');
@@ -247,23 +280,42 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     c.width = Math.max(1, Math.round(shown.w * scale * dpr));
     c.height = Math.max(1, Math.round(shown.h * scale * dpr));
     const g = c.getContext('2d');
-    if (g) {
-      // Drawn at the measuring size and scaled down: small canvas text snaps its advances to whole pixels, which would
-      // make the preview wider or narrower than the PDF (pdf-lib uses the font's exact advances, as measured here).
-      const k = (scale * dpr * it.size) / MEASURE_PX;
-      g.scale(k, k);
-      setFont(g, MEASURE_PX);
-      g.textBaseline = 'alphabetic';
-      if (!it.text.trim()) {
-        g.fillStyle = '#80868b';
-        g.fillText(PLACEHOLDER, 0, baselineOf(0, MEASURE_PX));
-      } else {
-        g.fillStyle = CSS_COLOR[it.color];
-        linesOf(it.text).forEach((line, i) => g.fillText(line, 0, baselineOf(i, MEASURE_PX)));
-      }
-    }
+    if (g) paintLines(g, it, scale * dpr, true);
     b.append(c);
   }
+
+  // ---------- annotations (form fields, notes, stamps) under the items ----------
+
+  /** Annotation rectangles by page, as seen (Link and Popup left out: they draw nothing over the page). */
+  const annots = new Map<number, Box[]>();
+  const annotsLoading = new Set<number>();
+  function loadAnnots(index: number): void {
+    const doc = opened?.doc;
+    if (!doc || annots.has(index) || annotsLoading.has(index)) return;
+    annotsLoading.add(index);
+    void doc
+      .getPage(index + 1)
+      .then(async (page) => {
+        const list = (await page.getAnnotations()) as { subtype?: string; rect?: number[] }[];
+        const vp = page.getViewport({ scale: 1 });
+        const boxes = list
+          .filter((a) => a.subtype !== 'Link' && a.subtype !== 'Popup' && Array.isArray(a.rect) && a.rect.length === 4)
+          .map((a) => {
+            const [rx1 = 0, ry1 = 0, rx2 = 0, ry2 = 0] = a.rect!;
+            const [x1 = 0, y1 = 0] = vp.convertToViewportPoint(rx1, ry1);
+            const [x2 = 0, y2 = 0] = vp.convertToViewportPoint(rx2, ry2);
+            return { x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1) };
+          });
+        if (opened?.doc !== doc) return;
+        annots.set(index, boxes);
+        updateUi();
+      })
+      .catch(() => undefined)
+      .finally(() => annotsLoading.delete(index));
+  }
+  const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  /** Whether the item lies over an annotation of its page (whose appearance viewers paint over the page content). */
+  const onAnnot = (it: EditItem): boolean => (annots.get(it.page) ?? []).some((b) => overlaps(b, it.box));
 
   // The page preview and the item boxes on it (src/lib/pdf/page-stage.ts).
   const pageStage = createPageStage({
@@ -289,7 +341,10 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
       boxOf: (id) => byId(id)?.box,
       store: (id, box) => {
         const it = byId(id);
-        if (it) it.box = box;
+        if (!it) return;
+        it.box = box;
+        // The 입력 칸 note follows the box.
+        if (it.id === pageStage.selection) updateControls();
       },
       editable: () => state === 'ready',
       selected: () => updateControls(),
@@ -372,6 +427,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     whiteNote.hidden = !hasWhite;
     whiteNote.textContent = hasWhite ? WHITE_NOTE : '';
     flattenBox.hidden = !hasWhite;
+    loadAnnots(pageStage.page);
     const cur = pageStage.page;
     prevBtn.disabled = cur <= 0;
     nextBtn.disabled = cur >= pageCount - 1;
@@ -388,6 +444,9 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     if (!it) return;
     textBoxEl.hidden = !isText(it);
     removeBtn.textContent = `이 ${KIND_LABELS[it.kind]} 빼기`;
+    const field = onAnnot(it) ? FIELD_NOTE[it.kind === 'white' ? 'white' : 'text'] : '';
+    itemNote.hidden = !field;
+    itemNote.textContent = field;
     if (!isText(it)) return;
     if (document.activeElement !== textInput && textInput.value !== it.text) textInput.value = it.text;
     const bad = badChars(it);
@@ -492,6 +551,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     items = [];
     drawnW.clear();
     noGlyph.clear();
+    annots.clear();
     flattenInput.checked = false;
     multiNote = false;
     pwInput.value = '';
@@ -669,6 +729,29 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     });
   }
 
+  /**
+   * Drawn over a converted page after pdf.js (annotations included): its white boxes, then its text items that sit on a
+   * white box or an annotation, so the picture shows them as placed (E2 round 2, Arch).
+   */
+  function paintOver(index: number, info: PageInfo): (g: CanvasRenderingContext2D, scale: number) => void {
+    const here = items.filter((it) => it.page === index);
+    const whites = here.filter((it) => it.kind === 'white').map((it) => clampBox(it.box, info.width, info.height));
+    return (g, scale) => {
+      g.save();
+      g.fillStyle = '#ffffff';
+      for (const b of whites) g.fillRect(b.x * scale, b.y * scale, b.w * scale, b.h * scale);
+      g.restore();
+      for (const it of here) {
+        if (!isText(it) || !(onAnnot(it) || whites.some((w) => overlaps(w, it.box)))) continue;
+        const b = clampBox(it.box, info.width, info.height);
+        g.save();
+        g.translate(b.x * scale, b.y * scale);
+        paintLines(g, it, scale, false);
+        g.restore();
+      }
+    };
+  }
+
   /** The pages of the saved PDF that get a white box, drawn as JPEGs (E2), one at a time. */
   async function drawFlat(saved: Uint8Array, pages: readonly number[]): Promise<FlatPage[]> {
     const { openPdf } = await loadInspect();
@@ -677,7 +760,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     try {
       const caps = RASTER_LIMITS[detectDevice()].caps;
       const out: FlatPage[] = [];
-      for (const index of pages) out.push(await renderFlat(o.doc, index, caps));
+      for (const index of pages) out.push(await renderFlat(o.doc, index, caps, paintOver(index, await pageStage.info(index))));
       return out;
     } finally {
       await o.close().catch(() => undefined);
@@ -717,7 +800,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
         if (id !== runId) return;
       }
       stopWorker();
-      finish(new Blob([out.bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }), out.signed, source, flat.length);
+      finish(new Blob([out.bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }), out.signed, source, flat);
     } catch (err) {
       if (id !== runId) return;
       stopWorker();
@@ -752,7 +835,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     status('저장을 취소했습니다. 넣은 글자와 상자는 그대로 있습니다.');
   }
 
-  function finish(out: Blob, signed: boolean, source: File, flattened: number): void {
+  function finish(out: Blob, signed: boolean, source: File, flattened: readonly number[]): void {
     revokeBlob();
     blobUrl = URL.createObjectURL(out);
     track({ e: 'success', t: 'pdf-edit' });
@@ -762,8 +845,10 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     const pages = new Set(items.map((it) => it.page)).size;
     summary.textContent = `${formatPages(pages)}에 ${items.length.toLocaleString('ko-KR')}개를 넣었습니다 · ${formatSize(out.size)}`;
     const lines: (string | HTMLLIElement)[] = signed ? [SIGNATURE_NOTE] : [];
-    if (flattened) lines.push(`${formatPages(flattened)}을 그림으로 바꿔 저장했어요. 그 쪽의 글자는 복사할 수 없어요.`);
+    if (flattened.length) lines.push(`${formatPages(flattened.length)}을 그림으로 바꿔 저장했어요. 그 쪽의 글자는 복사할 수 없어요.`);
     else if (items.some((it) => it.kind === 'white')) lines.push(WHITE_RESULT_NOTE);
+    // Items over a field on a page that stayed as it was (a converted page shows the boxes over the fields).
+    if (items.some((it) => !flattened.includes(it.page) && onAnnot(it))) lines.push(FIELD_RESULT_NOTE);
     if (encrypted === 'user') {
       const li = el('li', undefined, '암호 없이 저장했습니다. 다시 걸려면 ');
       const a = el('a', undefined, 'PDF 암호 해제·설정');

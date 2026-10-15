@@ -28,8 +28,12 @@ export function pagesToFlatten(items: readonly EditItem[]): number[] {
   return [...new Set(items.filter((i) => i.kind === 'white').map((i) => i.page))].sort((a, b) => a - b);
 }
 
-/** Page `index` of `doc` as a JPEG at FLATTEN_PPI within `caps`. */
-export async function renderFlat(doc: PdfJsDoc, index: number, caps: CanvasCaps): Promise<FlatPage> {
+/**
+ * Page `index` of `doc` as a JPEG at FLATTEN_PPI within `caps`. `paint` draws on top once pdf.js has drawn the page with
+ * its annotations (form field values among them): the white boxes go over those too (TOOLS1015 E2 round 2, Arch).
+ * `scale` = canvas pixels per point of the page as seen.
+ */
+export async function renderFlat(doc: PdfJsDoc, index: number, caps: CanvasCaps, paint?: (g: CanvasRenderingContext2D, scale: number) => void): Promise<FlatPage> {
   const page = await doc.getPage(index + 1);
   const unit = page.getViewport({ scale: 1 });
   const s = pageScale(unit.width, unit.height, FLATTEN_PPI, caps);
@@ -42,6 +46,7 @@ export async function renderFlat(doc: PdfJsDoc, index: number, caps: CanvasCaps)
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     await page.render({ canvas, canvasContext: ctx, viewport: page.getViewport({ scale: s.scale }) }).promise;
+    paint?.(ctx, s.scale);
     const blob = await new Promise<Blob | null>((resolve) => {
       try {
         canvas.toBlob(resolve, 'image/jpeg', 0.9);

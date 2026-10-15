@@ -4,7 +4,7 @@
 // with the HWP PDF faces (Noto Sans KR slices, SIL OFL): each code point resolves to one slice (FaceTable, as the HWP
 // writer), a line is drawn as runs of one face each, and each face is embedded once per document as a subset, so the
 // inserted text is real text (copy and search work).
-import { PDFDocument, degrees, rgb, type PDFFont } from '@cantoo/pdf-lib';
+import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRef, PDFStream, degrees, rgb, type PDFFont, type PDFObject } from '@cantoo/pdf-lib';
 import fontkit from '@cantoo/fontkit';
 import type { FaceTable, LoadedFace } from '../hwp/pdf/faces';
 import { hasSignature } from './compress/signature';
@@ -149,14 +149,27 @@ export async function flattenPdf(input: Uint8Array, pages: readonly FlatPageIn[]
     throw mapLoadError(err, false);
   }
   try {
+    // The annotations (form widgets among them) of the pages being replaced: their fields go too.
+    const gone = new Set<string>();
     for (const p of pages) {
       if (p.index < 0 || p.index >= doc.getPageCount()) throw new PdfError('unknown', `no page ${p.index}`);
+      const annots = doc.getPage(p.index).node.Annots();
+      for (let i = 0; i < (annots?.size() ?? 0); i++) {
+        const r = annots!.get(i);
+        if (r instanceof PDFRef) gone.add(r.toString());
+      }
+    }
+    for (const p of pages) {
       const image = await doc.embedJpg(p.jpeg);
       const page = doc.insertPage(p.index, [p.width, p.height]);
       page.drawImage(image, { x: 0, y: 0, width: p.width, height: p.height });
       doc.removePage(p.index + 1);
     }
+    dropFields(doc, gone);
     doc.setProducer(PRODUCER);
+    // removePage deletes only the page dictionary: its content streams, fonts, annotations and field values would still
+    // be written. Everything no longer reachable from the trailer is dropped, so the covered text leaves the file.
+    dropUnreachable(doc);
     const bytes = await doc.save({ useObjectStreams: true, updateFieldAppearances: false }).catch((err: unknown) => {
       if (/PDF\/A-1 forbids object/i.test(err instanceof Error ? err.message : '')) return doc.save({ useObjectStreams: false, updateFieldAppearances: false });
       throw err;
@@ -166,4 +179,58 @@ export async function flattenPdf(input: Uint8Array, pages: readonly FlatPageIn[]
     if (isOutOfMemory(err) || err instanceof PdfError) throw err;
     throw new PdfCorruptError(err instanceof Error ? err.message : String(err));
   }
+}
+
+/**
+ * Removes from /AcroForm /Fields every widget in `gone` (a removed page's annotations) and every field left without
+ * widgets, so a typed value (/V) on a replaced page does not stay in the form.
+ */
+function dropFields(doc: PDFDocument, gone: ReadonlySet<string>): void {
+  const acro = doc.catalog.lookupMaybe(PDFName.of('AcroForm'), PDFDict);
+  const fields = acro?.lookupMaybe(PDFName.of('Fields'), PDFArray);
+  if (!acro || !fields || !gone.size) return;
+  const KIDS = PDFName.of('Kids');
+  /** Prunes `arr` in place; true when something is left. */
+  const prune = (arr: PDFArray): boolean => {
+    for (let i = arr.size() - 1; i >= 0; i--) {
+      const ref = arr.get(i);
+      const node = doc.context.lookup(ref);
+      let keep = true;
+      if (ref instanceof PDFRef && gone.has(ref.toString())) keep = false;
+      else if (node instanceof PDFDict) {
+        const kids = node.lookupMaybe(KIDS, PDFArray);
+        if (kids && kids.size() > 0) keep = prune(kids);
+      }
+      if (!keep) arr.remove(i);
+    }
+    return arr.size() > 0;
+  };
+  prune(fields);
+}
+
+/** Deletes every indirect object that the trailer's /Root and /Info no longer reach. */
+export function dropUnreachable(doc: PDFDocument): void {
+  const ctx = doc.context;
+  const seen = new Set<string>();
+  const stack: PDFObject[] = [];
+  const { Root, Info } = ctx.trailerInfo;
+  if (Root) stack.push(Root);
+  if (Info) stack.push(Info);
+  while (stack.length) {
+    const o = stack.pop()!;
+    if (o instanceof PDFRef) {
+      const k = o.toString();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const target = ctx.lookup(o);
+      if (target) stack.push(target);
+    } else if (o instanceof PDFDict) {
+      for (const [, v] of o.entries()) stack.push(v);
+    } else if (o instanceof PDFArray) {
+      for (let i = 0; i < o.size(); i++) stack.push(o.get(i));
+    } else if (o instanceof PDFStream) {
+      stack.push(o.dict);
+    }
+  }
+  for (const [ref] of ctx.enumerateIndirectObjects()) if (!seen.has(ref.toString())) ctx.delete(ref);
 }

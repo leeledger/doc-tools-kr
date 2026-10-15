@@ -13,11 +13,13 @@ import { createCanvas } from '@napi-rs/canvas';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { expect, gotoReady, test } from './no-upload';
 import { RUNTIME_DIR, runtimePath } from './paths';
+import { hasSecret, pdfTraces } from '../helpers/pdf-traces';
 
 const DIR = join(RUNTIME_DIR, `ed-${process.pid}`);
 const FORM = join(DIR, 'form.pdf');
 const ROT90 = join(DIR, 'rot90.pdf');
 const CROP270 = join(DIR, 'crop270.pdf');
+const FIELD_FORM = join(DIR, 'field-form.pdf');
 
 test.beforeAll(async () => {
   mkdirSync(DIR, { recursive: true });
@@ -35,6 +37,21 @@ test.beforeAll(async () => {
   p.setCropBox(36, 36, 500, 700);
   p.setRotation(degrees(270));
   writeFileSync(CROP270, await c270.save());
+  // A filled form field (value FIELDSECRET) right where a new 흰 상자 starts (seen 60,80 120×24), over page text
+  // COVERTEXT; page 2 has a field that stays (FIELDKEEP).
+  const ff = await PDFDocument.create();
+  const ffFont = await ff.embedFont(StandardFonts.Helvetica);
+  const p1 = ff.addPage([600, 800]);
+  p1.drawText('COVERTEXT', { x: 64, y: 704, size: 12, font: ffFont });
+  const p2 = ff.addPage([600, 800]);
+  const fields = ff.getForm();
+  const f1 = fields.createTextField('applicant');
+  f1.setText('FIELDSECRET');
+  f1.addToPage(p1, { x: 60, y: 696, width: 120, height: 24 });
+  const f2 = fields.createTextField('other');
+  f2.setText('FIELDKEEP');
+  f2.addToPage(p2, { x: 60, y: 600, width: 120, height: 24 });
+  writeFileSync(FIELD_FORM, await ff.save());
 });
 
 const today = (): string => {
@@ -387,6 +404,46 @@ test('E2 「그림으로 바꿔 저장」: off by default and shown only with a 
   expect(seen[0]!.text).toBe('');
   expect(seen[0]!.dark(60, 80, 120, 24)).toBe(0);
   expect(seen[1]!.text.replace(/\s+/g, '')).toContain('둘째쪽');
+  // Round 2: the covered text is gone from the whole file (every object and decoded stream, literal and hex).
+  const traces = await pdfTraces(bytes);
+  expect(hasSecret(traces, 'OLDTEXT')).toBe(false);
   const doc = await PDFDocument.load(bytes, { updateMetadata: false });
   expect(doc.getPage(0).getSize()).toEqual({ width: 600, height: 800 });
+});
+
+test('입력 칸 under a 흰 상자 (round 2): the item and the result say the field may show; nothing is deleted from the file', async ({ page }) => {
+  await open(page, FIELD_FORM);
+  await stageReady(page);
+  await page.locator('#ed-add-white').click();
+  await expect(page.locator('#ed-item-note')).toHaveText('이 자리에 입력 칸이 있어 저장한 파일에서는 칸 내용이 흰 상자 위에 보일 수 있어요. 완전히 가리려면 「흰 상자로 가린 쪽은 그림으로 바꿔 저장」을 켜 주세요.');
+  // A text item away from the field has no note.
+  await page.locator('#ed-add-text').click();
+  await page.locator('#ed-text').fill('멀리');
+  await page.locator('.sign-box').nth(1).focus();
+  for (let i = 0; i < 30; i++) await page.keyboard.press('Shift+ArrowDown');
+  await expect(page.locator('#ed-item-note')).toBeHidden();
+  const { bytes } = await save(page);
+  await expect(page.locator('#ed-notes')).toContainText('입력 칸과 겹친 흰 상자나 글자가 있어요. 저장한 파일에서는 칸 내용이 위에 보이거나 넣은 글자가 가려질 수 있어요.');
+  const traces = await pdfTraces(bytes);
+  expect(hasSecret(traces, 'FIELDSECRET')).toBe(true);
+  expect(hasSecret(traces, 'COVERTEXT')).toBe(true);
+});
+
+test('입력 칸 under a 흰 상자 with 「그림으로 바꿔 저장」 (round 2): the field value and the page text leave the file; the picture is white there; the other page keeps its field', async ({ page }) => {
+  await open(page, FIELD_FORM);
+  await stageReady(page);
+  await page.locator('#ed-add-white').click();
+  await page.locator('#ed-flatten').check();
+  const { bytes } = await save(page);
+  await expect(page.locator('#ed-notes')).toContainText('1쪽을 그림으로 바꿔 저장했어요.');
+  await expect(page.locator('#ed-notes')).not.toContainText('입력 칸과 겹친');
+  const traces = await pdfTraces(bytes);
+  expect(hasSecret(traces, 'FIELDSECRET')).toBe(false);
+  expect(hasSecret(traces, 'COVERTEXT')).toBe(false);
+  expect(hasSecret(traces, 'FIELDKEEP')).toBe(true);
+  const doc = await PDFDocument.load(bytes, { updateMetadata: false });
+  expect(doc.getForm().getFields().map((f) => f.getName())).toEqual(['other']);
+  const seen = (await pagesSeen(bytes))[0]!;
+  expect(seen.text).toBe('');
+  expect(seen.dark(61, 81, 118, 22)).toBe(0);
 });

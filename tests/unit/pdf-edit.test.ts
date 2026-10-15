@@ -36,6 +36,7 @@ import { textOrigin, whiteRect } from '../../src/tools/pdf-edit/text-place';
 import { coverageOf, covered } from '../../src/tools/pdf-edit/coverage';
 import type { PageInfo } from '../../src/tools/pdf-sign/place';
 import { pageTexts, withPdf } from '../helpers/pdf';
+import { hasSecret, pdfTraces } from '../helpers/pdf-traces';
 
 const PUBLIC = join(__dirname, '..', '..', 'public');
 
@@ -290,5 +291,38 @@ describe('「그림으로 바꿔 저장」 (E2)', () => {
     expect(p.getRotation().angle).toBe(0);
     expect(p.getSize()).toEqual({ width: 800, height: 600 });
     expect(done.getProducer()).toBe(PRODUCER);
+  });
+
+  it('flattenPdf (round 2): the covered text, the old page streams and a filled field on the page leave the file; the rest stays', async () => {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const keep = doc.addPage([600, 800]);
+    keep.drawText('KEEPME', { x: 50, y: 700, size: 20, font });
+    const cover = doc.addPage([600, 800]);
+    cover.drawText('SECRETWORD', { x: 50, y: 700, size: 20, font });
+    const form = doc.getForm();
+    const gone = form.createTextField('covered');
+    gone.setText('FIELDSECRET');
+    gone.addToPage(cover, { x: 60, y: 600, width: 200, height: 24 });
+    const stays = form.createTextField('kept');
+    stays.setText('FIELDKEEP');
+    stays.addToPage(keep, { x: 60, y: 600, width: 200, height: 24 });
+    const input = await doc.save();
+    // The checker sees all three before the flatten (literal or hex, inside compressed streams too).
+    const before = await pdfTraces(input);
+    for (const s of ['SECRETWORD', 'FIELDSECRET', 'KEEPME', 'FIELDKEEP']) expect(hasSecret(before, s), s).toBe(true);
+    const c = createCanvas(600, 800);
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, 600, 800);
+    const out = await flattenPdf(input, [{ index: 1, jpeg: new Uint8Array(c.toBuffer('image/jpeg')), width: 600, height: 800 }]);
+    const after = await pdfTraces(out.bytes);
+    expect(hasSecret(after, 'SECRETWORD')).toBe(false);
+    expect(hasSecret(after, 'FIELDSECRET')).toBe(false);
+    expect(hasSecret(after, 'KEEPME')).toBe(true);
+    expect(hasSecret(after, 'FIELDKEEP')).toBe(true);
+    const done = await PDFDocument.load(out.bytes, { updateMetadata: false });
+    expect(done.getForm().getFields().map((f) => f.getName())).toEqual(['kept']);
+    expect(done.getPage(1).node.Annots()?.size() ?? 0).toBe(0);
   });
 });
