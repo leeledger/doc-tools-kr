@@ -40,3 +40,10 @@ astro check 0 errors · vitest 80 files / 1,697 passed · check:licenses OK (no 
 - work24-resume-upload is a draft (frontmatter only): no inbound link added; it appears in the chain and 관련 안내 when published.
 - C Known Gaps: several 문항, 원고지, 단어 수, `?goal=`, draft saving. qa:visual not run this step.
 - Tools 2–3 (id-copy, pdf-edit) not started.
+
+## Round 2 (2026-10-15, after REVIEW-FEEDBACK-TOOLS1015-C1.md)
+- src/tools/char-count/count.ts:41-50 — SIMPLE_RE excludes astral code points and the BMP joiners outside \p{M} (your regex); comment updated.
+- tests/unit/char-count.test.ts:153-end — astral/Thai/halfwidth/Prepend cases + exhaustive BMP fast path ≡ segmenter (both fail on 2cee9c8).
+- src/tools/char-count/controller.ts:38-40, 83, 157-165 — first render silent; also a silent render on `pageshow` (Chromium restores form values after the module runs, so restored text showed 0 before).
+- tests/e2e/char-count.spec.ts — plain emoji + flag in the six-numbers test; new back/forward test.
+- Gates: astro check 0; vitest 1,699 passed; check-dist OK; e2e char-count 5 projects 42 passed / 3 skipped.

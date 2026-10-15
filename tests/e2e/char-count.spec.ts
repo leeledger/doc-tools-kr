@@ -51,6 +51,10 @@ test('the six numbers for a fixed text; Intl.Segmenter counts an emoji family as
   await page.locator('#cc-text').fill('가 \u{1F468}\u200D\u{1F469}\u200D\u{1F467}');
   await expect(page.locator('#cc-n-space')).toHaveText('3');
   await expect(page.locator('#cc-n-nospace')).toHaveText('2');
+  // Round 2 (Richard r1): a plain emoji above U+FFFF is one character too (it is two UTF-16 units).
+  await page.locator('#cc-text').fill(`가 ${String.fromCodePoint(0x1f600)} ${String.fromCodePoint(0x1f1f0, 0x1f1f7)}`);
+  await expect(page.locator('#cc-n-space')).toHaveText('5');
+  await expect(page.locator('#cc-n-nospace')).toHaveText('3');
 });
 
 test('goal: over text, progress and colour state; basis switch; under again; one announcement per crossing', async ({ page }) => {
@@ -80,6 +84,19 @@ test('goal: over text, progress and colour state; basis switch; under again; one
   // A cleared or invalid goal hides the bar.
   await page.locator('#cc-goal').fill('');
   await expect(page.locator('#cc-goal-out')).toBeHidden();
+});
+
+test('back/forward: restored text and goal are counted without an announcement (round 2)', async ({ page }) => {
+  await gotoReady(page, '/char-count/');
+  await page.locator('#cc-text').fill(TEXT);
+  await page.locator('#cc-goal').fill('10');
+  await expect(page.locator('#cc-live')).toHaveText('목표보다 13자 넘었어요');
+  await gotoReady(page, '/privacy/');
+  await page.goBack({ waitUntil: 'load' });
+  const restored = await page.locator('#cc-text').inputValue();
+  test.skip(restored !== TEXT || (await page.locator('#cc-goal').inputValue()) !== '10', 'This browser did not restore the form.');
+  await expect(page.locator('#cc-goal-text')).toHaveText('13자 넘었어요');
+  await expect(page.locator('#cc-live')).toHaveText('');
 });
 
 test('copy: the clipboard gets the text (Chromium)', async ({ page, browserName, context }) => {

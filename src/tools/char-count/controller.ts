@@ -36,6 +36,8 @@ export function initCharCount(): void {
   let started = false;
   let nexted = false;
   let wasOver = false;
+  /** Off for the first render: text and goal the browser restored (back/forward) are counted without an announcement. */
+  let announce = false;
   let leaveGuard = false;
   /** The text 지우기 removed, until the next input (one undo step, in memory only). */
   let cleared: string | null = null;
@@ -78,7 +80,7 @@ export function initCharCount(): void {
     goalText.textContent = status.text;
     goalBox.dataset.over = String(status.over);
     // Announced only when the goal is crossed, either way.
-    if (status.over !== wasOver) live.textContent = status.over ? `목표보다 ${status.text}` : '목표 글자 수 안으로 들어왔어요';
+    if (announce && status.over !== wasOver) live.textContent = status.over ? `목표보다 ${status.text}` : '목표 글자 수 안으로 들어왔어요';
     wasOver = status.over;
   };
   const schedule = (): void => {
@@ -154,6 +156,13 @@ export function initCharCount(): void {
     });
   }
 
-  // Text the browser restored (back/forward, autofill) is counted at once.
-  render();
+  // Text and goal the browser restored (back/forward, autofill) are counted silently: now, and again on pageshow,
+  // because Chromium fills the restored form values in after this module has run.
+  const silentRender = (): void => {
+    announce = false;
+    render();
+    announce = true;
+  };
+  silentRender();
+  window.addEventListener('pageshow', silentRender);
 }

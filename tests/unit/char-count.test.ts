@@ -150,3 +150,44 @@ describe('tools.ts entry', () => {
     expect(links).toEqual(expect.arrayContaining(['/id-photo/?preset=saramin', '/id-photo/?preset=jobkorea', '/guide/resume-photo/']));
   });
 });
+
+describe('fast path equals the segmenter (round 2, Richard r1)', () => {
+  const fc = (...cps: number[]): string => String.fromCodePoint(...cps);
+  const segCount = (s: string): number => {
+    let n = 0;
+    for (const line of normalize(s).split(String.fromCharCode(10))) n += [...seg!.segment(line)].length;
+    return n + normalize(s).split(String.fromCharCode(10)).length - 1;
+  };
+
+  it('single emoji, emoji with skin tone, flag, CJK Ext. B, Thai SARA AM, halfwidth sound mark: as the segmenter', () => {
+    const cases = [
+      fc(0x1f600), // 😀
+      '안녕' + fc(0x1f600),
+      fc(0x1f44d, 0x1f3fb), // 👍🏻
+      fc(0x1f1f0, 0x1f1f7), // 🇰🇷
+      fc(0x20000), // 𠀀
+      'ก' + fc(0x0e33), // กำ
+      fc(0xff76, 0xff9e), // ｶﾞ
+      fc(0x0600) + 'a', // Arabic Prepend
+    ];
+    for (const s of cases) {
+      const want = [...seg!.segment(s)].length;
+      expect(count(s, seg).withSpace, s).toBe(want);
+      expect(count(s, seg).noSpace, s).toBe(want);
+    }
+    expect(count(fc(0x1f600), seg).withSpace).toBe(1);
+    expect(count('안녕' + fc(0x1f600), seg).withSpace).toBe(3);
+  });
+
+  it('every BMP code point next to a, 가 and ก: count() equals a segmenter-only count', () => {
+    const bad: string[] = [];
+    for (let cp = 0; cp <= 0xffff; cp++) {
+      if (cp === 10 || cp === 13 || (cp >= 0xd800 && cp <= 0xdfff)) continue;
+      const ch = String.fromCharCode(cp);
+      for (const s of ['a' + ch, ch + 'a', '가' + ch, 'ก' + ch]) {
+        if (count(s, seg).withSpace !== segCount(s)) bad.push(cp.toString(16));
+      }
+    }
+    expect([...new Set(bad)]).toEqual([]);
+  });
+});

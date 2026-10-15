@@ -40,10 +40,13 @@ export const normalize = (s: string): string => s.replace(/\r\n?/g, '\n');
 const SPACE_RE = /^\s+$/u;
 /**
  * Code points that never join a neighbour into one grapheme: every BMP code point except combining marks, the
- * joiners and variation selectors, Hangul jamo (and the two Hangul fillers) and the surrogate halves. A line made only
- * of these has one grapheme per UTF-16 unit, so the segmenter is skipped (a pasted 100,000-character 자소서 stays fast).
+ * joiners and variation selectors, Hangul jamo (and the two Hangul fillers), the grapheme joiners outside \p{M}
+ * (Prepend U+0600-0605, 06DD, 070F, 0890-0891, 08E2, 0D4E; SpacingMark U+0E33, 0EB3; Extend U+FF9E-FF9F) and the
+ * surrogates. Every code point above U+FFFF (emoji, flags, CJK Ext. B) is excluded too: it is two UTF-16 units. A line
+ * made only of the rest has one grapheme per UTF-16 unit, so the segmenter is skipped (a pasted 100,000-character
+ * 자소서 stays fast). tests/unit/char-count.test.ts checks every BMP code point against the segmenter.
  */
-const SIMPLE_RE = /^[^\p{M}\u200c\u200d\ufe00-\ufe0f\u1100-\u11ff\ua960-\ua97f\ud7b0-\ud7ff\ud800-\udfff\u3164\uffa0]*$/u;
+const SIMPLE_RE = /^[^\p{M}\u200c\u200d\ufe00-\ufe0f\u1100-\u11ff\ua960-\ua97f\ud7b0-\ud7ff\u3164\uffa0\u0600-\u0605\u06dd\u070f\u0890-\u0891\u08e2\u0d4e\u0e33\u0eb3\uff9e-\uff9f\ud800-\udfff\u{10000}-\u{10ffff}]*$/u;
 
 export function count(raw: string, segmenter: GraphemeSegmenter | null = defaultSegmenter()): Counts {
   const text = normalize(raw);
