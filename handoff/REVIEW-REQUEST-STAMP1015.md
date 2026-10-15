@@ -54,3 +54,30 @@ S6 (guide e-stamp) not started — later round.
 - Word / 한글 insert size from pHYs not probed (LibreOffice honours it: 18 mm PNG placed at 17.98 mm) → owner live smoke.
 - Rare Hanja outside KS X 1001 may be missing from the Noto slices (painted by the system fallback face).
 - qa:visual not run (not in this round's gate list); manual screenshots 1000 px light and 360 px dark looked right.
+
+---
+
+# Review Request — STAMP1015 round 2
+Date: 2026-10-16
+Ready for Review: YES
+Commits: 565699e (Must Fix 1 + Should Fix 1-5), 4df321e (S5 round 2, Arch decision). Not pushed.
+
+## Files Changed
+- scripts/gen-stamp-samples.mjs — generator (esbuild bundle of layout / render / styles + tests/helpers/stamp-fonts.ts, @napi-rs/canvas, 4-bit indexed PNG, SHA-256 of the four sources); npm run gen:stamp-samples.
+- public/stamp-samples/*.87a67c26.png (12, 27.2 KB) + src/tools/stamp-maker/samples.json — committed output.
+- src/pages/stamp-maker/index.astro — span.sm-art (canvas + img data-src, width/height 88, alt="", decoding async, loading lazy).
+- src/tools/stamp-maker/entry.ts — showSamples(): src set after the first-contentful-paint entry + one frame (fallback: a second after load).
+- src/tools/stamp-maker/controller.ts — hides each picture on the live paint; 印之 only for a Hanja name; fail c=font only when the untimed load fails.
+- src/tools/stamp-maker/fonts.ts — empty faces list = ok when document.fonts.check is true.
+- src/tools/stamp-maker/layout.ts — toLines/fitGrid take counts; personal square, vertical, 3 cells → [1, 2].
+- scripts/check-dist.mjs (stamp-maker block) — banned phrases +3; 12 pictures, per-tile reference + attributes, no other page references them, 30 KB raw budget.
+- tests/unit/stamp-maker.test.ts — staleness + files tests, probe (e) 400 + 700, 홍 | 길동. tests/e2e/stamp-maker.spec.ts — pictures before any signal, no /fonts/hwp/ requests, hidden + inked canvases after.
+- src/data/tools.ts, tests/unit/stamp-signature.test.ts, tests/e2e/site.spec.ts — S5 round 2.
+
+## Gates
+astro check 0 / 0 · vitest 83 / 1,787 · check:licenses OK · check:quotes --exact 248 · check-dist OK default 424.3 / AUTOFRAME 426.5 / cloud 433.8 KB precache (unchanged) · samples 27.2 / 30 KB · initial JS 9.2 KB (cloud 10.6) · controller 11.4 / 13.6 KB · 0 new core glyphs (94,864 / 94,884 B) · e2e stamp-maker 5 projects 55 passed; stamp-signature + pdf-sign 5 projects 116 / 4 skipped; site + polish chromium 152 / 1 skipped; usage (cloud ×5) 10 passed · LHCI /stamp-maker/ median of 5: LCP 1,667 ms (limit 1,750), perf / a11y / BP / SEO 1, CLS 0.
+
+## Open Questions
+1. **data-src instead of src** on the sample img: with a plain src the 12 images started at ~109 ms (High priority, in view) before the observed LCP (~200 ms) and the simulated LCP was 2,043 ms (5 runs 1,891-2,043). Deferring them to after the first contentful paint brought it back to 1,667. Without JS there are no pictures, but the tool needs JS anyway. OK?
+2. **S5 title is 40 characters, not Arch's 43:** 「전자서명·도장 이미지 만들기 — 서명 그리기·도장 배경 지우기 | 문서딱」 (「도장 사진」 → 「도장」; the 40 limit is enforced by meta-length / check-dist / site.spec). Description keeps 「도장 이미지 만들기」 and says 「도장 사진에서 종이 배경을 지워」.
+3. Samples use 16 alpha steps (8-bit alpha was 51.8 KB). At 176 px shown at 88 px no stepping is visible on the contact sheet.
