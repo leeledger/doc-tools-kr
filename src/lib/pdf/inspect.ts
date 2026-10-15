@@ -46,6 +46,21 @@ function resetPdfJs(worker: { destroy(): void }): void {
   pdfjsPromise = null;
 }
 
+/**
+ * Drops the shared pdf.js worker after it stopped answering ("Worker was destroyed", "Transport destroyed"), so the
+ * next openPdf starts a fresh one (REQ1015 D-P2). Documents opened on the old worker are unusable afterwards.
+ */
+export async function resetPdfJsWorker(): Promise<void> {
+  const p = pdfjsPromise;
+  pdfjsPromise = null;
+  if (!p) return;
+  try {
+    (await p).worker.destroy();
+  } catch {
+    // pdf.js never loaded, or the worker is already gone: nothing to drop.
+  }
+}
+
 /** Preload (Polish P.7): pdf.js and its worker script, ready before the first file is picked. */
 export async function preloadPdfJs(): Promise<void> {
   const { worker } = await loadPdfJs();

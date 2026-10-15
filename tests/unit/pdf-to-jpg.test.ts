@@ -5,7 +5,8 @@ import { getTool } from '../../src/data/tools';
 import { TOOL_FACTS } from '../../src/data/tool-facts';
 import { MB } from '../../src/lib/ui/device';
 import { LIMITS, PPI, fileLimitMessage, pageCap, runLimitMessage } from '../../src/tools/pdf-to-jpg/limits';
-import { CanvasError, RESTRICTED_NOTE, TaskSlot, restrictionNote, runErrorCode } from '../../src/tools/pdf-to-jpg/guards';
+import { CanvasError, RESTRICTED_NOTE, TaskSlot, afterRunError, reopenPlan, restrictionNote, runErrorCode, type RunError, type RunStage } from '../../src/tools/pdf-to-jpg/guards';
+import { CODE_RE, FAIL_LABELS } from '../../scripts/lib/usage.mjs';
 import { StoredZip } from '../../src/lib/zip/stored';
 import { jpgName, zipName } from '../../src/tools/pdf-to-jpg/output';
 import { pageScale } from '../../src/tools/pdf-to-jpg/scale';
@@ -146,13 +147,59 @@ describe('guards (T3 review fixes)', () => {
     for (const name of ['InvalidPDFException', 'UnknownErrorException', 'FormatError', 'MissingPDFException']) {
       const e = new Error('x');
       e.name = name;
-      expect(runErrorCode(e, oom)).toBe('corrupt');
+      expect(runErrorCode(e, oom, 'render')).toBe('corrupt');
     }
-    expect(runErrorCode({ code: 'corrupt' }, oom)).toBe('corrupt');
-    expect(runErrorCode(new CanvasError('toBlob'), oom)).toBe('canvas');
-    expect(runErrorCode(new RangeError('Array buffer allocation failed'), oom)).toBe('oom');
-    expect(runErrorCode(new TypeError('x'), oom)).toBe('unknown');
-    expect(runErrorCode(null, oom)).toBe('unknown');
+    expect(runErrorCode({ code: 'corrupt' }, oom, 'page')).toBe('corrupt');
+    expect(runErrorCode(new CanvasError('toBlob'), oom, 'encode')).toBe('canvas');
+    expect(runErrorCode(new RangeError('Array buffer allocation failed'), oom, 'render')).toBe('oom');
+  });
+
+  const STAGES: RunStage[] = ['page', 'render', 'encode', 'stamp', 'zip'];
+
+  it('REQ1015 runErrorCode: anything else is unknown-STAGE; every code fits the usage CODE_RE and has an admin label', () => {
+    for (const stage of STAGES) {
+      expect(runErrorCode(new TypeError('x'), oom, stage)).toBe(`unknown-${stage}`);
+      expect(runErrorCode(null, oom, stage)).toBe(`unknown-${stage}`);
+    }
+    const all: RunError[] = ['canvas', 'oom', 'corrupt', 'worker-gone', ...STAGES.map((st) => `unknown-${st}` as const)];
+    for (const c of all) expect(c, c).toMatch(CODE_RE);
+    for (const c of ['worker-gone', ...STAGES.map((st) => `unknown-${st}`)]) expect(FAIL_LABELS, c).toHaveProperty(c);
+    expect(FAIL_LABELS['worker-gone']).toBe('PDF 읽는 기능이 멈춤');
+    expect(FAIL_LABELS['unknown-render']).toBe('알 수 없음: 쪽 그리기');
+  });
+
+  it('REQ1015 runErrorCode: the pdf.js 6.3.289 dead-worker messages are worker-gone at any stage', () => {
+    // Verbatim from node_modules/pdfjs-dist/build/pdf.mjs (6.3.289).
+    const messages = [
+      'Worker was destroyed',
+      'Worker was destroyed.',
+      'Worker was destroyed during onPassword callback',
+      'Worker was terminated.',
+      'Transport destroyed',
+      'PDFWorker.create - the worker is being destroyed.\nPlease remember to await `PDFDocumentLoadingTask.destroy()`-calls.',
+    ];
+    for (const m of messages) for (const stage of STAGES) expect(runErrorCode(new Error(m), oom, stage), m).toBe('worker-gone');
+    // AbortException carries its text as message too.
+    expect(runErrorCode({ name: 'AbortException', message: 'Worker was terminated.' }, oom, 'page')).toBe('worker-gone');
+    // A canvas or memory failure wins over the text; an unrelated message is unknown.
+    expect(runErrorCode(new CanvasError('Worker was destroyed'), oom, 'encode')).toBe('canvas');
+    expect(runErrorCode(new Error('Page was destroyed.'), oom, 'render')).toBe('unknown-render');
+  });
+
+  it('REQ1015 afterRunError: worker-gone retries once only; cancel never retries; other codes fail at once', () => {
+    expect(afterRunError({ cancelled: false, code: 'worker-gone', retried: false })).toBe('retry');
+    expect(afterRunError({ cancelled: false, code: 'worker-gone', retried: true })).toBe('fail');
+    expect(afterRunError({ cancelled: true, code: 'worker-gone', retried: false })).toBe('stop');
+    expect(afterRunError({ cancelled: true, code: 'unknown-render', retried: true })).toBe('stop');
+    for (const code of ['canvas', 'oom', 'corrupt', 'unknown-page', 'unknown-zip'] as RunError[]) expect(afterRunError({ cancelled: false, code, retried: false }), code).toBe('fail');
+  });
+
+  it('REQ1015 reopenPlan: nothing when not stale; reopen after a failure; a new pdf.js worker too after worker-gone', () => {
+    expect(reopenPlan(false, null)).toBe('none');
+    expect(reopenPlan(false, 'worker-gone')).toBe('none');
+    expect(reopenPlan(true, 'unknown-render')).toBe('reopen');
+    expect(reopenPlan(true, 'canvas')).toBe('reopen');
+    expect(reopenPlan(true, 'worker-gone')).toBe('reset-worker');
   });
 
   it('restrictionNote: one plain line when print, change or copy is not allowed; nothing for unrestricted files', () => {

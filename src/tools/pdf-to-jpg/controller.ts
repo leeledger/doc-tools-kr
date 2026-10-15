@@ -17,7 +17,7 @@ import { bindPasswordToggle } from '../../lib/ui/password';
 import { isPdfFile } from '../../lib/ui/pdf-pick';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { StoredZip } from '../../lib/zip/stored';
-import { CanvasError, TaskSlot, restrictionNote, runErrorCode } from './guards';
+import { CanvasError, TaskSlot, afterRunError, reopenPlan, restrictionNote, runErrorCode, type RunError, type RunStage } from './guards';
 import { DEFAULT_PPI, LIMITS, PPI, fileLimitMessage, runLimitMessage, type PpiLevel } from './limits';
 import { jpgName, zipName } from './output';
 import { pageScale } from './scale';
@@ -107,6 +107,11 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
   // The copy/print-limits line for the open file (null when it has none).
   let restricted: string | null = null;
   let blobUrl: string | null = null;
+  // REQ1015 D-P2: after a failed run the document is reopened before the next one (stale), with the password that
+  // unlocked it (this closure only; never tracked or logged). lastFail: the last run's code (worker-gone resets pdf.js).
+  let stale = false;
+  let lastFail: RunError | null = null;
+  let lastPassword: string | undefined;
 
   const status = (msg: string): void => announce('status', msg, root);
   const usageFail = (c: string, p: UsagePhase): void => track({ e: 'fail', t: 'pdf-to-jpg', c, p });
@@ -172,6 +177,9 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
     bytes = null;
     pageCount = 0;
     restricted = null;
+    stale = false;
+    lastFail = null;
+    lastPassword = undefined;
     pwInput.value = '';
     pwInput.type = 'password';
     pwError.textContent = '';
@@ -251,6 +259,7 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
       }
       await closeDoc();
       opened = o;
+      lastPassword = password;
       pageCount = o.doc.numPages;
       restricted = restrictionNote(await o.doc.getPermissions().catch(() => null));
       if (id !== runId) return;
@@ -263,15 +272,8 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
       status(`${file.name}, ${formatPages(pageCount)}. 변환할 쪽과 선명도를 고른 뒤 JPG로 변환을 누르세요.`);
     } catch (err) {
       if (id !== runId) return;
-      if (isEngineLoadFailure(err)) {
-        usageFail('engine', 'load');
-        clearFile();
-        setState('empty');
-        void showEngineError();
-        return;
-      }
-      const code = (err as { code?: PdfErrorCode }).code;
-      if (code === 'wrong-password') {
+      const code = (err as { code?: PdfErrorCode } | null)?.code;
+      if (code === 'wrong-password' && !isEngineLoadFailure(err)) {
         usageFail('wrong-password', 'parse');
         pwError.textContent = MESSAGES['wrong-password'];
         status(MESSAGES['wrong-password']);
@@ -279,9 +281,51 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
         pwInput.focus();
         return;
       }
-      const oom = code === 'oom' || isOutOfMemory(err);
-      usageFail(oom ? 'oom' : 'corrupt', 'parse');
-      fileError(oom ? MESSAGES.oom : MESSAGES.corrupt);
+      openFailed(err);
+    }
+  }
+
+  /** A file that could not be opened (or reopened): engine, out of memory or 손상, as when it was first picked. */
+  function openFailed(err: unknown): void {
+    if (isEngineLoadFailure(err)) {
+      usageFail('engine', 'load');
+      clearFile();
+      setState('empty');
+      void showEngineError();
+      return;
+    }
+    const code = (err as { code?: PdfErrorCode } | null)?.code;
+    const oom = code === 'oom' || isOutOfMemory(err);
+    usageFail(oom ? 'oom' : 'corrupt', 'parse');
+    fileError(oom ? MESSAGES.oom : MESSAGES.corrupt);
+  }
+
+  /**
+   * Reopens the same bytes after a failed run (REQ1015 D-P2). The old document is not awaited: on a dead worker its
+   * destroy never answers. A cancel during the reopen keeps the new document (same file); a new file or reset drops it.
+   * True when `opened` is the fresh document and this run may go on.
+   */
+  async function reopen(id: number): Promise<boolean> {
+    const b = bytes;
+    if (!b) return false;
+    const plan = reopenPlan(stale, lastFail);
+    void closeDoc();
+    try {
+      const inspect = await loadInspect();
+      if (plan === 'reset-worker') await inspect.resetPdfJsWorker();
+      const o = await inspect.openPdf(b, lastPassword);
+      if (bytes !== b) {
+        await o?.close();
+        return false;
+      }
+      if (!o) throw new Error('password needed on reopen');
+      opened = o;
+      stale = false;
+      return id === runId;
+    } catch (err) {
+      if (bytes !== b) return false;
+      openFailed(err);
+      return false;
     }
   }
 
@@ -328,68 +372,92 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
     clearAlert(root);
     showNotice(restricted);
     const id = ++runId;
-    const doc = opened.doc;
     const source = file;
     track({ e: 'start', t: 'pdf-to-jpg', o: 'ppi', v: level });
     setState('working');
-    progressBar.max = pages.length;
-    progressBar.value = 0;
-    progressText.textContent = `JPG로 바꾸는 중… (0/${pages.length})`;
     status('JPG로 바꾸는 중입니다.');
     cancelBtn.focus();
 
-    const zip = pages.length > 1 ? new StoredZip() : null;
-    let single: Uint8Array | null = null;
-    const clamped: { page: number; width: number; height: number }[] = [];
-    try {
-      for (const [k, p] of pages.entries()) {
-        const page = await doc.getPage(p);
-        if (id !== runId) {
-          page.cleanup();
-          return;
+    // REQ1015 D-P2: a stale document is reopened first; a worker-gone failure reopens and runs once more by itself.
+    let retried = false;
+    for (;;) {
+      if (stale && !(await reopen(id))) return;
+      if (id !== runId || !opened) return;
+      const doc = opened.doc;
+      progressBar.max = pages.length;
+      progressBar.value = 0;
+      progressText.textContent = `JPG로 바꾸는 중… (0/${pages.length})`;
+      const zip = pages.length > 1 ? new StoredZip() : null;
+      let single: Uint8Array | null = null;
+      const clamped: { page: number; width: number; height: number }[] = [];
+      let stage: RunStage = 'page';
+      try {
+        for (const [k, p] of pages.entries()) {
+          stage = 'page';
+          const page = await doc.getPage(p);
+          if (id !== runId) {
+            page.cleanup();
+            return;
+          }
+          const unit = page.getViewport({ scale: 1 });
+          const s = pageScale(unit.width, unit.height, PPI[level], LIMITS[device].caps);
+          const canvas = document.createElement('canvas');
+          canvas.width = s.width;
+          canvas.height = s.height;
+          let jpeg: Blob;
+          let task: { cancel(): void; promise: Promise<void> } | null = null;
+          try {
+            stage = 'render';
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new CanvasError('2d context unavailable');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, s.width, s.height);
+            task = page.render({ canvas, canvasContext: ctx, viewport: page.getViewport({ scale: s.scale }) });
+            renderTask.set(task);
+            await task.promise;
+            stage = 'encode';
+            jpeg = await toJpeg(canvas);
+          } finally {
+            if (task) renderTask.release(task);
+            page.cleanup();
+            canvas.width = 0;
+            canvas.height = 0;
+          }
+          // The JFIF header carries the pixels per inch actually drawn, so Word/HWP insert the page at its paper size.
+          stage = 'stamp';
+          const stamped = setJfifDpi(new Uint8Array(await jpeg.arrayBuffer()), Math.round(s.scale * 72));
+          if (id !== runId) return;
+          stage = 'zip';
+          if (zip) zip.add(jpgName(source.name, p, pageCount), stamped);
+          else single = stamped;
+          if (s.clamped) clamped.push({ page: p, width: s.width, height: s.height });
+          progressBar.value = k + 1;
+          progressText.textContent = `JPG로 바꾸는 중… (${k + 1}/${pages.length})`;
+          await nextTask();
         }
-        const unit = page.getViewport({ scale: 1 });
-        const s = pageScale(unit.width, unit.height, PPI[level], LIMITS[device].caps);
-        const canvas = document.createElement('canvas');
-        canvas.width = s.width;
-        canvas.height = s.height;
-        let jpeg: Blob;
-        let task: { cancel(): void; promise: Promise<void> } | null = null;
-        try {
-          const ctx = canvas.getContext('2d');
-          if (!ctx) throw new CanvasError('2d context unavailable');
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, s.width, s.height);
-          task = page.render({ canvas, canvasContext: ctx, viewport: page.getViewport({ scale: s.scale }) });
-          renderTask.set(task);
-          await task.promise;
-          jpeg = await toJpeg(canvas);
-        } finally {
-          if (task) renderTask.release(task);
-          page.cleanup();
-          canvas.width = 0;
-          canvas.height = 0;
-        }
-        // The JFIF header carries the pixels per inch actually drawn, so Word/HWP insert the page at its paper size.
-        const stamped = setJfifDpi(new Uint8Array(await jpeg.arrayBuffer()), Math.round(s.scale * 72));
+        stage = 'zip';
+        const out = zip ? await zip.finish() : new Blob([single as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' });
         if (id !== runId) return;
-        if (zip) zip.add(jpgName(source.name, p, pageCount), stamped);
-        else single = stamped;
-        if (s.clamped) clamped.push({ page: p, width: s.width, height: s.height });
-        progressBar.value = k + 1;
-        progressText.textContent = `JPG로 바꾸는 중… (${k + 1}/${pages.length})`;
-        await nextTask();
+        lastFail = null;
+        finish(out, pages, clamped, source);
+        return;
+      } catch (err) {
+        if (id !== runId) return;
+        const code = runErrorCode(err, isOutOfMemory, stage);
+        const next = afterRunError({ cancelled: isCancelled(err), code, retried });
+        if (next === 'stop') return;
+        stale = true;
+        lastFail = code;
+        if (next === 'retry') {
+          retried = true;
+          continue;
+        }
+        usageFail(code, 'process');
+        setState('ready');
+        announce('alert', code === 'canvas' || code === 'oom' || code === 'corrupt' ? MESSAGES[code] : MESSAGES.unknown, root);
+        runBtn.focus();
+        return;
       }
-      const out = zip ? await zip.finish() : new Blob([single as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' });
-      if (id !== runId) return;
-      finish(out, pages, clamped, source);
-    } catch (err) {
-      if (id !== runId || isCancelled(err)) return;
-      const code = runErrorCode(err, isOutOfMemory);
-      usageFail(code, 'process');
-      setState('ready');
-      announce('alert', MESSAGES[code], root);
-      runBtn.focus();
     }
   }
 

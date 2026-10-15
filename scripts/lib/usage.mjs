@@ -429,6 +429,13 @@ export const FAIL_LABELS = {
   'corrupt-png': '손상된 사진: PNG',
   'corrupt-webp': '손상된 사진: WebP',
   'corrupt-other': '손상된 사진: 기타 형식',
+  // REQ1015 D-P1: PDF JPG 변환 run failures, the stage the unknown ones happened in (src/tools/pdf-to-jpg/guards.ts).
+  'worker-gone': 'PDF 읽는 기능이 멈춤',
+  'unknown-page': '알 수 없음: 쪽 읽기',
+  'unknown-render': '알 수 없음: 쪽 그리기',
+  'unknown-encode': '알 수 없음: JPG 만들기',
+  'unknown-stamp': '알 수 없음: 해상도 기록',
+  'unknown-zip': '알 수 없음: ZIP 만들기',
 };
 /** Admin and weekly-report labels of OUT_DESTS. */
 export const OUT_LABELS = {

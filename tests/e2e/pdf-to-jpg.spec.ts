@@ -207,6 +207,38 @@ test('취소, run again, 취소 again: the second cancel still stops the run (T3
   await expect(page.locator('#pj-download')).not.toHaveAttribute('href', /.+/);
 });
 
+test('REQ1015: two 작게 (96) runs in a row both succeed, each at 96 ppi', async ({ page }) => {
+  await open(page, THREE);
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await page.locator('label.chip', { hasText: '작게' }).click();
+  for (let round = 0; round < 2; round++) {
+    const { bytes } = await convert(page);
+    const files = Object.values(unzipSync(bytes));
+    expect(files, `round ${round + 1}`).toHaveLength(3);
+    expect(jpegSize(files[0]!)).toEqual({ w: px(SIZES[0]![0], 96), h: px(SIZES[0]![1], 96) });
+    expect(readJfif(files[0]!)).toEqual({ units: 1, x: 96, y: 96 });
+    await page.getByRole('button', { name: '쪽·선명도 바꿔 다시 변환' }).click();
+    await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  }
+});
+
+test('REQ1015: 취소 mid-run, then the same file at 작게 (96) converts', async ({ page }) => {
+  await open(page, runtimePath('scan_multi_40'));
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await page.locator('label.chip', { hasText: '선명' }).click();
+  await page.locator('#pj-run').click();
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'working');
+  await page.getByRole('button', { name: '취소' }).click();
+  await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'ready');
+  await page.locator('label.chip', { hasText: '작게' }).click();
+  await page.locator('#pj-range').fill('1-2');
+  const { name, bytes } = await convert(page);
+  expect(name).toMatch(/_jpg\.zip$/);
+  const files = Object.values(unzipSync(bytes));
+  expect(files).toHaveLength(2);
+  for (const f of files) expect(readJfif(f)).toEqual({ units: 1, x: 96, y: 96 });
+});
+
 test('the controller and pdf.js load only after the first interaction, not with the page', async ({ page }) => {
   const scripts: string[] = [];
   page.on('request', (r) => {
