@@ -607,6 +607,29 @@ test('REV3 PDF 합치기: the block shows only with a result, inside it before �
   expect(out.body).not.toMatch(/https?:|coupang|hM4/i);
 });
 
+test('STAMP1015 도장 만들기: the 실물 도장 block shows with the picked stamp, below the buttons; a click sends { e: out, t: stamp-maker, v: cp-stamp }', async ({ page, network }) => {
+  const beacons = await record(page);
+  await stubCoupang(page);
+  await gotoReady(page, '/stamp-maker/');
+  const block = page.locator('#sm-aff .out-links');
+  await page.locator('#sm-text').focus();
+  await expect(page.locator('#sm-tool')).toHaveAttribute('data-painted', /\d+/);
+  await expect(block).toBeHidden();
+  await page.locator('#sm-text').fill('홍길동');
+  await page.locator('.sm-tile[data-style="round"]').click();
+  await expect(block).toBeVisible();
+  await expectBlock(block, '실물 도장이 필요할 때', ['cp-stamp']);
+  expect(await page.evaluate(() => Boolean(document.getElementById('sm-save')!.compareDocumentPosition(document.querySelector('#sm-aff .out-links')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  const axe = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+  expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+  await openPopup(page, block.locator('a'), network);
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'out').length).toBe(1);
+  expectClean(beacons);
+  const out = beacons.find((b) => b.ev.e === 'out')!;
+  expect(out.ev).toEqual({ e: 'out', t: 'stamp-maker', o: 'out', v: 'cp-stamp', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
+  expect(out.body).not.toMatch(/https?:|coupang|홍길동/i);
+});
+
 test('REV3 PDF 서명·도장 넣기: a click on the result block sends exactly { e: out, t: pdf-sign, o: out, v: cp-stamp } with no URL', async ({ page, network }) => {
   const beacons = await record(page);
   await stubCoupang(page);

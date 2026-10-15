@@ -43,6 +43,7 @@ describe('affiliate link data (src/data/affiliate.ts)', () => {
       'remove-background': ['cp-backdrop'],
       'stamp-signature': ['cp-stamp'],
       'pdf-sign': ['cp-stamp'],
+      'stamp-maker': ['cp-stamp'],
       'hwp-viewer': ['cp-hancom'],
       'hwp-to-pdf': ['cp-hancom'],
       'hwpx-to-hwp': ['cp-hancom'],

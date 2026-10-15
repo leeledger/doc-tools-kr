@@ -4,9 +4,10 @@
 // load shows the shared engine panel.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
-import { startUsage, track } from '../../lib/ui/usage';
+import { startUsage, track, trackOut } from '../../lib/ui/usage';
 
 startUsage('stamp-maker');
+trackOut(document.getElementById('sm-aff'), 'stamp-maker');
 
 const root = document.getElementById('sm-tool');
 if (root) {

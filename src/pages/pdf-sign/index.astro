@@ -79,7 +79,7 @@ const where = [
             </div>
             <label class="btn small primary" for="sg-image-input" id="sg-image-pick">그림 고르기</label>
           </div>
-          <p class="hint">그림이 없다면 <a href="/stamp-signature/">전자서명·도장 이미지 만들기</a>에서 만든 뒤 「PDF에 넣기」를 누르세요.</p>
+          <p class="hint">그림이 없다면 <a href="/stamp-maker/">도장 만들기</a>나 <a href="/stamp-signature/">전자서명·도장 이미지 만들기</a>에서 만든 뒤 「PDF에 찍기」나 「PDF에 넣기」를 누르세요.</p>
         </div>
 
         <div class="sign-editor" id="sg-editor" hidden>
@@ -188,7 +188,7 @@ const where = [
       ))}
     </div>
   </section>
-  <RelatedTools current={tool.slug} only={['stamp-signature', 'pdf-merge', 'pdf-password']} />
+  <RelatedTools current={tool.slug} only={['stamp-maker', 'stamp-signature', 'pdf-merge', 'pdf-password']} />
   <div class="wrap narrow"><AdSlot id="pdf-sign-footer" size="leaderboard" /></div>
 </Base>
 

@@ -410,6 +410,8 @@ export function initStampMaker(): void {
       t.btn.tabIndex = s === id ? 0 : -1;
     }
     panel.hidden = false;
+    const aff = document.getElementById('sm-aff');
+    if (aff) aff.hidden = false;
     paintSelected();
     // D8: one start per page view, with the style id only.
     if (!started) track({ e: 'start', t: 'stamp-maker', o: 'style', v: id });

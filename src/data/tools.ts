@@ -443,7 +443,7 @@ export const TOOLS: Tool[] = [
     summary: 'PDF의 원하는 쪽, 원하는 자리에 서명이나 도장 그림을 넣습니다.',
     icon: '<path d="M14 3H6v18h12V7l-4-4z"/><path d="M14 3v4h4"/><path d="M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-.5 1.5-1 2.5.5"/>',
     status: 'live',
-    updated: '2026-10-08',
+    updated: '2026-10-16',
     faq: [
       {
         q: '인증서로 하는 전자서명과 같은가요?',
@@ -745,7 +745,7 @@ export const TOOLS: Tool[] = [
     summary: '도장·서명 사진의 배경을 지워 투명한 PNG 파일로 저장합니다. 서명은 직접 그려도 됩니다.',
     icon: '<rect x="4" y="15" width="16" height="5" rx="1"/><path d="M9 15v-3.5a3 3 0 1 1 6 0V15"/><path d="M7 23h10"/>',
     status: 'live',
-    updated: '2026-10-02',
+    updated: '2026-10-16',
     faq: [
       {
         q: '전자서명 이미지는 어떻게 만드나요?',

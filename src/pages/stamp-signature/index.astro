@@ -54,7 +54,7 @@ const limits = [
   <section class="tool-hero" aria-labelledby="tool-title">
     <div class="wrap narrow">
       <h1 id="tool-title">{tool.h1}</h1>
-      <p class="lead">종이에 찍은 도장이나 쓴 서명을 사진으로 찍어 고르면, 종이를 지우고 도장·서명만 남긴 투명 배경 PNG 파일로 저장합니다. 서명은 화면에 직접 그려도 됩니다.</p>
+      <p class="lead">종이에 찍은 도장이나 쓴 서명을 사진으로 찍어 고르면, 종이를 지우고 도장·서명만 남긴 투명 배경 PNG 파일로 저장합니다. 서명은 화면에 직접 그려도 됩니다. 이름으로 새 도장 그림을 만들려면 <a href="/stamp-maker/">도장 만들기</a>를 쓰세요.</p>
     </div>
   </section>
 
@@ -222,7 +222,7 @@ const limits = [
       ))}
     </div>
   </section>
-  <RelatedTools current={tool.slug} only={['pdf-sign', 'photo-compress', 'hwp-to-pdf', 'pdf-merge']} />
+  <RelatedTools current={tool.slug} only={['stamp-maker', 'pdf-sign', 'photo-compress', 'hwp-to-pdf', 'pdf-merge']} />
   <div class="wrap narrow"><AdSlot id="stamp-signature-footer" size="leaderboard" /></div>
 </Base>
 

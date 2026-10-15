@@ -125,7 +125,7 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     // HWPX2HWP (decision 13).
     '/hwpx-to-hwp/': ['/hwp-viewer/', '/hwp-to-pdf/'],
     // Sprint C (C1): where a signature or 도장 image goes next.
-    '/stamp-signature/': ['/pdf-sign/', '/photo-compress/', '/hwp-to-pdf/', '/pdf-merge/'],
+    '/stamp-signature/': ['/stamp-maker/', '/pdf-sign/', '/photo-compress/', '/hwp-to-pdf/', '/pdf-merge/'],
     // TOOLS4 T2 (brief decision 9).
     '/jpg-to-pdf/': ['/pdf-merge/', '/pdf-compress/', '/photo-compress/'],
     // TOOLS4 T3 (brief decision 9).
@@ -137,7 +137,7 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     // TOOLS5 U2 (brief decision 12).
     '/pdf-split/': ['/pdf-merge/', '/pdf-compress/', '/pdf-to-jpg/'],
     // TOOLS5 U3 (brief decision 12).
-    '/pdf-sign/': ['/stamp-signature/', '/pdf-merge/', '/pdf-password/'],
+    '/pdf-sign/': ['/stamp-maker/', '/stamp-signature/', '/pdf-merge/', '/pdf-password/'],
     // TOOLS1015 C1.
     '/char-count/': ['/id-photo/', '/photo-compress/', '/jpg-to-pdf/'],
     // TOOLS1015 I1.
