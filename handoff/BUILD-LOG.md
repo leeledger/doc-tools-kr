@@ -3220,3 +3220,17 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 ### TOOLS1015 C3 round 4 review — CLEAR (Richard, 2026-10-15)
 - Richard re-ran every break test (plain, /CO, tagged OBJR, MCR /Stm XObject, shared q/Q, shared source stream, shared XObject, inherited /Pages /Resources XObject): covered text gone, kept pages intact, 0 dangling refs.
 - Known Gap (nit, not fixed): the kept set does not yet include XObjects reached only through a kept page's annotation /AP resources or pattern /Resources. If a flattened page draws that same XObject directly, it is deleted outright and the kept annotation/pattern loses it. Very rare; revisit if reported.
+
+## STAMP1015 — brief (Arch log notes, copied by Bob 2026-10-15)
+- 2026-10-15 Arch: STAMP1015 brief (owner request 2026-10-15; Naver keyword table in handoff/ARCHITECT-BRIEF-STAMP1015.md). New tool /stamp-maker/ 「도장 만들기」, 12 styles: round, round-double, oval, square-seal, square-round, square-inverse, rect-v, rect-h, plain, corp-round, corp-square, date-round.
+- Fonts: reuse /fonts/hwp/ faces (Noto Serif KR, Noto Sans KR, Nanum Myeongjo, Nanum Gothic; fontsource 5.3.0, OFL-1.1). Measured cmap coverage 2026-10-15: all 11,172 Hangul syllables in all four; KS X 1001 한자 4,883 (Serif) / 4,885 (Sans) of 4,888 (misses are compatibility code points), none in Nanum → per-glyph Noto fallback. No OFL/Apache seal-script face found; Black Han Sans / Song Myung are OFL but KS X 1001 Hangul only, no 한자 → Known Gap.
+- PNG only (no SVG); pHYs 600 / 1,200 ppi from mm choices; 인주 질감 seeded and deterministic.
+- sign-handoff gains from; /pdf-sign/ names the source tool. /pdf-edit/ is not a chain target (no pictures).
+- /stamp-signature/ keeps URL / name / h1; title, description and keywords move to 전자서명 + 도장 사진 배경 지우기 (S5).
+- Core glyphs missing (never in core copy): 테 황 랑 굵 딕 之 印 싸 뀝 옵 뿐 듭 깥 레.
+- Open: O1-O3.
+
+### STAMP1015 S0 — sign-handoff carries the source tool (Bob, 2026-10-15) — status DONE
+- src/lib/ui/sign-handoff.ts: SIGN_FROM_KEY `docttak:sign-from`; SIGN_SOURCES map (stamp-signature → 전자서명·도장 이미지 만들기, stamp-maker → 도장 만들기) with arrivedNote / arrivedInfo; storeSignPng(url, store, from) writes both keys and removes both when the second write throws; takeSignPng returns `{ blob, from }` and removes both keys, a missing or unknown source (incl. `__proto__`) reads as stamp-signature; sendToPdfSign(png, from = 'stamp-signature', go, track) tracks next t = from. /pdf-sign/ controller takes its note and info line from the map (stamp-signature wording byte-identical). stamp-signature pad.ts / photo.ts pass 'stamp-signature' explicitly.
+- Decision: `stamp-maker` joins the UsageTool TypeScript union in S0 (type only, needed by the next event type); the runtime whitelist (usage.mjs TOOLS, labels) changes in S3 with the rest of D8. No caller sends stamp-maker before S3.
+- Gates: vitest pdf-sign.test 31 passed (2 new: source round trip incl. unknown values; note/info wording); astro check 0 errors / 0 warnings; build AUTOFRAME=1 check-dist OK, pdf-sign controller (lazy) 17.5 KB / 18.4 (was 17.6, within 1 %), precache 423.2 KB / 450; e2e pdf-sign + stamp-signature on chromium, firefox, webkit, mobile-chrome, mobile-safari 116 passed / 4 skipped.

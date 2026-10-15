@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { signPdf } from '../../src/lib/pdf/sign';
 import { MB } from '../../src/lib/ui/device';
 import { validate } from '../../scripts/lib/usage.mjs';
-import { HANDOFF_FAILED, PDF_SIGN_PATH, SIGN_PNG_KEY, hasSignPng, sendToPdfSign, storeSignPng, takeSignPng } from '../../src/lib/ui/sign-handoff';
+import { HANDOFF_FAILED, PDF_SIGN_PATH, SIGN_FROM_KEY, SIGN_PNG_KEY, SIGN_SOURCES, arrivedInfo, arrivedNote, hasSignPng, sendToPdfSign, storeSignPng, takeSignPng } from '../../src/lib/ui/sign-handoff';
 import { LIMITS, fileLimitMessage, imageLimitMessage } from '../../src/tools/pdf-sign/limits';
 import { LIMITS as SPLIT_LIMITS } from '../../src/tools/pdf-split/limits';
 import {
@@ -380,16 +380,50 @@ describe('/stamp-signature/ → /pdf-sign/ hand-over (sessionStorage)', () => {
     expect(storeSignPng(URL_PNG, s)).toBe(true);
     expect(hasSignPng(s)).toBe(true);
     const b = takeSignPng(s);
-    expect(b).toBeInstanceOf(Blob);
-    expect(new Uint8Array(await (b as Blob).arrayBuffer())).toEqual(png());
+    if (!b || b === 'invalid') throw new Error('expected a picture');
+    expect(b.blob).toBeInstanceOf(Blob);
+    expect(new Uint8Array(await b.blob.arrayBuffer())).toEqual(png());
+    expect(b.from).toBe('stamp-signature');
     expect(hasSignPng(s)).toBe(false);
     expect(takeSignPng(s)).toBeNull();
+  });
+
+  it('STAMP1015 D7: the source is stored under docttak:sign-from, taken with the PNG and both keys removed; missing or unknown -> stamp-signature', () => {
+    expect(SIGN_FROM_KEY).toBe('docttak:sign-from');
+    const s = new Store();
+    expect(storeSignPng(URL_PNG, s, 'stamp-maker')).toBe(true);
+    expect(s.getItem(SIGN_FROM_KEY)).toBe('stamp-maker');
+    const b = takeSignPng(s);
+    expect(b !== null && b !== 'invalid' && b.from).toBe('stamp-maker');
+    expect(s.getItem(SIGN_PNG_KEY)).toBeNull();
+    expect(s.getItem(SIGN_FROM_KEY)).toBeNull();
+    // A tab that stored the PNG before the deploy (no source key).
+    s.setItem(SIGN_PNG_KEY, URL_PNG);
+    const old = takeSignPng(s);
+    expect(old !== null && old !== 'invalid' && old.from).toBe('stamp-signature');
+    for (const bad of ['', 'pdf-sign', '__proto__', 'constructor', 'stamp-maker ']) {
+      s.setItem(SIGN_PNG_KEY, URL_PNG);
+      s.setItem(SIGN_FROM_KEY, bad);
+      const r = takeSignPng(s);
+      expect(r !== null && r !== 'invalid' && r.from).toBe('stamp-signature');
+      expect(s.getItem(SIGN_FROM_KEY)).toBeNull();
+    }
+  });
+
+  it('STAMP1015 D7: the arrival note and info line name the source; stamp-signature wording unchanged', () => {
+    expect(arrivedNote('stamp-signature')).toBe('전자서명·도장 이미지 만들기에서 만든 그림을 가져왔습니다. 이제 PDF 파일을 고르세요.');
+    expect(arrivedInfo('stamp-signature')).toBe('전자서명·도장 이미지 만들기에서 가져온 그림');
+    expect(arrivedNote('stamp-maker')).toBe('도장 만들기에서 만든 그림을 가져왔습니다. 이제 PDF 파일을 고르세요.');
+    expect(arrivedInfo('stamp-maker')).toBe('도장 만들기에서 가져온 그림');
+    expect(Object.keys(SIGN_SOURCES).sort()).toEqual(['stamp-maker', 'stamp-signature']);
   });
 
   it('a full or missing storage is reported (QuotaExceeded → the download message); a stored value that is not a PNG is invalid', () => {
     const s = new Store();
     s.full = true;
     expect(storeSignPng(URL_PNG, s)).toBe(false);
+    expect(s.getItem(SIGN_PNG_KEY)).toBeNull();
+    expect(s.getItem(SIGN_FROM_KEY)).toBeNull();
     expect(storeSignPng(URL_PNG, null)).toBe(false);
     expect(HANDOFF_FAILED).toBe('PNG를 내려받은 뒤 PDF 서명·도장 넣기에서 골라 주세요.');
     const t = new Store();
@@ -405,12 +439,13 @@ describe('/stamp-signature/ → /pdf-sign/ hand-over (sessionStorage)', () => {
     const store = new Store();
     g.window = { sessionStorage: store };
     try {
-      expect(await sendToPdfSign(new Blob([png() as Uint8Array<ArrayBuffer>], { type: 'image/png' }), (p) => opened.push(p))).toBe(true);
+      expect(await sendToPdfSign(new Blob([png() as Uint8Array<ArrayBuffer>], { type: 'image/png' }), 'stamp-signature', (p) => opened.push(p))).toBe(true);
       expect(opened).toEqual([PDF_SIGN_PATH]);
       expect(store.getItem(SIGN_PNG_KEY)).toBe(URL_PNG);
+      expect(store.getItem(SIGN_FROM_KEY)).toBe('stamp-signature');
       store.full = true;
       store.m.clear();
-      expect(await sendToPdfSign(new Blob([png() as Uint8Array<ArrayBuffer>], { type: 'image/png' }), (p) => opened.push(p))).toBe(false);
+      expect(await sendToPdfSign(new Blob([png() as Uint8Array<ArrayBuffer>], { type: 'image/png' }), 'stamp-signature', (p) => opened.push(p))).toBe(false);
       expect(opened).toEqual([PDF_SIGN_PATH]);
     } finally {
       g.window = before;
@@ -426,13 +461,18 @@ describe('/stamp-signature/ → /pdf-sign/ hand-over (sessionStorage)', () => {
     const blob = (): Blob => new Blob([png() as Uint8Array<ArrayBuffer>], { type: 'image/png' });
     const track = (ev: unknown): void => void log.push(`track ${JSON.stringify(ev)}`);
     try {
-      expect(await sendToPdfSign(blob(), (p) => log.push(`go ${p}`), track)).toBe(true);
+      expect(await sendToPdfSign(blob(), 'stamp-signature', (p) => log.push(`go ${p}`), track)).toBe(true);
       expect(log).toEqual([`track ${JSON.stringify({ e: 'next', t: 'stamp-signature', o: 'next', v: 'pdf-sign' })}`, `go ${PDF_SIGN_PATH}`]);
+      log.length = 0;
+      store.m.clear();
+      expect(await sendToPdfSign(blob(), 'stamp-maker', (p) => log.push(`go ${p}`), track)).toBe(true);
+      expect(log).toEqual([`track ${JSON.stringify({ e: 'next', t: 'stamp-maker', o: 'next', v: 'pdf-sign' })}`, `go ${PDF_SIGN_PATH}`]);
+      expect(store.getItem(SIGN_FROM_KEY)).toBe('stamp-maker');
       expect(validate(JSON.stringify({ e: 'next', t: 'stamp-signature', o: 'next', v: 'pdf-sign', via: 'direct', d: 'mobile', b: 'dev', w: 1 }))).not.toBeNull();
       log.length = 0;
       store.full = true;
       store.m.clear();
-      expect(await sendToPdfSign(blob(), (p) => log.push(`go ${p}`), track)).toBe(false);
+      expect(await sendToPdfSign(blob(), 'stamp-signature', (p) => log.push(`go ${p}`), track)).toBe(false);
       expect(log).toEqual([]);
     } finally {
       g.window = before;

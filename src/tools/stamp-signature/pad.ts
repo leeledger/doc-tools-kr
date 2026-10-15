@@ -217,7 +217,7 @@ export function initPad(): void {
   // PDF 서명·도장 넣기 (TOOLS5 U3): the PNG goes to /pdf-sign/ in this tab's sessionStorage.
   toPdfBtn.addEventListener('click', async () => {
     const blob = await encodeDrawing();
-    if (blob && !(await sendToPdfSign(blob))) live('alert', HANDOFF_FAILED, root);
+    if (blob && !(await sendToPdfSign(blob, 'stamp-signature'))) live('alert', HANDOFF_FAILED, root);
   });
 
   new ResizeObserver(resize).observe(box);

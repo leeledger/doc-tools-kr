@@ -21,7 +21,7 @@ import { formatPages, formatSize } from '../../lib/ui/format';
 import { hideNextSteps, showNextSteps } from '../../lib/ui/next-steps';
 import { bindPasswordToggle } from '../../lib/ui/password';
 import { isPdfFile } from '../../lib/ui/pdf-pick';
-import { takeSignPng } from '../../lib/ui/sign-handoff';
+import { arrivedInfo, arrivedNote, takeSignPng, type SignSource } from '../../lib/ui/sign-handoff';
 import { track, type UsagePhase } from '../../lib/ui/usage';
 import { IMAGE_EDGE, fileLimitMessage, imageLimitMessage } from './limits';
 import {
@@ -64,7 +64,6 @@ const RANGE_MESSAGES: Record<PageRangeError, (pages: number) => string> = {
 const OWNER_NOTE = '보안 설정(편집 제한)이 해제된 사본이 만들어집니다.';
 const MULTI_NOTE = 'PDF 파일은 한 번에 하나만 쓸 수 있어 첫 번째 파일만 열었습니다.';
 const SIGNATURE_NOTE = '전자서명이 들어 있는 문서입니다. 그림을 넣어 새로 저장하면 전자서명이 더 이상 유효하지 않습니다. 발급받은 증명서는 원본을 제출하세요.';
-const ARRIVED_NOTE = '전자서명·도장 이미지 만들기에서 만든 그림을 가져왔습니다. 이제 PDF 파일을 고르세요.';
 const IMAGE_FORMATS: readonly ImageFormat[] = ['png', 'jpeg', 'webp', 'heic'];
 const MIN_SIZE_PCT = 3;
 
@@ -430,7 +429,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     image = null;
   }
 
-  async function useImage(picked: Blob, label: string, fromStamp: boolean): Promise<boolean> {
+  async function useImage(picked: Blob, label: string, from: SignSource | null): Promise<boolean> {
     const id = ++imageRun;
     const before = imageInfo.textContent;
     clearAlert(root);
@@ -441,7 +440,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
       dropImage();
       image = { png: out.png, url: URL.createObjectURL(out.png), width: out.width, height: out.height };
       imageName.textContent = label;
-      imageInfo.textContent = fromStamp ? '전자서명·도장 이미지 만들기에서 가져온 그림' : `${out.width.toLocaleString('ko-KR')}×${out.height.toLocaleString('ko-KR')}픽셀`;
+      imageInfo.textContent = from ? arrivedInfo(from) : `${out.width.toLocaleString('ko-KR')}×${out.height.toLocaleString('ko-KR')}픽셀`;
       showImage();
       const info = curInfo();
       // Same width and corner; each page clamps it when shown and when saved.
@@ -767,7 +766,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     drop.classList.remove('over');
     const files = Array.from(ev.dataTransfer?.files ?? []);
     // A picture dropped while a PDF is open is the signature; anything else opens as the PDF.
-    if (state === 'ready' && files[0] && !/pdf$/i.test(files[0].type || files[0].name)) void useImage(files[0], files[0].name, false);
+    if (state === 'ready' && files[0] && !/pdf$/i.test(files[0].type || files[0].name)) void useImage(files[0], files[0].name, null);
     else void openFiles(files);
   });
   pwForm.addEventListener('submit', (ev) => {
@@ -779,7 +778,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
   imageInput.addEventListener('change', () => {
     const f = imageInput.files?.[0];
     imageInput.value = '';
-    if (f) void useImage(f, f.name, false);
+    if (f) void useImage(f, f.name, null);
   });
   prevBtn.addEventListener('click', () => void showPage(pageStage.page - 1));
   nextBtn.addEventListener('click', () => void showPage(pageStage.page + 1));
@@ -839,16 +838,17 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
   download.addEventListener('click', () => track({ e: 'download', t: 'pdf-sign' }));
 
   setState('empty');
-  // A picture handed over by /stamp-signature/ (read once, removed).
+  // A picture handed over by /stamp-signature/ or /stamp-maker/ (read once, removed).
   const handed = takeSignPng();
   if (handed === 'invalid') {
     usageFail('no-image', 'parse');
     announce('alert', MESSAGES['no-image'], root);
   } else if (handed) {
-    void useImage(handed, '서명·도장 그림', true).then((ok) => {
+    const note = arrivedNote(handed.from);
+    void useImage(handed.blob, '서명·도장 그림', handed.from).then((ok) => {
       if (ok && state === 'empty') {
-        showNotice(ARRIVED_NOTE);
-        status(ARRIVED_NOTE);
+        showNotice(note);
+        status(note);
       }
     });
   }

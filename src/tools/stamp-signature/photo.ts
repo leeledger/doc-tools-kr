@@ -455,7 +455,7 @@ export function initStampTool(pending?: File): { open(file: File): void } | null
   // PDF 서명·도장 넣기 (TOOLS5 U3): the PNG goes to /pdf-sign/ in this tab's sessionStorage.
   toPdfBtn.addEventListener('click', async () => {
     const blob = await encodeCurrent();
-    if (blob && !(await sendToPdfSign(blob))) showError(HANDOFF_FAILED);
+    if (blob && !(await sendToPdfSign(blob, 'stamp-signature'))) showError(HANDOFF_FAILED);
   });
 
   newBtn.addEventListener('click', () => {
