@@ -457,7 +457,7 @@ describe('live-only description (P.6)', () => {
     expect(n).toBeLessThanOrEqual(80);
   });
 
-  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4, image-to-jpg in TOOLS5 U1, pdf-split in U2, pdf-sign in U3, char-count in TOOLS1015 C1, id-copy in I1, pdf-edit in E1), no duplicates, every tool listed', () => {
+  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4, image-to-jpg in TOOLS5 U1, pdf-split in U2, pdf-sign in U3, char-count in TOOLS1015 C1, id-copy in I1, pdf-edit in E1, stamp-maker in STAMP1015), no duplicates, every tool listed', () => {
     const slugs = new Set([...TOOLS, BG_REMOVE_TOOL].map((t) => t.slug));
     expect(slugs.has('pdf-password')).toBe(true);
     expect(slugs.has('image-to-jpg')).toBe(true);
@@ -471,6 +471,9 @@ describe('live-only description (P.6)', () => {
     // TOOLS1015 decision 3: pdf-edit right after image-to-jpg.
     expect(slugs.has('pdf-edit')).toBe(true);
     expect(HOME_DESC_ORDER.indexOf('pdf-edit')).toBe(HOME_DESC_ORDER.indexOf('image-to-jpg') + 1);
+    // STAMP1015 D2: stamp-maker right after pdf-edit.
+    expect(slugs.has('stamp-maker')).toBe(true);
+    expect(HOME_DESC_ORDER.indexOf('stamp-maker')).toBe(HOME_DESC_ORDER.indexOf('pdf-edit') + 1);
     // HWPX2HWP decision 14: right after HWP PDF 변환, before HWP 파일 보기 (searches 1.5만 > 3,560 a month).
     expect(HOME_DESC_ORDER.indexOf('hwpx-to-hwp')).toBe(HOME_DESC_ORDER.indexOf('hwp-to-pdf') + 1);
     expect(HOME_DESC_ORDER.indexOf('hwp-viewer')).toBe(HOME_DESC_ORDER.indexOf('hwpx-to-hwp') + 1);
@@ -662,7 +665,7 @@ describe('service worker (P.11)', () => {
 
   it('C2 round 2 + TOOLS4 T4 round 2: legal pages and the non-precached tool pages are stored when visited; offline they come from the cache', async () => {
     const cache = new FakeCache();
-    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/']) {
+    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/']) {
       const ev = event(req(path, 'GET', 'navigate'));
       handleFetch(ev.e, envWith(async () => new Response(`page ${path}`), cache));
       await ev.responded;

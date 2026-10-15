@@ -1,0 +1,92 @@
+---
+// /stamp-maker/ (STAMP1015): 도장 만들기. A typed name is painted in 12 stamp frames at once; one is picked, fine-tuned and
+// saved as a transparent PNG (with its density in pHYs) or handed to /pdf-sign/. The page ships only the input and empty
+// containers: the controller (entry.ts: after load + idle, or at once on the first focus or pointer in the tool) builds the
+// tiles and the fine-tune panel, whose labels are late copy, and injects the HWP font CSS that is already served.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { INPUT_MAX } from '../../tools/stamp-maker/limits';
+// Page-only styles, inlined (the /pdf-sign/ pattern): no other page carries them.
+import smCss from '../../tools/stamp-maker/stamp-maker.css?inline';
+
+const tool = getTool('stamp-maker');
+const jsonLd = toolJsonLd(tool, Astro.site);
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={smCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">이름이나 회사 이름을 쓰면 원형, 사각 인감, 타원, 회사 직인, 날짜 도장 등 여러 모양의 도장 그림이 한 번에 보입니다. 하나를 골라 다듬고 투명 PNG로 저장하세요.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="sm-tool" class="sm">
+        <label class="sm-label" for="sm-text">도장에 넣을 글자</label>
+        <input id="sm-text" class="num-input sm-text" type="text" maxlength={INPUT_MAX} autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="이름 또는 회사 이름" aria-describedby="sm-privacy">
+        <p class="privacy-note" id="sm-privacy">쓴 글자는 이 기기 밖으로 보내지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        <p class="error-box" id="sm-error" role="alert" data-live="alert" hidden></p>
+        <div class="sm-gridbox">
+          <p class="sm-sample" id="sm-sample" hidden></p>
+          <div class="sm-grid" id="sm-grid" role="radiogroup" aria-label="도장 모양"></div>
+        </div>
+        <p class="hint sm-note" id="sm-note" hidden></p>
+        <div class="sm-panel" id="sm-panel" hidden></div>
+        <p class="visually-hidden" id="sm-status" aria-live="polite" data-live="status"></p>
+      </div>
+      <EngineError />
+      <AdSlot id="stamp-maker-result" size="rect" />
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>도장에 넣을 글자 쓰기</strong><span>이름이나 회사 이름을 씁니다. 한글, 한자, 영문을 쓸 수 있습니다.</span></li>
+        <li><strong>모양 고르기</strong><span>원형, 사각 인감, 법인 직인 등 여러 모양 가운데 마음에 드는 것을 누릅니다.</span></li>
+        <li><strong>다듬고 저장하기</strong><span>글꼴, 색, 크기를 고른 뒤 PNG로 저장하거나 PDF에 바로 찍습니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>도장 모양의 그림만 만들어요</strong><span>주민센터에 신고한 인감이 아니고, 법적 효력을 정하지 않습니다. 인감이 꼭 필요한 서류는 받는 곳에 먼저 물어보세요.</span></li>
+        <li><strong>가입·설치 없이 무료</strong><span>이 페이지에서 바로 만들고, 가입이나 설치가 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['stamp-signature', 'pdf-sign', 'jpg-to-pdf']} />
+  <div class="wrap narrow"><AdSlot id="stamp-maker-footer" size="leaderboard" /></div>
+</Base>
+
+<script>
+  import '../../tools/stamp-maker/entry';
+</script>

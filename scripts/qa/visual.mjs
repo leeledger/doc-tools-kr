@@ -43,6 +43,7 @@ const PAGES = [
   ['charcount', '/char-count/'],
   ['idcopy', '/id-copy/'],
   ['pdfedit', '/pdf-edit/'],
+  ['stampmaker', '/stamp-maker/'],
   ['idphoto', '/id-photo/'],
   ['stamp', '/stamp-signature/'],
   ['privacy', '/privacy/'],

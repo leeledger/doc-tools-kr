@@ -30,7 +30,7 @@ export const BYPASS = ['/sw.js', '/deploy-manifest.json'];
  * offline (REV3: /hwp-to-pdf/ too, like /hwp-viewer/, whose rhwp wasm was never precached either). /remove-background/
  * is not here: it needs the network for its model or cloud path anyway.
  */
-export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/'];
+export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/'];
 /** 배경 지우기 (Sprint C, C2): the model and the runtime go straight to the network (src/lib/bgremove/assets.ts caches them). */
 export const NETWORK_PREFIXES = ['/vendor/birefnet-lite-512/', '/vendor/onnxruntime-web/'];
 export const NAV_TIMEOUT_MS = 3000;

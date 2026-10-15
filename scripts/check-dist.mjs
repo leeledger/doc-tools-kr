@@ -23,6 +23,7 @@ import { precacheList } from './gen-sw.mjs';
 
 const dist = distDir();
 const KB = 1024;
+const STAMP_CONTROLLER_KB = 11.8;
 /** The UI font weights (Polish P.12; 700 retired in LCP round 2): one static instance each; no other weight may appear in the CSS. */
 const UI_WEIGHTS = new Set(['400', '800']);
 /** Copy that describes auto-framing; none of it may ship when PUBLIC_ID_PHOTO_AUTOFRAME is off. */
@@ -286,6 +287,26 @@ budget('password.worker*.js (pdf-password)', match(/^_astro\/password\.worker[^/
     if (controller.some((f) => initial.has(f))) errors.push('the /pdf-sign/ controller loads with the page');
     for (const f of initial) if (/pdfjs|pdf\.worker|getDocument|merge\.worker|PDFDocument/.test(read(f).toString('utf8'))) errors.push(`${f}: pdf.js, pdf-lib or the merge worker in the /pdf-sign/ initial JS`);
     budget('pdf-sign controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 18.4 * KB);
+  }
+}
+// 도장 만들기 (STAMP1015 S2): the controller (the controller*.js chunk that owns #sm-panel-note, and what only it imports)
+// loads after load + idle or on the first interaction, never with the page; the HWP font CSS is injected by it, so the
+// page HTML has no hwp-fonts link and no /fonts/hwp/ preload, and no initial script names them. The page never says what
+// the tool does not do (D9 / Trust row: no 「법적 효력이 있습니다」, 「인감 대신」, 「인감 등록」). Budget: controller
+// STAMP_CONTROLLER_KB gzip (measured + 20 %, BUILD-LOG STAMP1015 S2).
+{
+  const html = pageHtml.get('stamp-maker/index.html');
+  if (!html) errors.push('stamp-maker/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('sm-panel-note'));
+    if (controller.length !== 1) errors.push(`stamp-maker controller: ${controller.length} chunk(s) name #sm-panel-note, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /stamp-maker/ controller loads with the page');
+    if (/hwp-fonts|\/fonts\/hwp\//.test(html)) errors.push('stamp-maker/index.html: links or preloads the HWP fonts (the controller injects them)');
+    for (const f of initial) if (/\/fonts\/hwp\/|Anolim HWP/.test(read(f).toString('utf8'))) errors.push(`${f}: the HWP fonts in the /stamp-maker/ initial JS`);
+    const text = html.replace(/<[^>]+>/g, '');
+    for (const bad of ['법적 효력이 있습니다', '인감 대신', '인감 등록']) if (text.includes(bad)) errors.push(`stamp-maker/index.html: says 「${bad}」 (brief D9)`);
+    budget('stamp-maker controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), STAMP_CONTROLLER_KB * KB);
   }
 }
 // PDF 글자 넣기·편집 (TOOLS1015 E1): the controller (the controller*.js chunk that owns #ed-text-error, and what only it

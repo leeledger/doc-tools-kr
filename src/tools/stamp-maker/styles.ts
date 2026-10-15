@@ -1,5 +1,7 @@
 // 도장 만들기 (STAMP1015 D3): the 12 stamp styles. The ids are also the usage values (scripts/lib/usage.mjs STAMP_STYLES;
-// a unit test keeps them equal); the names are late labels (controller text, any glyph).
+// a unit test keeps them equal). The names are late labels, but the tiles show without any interaction, so they use only
+// preloaded UI-font glyphs (tests/e2e/polish.spec.ts: no late face before the first interaction): 「라운드 사각」 for the
+// brief's 「둥근 사각」.
 import type { SizeMm } from './limits';
 
 export const STYLE_IDS = [
@@ -62,7 +64,7 @@ export const STYLES: Record<StyleId, StyleDef> = {
   'round-double': P('round-double', '겹원', {}),
   oval: P('oval', '타원', { aspect: 0.72 }),
   'square-seal': P('square-seal', '사각 인감', { max: 9, maxCells: 9, suffix: true }),
-  'square-round': P('square-round', '둥근 사각', { max: 9, maxCells: 9, suffix: true }),
+  'square-round': P('square-round', '라운드 사각', { max: 9, maxCells: 9, suffix: true }),
   'square-inverse': P('square-inverse', '사각 음각', { max: 9, maxCells: 9, suffix: true }),
   'rect-v': P('rect-v', '세로 직사각', { max: 5, aspect: 0.5, orient: false }),
   'rect-h': P('rect-h', '가로 직사각', { max: 8, aspect: 2.4, orient: false, vertical: false, keepSpaces: true }),

@@ -56,7 +56,8 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
  * HWPX HWP 변환 → HWPX란, 한글 없이 HWP 열기, 휴대폰에서 HWP (HWPX2HWP);
  * 글자수 세기 → 이력서 사진, 고용24 이력서 올리기 (published later; a draft is skipped), 대학 원서 서류 (TOOLS1015 C1);
  * 신분증 사본 만들기 → 신분증 사본 만드는 법 (I2), 국가장학금 서류, 대학 원서 서류 (TOOLS1015 I1);
- * PDF 글자 넣기·편집 → PDF 서명 넣는 법, 정부24 PDF 저장, 전자서명법 (TOOLS1015 E1).
+ * PDF 글자 넣기·편집 → PDF 서명 넣는 법, 정부24 PDF 저장, 전자서명법 (TOOLS1015 E1);
+ * 도장 만들기 → 도장·서명 이미지 만들기, 전자서명법 (그림 도장을 받는지), PDF 서명 넣는 법 (STAMP1015).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
@@ -73,6 +74,7 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'char-count': ['resume-photo', 'work24-resume-upload', 'univ-docs-upload'],
   'id-copy': ['id-card-copy', 'kosaf-docs', 'univ-docs-upload'],
   'pdf-edit': ['pdf-sign', 'gov24-pdf-save', 'e-signature-law'],
+  'stamp-maker': ['stamp-image', 'e-signature-law', 'pdf-sign'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */

@@ -30,8 +30,9 @@ import {
 } from '../../src/tools/stamp-maker/layout';
 import { PPI_1X, PPI_2X, SIZES_MM, STRETCH_MAX, STRETCH_MIN, mmToPx } from '../../src/tools/stamp-maker/limits';
 import { crc32, ppiToPpm, readPhys, withPhys } from '../../src/tools/stamp-maker/png';
+import { COLORS, paintStamp, pixelSize } from '../../src/tools/stamp-maker/render';
 import { STYLES, STYLE_IDS, type StyleId } from '../../src/tools/stamp-maker/styles';
-import { emMeasure, inkMeasure } from '../helpers/stamp-fonts';
+import { emMeasure, inkMeasure, sliceFont } from '../helpers/stamp-fonts';
 
 const O = (more: Partial<StampOptions> = {}): StampOptions => ({ ...DEFAULT_OPTIONS, ...more });
 
@@ -429,5 +430,51 @@ describe('stamp-maker PNG pHYs (D6)', () => {
     expect(crc32(new TextEncoder().encode('IEND'))).toBe(0xae426082);
     expect(() => withPhys(new Uint8Array([1, 2, 3]), 600)).toThrow();
     expect(readPhys(png())).toBeNull();
+  });
+});
+
+describe('stamp-maker render (node, D4 / D6)', () => {
+  const draw = (id: StyleId, text: string, more: Partial<StampOptions> = {}, long = 300): { data: Uint8ClampedArray; w: number; h: number } => {
+    const l = layout(id, text, more);
+    const { w, h } = pixelSize(l, long);
+    const c = createCanvas(w, h);
+    const ctx = c.getContext('2d');
+    paintStamp(ctx as never, l, long, COLORS.red, sliceFont);
+    return { data: new Uint8ClampedArray(ctx.getImageData(0, 0, w, h).data), w, h };
+  };
+
+  it('every style paints, the four corners stay transparent (the EDGE margin), opaque pixels are exactly the colour', () => {
+    for (const id of STYLE_IDS) {
+      const { data, w, h } = draw(id, id.startsWith('corp') ? '문서딱 주식회사' : '홍길동');
+      let opaque = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] === 255) {
+          opaque++;
+          expect([data[i], data[i + 1], data[i + 2]], id).toEqual([0xd0, 0x20, 0x2e]);
+        }
+      }
+      expect(opaque, id).toBeGreaterThan(w * h * 0.01);
+      const corner = (x: number, y: number): number => data[(y * w + x) * 4 + 3]!;
+      const corners = [corner(0, 0), corner(w - 1, 0), corner(0, h - 1), corner(w - 1, h - 1)];
+      expect(corners, id).toEqual([0, 0, 0, 0]);
+    }
+  });
+
+  it('square-inverse cuts transparent holes where the glyphs are', () => {
+    const l = layout('square-inverse', '홍길동');
+    const { data, w } = draw('square-inverse', '홍길동');
+    let holes = 0;
+    for (const g of l.glyphs) {
+      for (let y = Math.round((g.y - g.hh) * 300); y < (g.y + g.hh) * 300; y++) {
+        for (let x = Math.round((g.x - g.hw) * 300); x < (g.x + g.hw) * 300; x++) if (data[(y * w + x) * 4 + 3] === 0) holes++;
+      }
+    }
+    expect(holes).toBeGreaterThan(500);
+  });
+
+  it('pixel sizes follow the layout aspect', () => {
+    expect(pixelSize(layout('rect-h', '홍길동'), 425)).toEqual({ w: 425, h: 177 });
+    expect(pixelSize(layout('oval', '홍길동'), 425)).toEqual({ w: 306, h: 425 });
+    expect(pixelSize(layout('round', '홍길동'), 850)).toEqual({ w: 850, h: 850 });
   });
 });

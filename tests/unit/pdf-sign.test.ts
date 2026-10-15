@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { getTool } from '../../src/data/tools';
 import { signPdf } from '../../src/lib/pdf/sign';
 import { MB } from '../../src/lib/ui/device';
 import { validate } from '../../scripts/lib/usage.mjs';
@@ -416,6 +417,8 @@ describe('/stamp-signature/ → /pdf-sign/ hand-over (sessionStorage)', () => {
     expect(arrivedNote('stamp-maker')).toBe('도장 만들기에서 만든 그림을 가져왔습니다. 이제 PDF 파일을 고르세요.');
     expect(arrivedInfo('stamp-maker')).toBe('도장 만들기에서 가져온 그림');
     expect(Object.keys(SIGN_SOURCES).sort()).toEqual(['stamp-maker', 'stamp-signature']);
+    // One name map, equal to the tool names (menu, cards, h1).
+    for (const [slug, name] of Object.entries(SIGN_SOURCES)) expect(name).toBe(getTool(slug).name);
   });
 
   it('a full or missing storage is reported (QuotaExceeded → the download message); a stored value that is not a PNG is invalid', () => {

@@ -1,0 +1,39 @@
+/* 도장 만들기 (/stamp-maker/, STAMP1015). Inlined on that page only. Tiles and the preview show the stamp on white
+   paper in both themes (a black stamp must stay visible in dark mode). */
+.sm { display: grid; gap: 10px; text-align: left; }
+.sm-label { font-weight: 800; }
+.sm-text { width: 100%; max-width: 24em; font-size: 18px; }
+/* 12 tiles (each about 130 CSS pixels tall): the box keeps the height of its rows and the sample line before the controller
+   fills it (no layout shift). Wide: 6+ columns, 2 rows; medium: up to 3 rows; phones: 3 columns, 4 rows. */
+.sm-gridbox { display: grid; align-content: start; gap: 6px; min-height: 300px; }
+@media (max-width: 699px) { .sm-gridbox { min-height: 450px; } }
+@media (max-width: 480px) { .sm-gridbox { min-height: 590px; } }
+.sm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+@media (max-width: 480px) { .sm-grid { grid-template-columns: repeat(3, 1fr); } }
+.sm-tile {
+  display: grid; justify-items: center; gap: 4px; padding: 8px 4px 6px; margin: 0; min-width: 0;
+  border: 2px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer;
+}
+.sm-tile canvas { display: block; width: 88px; height: 88px; background: #ffffff; border-radius: 8px; }
+.sm-tile-name { font-size: 14.5px; font-weight: 800; line-height: 1.3; text-align: center; }
+.sm-tile-over { font-size: 13px; color: var(--muted); line-height: 1.3; text-align: center; }
+.sm-tile[aria-checked="true"] { border-color: var(--brand); background: var(--brand-soft); }
+.sm-tile[aria-disabled="true"] { cursor: not-allowed; }
+.sm-tile[aria-disabled="true"] canvas { opacity: .25; }
+.sm-tile:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.sm-grid[aria-disabled="true"] .sm-tile { cursor: not-allowed; }
+.sm-grid[aria-disabled="true"] .sm-tile canvas { opacity: .25; }
+.sm-sample { margin: 0; font-size: 14.5px; color: var(--muted); }
+.sm-panel { display: grid; gap: 14px; margin-top: 8px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.sm-panel[hidden] { display: none; }
+.sm-preview { display: grid; justify-items: center; gap: 6px; }
+.sm-preview canvas { display: block; width: 220px; height: 220px; max-width: 100%; background: #ffffff; border-radius: 10px; box-shadow: 0 0 0 1px var(--line); }
+.sm-size-info { margin: 0; font-size: 15px; color: var(--muted); }
+.sm-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 14px; }
+.sm-field { display: grid; gap: 4px; min-width: 0; }
+.sm-field[hidden] { display: none; }
+.sm-field > label { font-size: 15px; font-weight: 800; }
+.sm-field .select, .sm-field .num-input { width: 100%; min-width: 0; }
+.sm-checks { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: center; }
+.sm-actions { gap: 8px; }
+.sm-legal { margin: 0; font-size: 14.5px; color: var(--muted); }
