@@ -3,6 +3,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   BLOB_KEYS,
+  DEEP_LINK_TOOLS,
+  NO_DEEP_LINK,
   CAMPAIGN_LABELS,
   EVENTS,
   FAIL_LABELS,
@@ -38,6 +40,7 @@ import { LEVELS } from '../../src/lib/pdf/compress/levels';
 import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { USAGE_ON, UTM_STASH_KEY, UTM_TTL_MS, arrival, browserFamily, buildPayload, createTracker, readUtmStash, startUsage, track, writeUtmStash } from '../../src/lib/ui/usage';
 import { route } from '../../src/sw/sw';
+import { DEEP_PARAM } from '../../src/lib/ui/deeplink';
 import { campaignSql } from '../../scripts/lib/campaign.mjs';
 import { FULL } from '../fixtures/usage-rows.mjs';
 import { RUM_EMPTY } from '../fixtures/rum-rows.mjs';
@@ -1319,5 +1322,23 @@ describe('page tracker: link markers (REQ1014-A D5/D7)', () => {
     t.start('id-photo');
     expect(bodies(g.send).map((b) => [b.e, b.via])).toEqual([['arrive', 'guide'], ['land', 'direct']]);
     for (const c of g.send.mock.calls) expect(validate(c[1] as string)).not.toBeNull();
+  });
+});
+
+describe('REQ1015 딥링크 비율 해당 없음', () => {
+  it('DEEP_LINK_TOOLS is exactly the tools of DEEP_PARAM (src/lib/ui/deeplink.ts)', () => {
+    expect([...DEEP_LINK_TOOLS].sort()).toEqual(Object.keys(DEEP_PARAM).sort());
+  });
+  it('a guide row of a tool without deep links shows 해당 없음; a deep-link tool shows its percent', () => {
+    const shaped = shapeUsage({
+      guides: [
+        { guide: 'hwp-open', tool: 'hwp-to-pdf', dl: '0', n: 7 },
+        { guide: 'passport-photo', tool: 'id-photo', dl: '1', n: 3 },
+        { guide: 'passport-photo', tool: 'id-photo', dl: '0', n: 1 },
+      ],
+    });
+    const guides = shaped.tables.find((t) => t.title === '안내 글에서 도구로')!;
+    expect(guides.rows.map((r) => r[3])).toEqual([NO_DEEP_LINK, '75%']);
+    expect(NO_DEEP_LINK).toBe('해당 없음');
   });
 });

@@ -504,6 +504,13 @@ const num = (x) => {
   return Number.isFinite(n) ? n : 0;
 };
 const count = (n) => Math.round(n).toLocaleString('en-US');
+/**
+ * The tools a guide can open with a setting already chosen (src/lib/ui/deeplink.ts DEEP_PARAM; a unit test keeps the two
+ * equal). Other tools have no deep link, so their 딥링크 비율 is 해당 없음, not 0 % (REQ1015, the deep-link decision).
+ */
+export const DEEP_LINK_TOOLS = ['id-photo', 'photo-compress', 'pdf-compress'];
+export const NO_DEEP_LINK = '해당 없음';
+
 const rate = (part, whole) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : '-');
 
 /**
@@ -634,7 +641,7 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
       {
         title: '안내 글에서 도구로',
         head: ['안내 글', '도구', '넘어옴', '딥링크 비율'],
-        rows: [...arrivals.values()].sort((a, b) => b.n - a.n).map((a) => [label(GUIDE_TITLES, a.guide), label(TOOL_LABELS, a.tool), count(a.n), rate(a.dl, a.n)]),
+        rows: [...arrivals.values()].sort((a, b) => b.n - a.n).map((a) => [label(GUIDE_TITLES, a.guide), label(TOOL_LABELS, a.tool), count(a.n), DEEP_LINK_TOOLS.includes(a.tool) ? rate(a.dl, a.n) : NO_DEEP_LINK]),
       },
       {
         title: '도구별 성공률 (안내에서 온 경우, 바로 온 경우, 다른 누리집에 넣은 도구)',
