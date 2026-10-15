@@ -109,3 +109,54 @@ tools.ts, usage.mjs, affiliate.ts, check-dist block, guides and COPY.md. The uni
 ## Cleared
 S0 hand-off, the layout, font, PNG and usage logic, the copy and the budgets were reviewed and pass. The only item blocking
 Deploy A is Must Fix 1 (the empty tiles before any user signal). S5 waits on the Arch decision.
+
+---
+
+# Round 2 — 565699e, 4df321e, 013e094
+Date: 2026-10-16
+Verdict: CLEAR (Ready for Builder: YES). Step STAMP1015 Deploy A + B is clear.
+
+Checked: the diff 709c090..HEAD for entry, controller, fonts, layout, the page, the CSS, check-dist, tools.ts, the unit tests
+and the e2e test. I viewed the samples corp-round and square-seal. vitest stamp-maker, stamp-signature and pdf-sign
+passed (3 files, 75).
+
+## Must Fix 1: sample pictures (resolved)
+- Quality: at 176 px with 16 alpha steps, the edges are clean and there is no visible banding. At 88 px it cannot be told
+  apart from the live render. Accepted.
+- The corp-round centre reads 대표이사 in the right-to-left vertical order.
+- Staleness: the samplesHash in the generator covers styles, layout, render and limits, with line endings normalised for
+  CRLF checkouts. The unit test fails when samples.json is out of date. The files test checks:
+  - all 12 ids are present;
+  - the files are named with the hash;
+  - each is 176×176 with colour type 3;
+  - the byte total is 30 KB or less.
+- check-dist: 12 files; every tile has its own data-src with width and height 88, alt="" and lazy; no other page
+  references them (so they are not precached); the raw budget is 30 KB.
+- e2e: before any signal, 12 images have naturalWidth 176 and there are 0 /fonts/hwp/ requests. After the controller
+  paints, the images are hidden and all 12 canvases have ink.
+- data-src after FCP (Open Question 1): accepted. Measured cost of a plain src was 1,667 → 2,043 ms. The fallback is
+  robust:
+  - set() is idempotent.
+  - The load + 1 s timer always runs, whether or not the PerformanceObserver fires.
+  - In a background tab, requestAnimationFrame does not run, but the throttled timer still sets the images.
+  - bfcache restores the DOM as it was, src included.
+  - A browser without paint timing gets them on load, through the catch path.
+  - I found no case where the images never appear.
+
+## Should Fix 1-5 (all resolved)
+1. 印之 is fetched only when the typed text is Hanja.
+2. An empty faces list is ok when check() is true, and fail c=font is sent only when the untimed load fails.
+3. A personal square seal, vertical, 3 cells: [1, 2] (홍 | 길동). corp-square and 가로 keep the plain order, and both are
+   tested.
+4. Banned phrases: 6, and the FAQ question still passes.
+5. Probe (e) now runs over both 400 and 700.
+
+## S5 (Arch decision)
+「전자서명·도장 이미지 만들기 — 서명 그리기·도장 배경 지우기 | 문서딱」 (40 characters) is accepted:
+- It keeps the h1 phrase and the 「도장 이미지 만들기」 query.
+- The description carries the photo intent: 「도장 사진에서 종이 배경을 지워」.
+- The keywords put 도장이미지만들기 back.
+
+## Nit (optional)
+- src/tools/stamp-maker/entry.ts set(): if the controller paints before set() runs (a fast focus), the 12 hidden images are
+  still requested, about 27 KB wasted. Skipping img.hidden in set() fixes it.
