@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  AI_SERVICES,
   CHUNK_TOP,
   COUNTRY_PATHS_LIMIT,
   GRAPHQL_URL,
@@ -14,6 +15,8 @@ import {
   SITE_TAG,
   TREND_LIMIT,
   VisitsApiError,
+  aiReferrers,
+  aiServiceOf,
   chunks,
   countryLabel,
   deviceLabel,
@@ -33,7 +36,8 @@ import {
   windows,
 } from '../../scripts/lib/visits.mjs';
 import { niceTicks, trendSvg } from '../../scripts/lib/admin-chart.mjs';
-import { VISITS_NOTE, ratioDelta, renderAdminPage, startsPer100 } from '../../scripts/lib/admin-view.mjs';
+import { AI_PARTIAL_NOTE, VISITS_NOTE, ratioDelta, renderAdminPage, startsPer100 } from '../../scripts/lib/admin-view.mjs';
+import { aiLine, summaryBody } from '../../scripts/ops/growth.mjs';
 import { GUIDE_TITLES, PRESETS, VALUE_LABELS, shapeUsage } from '../../scripts/lib/usage.mjs';
 import { guideTitles } from '../../scripts/ops/lib/guides.mjs';
 import { serialize } from '../../scripts/gen-guide-titles.mjs';
@@ -679,5 +683,98 @@ describe('REQ1014-A visits: total node, pages fallback, country split, labels, d
     const empty = shapeVisits(await fetchVisits(args(api(() => ok(RUM_EMPTY)).f, 7, { compare: false })), 7, NOW);
     expect(empty.diag.find((d) => d.node === 'total')).toEqual({ node: 'total', rows: 0, maxSi: null });
     expect(page(empty)).toContain('<tr><td>total</td><td class="num">0</td><td class="num">-</td></tr>');
+  });
+});
+
+describe('REQ1015 AI services as referrers', () => {
+  const row = (key: string, visits: number, pageViews = visits) => ({ key, visits, pageViews });
+
+  it('aiServiceOf: every listed host and app, www. and other subdomains, any case; search and company sites are not AI', () => {
+    for (const [label, { hosts, apps }] of Object.entries(AI_SERVICES)) {
+      for (const h of hosts) {
+        expect(aiServiceOf(h), h).toBe(label);
+        expect(aiServiceOf(`www.${h}`), `www.${h}`).toBe(label);
+        expect(aiServiceOf(h.toUpperCase()), h.toUpperCase()).toBe(label);
+      }
+      for (const a of apps) {
+        expect(aiServiceOf(a), a).toBe(label);
+        expect(aiServiceOf(a.toUpperCase()), a).toBe(label);
+      }
+    }
+    expect(aiServiceOf('chatgpt.com')).toBe('ChatGPT');
+    expect(aiServiceOf('com.openai.chatgpt')).toBe('ChatGPT');
+    expect(aiServiceOf('ai.perplexity.app.android')).toBe('Perplexity');
+    expect(aiServiceOf('com.google.android.apps.bard')).toBe('Gemini');
+    expect(aiServiceOf('grok.com')).toBe('기타 AI');
+    for (const h of ['google.com', 'www.google.com', 'bing.com', 'naver.com', 'm.search.naver.com', 'openai.com', 'docttak.com', 'com.docttak.app', 'notchatgpt.com', 'x.com.openai.chatgpt', ''])
+      expect(aiServiceOf(h), h).toBeNull();
+  });
+
+  it('referrerLabel: an AI host is LABEL (host); our app and other hosts unchanged', () => {
+    expect(referrerLabel('chatgpt.com')).toBe('ChatGPT (chatgpt.com)');
+    expect(referrerLabel('com.anthropic.claude')).toBe('Claude (com.anthropic.claude)');
+    expect(referrerLabel('com.docttak.app')).toBe(REFERRER_LABELS['com.docttak.app']);
+    expect(referrerLabel('search.example.kr')).toBe('search.example.kr');
+    expect(referrerLabel('')).toBe('직접 방문·알 수 없음');
+  });
+
+  it('aiReferrers: per service summed over hosts and apps, visits desc, zero rows left out, total; partial at CHUNK_TOP rows', () => {
+    const rows = [row('', 50), row('chatgpt.com', 5, 9), row('com.openai.chatgpt', 2, 3), row('perplexity.ai', 8, 10), row('www.google.com', 30), row('claude.ai', 0, 0), row('grok.com', 1, 1)];
+    const ai = aiReferrers(rows);
+    expect(ai.rows).toEqual([
+      { label: 'Perplexity', visits: 8, pageViews: 10 },
+      { label: 'ChatGPT', visits: 7, pageViews: 12 },
+      { label: '기타 AI', visits: 1, pageViews: 1 },
+    ]);
+    expect(ai.total).toEqual({ visits: 16, pageViews: 23 });
+    expect(ai.partial).toBe(false);
+    const many = Array.from({ length: CHUNK_TOP }, (_, i) => row(`site${i}.example.com`, 1));
+    expect(aiReferrers(many)).toEqual({ total: { visits: 0, pageViews: 0 }, rows: [], partial: true });
+  });
+
+  it('shapeVisits.ai counts all referrer rows, also those below the top 10; the referrer rows are unchanged otherwise', () => {
+    const referrers = [...Array.from({ length: 12 }, (_, i) => row(`site${i}.example.com`, 100 - i)), row('chatgpt.com', 3, 4)];
+    const s = shapeVisits({ cur: { ...EMPTY_CUR, referrers }, prev: null, estimated: false, approxTops: false, requests: 1 }, 7, NOW);
+    expect(s.referrers).toHaveLength(10);
+    expect(s.referrers.map((r) => r.label)).not.toContain('ChatGPT (chatgpt.com)');
+    expect(s.ai).toEqual({ total: { visits: 3, pageViews: 4 }, rows: [{ label: 'ChatGPT', visits: 3, pageViews: 4 }], partial: false });
+  });
+
+  const page = (ai: unknown) => renderAdminPage({ days: 7, now: NOW, visits: { ...shapeVisits({ cur: EMPTY_CUR, prev: null, estimated: false, approxTops: false, requests: 1 }, 7, NOW), ai } });
+  const sectionOf = (html: string) => html.slice(html.indexOf('<section aria-labelledby="s-ai">'), html.indexOf('</section>', html.indexOf('id="s-ai"')));
+
+  it('admin: s-ai right after s-referrers with rows and 합계; empty text; partial note; labels escaped', () => {
+    const ai = { total: { visits: 9, pageViews: 12 }, rows: [{ label: 'ChatGPT', visits: 7, pageViews: 9 }, { label: '<b>x</b>', visits: 2, pageViews: 3 }], partial: false };
+    const html = page(ai);
+    expect(html.indexOf('id="s-referrers"')).toBeLessThan(html.indexOf('id="s-ai"'));
+    expect(html.indexOf('id="s-ai"')).toBeLessThan(html.indexOf('id="s-countries"'));
+    const sec = sectionOf(html);
+    expect(sec).toContain('>AI 서비스에서 들어옴</h2>');
+    expect(sec).toContain('<th scope="col">서비스</th><th scope="col" class="num">방문</th><th scope="col" class="num">페이지뷰</th>');
+    expect(sec).toContain('<tr><td>ChatGPT</td><td class="num">7</td><td class="num">9</td></tr>');
+    expect(sec).toContain('<td>&lt;b&gt;x&lt;/b&gt;</td>');
+    expect(sec).not.toContain('<b>x</b>');
+    const total = '<tr><td>합계</td><td class="num">9</td><td class="num">12</td></tr>';
+    expect(sec).toContain(total);
+    expect(sec.indexOf(total)).toBeGreaterThan(sec.indexOf('&lt;b&gt;'));
+    expect(sec.indexOf('</tr>', sec.indexOf(total) + total.length)).toBe(-1);
+    expect(sec).not.toContain(AI_PARTIAL_NOTE);
+    const empty = sectionOf(page({ total: { visits: 0, pageViews: 0 }, rows: [], partial: false }));
+    expect(empty).toContain('이 기간에는 기록이 없어요.');
+    expect(empty).not.toContain('합계');
+    expect(sectionOf(page({ ...ai, partial: true }))).toContain(`<p class="muted kpi-note">${AI_PARTIAL_NOTE}</p>`);
+    expect(AI_PARTIAL_NOTE).toBe('들어온 곳 상위 50곳 안에서 센 값입니다.');
+  });
+
+  it('weekly report: one AI line after the visits line; 0회 when none; no line without visits', () => {
+    const base = { week: '2026-42', gsc: null, cf: null, usage: null, r1: { sitemapCount: 70, pagesOk: true, streak: 0, clicksOk: false }, notes: [] };
+    const ai = { total: { visits: 12, pageViews: 20 }, rows: [{ label: 'ChatGPT', visits: 9, pageViews: 15 }, { label: 'Perplexity', visits: 3, pageViews: 5 }], partial: false };
+    const body = summaryBody({ ...base, visits: { visits: 500, pageViews: 900, estimated: false, ai } }, 'f.md', false);
+    const lines = body.split('\n');
+    const at = lines.findIndex((l) => l.startsWith('- 방문 7일:'));
+    expect(lines[at + 1]).toBe('- AI 서비스에서 들어옴 7일: 12회 (ChatGPT 9, Perplexity 3)');
+    expect(aiLine({ total: { visits: 0, pageViews: 0 }, rows: [], partial: false })).toBe('- AI 서비스에서 들어옴 7일: 0회');
+    expect(summaryBody({ ...base, visits: null }, 'f.md', false)).not.toContain('AI 서비스');
+    expect(summaryBody({ ...base, visits: { visits: 1, pageViews: 1, estimated: false } }, 'f.md', false)).not.toContain('AI 서비스');
   });
 });

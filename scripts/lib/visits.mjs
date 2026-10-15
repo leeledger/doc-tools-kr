@@ -46,6 +46,18 @@ export const EN_PATH_LIKE = '/en/%';
 export const MISMATCH_SHARE = 0.1;
 /** Our own Android app (TWA) as a referrer -> its name (REQ1014-A D13). Other package names stay as they are. */
 export const REFERRER_LABELS = { 'com.docttak.app': '문서딱 앱(안드로이드)' };
+/**
+ * AI answer services as referrers (REQ1015 D-A1): label -> web hosts (exact or any subdomain) and Android app package
+ * names (exact). Search engines and company sites (google.com, bing.com, naver.com, openai.com) are not AI answers.
+ */
+export const AI_SERVICES = {
+  ChatGPT: { hosts: ['chatgpt.com', 'chat.openai.com'], apps: ['com.openai.chatgpt'] },
+  Perplexity: { hosts: ['perplexity.ai'], apps: ['ai.perplexity.app.android'] },
+  Gemini: { hosts: ['gemini.google.com', 'bard.google.com'], apps: ['com.google.android.apps.bard'] },
+  Copilot: { hosts: ['copilot.microsoft.com', 'copilot.cloud.microsoft'], apps: ['com.microsoft.copilot'] },
+  Claude: { hosts: ['claude.ai'], apps: ['com.anthropic.claude'] },
+  '기타 AI': { hosts: ['chat.deepseek.com', 'grok.com', 'wrtn.ai', 'clova-x.naver.com', 'poe.com', 'you.com', 'chat.mistral.ai', 'meta.ai'], apps: [] },
+};
 
 const FIELDS = 'count sum { visits } avg { sampleInterval }';
 const group = (alias, limit, dim, order, filter = '$filter') => `${alias}: rumPageloadEventsAdaptiveGroups(limit: ${limit}, filter: ${filter}${order ? `, orderBy: [${order}]` : ''}) { ${FIELDS} dimensions { ${dim} } }`;
@@ -415,11 +427,45 @@ export const deviceLabel = (d) => (Object.hasOwn(DEVICE_LABELS, d) ? DEVICE_LABE
 
 const byVisits = (a, b) => b.visits - a.visits || b.pageViews - a.pageViews;
 
-/** A referrer host -> its label: our app's name (REFERRER_LABELS, any case), 직접 방문·알 수 없음 for none, else the host. */
+/** A referrer host or Android package name -> its AI_SERVICES label (any case), or null when it is not an AI service. */
+export function aiServiceOf(host) {
+  const k = String(host ?? '').toLowerCase();
+  if (k === '') return null;
+  for (const [label, { hosts, apps }] of Object.entries(AI_SERVICES)) {
+    if (apps.includes(k) || hosts.some((h) => k === h || k.endsWith(`.${h}`))) return label;
+  }
+  return null;
+}
+
+/**
+ * A referrer host -> its label: our app's name (REFERRER_LABELS, any case), an AI service as 「LABEL (host)」,
+ * 직접 방문·알 수 없음 for none, else the host.
+ */
 export function referrerLabel(host) {
   if (host === '') return '직접 방문·알 수 없음';
   const k = host.toLowerCase();
-  return Object.hasOwn(REFERRER_LABELS, k) ? REFERRER_LABELS[k] : host;
+  if (Object.hasOwn(REFERRER_LABELS, k)) return REFERRER_LABELS[k];
+  const ai = aiServiceOf(k);
+  return ai ? `${ai} (${host})` : host;
+}
+
+/**
+ * The AI-service visits among all referrer rows (REQ1015 D-A2), before the top-10 cut: per service (visits desc, zero
+ * rows left out) and the total. partial: the referrer list reached CHUNK_TOP rows, so AI hosts ranked lower are missed.
+ * @param {Group[]} referrers
+ */
+export function aiReferrers(referrers) {
+  const by = new Map();
+  for (const g of referrers) {
+    const label = aiServiceOf(g.key);
+    if (!label) continue;
+    const row = by.get(label) ?? { label, visits: 0, pageViews: 0 };
+    row.visits += g.visits;
+    row.pageViews += g.pageViews;
+    by.set(label, row);
+  }
+  const rows = [...by.values()].filter((r) => r.visits > 0 || r.pageViews > 0).sort(byVisits);
+  return { total: sum(rows), rows, partial: referrers.length >= CHUNK_TOP };
 }
 
 /** True when the device rows' visits differ from the total by more than MISMATCH_SHARE of it (REQ1014-A D9). */
@@ -461,6 +507,7 @@ export function shapeVisits(raw, days, now) {
       .sort(byVisits)
       .slice(0, TOP_N)
       .map((g) => ({ label: referrerLabel(g.key), visits: g.visits, pageViews: g.pageViews })),
+    ai: aiReferrers(cur.referrers),
     countriesKo: countries(cur.countriesKo),
     countriesEn: countries(cur.countriesEn),
     devices: devices.map((g) => ({ label: deviceLabel(g.key), visits: g.visits })),

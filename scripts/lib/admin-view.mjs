@@ -109,6 +109,12 @@ ${tbody}
 </section>`;
 }
 
+/** REQ1015 D-A3: visits from AI answer services (shapeVisits.ai), a 합계 row last; the partial note when the list was cut. */
+function aiSection(ai, n) {
+  const rows = ai?.rows?.length ? [...ai.rows.map((r) => [esc(r.label), n(r.visits), n(r.pageViews)]), ['합계', n(ai.total.visits), n(ai.total.pageViews)]] : [];
+  return section('s-ai', 'AI 서비스에서 들어옴', ['서비스', '방문', '페이지뷰'], rows, [1, 2], ai?.partial ? AI_PARTIAL_NOTE : '');
+}
+
 function kpiCard(label, value, d, cls = '') {
   const sr = d.sr ? `<span class="sr">${esc(d.sr)}</span>` : '';
   const shown = d.sr ? `<span aria-hidden="true">${esc(d.text)}</span>` : esc(d.text);
@@ -207,6 +213,7 @@ const APPROX_TOPS = '7일씩 나눠 받은 순위를 더한 값이라 순위는 
 export const MISMATCH_NOTE = '표마다 Cloudflare가 따로 세어(표본) 합이 방문 수와 다를 수 있어요.';
 export const PAGES_MISSING = 'Cloudflare가 이 기간의 페이지 목록을 보내지 않았어요. 7일 보기에서 확인해 주세요.';
 export const EN_COUNTRIES_NOTE = '영어판은 2026년 10월 13일에 열었어요.';
+export const AI_PARTIAL_NOTE = '들어온 곳 상위 50곳 안에서 센 값입니다.';
 
 /**
  * The ratio card's change in its own unit (회 per 100 visits, one decimal): { text, sr } like delta().
@@ -261,6 +268,7 @@ ${visitsKpis(visits, kpi, prevUsage, days)}
 ${chart}
 ${pagesSection(visits)}
 ${section('s-referrers', '들어온 곳', ['들어온 곳', '방문', '페이지뷰'], visits.referrers.map((r) => [esc(r.label), n(r.visits), n(r.pageViews)]), [1, 2])}
+${aiSection(visits.ai, n)}
 ${section('s-countries', '나라 (한국어 페이지)', ['나라', '방문'], visits.countriesKo.map((r) => [esc(r.label), n(r.visits)]), [1])}
 ${section('s-countries-en', '나라 (영어 페이지 /en/)', ['나라', '방문'], visits.countriesEn.map((r) => [esc(r.label), n(r.visits)]), [1], EN_COUNTRIES_NOTE)}
 ${section('s-devices', '기기', ['기기', '방문'], visits.devices.map((r) => [esc(r.label), n(r.visits)]), [1])}${visits.approxTops ? `\n<p class="muted ratio-note">${esc(APPROX_TOPS)}</p>` : ''}${visits.mismatch ? `\n<p class="muted ratio-note">${esc(MISMATCH_NOTE)}</p>` : ''}${diagDetails(visits.diag)}

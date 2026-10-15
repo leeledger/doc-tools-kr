@@ -97,7 +97,7 @@ export async function collect({ env, now, fetchImpl = fetch, wait }) {
       const siteTag = siteTagOf(env.RUM_SITE_TAG);
       if (!siteTag) throw new Error('RUM_SITE_TAG 형식이 올바르지 않습니다');
       const v = shapeVisits(await fetchVisits({ accountId: env.CF_ACCOUNT_ID, token: env.AE_API_TOKEN, siteTag, days: 7, now, compare: false, fetch: fetchImpl }), 7, now);
-      visits = { ...v.totals, estimated: v.estimated };
+      visits = { ...v.totals, estimated: v.estimated, ai: v.ai };
     } catch (err) {
       notes.push(`방문 통계 오류: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -112,12 +112,20 @@ export async function collect({ env, now, fetchImpl = fetch, wait }) {
   return { gsc, cf, usage, campaigns, visits, notes, failed, sitemapCount };
 }
 
+/** REQ1015 D-A3: the weekly AI-referrer line, per service in the order shapeVisits gives (visits desc). */
+export function aiLine(ai) {
+  const n = (x) => Math.round(x).toLocaleString('en-US');
+  const per = ai.rows.map((r) => `${r.label} ${n(r.visits)}`).join(', ');
+  return `- AI 서비스에서 들어옴 7일: ${n(ai.total.visits)}회${per ? ` (${per})` : ''}`;
+}
+
 export function summaryBody(data, file, failed) {
   const { gsc, cf, usage, visits = null, r1, notes } = data;
   const lines = [`${data.week} 성장 리포트: \`${file}\``, ''];
   if (gsc) lines.push(`- 서치콘솔 7일: 클릭 ${gsc.last7.clicks}, 노출 ${gsc.last7.impressions}, CTR ${(gsc.last7.ctr * 100).toFixed(1)}%, 평균 순위 ${gsc.last7.position.toFixed(1)}`, `- 서치콘솔 28일: 클릭 ${gsc.last28.clicks}, 노출 ${gsc.last28.impressions}`);
   if (cf) lines.push(`- Cloudflare 7일: 요청 ${cf.last7.requests.toLocaleString('en-US')}, 페이지뷰 ${cf.last7.pageViews.toLocaleString('en-US')}, 대역폭 ${(cf.last7.bytes / 1e6).toFixed(1)} MB`);
   if (visits) lines.push(`- 방문 7일: ${Math.round(visits.visits).toLocaleString('en-US')}회, 페이지뷰 ${Math.round(visits.pageViews).toLocaleString('en-US')} (Web Analytics${visits.estimated ? ', 추정' : ''})`);
+  if (visits?.ai) lines.push(aiLine(visits.ai));
   if (usage) lines.push(`- 도구 사용 7일: 성공 ${Math.round(usage.totals.success).toLocaleString('en-US')}회, 성공률 ${usage.totals.rate}`);
   lines.push(`- R1: 페이지 ${r1.sitemapCount}개(${r1.pagesOk ? '충족' : '미충족'}), 주 100클릭 연속 ${r1.streak}주(${r1.clicksOk ? '충족' : '미충족'})`);
   if (notes.length) lines.push('', ...notes.map((x) => `> ${x}`));
