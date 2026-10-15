@@ -14,6 +14,7 @@ export default {
   "hwp-on-phone": "휴대폰·아이폰에서 HWP 열기",
   "hwp-to-pdf": "HWP PDF 변환, 한글 파일을 PDF로 바꾸는 법",
   "hwpx-to-hwp": "HWPX 파일 HWP로 바꾸는 법 (한글 없이)",
+  "id-card-copy": "신분증 사본 만드는 법·가리는 법",
   "id-card-photo": "주민등록증 사진 크기·규격 (신규·재발급)",
   "id-photo-kb": "증명사진 용량 줄이기 (200·350·500KB 맞추기)",
   "id-photo-size": "증명사진 사이즈 규격 정리 (여권·공무원·큐넷·이력서)",

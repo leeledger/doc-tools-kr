@@ -18,6 +18,8 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   'pdf-split': ['pdf-split'],
   'pdf-sign': ['pdf-sign'],
   'hwpx-to-hwp': ['hwpx-to-hwp'],
+  // TOOLS1015 I2: 신분증 사본 만들기 pins its guide (slug id-card-copy).
+  'id-copy': ['id-card-copy'],
   // Part B: shown only in builds with PUBLIC_BG_REMOVE on (the guide requires bg-remove; the tool page exists only then).
   'remove-background': ['remove-background'],
 };
