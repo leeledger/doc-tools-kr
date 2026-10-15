@@ -21,6 +21,7 @@ import {
   placeValue,
   reshapeBox,
   resizeBox,
+  resizeFree,
   showsOn,
   signName,
   stampsFor,
@@ -141,6 +142,19 @@ describe('box rules', () => {
       expect(r).toEqual({ x: 0, y: 0, w: MIN_EDGE, h: MIN_EDGE });
       expect(clampBox(bad, 600, 800)).toEqual({ x: 0, y: 0, w: MIN_EDGE, h: MIN_EDGE });
     }
+  });
+
+  it('resizeFree (TOOLS1015 E0, the 흰 상자): width and height apart, top-left fixed, MIN_EDGE each side, inside the page', () => {
+    const b = { x: 100, y: 100, w: 50, h: 50 };
+    expect(resizeFree(b, 200, 20, 600, 800)).toEqual({ x: 100, y: 100, w: 200, h: 20 });
+    expect(resizeFree(b, 1, -40, 600, 800)).toEqual({ x: 100, y: 100, w: MIN_EDGE, h: MIN_EDGE });
+    expect(resizeFree(b, Number.NaN, 30, 600, 800)).toEqual({ x: 100, y: 100, w: MIN_EDGE, h: 30 });
+    // Growing past the lower right: as large as the page at most, moved back inside.
+    expect(resizeFree(b, 900, 300, 600, 800)).toEqual({ x: 0, y: 100, w: 600, h: 300 });
+    expect(resizeFree({ x: 500, y: 700, w: 50, h: 50 }, 300, 300, 600, 800)).toEqual({ x: 300, y: 500, w: 300, h: 300 });
+    // clampBox leaves a resized box as it is (the stage clamps every stored box again).
+    const r = resizeFree(b, 240, 13, 600, 800);
+    expect(clampBox(r, 600, 800)).toEqual(r);
   });
 
   it('mixed page sizes: the shared box is clamped per page at save, and stays as placed for the large page', async () => {

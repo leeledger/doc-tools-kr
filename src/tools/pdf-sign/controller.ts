@@ -11,6 +11,7 @@ import { decodeImage } from '../../lib/image/decode';
 import { ERRORS, photoErrorCode } from '../../lib/image/messages';
 import { HEAD_BYTES, TAIL_BYTES, sniffImage, type ImageFormat } from '../../lib/image/sniff';
 import { isOutOfMemory } from '../../lib/pdf/errors';
+import { createPageStage } from '../../lib/pdf/page-stage';
 import { announce, clearAlert } from '../../lib/ui/announce';
 import { detectDevice } from '../../lib/ui/device';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
@@ -35,7 +36,6 @@ import {
   signName,
   stampsFor,
   startBox,
-  type Box,
   type PageInfo,
   type Placement,
   type Where,
@@ -66,11 +66,6 @@ const MULTI_NOTE = 'PDF 파일은 한 번에 하나만 쓸 수 있어 첫 번째
 const SIGNATURE_NOTE = '전자서명이 들어 있는 문서입니다. 그림을 넣어 새로 저장하면 전자서명이 더 이상 유효하지 않습니다. 발급받은 증명서는 원본을 제출하세요.';
 const ARRIVED_NOTE = '전자서명·도장 이미지 만들기에서 만든 그림을 가져왔습니다. 이제 PDF 파일을 고르세요.';
 const IMAGE_FORMATS: readonly ImageFormat[] = ['png', 'jpeg', 'webp', 'heic'];
-/** Arrow keys move the picture this many points (Shift: SHIFT_STEP). */
-const STEP = 1;
-const SHIFT_STEP = 10;
-/** The page preview is at most this tall, as a share of the window height. */
-const MAX_STAGE_HEIGHT = 0.8;
 const MIN_SIZE_PCT = 3;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -223,21 +218,55 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
   let imageRun = 0;
 
   let placements: Placement[] = [];
-  let selected: number | null = null;
   let nextId = 1;
-  /** 0-based page shown in the editor. */
-  let cur = 0;
-  /** Page geometry by page (pdf.js viewport at scale 1); dropped with the document. */
-  const infos = new Map<number, PageInfo>();
-  /** CSS pixels per point of the page shown. */
-  let scale = 1;
-  let renderId = 0;
-  let pageCanvas: HTMLCanvasElement | null = null;
 
   const status = (msg: string): void => announce('status', msg, root);
   const usageFail = (c: string, p: UsagePhase): void => track({ e: 'fail', t: 'pdf-sign', c, p });
-  const sel = (): Placement | undefined => placements.find((p) => p.id === selected);
-  const curInfo = (): PageInfo | undefined => infos.get(cur);
+  const byId = (id: number): Placement | undefined => placements.find((p) => p.id === id);
+  // The page preview and the picture boxes on it (src/lib/pdf/page-stage.ts).
+  const pageStage = createPageStage({
+    el: stage,
+    cls: 'sign',
+    hintId: 'sg-stage-hint',
+    hooks: {
+      items: (index, info) => {
+        if (!image) return [];
+        const url = image.url;
+        let k = 0;
+        return placements
+          .filter((p) => showsOn(p, index, pageCount))
+          .map((p) => ({
+            id: p.id,
+            // Display only: a smaller page shows the shared box clamped, without changing it for the other pages.
+            box: clampBox(p.box, info.width, info.height),
+            label: `그림 ${++k}, ${formatPages(index + 1)}`,
+            resizeMode: 'aspect' as const,
+            render: (b: HTMLButtonElement) => {
+              const img = el('img');
+              img.src = url;
+              img.alt = '';
+              img.draggable = false;
+              b.append(img);
+            },
+          }));
+      },
+      boxOf: (id) => byId(id)?.box,
+      store: (id, box) => {
+        const p = byId(id);
+        if (p) p.box = box;
+      },
+      editable: () => state === 'ready',
+      selected: () => updateControls(),
+      moved: (_id, resized) => {
+        updateControls();
+        status(resized ? `그림 크기를 ${sizeOut.value}로 바꿨습니다.` : '그림을 옮겼습니다.');
+      },
+      remove: () => removeSelected(),
+      changed: () => updateUi(),
+    },
+  });
+  const sel = (): Placement | undefined => (pageStage.selection === null ? undefined : byId(pageStage.selection));
+  const curInfo = (): PageInfo | undefined => pageStage.current();
 
   const showNotice = (msg: string | null): void => {
     notice.hidden = !msg;
@@ -303,10 +332,10 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     const stamps = planned.reduce((a, pages) => a + pages.length, 0);
     hint.textContent = why ?? `${formatPages(new Set(planned.flat()).size)}에 그림 ${stamps.toLocaleString('ko-KR')}개를 넣어 저장합니다.`;
     addBtn.disabled = !image;
-    addBtn.textContent = placements.some((p) => showsOn(p, cur, pageCount)) ? '그림 하나 더 넣기' : '이 쪽에 그림 넣기';
-    prevBtn.disabled = cur <= 0;
-    nextBtn.disabled = cur >= pageCount - 1;
-    if (document.activeElement !== gotoInput) gotoInput.value = String(cur + 1);
+    addBtn.textContent = placements.some((p) => showsOn(p, pageStage.page, pageCount)) ? '그림 하나 더 넣기' : '이 쪽에 그림 넣기';
+    prevBtn.disabled = pageStage.page <= 0;
+    nextBtn.disabled = pageStage.page >= pageCount - 1;
+    if (document.activeElement !== gotoInput) gotoInput.value = String(pageStage.page + 1);
     pageCountEl.textContent = ` / ${formatPages(pageCount)}`;
     gotoInput.setAttribute('aria-label', `보는 쪽, 전체 ${formatPages(pageCount)}`);
     updateControls();
@@ -331,203 +360,29 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
 
   // ---------- the page preview ----------
 
-  async function pageInfo(index: number): Promise<PageInfo> {
-    const known = infos.get(index);
-    if (known) return known;
-    const doc = opened?.doc;
-    if (!doc) throw new Error('no document');
-    const page = await doc.getPage(index + 1);
-    const vp = page.getViewport({ scale: 1 });
-    const info: PageInfo = { width: vp.width, height: vp.height, rotate: page.rotate, toPdf: (x, y) => vp.convertToPdfPoint(x, y) };
-    infos.set(index, info);
-    return info;
-  }
-
-  async function showPage(index: number): Promise<void> {
-    const doc = opened?.doc;
-    if (!doc) return;
-    cur = Math.max(0, Math.min(pageCount - 1, index));
-    const id = ++renderId;
-    updateUi();
-    try {
-      const info = await pageInfo(cur);
-      const page = await doc.getPage(cur + 1);
-      if (id !== renderId) return;
-      const avail = stage.clientWidth || stage.parentElement?.clientWidth || 320;
-      const maxH = Math.max(320, window.innerHeight * MAX_STAGE_HEIGHT);
-      scale = Math.min(avail / info.width, maxH / info.height);
-      const cssW = Math.round(info.width * scale);
-      const cssH = Math.round(info.height * scale);
-      const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
-      const viewport = page.getViewport({ scale: scale * dpr });
-      const canvas = el('canvas', 'sign-page');
-      canvas.width = Math.round(viewport.width);
-      canvas.height = Math.round(viewport.height);
-      canvas.style.width = `${cssW}px`;
-      canvas.style.height = `${cssH}px`;
-      canvas.setAttribute('role', 'img');
-      canvas.setAttribute('aria-label', `${formatPages(cur + 1)} 미리보기`);
-      await page.render({ canvas, viewport }).promise;
-      page.cleanup();
-      if (id !== renderId) {
-        canvas.width = 0;
-        return;
-      }
-      if (pageCanvas) pageCanvas.width = 0;
-      pageCanvas = canvas;
-      stage.style.width = `${cssW}px`;
-      stage.style.height = `${cssH}px`;
-      drawBoxes();
-      updateUi();
-    } catch {
-      // A page that cannot be drawn still takes placements by its size; the stage stays empty.
-      if (id === renderId) drawBoxes();
-    }
-  }
-
-  function boxStyle(b: HTMLElement, box: Box): void {
-    b.style.left = `${box.x * scale}px`;
-    b.style.top = `${box.y * scale}px`;
-    b.style.width = `${box.w * scale}px`;
-    b.style.height = `${box.h * scale}px`;
-  }
-
-  function drawBoxes(focusId?: number): void {
-    // Replacing the boxes keeps keyboard focus on the same picture.
-    const active = document.activeElement as HTMLElement | null;
-    const keep = focusId ?? (active && stage.contains(active) && active.dataset.id ? Number(active.dataset.id) : undefined);
-    const info = curInfo();
-    const items: HTMLElement[] = pageCanvas ? [pageCanvas] : [];
-    if (info && image) {
-      let k = 0;
-      for (const p of placements) {
-        if (!showsOn(p, cur, pageCount)) continue;
-        k++;
-        // Display only: a smaller page shows the shared box clamped, without changing it for the other pages.
-        items.push(boxButton(p, k, clampBox(p.box, info.width, info.height)));
-      }
-    }
-    stage.replaceChildren(...items);
-    if (keep !== undefined) stage.querySelector<HTMLElement>(`[data-id="${keep}"]`)?.focus({ preventScroll: focusId === undefined });
-  }
-
-  function boxButton(p: Placement, k: number, shown: Box): HTMLButtonElement {
-    const b = el('button', p.id === selected ? 'sign-box selected' : 'sign-box');
-    b.type = 'button';
-    b.dataset.id = String(p.id);
-    b.setAttribute('aria-label', `그림 ${k}, ${formatPages(cur + 1)}`);
-    b.setAttribute('aria-pressed', String(p.id === selected));
-    b.setAttribute('aria-describedby', 'sg-stage-hint');
-    const img = el('img');
-    img.src = image!.url;
-    img.alt = '';
-    img.draggable = false;
-    const handle = el('span', 'sign-handle');
-    handle.setAttribute('aria-hidden', 'true');
-    b.append(img, handle);
-    boxStyle(b, shown);
-    b.addEventListener('pointerdown', (ev) => beginDrag(ev, b, p, ev.target === handle));
-    b.addEventListener('keydown', (ev) => onBoxKey(ev, p));
-    b.addEventListener('click', () => choose(p.id));
-    return b;
-  }
-
-  function choose(id: number | null): void {
-    if (selected === id) return;
-    selected = id;
-    for (const b of stage.querySelectorAll<HTMLElement>('.sign-box')) {
-      const on = b.dataset.id === String(id);
-      b.classList.toggle('selected', on);
-      b.setAttribute('aria-pressed', String(on));
-    }
-    updateControls();
-  }
-
-  /** Writes a placement's new box (kept inside the page shown) and moves its element. */
-  function setBox(p: Placement, box: Box): void {
-    const info = curInfo();
-    if (!info) return;
-    p.box = clampBox(box, info.width, info.height);
-    const b = stage.querySelector<HTMLElement>(`.sign-box[data-id="${p.id}"]`);
-    if (b) boxStyle(b, p.box);
-  }
-
-  function beginDrag(ev: PointerEvent, b: HTMLElement, p: Placement, resizing: boolean): void {
-    const info = curInfo();
-    if (state !== 'ready' || ev.button > 0 || !info) return;
-    ev.preventDefault();
-    choose(p.id);
-    b.focus({ preventScroll: true });
-    // From the box as shown on this page (a shared box may be clamped here).
-    const start = clampBox(p.box, info.width, info.height);
-    const x0 = ev.clientX;
-    const y0 = ev.clientY;
-    let moved = false;
-    try {
-      b.setPointerCapture(ev.pointerId);
-    } catch {
-      // Capture is a nicety; moves still arrive while the pointer stays over the box.
-    }
-    const onMove = (e: PointerEvent): void => {
-      const dx = (e.clientX - x0) / scale;
-      const dy = (e.clientY - y0) / scale;
-      if (!moved && Math.hypot(dx, dy) * scale < 2) return;
-      moved = true;
-      setBox(p, resizing ? resizeBox(start, start.w + dx, info.width, info.height) : moveBox(start, dx, dy, info.width, info.height));
-    };
-    const onEnd = (): void => {
-      b.removeEventListener('pointermove', onMove);
-      b.removeEventListener('pointerup', onEnd);
-      b.removeEventListener('pointercancel', onEnd);
-      if (!moved) return;
-      updateControls();
-      status(resizing ? `그림 크기를 ${sizeOut.value}로 바꿨습니다.` : '그림을 옮겼습니다.');
-    };
-    b.addEventListener('pointermove', onMove);
-    b.addEventListener('pointerup', onEnd);
-    b.addEventListener('pointercancel', onEnd);
-  }
-
-  function onBoxKey(ev: KeyboardEvent, p: Placement): void {
-    const info = curInfo();
-    if (state !== 'ready' || !info) return;
-    const step = ev.shiftKey ? SHIFT_STEP : STEP;
-    const d: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
-    const move = d[ev.key];
-    if (move) {
-      ev.preventDefault();
-      choose(p.id);
-      // From the box as shown on this page (as the drag), so the first press moves visibly on a smaller page.
-      setBox(p, moveBox(clampBox(p.box, info.width, info.height), move[0], move[1], info.width, info.height));
-      return;
-    }
-    if (ev.key === 'Delete' || ev.key === 'Backspace') {
-      ev.preventDefault();
-      choose(p.id);
-      removeSelected();
-    }
-  }
+  const showPage = (index: number): Promise<void> => pageStage.show(index);
+  const drawBoxes = (focusId?: number): void => pageStage.draw(focusId);
 
   function addPlacement(): void {
     const info = curInfo();
     if (state !== 'ready' || !image || !info) return;
     let box = startBox(image.width, image.height, info.width, info.height);
     // A second picture on the same page starts a little up and left of the first, not on top of it.
-    const here = placements.filter((p) => showsOn(p, cur, pageCount)).length;
+    const here = placements.filter((p) => showsOn(p, pageStage.page, pageCount)).length;
     if (here) box = moveBox(box, -24 * here, -24 * here, info.width, info.height);
-    const p: Placement = { id: nextId++, box, where: 'one', page: cur, range: '' };
+    const p: Placement = { id: nextId++, box, where: 'one', page: pageStage.page, range: '' };
     placements.push(p);
-    selected = p.id;
+    pageStage.setSelection(p.id);
     drawBoxes(p.id);
     updateUi();
-    status(`${formatPages(cur + 1)} 오른쪽 아래에 그림을 놓았습니다. 끌거나 화살표 키로 옮기세요.`);
+    status(`${formatPages(pageStage.page + 1)} 오른쪽 아래에 그림을 놓았습니다. 끌거나 화살표 키로 옮기세요.`);
   }
 
   function removeSelected(): void {
     const p = sel();
     if (!p || state !== 'ready') return;
     placements = placements.filter((x) => x !== p);
-    selected = null;
+    pageStage.setSelection(null);
     drawBoxes();
     updateUi();
     addBtn.focus();
@@ -539,8 +394,8 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     if (!p) return;
     p.where = w;
     // The picture stays on the page being looked at (an unfinished range shows it there too).
-    p.page = cur;
-    if (w === 'range' && !p.range.trim()) p.range = String(cur + 1);
+    p.page = pageStage.page;
+    if (w === 'range' && !p.range.trim()) p.range = String(pageStage.page + 1);
     drawBoxes();
     updateUi();
     if (w === 'range') {
@@ -613,11 +468,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
   // ---------- opening ----------
 
   async function closeDoc(): Promise<void> {
-    renderId++;
-    infos.clear();
-    if (pageCanvas) pageCanvas.width = 0;
-    pageCanvas = null;
-    stage.replaceChildren();
+    pageStage.clear();
     const o = opened;
     opened = null;
     await o?.close().catch(() => undefined);
@@ -631,8 +482,6 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     encrypted = 'none';
     pageCount = 0;
     placements = [];
-    selected = null;
-    cur = 0;
     multiNote = false;
     pwInput.value = '';
     pwInput.type = 'password';
@@ -719,7 +568,8 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
       pwError.textContent = '';
       infoEl.textContent = `${formatPages(pageCount)} · ${formatSize(file.size)}`;
       setState('ready');
-      await pageInfo(0).catch(() => undefined);
+      pageStage.open(o.doc, pageCount);
+      await pageStage.info(0).catch(() => undefined);
       if (id !== runId) return;
       if (image && !placements.length) addPlacement();
       await showPage(0);
@@ -789,7 +639,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     status('서명을 넣어 저장하는 중입니다.');
     cancelBtn.focus();
     try {
-      const plan = await stampsFor(placements, pageCount, pageInfo);
+      const plan = await stampsFor(placements, pageCount, pageStage.info);
       if (id !== runId) return;
       if (!plan.ok) throw new Error('range');
       // pdf-lib takes the buffer it is given (transferred), so it gets a copy.
@@ -874,7 +724,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     if (state !== 'done') return;
     revokeBlob();
     setState('ready');
-    void showPage(cur);
+    void showPage(pageStage.page);
     runBtn.focus();
   }
 
@@ -931,12 +781,12 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     imageInput.value = '';
     if (f) void useImage(f, f.name, false);
   });
-  prevBtn.addEventListener('click', () => void showPage(cur - 1));
-  nextBtn.addEventListener('click', () => void showPage(cur + 1));
+  prevBtn.addEventListener('click', () => void showPage(pageStage.page - 1));
+  nextBtn.addEventListener('click', () => void showPage(pageStage.page + 1));
   const goto = (): void => {
     const n = Number.parseInt(gotoInput.value.replace(/[^\d]/g, ''), 10);
     if (Number.isFinite(n)) void showPage(n - 1);
-    else gotoInput.value = String(cur + 1);
+    else gotoInput.value = String(pageStage.page + 1);
   };
   gotoInput.addEventListener('change', goto);
   gotoInput.addEventListener('keydown', (ev) => {
@@ -952,7 +802,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     const info = curInfo();
     if (!p || !info) return;
     const pct = Math.max(MIN_SIZE_PCT, Number(sizeInput.value) || MIN_SIZE_PCT);
-    setBox(p, resizeBox(clampBox(p.box, info.width, info.height), (pct / 100) * info.width, info.width, info.height));
+    pageStage.place(p.id, resizeBox(clampBox(p.box, info.width, info.height), (pct / 100) * info.width, info.width, info.height));
     const now = Math.round((p.box.w / info.width) * 100);
     sizeOut.value = `쪽 너비의 ${now}%`;
     sizeInput.setAttribute('aria-valuetext', sizeOut.value);
@@ -974,7 +824,7 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      if (state === 'ready') void showPage(cur);
+      if (state === 'ready') void showPage(pageStage.page);
     }, 150);
   });
   window.addEventListener('pagehide', () => {

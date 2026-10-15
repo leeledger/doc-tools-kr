@@ -97,6 +97,16 @@ export function resizeBox(box: Box, w: number, width: number, height: number): B
   return clampBox({ x: box.x, y: box.y, w, h }, width, height);
 }
 
+/**
+ * The box `w` × `h` points (each side on its own, at least MIN_EDGE and at most the page; top-left corner fixed), kept
+ * inside the page (PDF 글자 넣기·편집 흰 상자, TOOLS1015 E0).
+ */
+export function resizeFree(box: Box, w: number, h: number, width: number, height: number): Box {
+  const fw = Math.min(edge(w), Math.max(MIN_EDGE, width));
+  const fh = Math.min(edge(h), Math.max(MIN_EDGE, height));
+  return clampBox({ x: box.x, y: box.y, w: fw, h: fh }, width, height);
+}
+
 /** The box for a new picture aspect (그림 바꾸기): same width and top-left corner (each page clamps it when shown or saved). */
 export function reshapeBox(box: Box, imgW: number, imgH: number): Box {
   const aspect = imgW > 0 && imgH > 0 ? imgH / imgW : 1;
