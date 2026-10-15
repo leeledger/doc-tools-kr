@@ -4,6 +4,10 @@ Ready for Review: YES
 Branch: tools-1015. Commits: d10488c (E0 refactor only), 75f9bcf (E1 tool), 644ff5a (E2 option, default off). Not pushed.
 Status: DONE (BUILD-LOG "TOOLS1015 E0", "E1", "E2" have gates, probes and decisions).
 
+## Round 4 (after the "round 3" feedback) — one commit on top of db870c9; BUILD-LOG "TOOLS1015 C3 round 4"
+- src/lib/pdf/edit.ts flattenPdf + xobjectRefs — "kept" set (every remaining page's /Contents refs, /Resources /XObject refs recursively, annotations + /AP); doomed refs inside it are left to the sweep, the rest deleted outright; the old page's /XObject refs (recursively) join the doomed list, closing the MCR /Stm gap.
+- tests/unit/pdf-edit.test.ts 「round 4」 (a) shared q / Q streams with an open flip transform on page 2: page-2 /Contents all resolve, text strings and transforms unchanged; (b) two pages sharing one content stream; (c) Form XObject reached by MCR /Stm gone. All three fail on db870c9.
+
 ## Round 3 (after the "round 2" feedback) — one commit on top of 0242667; BUILD-LOG "TOOLS1015 C3 round 3"
 - src/lib/pdf/edit.ts flattenPdf / dropFields / appearanceRefs / contentRefs — Must Fix 1: replaced pages' /Annots (+ /AP streams), pruned fields and emptied parents (+ /AP), old /Contents deleted outright; pruned/gone refs out of /AcroForm /CO; then the unreachable sweep.
 - tests/unit/pdf-edit.test.ts 「round 3」 — plain, /CO, tagged OBJR, both; SECRETWORD, FIELDSECRET (value + /AP) and 비밀값 (UTF-16BE) gone, kept field stays; /CO, tagged and both fail on 0242667.

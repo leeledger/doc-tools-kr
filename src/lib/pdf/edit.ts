@@ -163,7 +163,7 @@ export async function flattenPdf(input: Uint8Array, pages: readonly FlatPageIn[]
         gone.add(r.toString());
         doomed.push(r, ...appearanceRefs(doc, r));
       }
-      doomed.push(...contentRefs(doc, node.get(PDFName.of('Contents'))));
+      doomed.push(...contentRefs(doc, node.get(PDFName.of('Contents'))), ...xobjectRefs(doc, node.Resources()));
     }
     for (const p of pages) {
       const image = await doc.embedJpg(p.jpeg);
@@ -172,11 +172,23 @@ export async function flattenPdf(input: Uint8Array, pages: readonly FlatPageIn[]
       doc.removePage(p.index + 1);
     }
     doomed.push(...dropFields(doc, gone));
+    // What the pages that stay use is never deleted outright, even when a replaced page shared it (pdf-lib's q / Q wrapper
+    // streams, a content stream or a Form XObject two pages point at): those go only if the sweep finds them unreachable.
+    const kept = new Set<string>();
+    for (const page of doc.getPages()) {
+      const node = page.node;
+      for (const r of [...contentRefs(doc, node.get(PDFName.of('Contents'))), ...xobjectRefs(doc, node.Resources())]) kept.add(r.toString());
+      const annots = node.Annots();
+      for (let i = 0; i < (annots?.size() ?? 0); i++) {
+        const r = annots!.get(i);
+        if (r instanceof PDFRef) for (const k of [r, ...appearanceRefs(doc, r)]) kept.add(k.toString());
+      }
+    }
     // removePage deletes only the page dictionary. Whatever else still points at the old page's annotations, fields or
     // contents (the struct tree's OBJR, /AcroForm /CO, another annotation's /Popup or /IRT) would keep them, and their
     // typed values, in the file: they are deleted outright (a reference to a missing object reads as null, PDF 32000
     // 7.3.10), then everything no longer reachable from the trailer is dropped.
-    for (const r of doomed) doc.context.delete(r);
+    for (const r of doomed) if (!kept.has(r.toString())) doc.context.delete(r);
     doc.setProducer(PRODUCER);
     dropUnreachable(doc);
     const bytes = await doc.save({ useObjectStreams: true, updateFieldAppearances: false }).catch((err: unknown) => {
@@ -238,6 +250,20 @@ function appearanceRefs(doc: PDFDocument, ref: PDFRef): PDFRef[] {
     if (v instanceof PDFRef) out.push(v);
     const sub = doc.context.lookup(v);
     if (sub instanceof PDFDict && !(sub instanceof PDFStream)) for (const [, w] of sub.entries()) if (w instanceof PDFRef) out.push(w);
+  }
+  return out;
+}
+
+/** The /XObject refs of a /Resources dictionary, and of the Form XObjects' own /Resources, all the way down. */
+function xobjectRefs(doc: PDFDocument, resources: PDFDict | undefined, out: PDFRef[] = [], seen = new Set<string>()): PDFRef[] {
+  const xobjects = resources?.lookupMaybe(PDFName.of('XObject'), PDFDict);
+  if (!xobjects) return out;
+  for (const [, v] of xobjects.entries()) {
+    if (!(v instanceof PDFRef) || seen.has(v.toString())) continue;
+    seen.add(v.toString());
+    out.push(v);
+    const x = doc.context.lookup(v);
+    if (x instanceof PDFStream) xobjectRefs(doc, x.dict.lookupMaybe(PDFName.of('Resources'), PDFDict), out, seen);
   }
   return out;
 }

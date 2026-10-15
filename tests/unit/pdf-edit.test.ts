@@ -4,7 +4,7 @@
 // text on the rendered page but the old text stays in the file.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, StandardFonts, degrees } from '@cantoo/pdf-lib';
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFStream, StandardFonts, degrees } from '@cantoo/pdf-lib';
 import fontkit from '@cantoo/fontkit';
 import { createCanvas } from '@napi-rs/canvas';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -404,5 +404,109 @@ describe('「그림으로 바꿔 저장」 round 3: nothing that still points at
     expect(hasSecret(`<${be.toString('hex')}>`, '비밀값')).toBe(true);
     expect(hasSecret('<FEFF0046004900450040>', 'FIE')).toBe(true);
     expect(hasSecret('nothing here', '비밀값')).toBe(false);
+  });
+});
+
+describe('「그림으로 바꿔 저장」 round 4: what the pages that stay use is never deleted', () => {
+  const blank = (): Uint8Array => {
+    const c = createCanvas(600, 800);
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, 600, 800);
+    return new Uint8Array(c.toBuffer('image/jpeg'));
+  };
+
+  /** Text items of a page as pdf.js reads them: string and transform (position), in order. */
+  const textAt = (bytes: Uint8Array, pageNo: number) =>
+    withPdf(bytes, async (pdf) => {
+      const tc = await (await pdf.getPage(pageNo)).getTextContent();
+      return tc.items.flatMap((it) => ('str' in it && it.str.trim() ? [{ str: it.str, at: it.transform.map((v: number) => Math.round(v * 100) / 100) }] : []));
+    });
+
+  /** Every ref in page `index`'s /Contents resolves to a stream. */
+  const contentsResolve = async (bytes: Uint8Array, index: number): Promise<boolean> => {
+    const doc = await PDFDocument.load(bytes, { updateMetadata: false });
+    const c = doc.getPage(index).node.get(PDFName.of('Contents'));
+    const arr = doc.context.lookup(c);
+    const refs = arr instanceof PDFArray ? arr.asArray() : [c];
+    return refs.length > 0 && refs.every((r) => doc.context.lookup(r) instanceof PDFStream);
+  };
+
+  it.skipIf(!HAVE_FACES)('(a) E1 text on pages 1 and 2 (pdf-lib shares its q / Q streams), flatten page 1: page 2 keeps every content stream and its text stays where it was', async () => {
+    const src = await PDFDocument.create();
+    const font = await src.embedFont(StandardFonts.Helvetica);
+    src.addPage([600, 800]).drawText('OLDTEXT', { x: 100, y: 700, size: 20, font });
+    const two = src.addPage([600, 800]);
+    two.drawText('PAGETWO', { x: 100, y: 500, size: 20, font });
+    // Content that leaves a transform open (a flip, no Q): without the q / Q wrapper the inserted text would move.
+    two.node.addContentStream(src.context.register(src.context.flateStream('1 0 0 -1 0 800 cm')));
+    const input = await src.save();
+    const { info } = await viewOf(input);
+    const line = (text: string, y: number) => {
+      const o = textOrigin({ x: 60, y, w: 200, h: 20 }, info, ASCENT, 14);
+      return { text, x: o.x, y: o.y };
+    };
+    const edited = await editPdf(
+      input,
+      undefined,
+      [
+        { kind: 'white', page: 0, ...whiteRect({ x: 95, y: 80, w: 100, h: 26 }, info) },
+        { kind: 'text', page: 0, lines: [line('첫쪽', 300)], size: 14, rgb: RGB.black, rotate: 0 },
+        { kind: 'text', page: 1, lines: [line('둘째쪽', 200)], size: 14, rgb: RGB.black, rotate: 0 },
+      ],
+      diskFaces(),
+      FONT_CHAIN,
+    );
+    const before = await textAt(edited.bytes, 2);
+    expect(before.map((t) => t.str).join('')).toContain('둘째쪽');
+    const out = await flattenPdf(edited.bytes, [{ index: 0, jpeg: blank(), width: 600, height: 800 }]);
+    expect(await contentsResolve(out.bytes, 1)).toBe(true);
+    expect(await textAt(out.bytes, 2)).toEqual(before);
+    expect(hasSecret(await pdfTraces(out.bytes), 'OLDTEXT')).toBe(false);
+  });
+
+  it('(b) two pages share one content stream: flattening one keeps the other page text', async () => {
+    const src = await PDFDocument.create();
+    const font = await src.embedFont(StandardFonts.Helvetica);
+    const one = src.addPage([600, 800]);
+    one.drawText('SHAREDTEXT', { x: 100, y: 700, size: 20, font });
+    const two = src.addPage([600, 800]);
+    two.node.set(PDFName.of('Contents'), one.node.get(PDFName.of('Contents'))!);
+    two.node.set(PDFName.of('Resources'), one.node.get(PDFName.of('Resources'))!);
+    const input = await src.save();
+    expect((await pageTexts(input))[1]).toContain('SHAREDTEXT');
+    const out = await flattenPdf(input, [{ index: 0, jpeg: blank(), width: 600, height: 800 }]);
+    const texts = await pageTexts(out.bytes);
+    expect(texts[0]).toBe('');
+    expect(texts[1]).toContain('SHAREDTEXT');
+    expect(await contentsResolve(out.bytes, 1)).toBe(true);
+  });
+
+  it('(c) a Form XObject of the replaced page that the struct tree reaches through MCR /Stm leaves the file', async () => {
+    const src = await PDFDocument.create();
+    const font = await src.embedFont(StandardFonts.Helvetica);
+    const one = src.addPage([600, 800]);
+    const ctx = src.context;
+    const xobj = ctx.register(
+      ctx.flateStream('BT /F1 20 Tf 50 700 Td (XOBJSECRET) Tj ET', {
+        Type: 'XObject',
+        Subtype: 'Form',
+        BBox: [0, 0, 600, 800],
+        Resources: { Font: { F1: font.ref } },
+      }),
+    );
+    one.node.setXObject(PDFName.of('X1'), xobj);
+    one.node.addContentStream(ctx.register(ctx.flateStream('/X1 Do')));
+    src.addPage([600, 800]).drawText('KEEPME', { x: 50, y: 700, size: 20, font });
+    const root = ctx.nextRef();
+    const elem = ctx.register(ctx.obj({ Type: 'StructElem', S: 'P', P: root, Pg: one.ref, K: ctx.obj({ Type: 'MCR', Stm: xobj, MCID: 0 }) }));
+    ctx.assign(root, ctx.obj({ Type: 'StructTreeRoot', K: [elem] }));
+    src.catalog.set(PDFName.of('StructTreeRoot'), root);
+    const input = await src.save();
+    expect(hasSecret(await pdfTraces(input), 'XOBJSECRET')).toBe(true);
+    const out = await flattenPdf(input, [{ index: 0, jpeg: blank(), width: 600, height: 800 }]);
+    const after = await pdfTraces(out.bytes);
+    expect(hasSecret(after, 'XOBJSECRET')).toBe(false);
+    expect(hasSecret(after, 'KEEPME')).toBe(true);
   });
 });
