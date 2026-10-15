@@ -24,7 +24,7 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
  *   the endpoint). The test below pins it to that one call.
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
-const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts', 'lib/bgremove/cloud.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts', 'lib/bgremove/cloud.ts', 'tools/pdf-edit/coverage.ts'];
 /**
  * sendBeacon only in the usage tracker, which is off (and dropped from the bundle) unless PUBLIC_USAGE_STATS=1, and in
  * its guide twin (REV3; rendered only in a PUBLIC_USAGE_STATS=1 build, src/layouts/Guide.astro).
@@ -67,6 +67,14 @@ describe('no network APIs in src/', () => {
       .filter((f) => /\bfetch\s*\(/.test(readFileSync(f, 'utf8')))
       .map((f) => relative(SRC, f).split('\\').join('/'));
     expect(hits.filter((h) => h.startsWith('lib/hwp/')).sort()).toEqual(['lib/hwp/pdf/font-source.ts', 'lib/hwp/wasm-browser.ts']);
+  });
+
+  it('PDF 글자 넣기·편집 coverage (TOOLS1015 E1): one GET of the generated face list, same origin under /fonts/hwp/ only', () => {
+    const src = readFileSync(join(SRC, 'tools', 'pdf-edit', 'coverage.ts'), 'utf8');
+    expect(src.match(/\bfetch\s*\(/g)).toHaveLength(1);
+    expect(src).toMatch(/const res = await fetch\(url\);/);
+    expect(src).toMatch(/url\.origin !== location\.origin \|\| !url\.pathname\.startsWith\('\/fonts\/hwp\/'\)/);
+    expect(src).not.toMatch(/https?:\/\/|method:/);
   });
 
   it('the 배경 지우기 cloud client makes one fetch, a POST to the same-origin /api/remove-bg, loaded only behind __BG_CLOUD__', () => {

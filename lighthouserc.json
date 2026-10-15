@@ -20,6 +20,7 @@
         "http://127.0.0.1:4173/hwpx-to-hwp/",
         "http://127.0.0.1:4173/char-count/",
         "http://127.0.0.1:4173/id-copy/",
+        "http://127.0.0.1:4173/pdf-edit/",
         "http://127.0.0.1:4173/id-photo/",
         "http://127.0.0.1:4173/stamp-signature/",
         "http://127.0.0.1:4173/embed/",

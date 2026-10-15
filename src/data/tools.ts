@@ -9,6 +9,7 @@ import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
 import { LIMITS as PDF_SPLIT_LIMITS } from '../tools/pdf-split/limits';
 import { LIMITS as PDF_SIGN_LIMITS } from '../tools/pdf-sign/limits';
 import { LIMITS as ID_COPY_LIMITS } from '../tools/id-copy/limits';
+import { LIMITS as PDF_EDIT_LIMITS } from '../tools/pdf-edit/limits';
 
 /** HWP numbers in the /hwp-viewer/ and /hwpx-to-hwp/ FAQs, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -86,6 +87,12 @@ const PDF_SIGN_FAQ = {
 const ID_COPY_FAQ = {
   filePc: `${n(ID_COPY_LIMITS.desktop.maxFileBytes / MB)} MB`,
   filePhone: `${n(ID_COPY_LIMITS.mobile.maxFileBytes / MB)} MB`,
+} as const;
+
+/** PDF 글자 넣기·편집 numbers in its FAQ, read from its limits (MB = 1,048,576 bytes). */
+const PDF_EDIT_FAQ = {
+  filePc: `${n(PDF_EDIT_LIMITS.desktop.maxFileBytes / MB)} MB`,
+  filePhone: `${n(PDF_EDIT_LIMITS.mobile.maxFileBytes / MB)} MB`,
 } as const;
 
 export type ToolStatus = 'live' | 'soon';
@@ -469,6 +476,47 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['pdf 서명 넣기', 'pdf 도장 넣기', 'pdf 서명', 'pdf 싸인 넣기', 'pdf 전자서명 넣기'],
+  },
+  {
+    // TOOLS1015 E1. name = h1 (COPY.md). A PDF tool: after PDF 서명·도장 넣기 (the PDF group keeps its order). Every string
+    // here is in the preloaded UI font (brief decision 2: 「위에 올리는」, not the missing glyph of 덮다).
+    slug: 'pdf-edit',
+    name: 'PDF 글자 넣기·편집',
+    title: 'PDF 편집 — 글자 넣기·흰 상자로 가리기·날짜 무료 | 문서딱',
+    description: 'PDF 빈칸에 글자와 날짜를 넣고 필요 없는 곳은 흰 상자로 가려요. 원래 있는 글자는 고치지 못해요. 가입 없이 무료.',
+    h1: 'PDF 글자 넣기·편집',
+    summary: 'PDF 빈칸에 글자와 날짜를 넣고, 흰 상자로 필요 없는 곳을 가립니다.',
+    icon: '<path d="M14 3H6v18h12V7l-4-4z"/><path d="M14 3v4h4"/><path d="M9 11h6M12 11v7"/>',
+    status: 'live',
+    updated: '2026-10-15',
+    faq: [
+      {
+        q: '원래 있는 글자를 고칠 수 있나요?',
+        a: '아니요. PDF에 이미 있는 글자는 고칠 수 없습니다. 고칠 곳을 흰 상자로 가리고, 그 위에 새 글자를 넣으세요.',
+      },
+      {
+        q: '흰 상자로 가린 내용은 지워지나요?',
+        a: '아니요. 흰 상자는 위에 올리는 것이라, 가린 곳의 원래 글자는 파일 안에 남아 글자 복사로 볼 수 있습니다. 남으면 안 되는 내용이라면 이 도구로 가리지 마세요.',
+      },
+      {
+        q: '넣은 글자는 복사·검색이 되나요?',
+        a: '네. 넣은 글자는 무료 글꼴(Noto Sans KR)로 들어가, PDF를 여는 프로그램에서 고르고 복사하거나 찾을 수 있습니다.',
+      },
+      {
+        q: '서명도 넣을 수 있나요?',
+        a: '서명이나 도장 그림은 PDF 서명·도장 넣기에서 넣을 수 있습니다. 글자를 넣어 저장한 뒤 「이어서 하기」에서 바로 넘어갈 수 있습니다.',
+        links: [{ href: '/pdf-sign/', text: 'PDF 서명·도장 넣기' }],
+      },
+      {
+        q: '비밀번호가 걸린 PDF나 전자서명이 있는 문서도 되나요?',
+        a: '열 때 쓰는 비밀번호를 알면 됩니다. 저장한 PDF에는 비밀번호가 걸려 있지 않으니, 다시 걸려면 PDF 암호 해제·설정을 쓰세요. 전자서명이 들어 있는 문서는 글자를 넣어 새로 저장하면 전자서명이 더 이상 유효하지 않으니, 내려받기 전에 알려 드립니다.',
+      },
+      {
+        q: '휴대폰에서도 되나요? 크기 제한이 있나요?',
+        a: `네. 휴대폰에서는 손가락으로 글자와 상자를 끌어 옮깁니다. PDF 파일은 PC에서 ${PDF_EDIT_FAQ.filePc}, 휴대폰에서 ${PDF_EDIT_FAQ.filePhone}까지 열 수 있습니다.`,
+      },
+    ],
+    keywords: ['pdf 편집', 'pdf 수정', 'pdf 글자 넣기', 'pdf 텍스트 넣기', 'pdf 편집 무료'],
   },
   {
     slug: 'photo-compress',

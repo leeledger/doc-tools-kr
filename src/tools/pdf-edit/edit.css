@@ -1,0 +1,15 @@
+/* PDF 글자 넣기·편집 (/pdf-edit/, TOOLS1015 E1). Inlined on that page only, after the shared stage styles (sign.css). */
+.edit-add { flex-wrap: wrap; gap: 8px; }
+/* The content covers the box itself (the stage pads small boxes by --px / --py; sign.css borders are 2px). */
+.edit-fill {
+  position: absolute; left: calc(var(--px, 0px) - 2px); top: calc(var(--py, 0px) - 2px); display: block;
+  width: calc(100% - 2 * var(--px, 0px) + 4px); height: calc(100% - 2 * var(--py, 0px) + 4px); pointer-events: none;
+}
+.edit-white { background: #ffffff; box-shadow: inset 0 0 0 1px #c9cdd2; }
+.edit-text { display: grid; gap: 10px; }
+.edit-text[hidden], .edit-text fieldset[hidden] { display: none; }
+.edit-textarea {
+  width: 100%; min-height: 4.5em; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+  font: inherit; font-size: 16px; line-height: 1.5; resize: vertical; background: var(--surface); color: inherit;
+}
+.edit-textarea[aria-invalid="true"] { border-color: var(--danger); }

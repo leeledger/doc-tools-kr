@@ -17,8 +17,8 @@ export interface StageItem {
   label: string;
   /** `aspect`: the corner handle keeps the shape (a picture, a line of text); `free`: width and height apart. */
   resizeMode: 'aspect' | 'free';
-  /** Fills the box button (before the corner handle is appended). */
-  render(el: HTMLButtonElement): void;
+  /** Fills the box button (before the corner handle is appended); `scale` = CSS pixels per point, `shown` = the box drawn. */
+  render(el: HTMLButtonElement, scale: number, shown: Box): void;
 }
 
 export interface StageHooks {
@@ -49,6 +49,11 @@ export interface StageOptions {
   hintId: string;
   hooks: StageHooks;
 }
+
+/** Boxes smaller than this many CSS pixels get a larger button around them (WCAG 2.5.8 target size). */
+export const MIN_TARGET = 24;
+/** Padding that makes a `w` × `h` CSS-pixel box at least MIN_TARGET on each side. */
+export const targetPad = (w: number, h: number): { x: number; y: number } => ({ x: Math.max(0, (MIN_TARGET - w) / 2), y: Math.max(0, (MIN_TARGET - h) / 2) });
 
 /** Arrow keys move a box this many points (Shift: SHIFT_STEP). */
 const STEP = 1;
@@ -152,10 +157,18 @@ export function createPageStage(o: StageOptions): PageStage {
   }
 
   function boxStyle(b: HTMLElement, box: Box): void {
-    b.style.left = `${box.x * scale}px`;
-    b.style.top = `${box.y * scale}px`;
-    b.style.width = `${box.w * scale}px`;
-    b.style.height = `${box.h * scale}px`;
+    const w = box.w * scale;
+    const h = box.h * scale;
+    // A box smaller than MIN_TARGET gets padding around it, so the button stays easy to hit; --px / --py let the
+    // content sit on the box itself.
+    const p = targetPad(w, h);
+    b.style.left = `${box.x * scale - p.x}px`;
+    b.style.top = `${box.y * scale - p.y}px`;
+    b.style.width = `${w + 2 * p.x}px`;
+    b.style.height = `${h + 2 * p.y}px`;
+    b.style.padding = p.x || p.y ? `${p.y}px ${p.x}px` : '';
+    b.style.setProperty('--px', `${p.x}px`);
+    b.style.setProperty('--py', `${p.y}px`);
   }
 
   function draw(focusId?: number): void {
@@ -177,7 +190,7 @@ export function createPageStage(o: StageOptions): PageStage {
     b.setAttribute('aria-label', item.label);
     b.setAttribute('aria-pressed', String(item.id === selected));
     b.setAttribute('aria-describedby', o.hintId);
-    item.render(b);
+    item.render(b, scale, shown);
     const handle = document.createElement('span');
     handle.className = `${cls}-handle`;
     handle.setAttribute('aria-hidden', 'true');

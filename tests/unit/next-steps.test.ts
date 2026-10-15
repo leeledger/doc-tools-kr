@@ -10,13 +10,17 @@ const one = (size = 10) => [{ blob: new Blob([new Uint8Array(size)], { type: 'ap
 describe('flow table', () => {
   it('never offers the sender itself', () => {
     for (const from of Object.keys(FLOW) as NextSource[]) expect(FLOW[from], from).not.toContain(sourceTool(from));
-    expect(Object.keys(FLOW)).toHaveLength(12);
+    expect(Object.keys(FLOW)).toHaveLength(13);
   });
 
   it('the brief table, in button order', () => {
     expect(FLOW['jpg-to-pdf']).toEqual(['pdf-compress', 'pdf-password', 'pdf-sign']);
     expect(FLOW['pdf-compress']).toEqual(['pdf-password', 'pdf-sign']);
-    expect(FLOW['pdf-password-unlock']).toEqual(['pdf-compress', 'pdf-sign', 'pdf-split']);
+    expect(FLOW['pdf-password-unlock']).toEqual(['pdf-compress', 'pdf-sign', 'pdf-split', 'pdf-edit']);
+    // TOOLS1015 E1: PDF 글자 넣기·편집 last on the merge, HWP and unlock rows; its own row.
+    expect(FLOW['pdf-merge']).toEqual(['pdf-compress', 'pdf-password', 'pdf-sign', 'pdf-edit']);
+    expect(FLOW['hwp-to-pdf']).toEqual(['pdf-compress', 'pdf-password', 'pdf-sign', 'pdf-edit']);
+    expect(FLOW['pdf-edit']).toEqual(['pdf-sign', 'pdf-compress', 'pdf-password']);
     expect(FLOW['id-photo']).toEqual(['jpg-to-pdf']);
     // TOOLS1015 I1: the 신분증 사본 PDF.
     expect(FLOW['id-copy']).toEqual(['pdf-password', 'pdf-compress']);
@@ -77,7 +81,7 @@ describe('showNextSteps / hideNextSteps', () => {
   it('EN0: showNextStepsIn renders the catalog it is given, not the Korean labels (a fake non-Korean catalog)', () => {
     const FAKE: NextMessages = {
       group: 'Continue with this file',
-      labels: { 'pdf-compress': 'Compress', 'pdf-password': 'Lock', 'pdf-sign': 'Sign', 'pdf-split': 'Split', 'photo-compress': 'Shrink', 'jpg-to-pdf': 'To PDF' },
+      labels: { 'pdf-compress': 'Compress', 'pdf-password': 'Lock', 'pdf-sign': 'Sign', 'pdf-split': 'Split', 'photo-compress': 'Shrink', 'jpg-to-pdf': 'To PDF', 'pdf-edit': 'Edit' },
       sendFailed: (label) => `Could not pass it to ${label}.`,
     };
     showNextStepsIn(FAKE, slot, 'jpg-to-pdf', one());

@@ -288,6 +288,29 @@ budget('password.worker*.js (pdf-password)', match(/^_astro\/password\.worker[^/
     budget('pdf-sign controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 18.4 * KB);
   }
 }
+// PDF 글자 넣기·편집 (TOOLS1015 E1): the controller (the controller*.js chunk that owns #ed-text-error, and what only it
+// imports, the shared page stage included) loads on the first interaction, never with the page; no initial script of the
+// page names pdf.js, pdf-lib, fontkit or the edit worker. edit.worker carries pdf-lib, fontkit and the face table, never
+// merge.worker's other jobs and never a Brotli decoder (alias brotli/decompress.js); merge.worker never carries fontkit
+// (marker: fontkit's GSUB table name). Budgets: controller 15.4 KB gzip measured + 20 %; the worker 335.1 KB gzip measured,
+// + 20 % would pass the HWP export chunk's 360 KB, so 360 KB (brief: never above it).
+{
+  const html = pageHtml.get('pdf-edit/index.html');
+  if (!html) errors.push('pdf-edit/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('ed-text-error'));
+    if (controller.length !== 1) errors.push(`pdf-edit controller: ${controller.length} chunk(s) name #ed-text-error, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /pdf-edit/ controller loads with the page');
+    for (const f of initial) if (/pdfjs|pdf\.worker|getDocument|edit\.worker|merge\.worker|PDFDocument|GSUB/.test(read(f).toString('utf8'))) errors.push(`${f}: pdf.js, pdf-lib, fontkit or a PDF worker in the /pdf-edit/ initial JS`);
+    budget('pdf-edit controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 18.5 * KB);
+  }
+  const editWorker = match(/^_astro\/edit\.worker[^/]*\.js$/);
+  if (editWorker.length !== 1) errors.push(`edit.worker: ${editWorker.length} file(s), expected 1`);
+  budget('edit.worker*.js (pdf-edit)', [...new Set(editWorker.flatMap((f) => staticClosure(dist, f)))], 360 * KB);
+  for (const js of editWorker.flatMap((f) => staticClosure(dist, f))) if (read(js).includes('[ReadHuffmanCodeLengths]')) errors.push(`${js}: a Brotli decoder ships in edit.worker (alias brotli/decompress.js)`);
+  for (const js of match(/^_astro\/merge\.worker[^/]*\.js$/)) if (read(js).includes('GSUB')) errors.push(`${js}: fontkit in merge.worker (it belongs to edit.worker)`);
+}
 // 사진 JPG 변환 (TOOLS5 U1): no worker (canvas on the main thread). The controller (the controller*.js chunk that owns
 // #ij-quality-group, and what only it imports, fflate's Zip included) loads on the first interaction, never with the page;
 // no initial script of the page names the ZIP code or @jsquash/webp, and the WebP fallback (@jsquash/webp and its wasm)

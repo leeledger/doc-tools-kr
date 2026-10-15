@@ -305,6 +305,31 @@ test('신분증 사본 만들기 (TOOLS1015 I1): pick, start (o=mark, v=on), suc
   for (const b of beacons) expect(b.body).not.toMatch(/비밀상사|제출용|exif6|신분증_사본|\d{4}\.\d{2}\.\d{2}/);
 });
 
+test('PDF 글자 넣기·편집 (TOOLS1015 E1): pick, start (o=items, v=mix), success, download; never the text, the date, sizes or places; a font that cannot be fetched sends fail c=font', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/pdf-edit/');
+  await page.setInputFiles('#ed-input', fixturePath('gen_scan_a6.pdf'));
+  await expect(page.locator('#ed-tool')).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  await expect(page.locator('#ed-stage canvas.sign-page')).toHaveCount(1);
+  await page.locator('#ed-add-text').click();
+  await page.locator('#ed-text').fill('비밀상사 홍길동');
+  await page.locator('#ed-add-white').click();
+  await page.locator('#ed-run').click();
+  await expect(page.locator('#ed-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#ed-download').click()]);
+  await expect.poll(() => beacons.map((b) => `${b.ev.e} ${b.ev.t}`)).toEqual(['pick pdf-edit', 'start pdf-edit', 'success pdf-edit', 'download pdf-edit']);
+  expectClean(beacons);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'start', t: 'pdf-edit', o: 'items', v: 'mix' });
+  for (const b of beacons) expect(b.body).not.toMatch(/비밀상사|홍길동|gen_scan|작성|\d{4}\. \d/);
+  // Fonts blocked: the save fails with the font code.
+  await page.locator('#ed-again').click();
+  await page.route('**/fonts/hwp/**', (r) => r.abort());
+  await page.locator('#ed-run').click();
+  await expect(page.locator('#ed-error')).toHaveText('글꼴을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 저장해 주세요.', { timeout: 30_000 });
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'fail').map((b) => b.ev)).toEqual([expect.objectContaining({ e: 'fail', t: 'pdf-edit', c: 'font', p: 'process' })]);
+  expectClean(beacons);
+});
+
 test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

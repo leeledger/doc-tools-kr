@@ -6,7 +6,7 @@ import { MB } from './device';
 import type { HandoffDeps } from './handoff';
 import { track, type UsageTool } from './usage';
 
-export type NextTarget = 'pdf-compress' | 'pdf-password' | 'pdf-sign' | 'pdf-split' | 'photo-compress' | 'jpg-to-pdf';
+export type NextTarget = 'pdf-compress' | 'pdf-password' | 'pdf-sign' | 'pdf-split' | 'photo-compress' | 'jpg-to-pdf' | 'pdf-edit';
 /** A sender, by tool; 암호 풀기 and 암호 걸기 results of /pdf-password/ differ. */
 export type NextSource =
   | 'jpg-to-pdf'
@@ -21,7 +21,8 @@ export type NextSource =
   | 'photo-compress'
   | 'remove-background'
   | 'id-photo'
-  | 'id-copy';
+  | 'id-copy'
+  | 'pdf-edit';
 
 /**
  * Button order = array order. A tool never offers itself. The 배경 지우기 row exists only in a build with
@@ -29,12 +30,13 @@ export type NextSource =
  */
 export const FLOW = {
   'jpg-to-pdf': ['pdf-compress', 'pdf-password', 'pdf-sign'],
-  'pdf-merge': ['pdf-compress', 'pdf-password', 'pdf-sign'],
+  // TOOLS1015 E1: PDF 글자 넣기·편집 is last on the rows of a document someone may still fill in.
+  'pdf-merge': ['pdf-compress', 'pdf-password', 'pdf-sign', 'pdf-edit'],
   'pdf-split': ['pdf-compress', 'pdf-password', 'pdf-sign'],
-  'hwp-to-pdf': ['pdf-compress', 'pdf-password', 'pdf-sign'],
+  'hwp-to-pdf': ['pdf-compress', 'pdf-password', 'pdf-sign', 'pdf-edit'],
   'pdf-compress': ['pdf-password', 'pdf-sign'],
   'pdf-sign': ['pdf-compress', 'pdf-password'],
-  'pdf-password-unlock': ['pdf-compress', 'pdf-sign', 'pdf-split'],
+  'pdf-password-unlock': ['pdf-compress', 'pdf-sign', 'pdf-split', 'pdf-edit'],
   // An encrypted result: every next tool would ask for the password again.
   'pdf-password-lock': [],
   'image-to-jpg': ['photo-compress', 'jpg-to-pdf'],
@@ -42,6 +44,8 @@ export const FLOW = {
   'id-photo': ['jpg-to-pdf'],
   // TOOLS1015 I1: the PDF of the copy (a password before sending it, or a smaller file).
   'id-copy': ['pdf-password', 'pdf-compress'],
+  // TOOLS1015 E1: sign the filled-in form, make it smaller, or lock it.
+  'pdf-edit': ['pdf-sign', 'pdf-compress', 'pdf-password'],
   ...(__BG_REMOVE__ ? { 'remove-background': ['jpg-to-pdf', 'photo-compress'] } : {}),
 } as Readonly<Record<NextSource, readonly NextTarget[] | undefined>>;
 
@@ -53,6 +57,7 @@ export const NEXT_LABELS: Readonly<Record<NextTarget, string>> = {
   'pdf-split': 'PDF 나누기·쪽 편집',
   'photo-compress': '사진 용량 줄이기',
   'jpg-to-pdf': '사진 PDF 변환',
+  'pdf-edit': 'PDF 글자 넣기·편집',
 };
 
 export const NEXT_GROUP_LABEL = '이 파일로 이어서 하기';

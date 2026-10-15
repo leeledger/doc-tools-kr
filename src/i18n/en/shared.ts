@@ -21,6 +21,7 @@ export const NEXT_EN: NextMessages = {
     'pdf-split': 'Split PDF',
     'photo-compress': 'Compress image',
     'jpg-to-pdf': 'JPG to PDF',
+    'pdf-edit': 'Edit PDF',
   },
   sendFailed: (label) => `The file could not be passed on. Download it, then pick it in ${label}.`,
 };

@@ -55,7 +55,8 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
  * PDF 서명·도장 넣기 → 전자서명법 (그림 서명을 받는지), 도장·서명 이미지 만들기, PDF 암호 해제·설정 (저장 뒤 암호 다시 걸기) (TOOLS5 U3);
  * HWPX HWP 변환 → HWPX란, 한글 없이 HWP 열기, 휴대폰에서 HWP (HWPX2HWP);
  * 글자수 세기 → 이력서 사진, 고용24 이력서 올리기 (published later; a draft is skipped), 대학 원서 서류 (TOOLS1015 C1);
- * 신분증 사본 만들기 → 신분증 사본 만드는 법 (I2), 국가장학금 서류, 대학 원서 서류 (TOOLS1015 I1).
+ * 신분증 사본 만들기 → 신분증 사본 만드는 법 (I2), 국가장학금 서류, 대학 원서 서류 (TOOLS1015 I1);
+ * PDF 글자 넣기·편집 → PDF 서명 넣는 법, 정부24 PDF 저장, 전자서명법 (TOOLS1015 E1).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
@@ -71,6 +72,7 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'pdf-sign': ['e-signature-law', 'stamp-image', 'pdf-password'],
   'char-count': ['resume-photo', 'work24-resume-upload', 'univ-docs-upload'],
   'id-copy': ['id-card-copy', 'kosaf-docs', 'univ-docs-upload'],
+  'pdf-edit': ['pdf-sign', 'gov24-pdf-save', 'e-signature-law'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */

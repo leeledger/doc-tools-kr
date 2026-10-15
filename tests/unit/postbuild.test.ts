@@ -378,7 +378,7 @@ describe('gen-brand (P.10)', () => {
     expect(pngSize(out['brand/icon-maskable-512.png'])).toMatchObject({ w: 512, h: 512 });
     // One share image per og.json image (Polish Q), 1200×630, ≤ 300 KB; no single og.png any more.
     const og = Object.keys(out).filter((k) => /^brand\/og-[a-z-]+\.png$/.test(k)).sort();
-    expect(og).toEqual(['char-count', 'default', 'home', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'id-copy', 'id-photo', 'image-to-jpg', 'jpg-to-pdf', 'pdf-compress', 'pdf-merge', 'pdf-password', 'pdf-sign', 'pdf-split', 'pdf-to-jpg', 'photo-compress', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
+    expect(og).toEqual(['char-count', 'default', 'home', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'id-copy', 'id-photo', 'image-to-jpg', 'jpg-to-pdf', 'pdf-compress', 'pdf-edit', 'pdf-merge', 'pdf-password', 'pdf-sign', 'pdf-split', 'pdf-to-jpg', 'photo-compress', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
     expect(out).not.toHaveProperty(['brand/og.png']);
     for (const k of og) {
       expect(pngSize(out[k]), k).toMatchObject({ w: 1200, h: 630, png: true });
@@ -887,6 +887,7 @@ describe('built output', () => {
     // TOOLS1015 (decision 4): every new tool page from the start.
     expect(urls).not.toContain('/char-count/');
     expect(urls).not.toContain('/id-copy/');
+    expect(urls).not.toContain('/pdf-edit/');
     for (const tool of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/']) expect(urls).toContain(tool);
     // Round 2: the lazily imported /id-photo/ controller is precached too (offline first use).
     expect(urls.some((u: string) => /^\/_astro\/controller\.[\w-]+\.js$/.test(u))).toBe(true);
@@ -1024,7 +1025,7 @@ describe('built output', () => {
     }
     // Each tool page has its own image; the legal pages share the default one.
     const imageOf = (path: string) => readFileSync(join(DIST, path, 'index.html'), 'utf8').match(/<meta property="og:image" content="[^"]*\/brand\/(og-[a-z-]+)\.png"/)![1];
-    for (const slug of ['pdf-merge', 'pdf-compress', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'pdf-split', 'pdf-sign', 'image-to-jpg', 'photo-compress', 'id-photo', 'stamp-signature', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'char-count', 'id-copy']) expect(imageOf(slug)).toBe(`og-${slug}`);
+    for (const slug of ['pdf-merge', 'pdf-compress', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'pdf-split', 'pdf-sign', 'image-to-jpg', 'photo-compress', 'id-photo', 'stamp-signature', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit']) expect(imageOf(slug)).toBe(`og-${slug}`);
     expect(imageOf('')).toBe('og-home');
     for (const p of ['privacy', 'terms', 'licenses']) expect(imageOf(p)).toBe('og-default');
   });

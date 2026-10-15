@@ -992,6 +992,42 @@ describe('신분증 사본 만들기 (TOOLS1015 I1)', () => {
   });
 });
 
+describe('PDF 글자 넣기·편집 (TOOLS1015 E1)', () => {
+  it('tool and 넣은 것 setting are whitelisted; its fail codes (font new) pass; text, sizes and places are refused as values', () => {
+    expect(TOOLS).toContain('pdf-edit');
+    for (const v of ['text', 'date', 'white', 'mix']) expect(validate(body({ ...BASE, t: 'pdf-edit', e: 'start', o: 'items', v })), v).not.toBeNull();
+    for (const v of ['홍길동', '2026. 10. 15.', '11', 'TEXT', '3', 'blue']) expect(validate(body({ ...BASE, t: 'pdf-edit', e: 'start', o: 'items', v })), v).toBeNull();
+    for (const c of ['not-pdf', 'corrupt', 'wrong-password', 'too-big', 'font', 'canvas', 'oom', 'engine', 'unknown']) {
+      expect(validate(body({ ...BASE, t: 'pdf-edit', e: 'fail', c, p: 'process' })), c).not.toBeNull();
+      expect((FAIL_LABELS as Record<string, string>)[c], c).toBeTruthy();
+    }
+    expect(FAIL_LABELS.font).toBe('글꼴을 불러오지 못함');
+    for (const e of ['pick', 'success', 'download']) expect(validate(body({ ...BASE, t: 'pdf-edit', e })), e).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'pdf-edit', e: 'next', o: 'next', v: 'pdf-sign' }))).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'pdf-merge', e: 'next', o: 'next', v: 'pdf-edit' }))).not.toBeNull();
+  });
+
+  it('admin labels are Korean: PDF 글자 넣기·편집, 넣은 것 and its four values', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'pdf-edit', event: 'success', via: 'direct', n: 4 }],
+      settings: [
+        { tool: 'pdf-edit', setting: 'items', value: 'text', n: 4 },
+        { tool: 'pdf-edit', setting: 'items', value: 'date', n: 3 },
+        { tool: 'pdf-edit', setting: 'items', value: 'white', n: 2 },
+        { tool: 'pdf-edit', setting: 'items', value: 'mix', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('PDF 글자 넣기·편집');
+    expect(settings!.rows).toEqual([
+      ['PDF 글자 넣기·편집', '넣은 것', '글자', '4'],
+      ['PDF 글자 넣기·편집', '넣은 것', '날짜', '3'],
+      ['PDF 글자 넣기·편집', '넣은 것', '흰 상자', '2'],
+      ['PDF 글자 넣기·편집', '넣은 것', '여러 가지', '1'],
+    ]);
+  });
+});
+
 describe('PDF 나누기·쪽 편집 (TOOLS5 U2)', () => {
   it('tool and 저장 방식 setting are whitelisted; its fail codes pass; ranges, counts and names are refused as values', () => {
     expect(TOOLS).toContain('pdf-split');

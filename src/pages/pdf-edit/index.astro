@@ -1,0 +1,176 @@
+---
+// /pdf-edit/ (TOOLS1015 E1): one PDF -> text (글자, 오늘 날짜) and white boxes (흰 상자) put where they were placed. Old
+// text cannot be changed; a white box only covers it. The controller loads on the first interaction (entry.ts); pdf.js
+// when a file is chosen; pdf-lib, fontkit and the faces only in edit.worker when saving.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import EngineError from '../../components/EngineError.astro';
+import { toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { sharePreview } from '../../data/site';
+import Share from '../../components/Share.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+// Page-only styles, inlined: the shared page stage styles of /pdf-sign/ (sign-stage, sign-box…) and this tool's own.
+import signCss from '../../tools/pdf-sign/sign.css?inline';
+import editCss from '../../tools/pdf-edit/edit.css?inline';
+
+const tool = getTool('pdf-edit');
+const jsonLd = toolJsonLd(tool, Astro.site);
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={signCss + editCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">PDF 빈칸에 글자와 오늘 날짜를 넣고, 필요 없는 곳은 흰 상자로 가립니다. 원래 있는 글자를 고치지는 못해요.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="ed-tool" class="merge" data-state="empty">
+        <div class="drop" id="ed-drop">
+          <input id="ed-input" class="file-input" type="file" accept="application/pdf,.pdf">
+          <label class="btn primary" for="ed-input" id="ed-pick">PDF 파일 선택</label>
+          <p class="drop-hint">또는 여기에 PDF 파일을 끌어다 놓으세요</p>
+          <p class="drop-hint-touch">휴대폰의 「파일」 앱에서 PDF를 고를 수 있습니다.</p>
+          <p class="privacy-note">파일은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <p class="notice" id="ed-notice" hidden></p>
+        <EngineError />
+
+        <div class="file-item file-card" id="ed-file" hidden>
+          <div class="meta">
+            <p class="name" id="ed-name"></p>
+            <p class="info" id="ed-info"></p>
+          </div>
+          <form class="pw" id="ed-pw" novalidate hidden>
+            <p class="pw-state" id="ed-pw-state">이 파일은 비밀번호로 보호되어 있습니다.</p>
+            <label class="pw-label" for="ed-pw-input">비밀번호</label>
+            <div class="row pw-row">
+              <input class="pw-input" id="ed-pw-input" type="password" autocomplete="off" aria-describedby="ed-pw-state ed-pw-error">
+              <button type="button" class="btn small ghost icon-btn pw-toggle" id="ed-pw-toggle" aria-label="비밀번호 보기" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button type="submit" class="btn small primary">확인</button>
+            </div>
+            <p class="pw-error" id="ed-pw-error"></p>
+          </form>
+        </div>
+
+        <div class="sign-editor" id="ed-editor" hidden>
+          <div class="row sign-nav">
+            <button type="button" class="btn small ghost" id="ed-prev">이전 쪽</button>
+            <label class="sign-goto" for="ed-goto"><input class="num-input" id="ed-goto" type="text" inputmode="numeric" autocomplete="off" value="1" aria-describedby="ed-page-count"><span id="ed-page-count"></span></label>
+            <button type="button" class="btn small ghost" id="ed-next">다음 쪽</button>
+          </div>
+          <div class="row edit-add" role="group" aria-label="넣을 것">
+            <button type="button" class="btn small primary" id="ed-add-text">글자 넣기</button>
+            <button type="button" class="btn small ghost" id="ed-add-date">오늘 날짜</button>
+            <button type="button" class="btn small ghost" id="ed-add-white">흰 상자</button>
+          </div>
+          <p class="hint" id="ed-white-note" hidden></p>
+          <div class="sign-stage" id="ed-stage"></div>
+          <p class="hint" id="ed-stage-hint">글자나 상자를 끌어 옮기고, 오른쪽 아래 모서리를 끌어 크기를 바꿉니다. 고른 뒤 화살표 키로도 옮길 수 있습니다.</p>
+
+          <div class="sign-controls" id="ed-controls" hidden>
+            <div class="edit-text" id="ed-text-box">
+              <label class="target-label" for="ed-text">넣을 글자</label>
+              <textarea class="edit-textarea" id="ed-text" rows="3" spellcheck="false" aria-describedby="ed-text-error"></textarea>
+              <p class="field-error" id="ed-text-error"></p>
+              <fieldset class="levels" id="ed-formats" hidden>
+                <legend>날짜 모양</legend>
+                <div class="chips" id="ed-format-chips"></div>
+              </fieldset>
+              <div class="ph-range">
+                <label for="ed-size">글자 크기</label>
+                <input id="ed-size" type="range" min="6" max="48" step="1" value="11">
+                <output id="ed-size-out" for="ed-size"></output>
+              </div>
+              <fieldset class="levels">
+                <legend>글자 색</legend>
+                <div class="chips" id="ed-color-chips"></div>
+              </fieldset>
+            </div>
+            <div class="row">
+              <button type="button" class="btn small ghost danger" id="ed-remove">이 항목 빼기</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="hint" id="ed-hint"></p>
+        <div class="row merge-actions" id="ed-actions" hidden>
+          <button type="button" class="btn primary" id="ed-run" aria-describedby="ed-hint" disabled>글자 넣어 저장</button>
+          <button type="button" class="btn ghost" id="ed-change">다른 파일 고르기</button>
+        </div>
+
+        <div class="progress-box" id="ed-progress" hidden>
+          <p id="ed-progress-text">저장하는 중…</p>
+          <progress id="ed-progress-bar" aria-labelledby="ed-progress-text"></progress>
+          <button type="button" class="btn ghost" id="ed-cancel">취소</button>
+        </div>
+
+        <div class="result" id="ed-result" hidden>
+          <p class="result-title" id="ed-headline" tabindex="-1">PDF가 준비되었습니다</p>
+          <p class="result-summary" id="ed-summary"></p>
+          <ul class="result-notes" id="ed-notes" hidden></ul>
+          <div class="row">
+            <a class="btn primary" id="ed-download" download tabindex="0">내려받기</a>
+            <button type="button" class="btn ghost" id="ed-again">다시 편집하기</button>
+            <button type="button" class="btn ghost" id="ed-reset">다른 파일 처리하기</button>
+          </div>
+          <div id="ed-chain" class="next-steps" role="group" aria-labelledby="ed-chain-label" hidden></div>
+          <p class="save-name" id="ed-save-name"></p>
+          <Share name={tool.name} text={sharePreview('/pdf-edit/', Astro.site!).description} id="ed-share" />
+          <p class="related-line">서명이나 도장 그림을 넣으려면 <a href="/pdf-sign/">PDF 서명·도장 넣기</a>를, 용량을 줄이려면 <a href="/pdf-compress/">PDF 용량 줄이기</a>를 쓰세요.</p>
+        </div>
+
+        <p class="error-box" id="ed-error" role="alert" data-live="alert" hidden></p>
+        <p class="visually-hidden" id="ed-status" aria-live="polite" data-live="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>PDF 고르기</strong><span>글자를 넣을 PDF를 고릅니다. 비밀번호가 걸린 파일은 비밀번호를 넣으면 열립니다.</span></li>
+        <li><strong>글자·날짜·흰 상자 넣기</strong><span>「글자 넣기」나 「오늘 날짜」를 누르고 글자를 쓴 뒤, 미리보기에서 끌어 자리를 맞춥니다. 필요 없는 곳은 「흰 상자」로 가립니다.</span></li>
+        <li><strong>저장하고 내려받기</strong><span>「글자 넣어 저장」을 누르면 새 PDF를 내려받습니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>원래 글자는 고칠 수 없어요</strong><span>새 글자를 위에 넣는 도구입니다. 잘못 쓴 글자는 흰 상자로 가리고 그 위에 새로 쓰세요.</span></li>
+        <li><strong>흰 상자는 위에 올리는 것입니다</strong><span>가린 곳의 원래 글자는 파일 안에 남아 글자 복사로 볼 수 있습니다.</span></li>
+        <li><strong>원본은 그대로입니다</strong><span>글자를 넣은 내용은 새 PDF로 저장되고, 고른 원본 파일은 바뀌지 않습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['pdf-sign', 'pdf-merge', 'pdf-compress']} />
+</Base>
+
+<script>
+  import '../../tools/pdf-edit/entry';
+</script>

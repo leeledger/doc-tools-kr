@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, gotoReady, test } from './no-upload';
 import { fixturePath, photoFixture, runtimePath } from './paths';
 
-const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/char-count/', '/id-copy/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
+const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/char-count/', '/id-copy/', '/pdf-edit/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 for (const path of PAGES) {
@@ -39,7 +39,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   expect(await serious()).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/privacy/', '/terms/', '/licenses/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/privacy/', '/terms/', '/licenses/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -75,6 +75,7 @@ for (const [path, name] of [
   ['/stamp-signature/', '도장 이미지 만들기'],
   ['/char-count/', '자소서 글자수'],
   ['/id-copy/', '주민번호 뒤 7자리'],
+  ['/pdf-edit/', '흰 상자로 가려요'],
 ] as const) {
   test(`tool page JSON-LD, title and description on ${path}`, async ({ page }) => {
     await gotoReady(page, path);
@@ -114,6 +115,7 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     ['/stamp-signature/', '전자서명·도장 이미지 만들기'],
     ['/char-count/', '글자수 세기'],
     ['/id-copy/', '신분증 사본 만들기'],
+    ['/pdf-edit/', 'PDF 글자 넣기·편집'],
   ] as const;
   const related: Record<string, string[]> = {
     '/hwp-to-pdf/': ['/hwp-viewer/', '/hwpx-to-hwp/', '/pdf-merge/', '/pdf-compress/'],
@@ -138,6 +140,8 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     '/char-count/': ['/id-photo/', '/photo-compress/', '/jpg-to-pdf/'],
     // TOOLS1015 I1.
     '/id-copy/': ['/jpg-to-pdf/', '/photo-compress/', '/pdf-password/'],
+    // TOOLS1015 E1.
+    '/pdf-edit/': ['/pdf-sign/', '/pdf-merge/', '/pdf-compress/'],
   };
   for (const [path] of tools) {
     await gotoReady(page, path);
@@ -155,7 +159,7 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   // EN1: the English twins are listed too (hreflang alternates: scripts/lib/en-check.mjs rule e).
   expect(locs.filter((p) => p.startsWith('/en/')).sort()).toEqual(['/en/', '/en/image-to-jpg/', '/en/pdf-compress/', '/en/pdf-merge/', '/en/privacy/', '/en/terms/']);
   const pages = locs.filter((p) => !p.startsWith('/guide/') && !p.startsWith('/en/'));
-  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/char-count/', '/id-copy/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/', '/embed/'].sort());
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/char-count/', '/id-copy/', '/pdf-edit/', '/photo-compress/', '/privacy/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/', '/embed/'].sort());
   // REV5: the widget's info page is listed, the widget itself (noindex) never.
   expect(locs).not.toContain('/embed/id-photo/');
   // Growth G: /guide/ and every published guide (drafts never). G2 A1: hwp-to-pdf is published; both hubs are in.
@@ -191,7 +195,7 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(16);
+  await expect(cards).toHaveCount(17);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 PDF 변환' })).toHaveAttribute('href', '/jpg-to-pdf/');
@@ -208,8 +212,9 @@ test('landing page: live cards link to their tools, soon tools are names only, f
   await expect(cards.getByRole('link', { name: '전자서명·도장 이미지 만들기' })).toHaveAttribute('href', '/stamp-signature/');
   await expect(cards.getByRole('link', { name: '글자수 세기' })).toHaveAttribute('href', '/char-count/');
   await expect(cards.getByRole('link', { name: '신분증 사본 만들기' })).toHaveAttribute('href', '/id-copy/');
-  await expect(cards.locator('.status')).toHaveText(Array(16).fill('사용하기'));
-  await expect(page.locator('.card')).toHaveCount(16);
+  await expect(cards.getByRole('link', { name: 'PDF 글자 넣기·편집' })).toHaveAttribute('href', '/pdf-edit/');
+  await expect(cards.locator('.status')).toHaveText(Array(17).fill('사용하기'));
+  await expect(page.locator('.card')).toHaveCount(17);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
   // Every tool is live: the 준비 중 block is not rendered at all.
   await expect(page.locator('.soon')).toHaveCount(0);
@@ -239,7 +244,7 @@ test('licenses page lists the shipped packages and their texts', async ({ page }
 test.describe('mobile layout', () => {
   test.use({ viewport: { width: 360, height: 780 } });
 
-  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/privacy/', '/terms/', '/licenses/']) {
+  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/privacy/', '/terms/', '/licenses/']) {
     test(`no horizontal scroll at 360 px on ${path}`, async ({ page }) => {
       await gotoReady(page, path);
       const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);

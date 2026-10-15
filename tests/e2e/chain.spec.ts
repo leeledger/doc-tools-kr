@@ -253,7 +253,7 @@ test('pdf-merge → pdf-password: the merged PDF opens in 암호 걸기', async 
   await expect(page.locator('#merge-list > li .info', { hasText: '쪽' })).toHaveCount(2);
   await page.getByRole('button', { name: /^PDF \d+개 합치기$/ }).click();
   await expect(page.locator('#merge-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
-  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 암호 걸기', 'PDF 서명·도장 넣기']);
+  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 암호 걸기', 'PDF 서명·도장 넣기', 'PDF 글자 넣기·편집']);
   const name = await offered(page, '#merge-download');
   await group(page).getByRole('button', { name: 'PDF 암호 걸기' }).click();
   await expect(page).toHaveURL(/\/pdf-password\/$/);
@@ -343,7 +343,7 @@ test('pdf-password: a 암호 걸기 result offers nothing; the 암호 풀기 res
   await page.locator('#pp-pw').fill('문서딱암호12');
   await page.getByRole('button', { name: '암호 풀기', exact: true }).click();
   await expect(page.locator('#pp-tool')).toHaveAttribute('data-state', 'done', { timeout: 45_000 });
-  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 서명·도장 넣기', 'PDF 나누기·쪽 편집']);
+  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 서명·도장 넣기', 'PDF 나누기·쪽 편집', 'PDF 글자 넣기·편집']);
   expect(await axeSerious(page)).toEqual([]);
   const name = await offered(page, '#pp-download');
   await group(page).getByRole('button', { name: 'PDF 용량 줄이기' }).click();
@@ -412,7 +412,7 @@ test('hwp-to-pdf → pdf-compress: the saved PDF opens without a second pick', a
   await expect(page.locator('#hwp-tool')).toHaveAttribute('data-state', 'convert', { timeout: 150_000 });
   await expect(page.locator('#hw-next')).toBeHidden();
   await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), page.locator('#hw-save').click()]);
-  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 암호 걸기', 'PDF 서명·도장 넣기']);
+  await expect(group(page).getByRole('button')).toHaveText(['PDF 용량 줄이기', 'PDF 암호 걸기', 'PDF 서명·도장 넣기', 'PDF 글자 넣기·편집']);
   await group(page).getByRole('button', { name: 'PDF 용량 줄이기' }).click();
   await expect(page).toHaveURL(/\/pdf-compress\/$/);
   await expect(page.locator('#cmp-notice')).toHaveText(ARRIVED);
