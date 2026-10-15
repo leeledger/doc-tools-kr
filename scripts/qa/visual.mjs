@@ -41,6 +41,7 @@ const PAGES = [
   ['hwpview', '/hwp-viewer/'],
   ['hwpx', '/hwpx-to-hwp/'],
   ['charcount', '/char-count/'],
+  ['idcopy', '/id-copy/'],
   ['idphoto', '/id-photo/'],
   ['stamp', '/stamp-signature/'],
   ['privacy', '/privacy/'],

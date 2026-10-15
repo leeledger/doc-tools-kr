@@ -8,6 +8,7 @@ import { LIMITS as PDF_PW_LIMITS, PASSWORD_MAX, PASSWORD_MIN } from '../tools/pd
 import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
 import { LIMITS as PDF_SPLIT_LIMITS } from '../tools/pdf-split/limits';
 import { LIMITS as PDF_SIGN_LIMITS } from '../tools/pdf-sign/limits';
+import { LIMITS as ID_COPY_LIMITS } from '../tools/id-copy/limits';
 
 /** HWP numbers in the /hwp-viewer/ and /hwpx-to-hwp/ FAQs, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -79,6 +80,12 @@ const PDF_SPLIT_FAQ = {
 const PDF_SIGN_FAQ = {
   filePc: `${n(PDF_SIGN_LIMITS.desktop.maxFileBytes / MB)} MB`,
   filePhone: `${n(PDF_SIGN_LIMITS.mobile.maxFileBytes / MB)} MB`,
+} as const;
+
+/** 신분증 사본 만들기 numbers in its FAQ, read from its limits (MB = 1,048,576 bytes). */
+const ID_COPY_FAQ = {
+  filePc: `${n(ID_COPY_LIMITS.desktop.maxFileBytes / MB)} MB`,
+  filePhone: `${n(ID_COPY_LIMITS.mobile.maxFileBytes / MB)} MB`,
 } as const;
 
 export type ToolStatus = 'live' | 'soon';
@@ -593,6 +600,47 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['여권사진 규격', '여권사진', '증명사진 사이즈', '여권사진 사이즈', '증명사진 용량 줄이기'],
+  },
+  {
+    // TOOLS1015 I1. name = h1 (COPY.md). A photo tool: after 여권·증명사진 규격 맞추기 (the photo group keeps its order).
+    // Every string here is in the preloaded UI font (brief decision 2: 뒤 7자리, not the missing glyph).
+    slug: 'id-copy',
+    name: '신분증 사본 만들기',
+    title: '신분증 사본 만들기 — 주민번호 가리기·용도 문구 넣기 무료 | 문서딱',
+    description: '신분증 사진에서 주민번호 뒤 7자리와 주소를 가리고 「회사 제출용」 문구를 넣어 JPG·PDF로 저장해요. 가입 없이 무료.',
+    h1: '신분증 사본 만들기',
+    summary: '신분증 사진의 주민번호·주소를 가리고 용도 문구를 넣어 사본으로 저장합니다.',
+    icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M13 10h5M13 14h5M6 16h5"/>',
+    status: 'live',
+    updated: '2026-10-15',
+    faq: [
+      {
+        q: '신분증 사본은 어디서 발급받나요?',
+        a: '신분증 사본은 따로 발급받는 서류가 아니라, 가지고 있는 신분증을 복사하거나 사진으로 찍은 것입니다. 주민등록표 등본·초본이 필요하다면 정부24(인터넷), 주민센터, 무인민원발급기에서 발급받을 수 있습니다.',
+      },
+      {
+        q: '무엇을 가려야 하나요?',
+        a: '받는 곳이 요구하지 않는 정보입니다. 보통 주민등록번호 뒤 7자리와 주소를 많이 가립니다. 다만 받는 곳에 따라 꼭 필요한 정보일 수 있으니, 가려도 되는지 먼저 물어보세요.',
+      },
+      {
+        q: '가린 부분을 다시 볼 수 있나요?',
+        a: '볼 수 없습니다. 검은 상자는 사진 위에 올리는 것이 아니라 사진 자체를 칠해 저장합니다. JPG와 PDF 어디에도 원래 글자가 남지 않습니다.',
+      },
+      {
+        q: '용도 문구에는 무엇을 쓰나요?',
+        a: '사본을 낼 곳의 이름을 적으세요. 「회사 제출용」처럼 들어가고, 「다른 용도 사용 금지」와 오늘 날짜가 함께 들어갑니다. 문구는 비스듬히 사진 전체에 반복해 넣어, 일부를 잘라 내도 남습니다.',
+      },
+      {
+        q: '양면을 한 파일로 내야 하면?',
+        a: '두 면을 하나씩 사본으로 만들어 JPG로 저장한 뒤, 사진 PDF 변환에서 두 장을 골라 PDF 하나로 합치세요.',
+        links: [{ href: '/jpg-to-pdf/', text: '사진 PDF 변환' }],
+      },
+      {
+        q: '사진이 어디로 보내지나요?',
+        a: `어디로도 보내지 않습니다. 사진을 고르고 가리고 저장하는 일이 모두 이 기기 안에서 끝나고, 저장하지도 않습니다. 사진은 PC에서 ${ID_COPY_FAQ.filePc}, 휴대폰에서 ${ID_COPY_FAQ.filePhone}까지 고를 수 있습니다.`,
+      },
+    ],
+    keywords: ['신분증 사본', '신분증 사본 만들기', '주민번호 가리기', '신분증 워터마크', '신분증 사본 워터마크'],
   },
   {
     // Sprint C, C1. name = h1 (COPY.md; the brief's shorter name "전자서명·도장 이미지" would break that rule).

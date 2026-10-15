@@ -289,6 +289,22 @@ test('글자수 세기 (TOOLS1015 C1): pick on the first text, start (o=basis, v
   }
 });
 
+test('신분증 사본 만들기 (TOOLS1015 I1): pick, start (o=mark, v=on), success, download; never the 용도 문구, the date, boxes or the file name', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/id-copy/');
+  await page.setInputFiles('#ic-input', photoFixture('exif6_gps.jpg'));
+  await expect(page.locator('#ic-tool')).toHaveAttribute('data-state', 'editing', { timeout: 30_000 });
+  await page.locator('#ic-add').click();
+  await page.locator('#ic-place').fill('비밀상사');
+  await page.locator('#ic-run').click();
+  await expect(page.locator('#ic-tool')).toHaveAttribute('data-state', 'done', { timeout: 60_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#ic-jpg').click()]);
+  await expect.poll(() => beacons.map((b) => `${b.ev.e} ${b.ev.t}`)).toEqual(['pick id-copy', 'start id-copy', 'success id-copy', 'download id-copy']);
+  expectClean(beacons);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'start', t: 'id-copy', o: 'mark', v: 'on' });
+  for (const b of beacons) expect(b.body).not.toMatch(/비밀상사|제출용|exif6|신분증_사본|\d{4}\.\d{2}\.\d{2}/);
+});
+
 test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

@@ -645,6 +645,22 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
     budget('hwpx-to-hwp controller (lazy)', closure.filter((f) => !initial.has(f)), 6.5 * KB);
   }
 }
+// 신분증 사본 만들기 (TOOLS1015 I1): no worker of its own (the 사진 PDF 변환 images.worker makes the PDF). The controller
+// (the controller*.js chunk that owns #ic-mark-note, and what only it imports) loads on the first interaction, never with
+// the page; no initial script of the page names pdf-lib or the images worker (controller 13.2 KB gzip measured with the shared
+// decode/sniff, budget + 20 %).
+{
+  const html = pageHtml.get('id-copy/index.html');
+  if (!html) errors.push('id-copy/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('ic-mark-note'));
+    if (controller.length !== 1) errors.push(`id-copy controller: ${controller.length} chunk(s) name #ic-mark-note, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /id-copy/ controller loads with the page');
+    for (const f of initial) if (/images\.worker|PDFDocument/.test(read(f).toString('utf8'))) errors.push(`${f}: pdf-lib or the images worker in the /id-copy/ initial JS`);
+    budget('id-copy controller (lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 15.9 * KB);
+  }
+}
 // 글자수 세기 (TOOLS1015 C1): no engine and no lazy split; the page script (the chunk that owns #cc-text) loads with the
 // page (1.9 KB gzip measured, budget + 20 %; the whole initial JS 10.2 KB measured, 11.6 KB in the cloud build with the
 // usage tracker, budget + 20 % of the larger). It stores nothing:

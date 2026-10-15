@@ -20,7 +20,8 @@ export type NextSource =
   | 'image-to-jpg'
   | 'photo-compress'
   | 'remove-background'
-  | 'id-photo';
+  | 'id-photo'
+  | 'id-copy';
 
 /**
  * Button order = array order. A tool never offers itself. The 배경 지우기 row exists only in a build with
@@ -39,6 +40,8 @@ export const FLOW = {
   'image-to-jpg': ['photo-compress', 'jpg-to-pdf'],
   'photo-compress': ['jpg-to-pdf'],
   'id-photo': ['jpg-to-pdf'],
+  // TOOLS1015 I1: the PDF of the copy (a password before sending it, or a smaller file).
+  'id-copy': ['pdf-password', 'pdf-compress'],
   ...(__BG_REMOVE__ ? { 'remove-background': ['jpg-to-pdf', 'photo-compress'] } : {}),
 } as Readonly<Record<NextSource, readonly NextTarget[] | undefined>>;
 

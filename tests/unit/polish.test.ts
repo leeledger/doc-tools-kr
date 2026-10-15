@@ -457,15 +457,17 @@ describe('live-only description (P.6)', () => {
     expect(n).toBeLessThanOrEqual(80);
   });
 
-  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4, image-to-jpg in TOOLS5 U1, pdf-split in U2, pdf-sign in U3, char-count in TOOLS1015 C1), no duplicates, every tool listed', () => {
+  it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4, image-to-jpg in TOOLS5 U1, pdf-split in U2, pdf-sign in U3, char-count in TOOLS1015 C1, id-copy in I1), no duplicates, every tool listed', () => {
     const slugs = new Set([...TOOLS, BG_REMOVE_TOOL].map((t) => t.slug));
     expect(slugs.has('pdf-password')).toBe(true);
     expect(slugs.has('image-to-jpg')).toBe(true);
     expect(slugs.has('pdf-split')).toBe(true);
     expect(slugs.has('pdf-sign')).toBe(true);
     expect(slugs.has('char-count')).toBe(true);
-    // TOOLS1015 decision 3: char-count after id-copy (not built yet), id-copy after pdf-sign; until then right after pdf-sign.
-    expect(HOME_DESC_ORDER.indexOf('char-count')).toBe(HOME_DESC_ORDER.indexOf('pdf-sign') + 1);
+    expect(slugs.has('id-copy')).toBe(true);
+    // TOOLS1015 decision 3: id-copy right after pdf-sign, char-count right after id-copy.
+    expect(HOME_DESC_ORDER.indexOf('id-copy')).toBe(HOME_DESC_ORDER.indexOf('pdf-sign') + 1);
+    expect(HOME_DESC_ORDER.indexOf('char-count')).toBe(HOME_DESC_ORDER.indexOf('id-copy') + 1);
     // HWPX2HWP decision 14: right after HWP PDF 변환, before HWP 파일 보기 (searches 1.5만 > 3,560 a month).
     expect(HOME_DESC_ORDER.indexOf('hwpx-to-hwp')).toBe(HOME_DESC_ORDER.indexOf('hwp-to-pdf') + 1);
     expect(HOME_DESC_ORDER.indexOf('hwp-viewer')).toBe(HOME_DESC_ORDER.indexOf('hwpx-to-hwp') + 1);
@@ -657,7 +659,7 @@ describe('service worker (P.11)', () => {
 
   it('C2 round 2 + TOOLS4 T4 round 2: legal pages and the non-precached tool pages are stored when visited; offline they come from the cache', async () => {
     const cache = new FakeCache();
-    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/']) {
+    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/']) {
       const ev = event(req(path, 'GET', 'navigate'));
       handleFetch(ev.e, envWith(async () => new Response(`page ${path}`), cache));
       await ev.responded;

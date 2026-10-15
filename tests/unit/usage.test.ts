@@ -962,6 +962,36 @@ describe('글자수 세기 (TOOLS1015 C1)', () => {
   });
 });
 
+describe('신분증 사본 만들기 (TOOLS1015 I1)', () => {
+  it('tool and 용도 문구 setting are whitelisted; its fail codes pass; words, dates and box counts are refused as values', () => {
+    expect(TOOLS).toContain('id-copy');
+    for (const v of ['on', 'off']) expect(validate(body({ ...BASE, t: 'id-copy', e: 'start', o: 'mark', v })), v).not.toBeNull();
+    for (const v of ['회사 제출용', 'ON', '2026.10.15', '3', 'true']) expect(validate(body({ ...BASE, t: 'id-copy', e: 'start', o: 'mark', v })), v).toBeNull();
+    for (const c of ['heic', 'not-image', 'corrupt', 'too-big', 'canvas', 'oom', 'encoder', 'engine', 'unknown']) {
+      expect(validate(body({ ...BASE, t: 'id-copy', e: 'fail', c, p: 'process' })), c).not.toBeNull();
+      expect((FAIL_LABELS as Record<string, string>)[c], c).toBeTruthy();
+    }
+    for (const e of ['pick', 'success', 'download']) expect(validate(body({ ...BASE, t: 'id-copy', e })), e).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'id-copy', e: 'next', o: 'next', v: 'pdf-password' }))).not.toBeNull();
+  });
+
+  it('admin labels are Korean: 신분증 사본 만들기, 용도 문구 and its two values', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'id-copy', event: 'success', via: 'direct', n: 4 }],
+      settings: [
+        { tool: 'id-copy', setting: 'mark', value: 'on', n: 3 },
+        { tool: 'id-copy', setting: 'mark', value: 'off', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('신분증 사본 만들기');
+    expect(settings!.rows).toEqual([
+      ['신분증 사본 만들기', '용도 문구', '용도 문구 넣음', '3'],
+      ['신분증 사본 만들기', '용도 문구', '용도 문구 안 넣음', '1'],
+    ]);
+  });
+});
+
 describe('PDF 나누기·쪽 편집 (TOOLS5 U2)', () => {
   it('tool and 저장 방식 setting are whitelisted; its fail codes pass; ranges, counts and names are refused as values', () => {
     expect(TOOLS).toContain('pdf-split');

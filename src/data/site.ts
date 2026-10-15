@@ -41,6 +41,7 @@ export const HOME_DESC_ORDER: readonly string[] = [
   'pdf-split',
   'stamp-signature',
   'pdf-sign',
+  'id-copy',
   'char-count',
   'remove-background',
 ];
