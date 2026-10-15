@@ -738,10 +738,12 @@ export const TOOLS: Tool[] = [
     // Sprint C, C1. name = h1 (COPY.md; the brief's shorter name "전자서명·도장 이미지" would break that rule).
     slug: 'stamp-signature',
     name: '전자서명·도장 이미지 만들기',
-    // STAMP1015 D2 (S5): the 도장 이미지 terms moved to /stamp-maker/; this page leads with 전자서명 and 도장 사진 배경 지우기.
-    title: '전자서명 만들기 — 서명 그리기·도장 사진 배경 지우기 | 문서딱',
+    // STAMP1015 S5 round 2 (Arch, 2026-10-16: keep the traffic): the title keeps the h1 phrase 「전자서명·도장 이미지 만들기」
+    // (the 「도장 이미지 만들기」 query) and says what the page does; Arch's wording with 「도장 사진」 is 43 characters, over
+    // the 40 limit, so 「도장 배경 지우기」.
+    title: '전자서명·도장 이미지 만들기 — 서명 그리기·도장 배경 지우기 | 문서딱',
     description:
-      '전자서명 만들기와 도장 사진 배경 지우기를 무료로. 서명을 직접 그리거나 종이 사진에서 배경을 지워 투명 PNG로 저장해요.',
+      '전자서명·도장 이미지 만들기를 무료로. 서명을 직접 그리거나 도장 사진에서 종이 배경을 지워 투명 PNG로 저장해요.',
     h1: '전자서명·도장 이미지 만들기',
     summary: '도장·서명 사진의 배경을 지워 투명한 PNG 파일로 저장합니다. 서명은 직접 그려도 됩니다.',
     icon: '<rect x="4" y="15" width="16" height="5" rx="1"/><path d="M9 15v-3.5a3 3 0 1 1 6 0V15"/><path d="M7 23h10"/>',
@@ -769,7 +771,7 @@ export const TOOLS: Tool[] = [
         a: '아이폰 사진(HEIC)은 기기에 따라 열리지 않습니다. PC에서는 열리지 않는 경우가 많아요. 그럴 때는 아이폰에서 이 페이지를 열어 바꾸거나, 아이폰 설정 > 카메라 > 포맷에서 「높은 호환성」을 골라 새로 찍을 사진을 JPG로 저장하세요.',
       },
     ],
-    keywords: ['전자서명만들기', '서명 만들기', '도장배경제거', '싸인누끼', '도장누끼'],
+    keywords: ['전자서명만들기', '서명 만들기', '도장이미지만들기', '도장배경제거', '싸인누끼', '도장누끼'],
   },
   ...(__BG_REMOVE__ ? [BG_REMOVE_TOOL] : []),
   {

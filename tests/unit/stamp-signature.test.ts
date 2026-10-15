@@ -168,13 +168,14 @@ describe('자동 classification and file names (Arch rulings, C1 review)', () =>
 describe('stamp-signature tool entry and guides', () => {
   const tool = getTool('stamp-signature');
 
-  it('title, H1 = name, a description with both keywords, 40–80 characters (STAMP1015 D2: 도장 이미지 terms moved to /stamp-maker/)', () => {
-    expect(tool.title).toBe('전자서명 만들기 — 서명 그리기·도장 사진 배경 지우기 | 문서딱');
+  it('title, H1 = name, a description with both keywords, 40–80 characters (STAMP1015 S5 round 2: the h1 phrase stays)', () => {
+    expect(tool.title).toBe('전자서명·도장 이미지 만들기 — 서명 그리기·도장 배경 지우기 | 문서딱');
     expect(tool.h1).toBe('전자서명·도장 이미지 만들기');
     expect(tool.name).toBe(tool.h1);
-    expect(tool.description).toContain('전자서명 만들기');
-    expect(tool.description).toContain('도장 사진 배경 지우기');
-    expect(tool.keywords).toEqual(['전자서명만들기', '서명 만들기', '도장배경제거', '싸인누끼', '도장누끼']);
+    expect(tool.description).toContain('도장 이미지 만들기');
+    expect(tool.description).toContain('전자서명');
+    expect(tool.description).toContain('배경을 지워');
+    expect(tool.keywords).toEqual(['전자서명만들기', '서명 만들기', '도장이미지만들기', '도장배경제거', '싸인누끼', '도장누끼']);
     expect([...tool.description].length).toBeGreaterThanOrEqual(40);
     expect([...tool.description].length).toBeLessThanOrEqual(80);
   });
