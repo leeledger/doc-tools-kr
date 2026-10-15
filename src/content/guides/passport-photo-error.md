@@ -60,10 +60,10 @@ sources:
     title: 외교부 여권안내 — 여권 사진 파일 안내
     quote: 배경이 흰색이 아니거나, 배경색을 사진 편집 프로그램으로 제거하여 사진이 변형된 경우
     retrieved: '2026-10-14'
-  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=10
+  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=11
     title: 외교부 여권안내 — 온라인 여권 재발급 신청
     quote: 여권용 사진 파일 규격에 맞지 않는 경우 신청이 진행되지 않거나 반려될 수 있음
-    retrieved: '2026-10-14'
+    retrieved: '2026-10-15'
   - preset: passport_online
 faq:
   - q: 706 속성검사 실패는 왜 나오나요?

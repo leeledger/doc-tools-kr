@@ -20,8 +20,16 @@ export async function pdfTraces(bytes: Uint8Array): Promise<string> {
   return parts.join('\n');
 }
 
-/** Whether `secret` (ASCII) is in the traces as text or as hex, either case. */
+/**
+ * Whether `secret` is in the traces in any form a PDF writes text: as is, its UTF-8 or latin1 bytes, UTF-16BE bytes (what
+ * field values and Korean text use), each also as hex, the UTF-16BE hex with and without the FEFF mark (either case).
+ */
 export function hasSecret(traces: string, secret: string): boolean {
-  const hex = Buffer.from(secret, 'latin1').toString('hex');
-  return traces.includes(secret) || traces.toLowerCase().replace(/\s+/g, '').includes(hex);
+  const utf16 = Buffer.from(secret, 'utf16le').swap16();
+  const raw = [secret, Buffer.from(secret, 'utf8').toString('latin1'), utf16.toString('latin1')];
+  if (raw.some((r) => traces.includes(r))) return true;
+  const flat = traces.toLowerCase().replace(/\s+/g, '');
+  const hexes = [Buffer.from(secret, 'utf8').toString('hex'), utf16.toString('hex'), 'feff' + utf16.toString('hex')];
+  if (/^[\x00-\xff]*$/.test(secret)) hexes.push(Buffer.from(secret, 'latin1').toString('hex'));
+  return hexes.some((h) => flat.includes(h));
 }

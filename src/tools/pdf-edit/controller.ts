@@ -74,10 +74,10 @@ const WHITE_RESULT_NOTE = '흰 상자로 가린 곳의 원래 글자는 파일 �
  * file the field shows over a white box, or hides inserted text (E2 round 2, Arch: say so; nothing is deleted).
  */
 const FIELD_NOTE = {
-  white: '이 자리에 입력 칸이 있어 저장한 파일에서는 칸 내용이 흰 상자 위에 보일 수 있어요. 완전히 가리려면 「흰 상자로 가린 쪽은 그림으로 바꿔 저장」을 켜 주세요.',
-  text: '이 자리에 입력 칸이 있어 저장한 파일에서는 넣은 글자가 칸에 가려질 수 있어요.',
+  white: '이 자리에 입력 칸이나 메모가 있어 저장한 파일에서는 그 내용이 흰 상자 위에 보일 수 있어요. 완전히 가리려면 「흰 상자로 가린 쪽은 그림으로 바꿔 저장」을 켜 주세요.',
+  text: '이 자리에 입력 칸이나 메모가 있어 저장한 파일에서는 넣은 글자가 그 아래에 가려질 수 있어요.',
 } as const;
-const FIELD_RESULT_NOTE = '입력 칸과 겹친 흰 상자나 글자가 있어요. 저장한 파일에서는 칸 내용이 위에 보이거나 넣은 글자가 가려질 수 있어요.';
+const FIELD_RESULT_NOTE = '입력 칸이나 메모와 겹친 흰 상자나 글자가 있어요. 저장한 파일에서는 그 내용이 위에 보이거나 넣은 글자가 가려질 수 있어요.';
 const PLACEHOLDER = '글자를 쓰세요';
 const COLOR_LABELS: Record<TextColor, string> = { black: '검정', blue: '파랑' };
 /** Item names (each takes 를). */
@@ -286,32 +286,40 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
 
   // ---------- annotations (form fields, notes, stamps) under the items ----------
 
-  /** Annotation rectangles by page, as seen (Link and Popup left out: they draw nothing over the page). */
+  /**
+   * Annotation rectangles by page, as seen. Left out: Link and Popup, hidden or NoView ones (pdf.js `hidden`) and empty
+   * rectangles: they draw nothing over the page.
+   */
   const annots = new Map<number, Box[]>();
-  const annotsLoading = new Set<number>();
-  function loadAnnots(index: number): void {
+  const annotsLoading = new Map<number, Promise<void>>();
+  /** Loads page `index`'s list once (the save awaits it for every page with an item). */
+  function loadAnnots(index: number): Promise<void> {
     const doc = opened?.doc;
-    if (!doc || annots.has(index) || annotsLoading.has(index)) return;
-    annotsLoading.add(index);
-    void doc
+    if (!doc || annots.has(index)) return Promise.resolve();
+    const running = annotsLoading.get(index);
+    if (running) return running;
+    const p = doc
       .getPage(index + 1)
       .then(async (page) => {
-        const list = (await page.getAnnotations()) as { subtype?: string; rect?: number[] }[];
+        const list = (await page.getAnnotations()) as { subtype?: string; rect?: number[]; hidden?: boolean }[];
         const vp = page.getViewport({ scale: 1 });
         const boxes = list
-          .filter((a) => a.subtype !== 'Link' && a.subtype !== 'Popup' && Array.isArray(a.rect) && a.rect.length === 4)
+          .filter((a) => a.subtype !== 'Link' && a.subtype !== 'Popup' && !a.hidden && Array.isArray(a.rect) && a.rect.length === 4)
           .map((a) => {
             const [rx1 = 0, ry1 = 0, rx2 = 0, ry2 = 0] = a.rect!;
             const [x1 = 0, y1 = 0] = vp.convertToViewportPoint(rx1, ry1);
             const [x2 = 0, y2 = 0] = vp.convertToViewportPoint(rx2, ry2);
             return { x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1) };
-          });
+          })
+          .filter((b) => b.w > 0 && b.h > 0);
         if (opened?.doc !== doc) return;
         annots.set(index, boxes);
         updateUi();
       })
       .catch(() => undefined)
       .finally(() => annotsLoading.delete(index));
+    annotsLoading.set(index, p);
+    return p;
   }
   const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   /** Whether the item lies over an annotation of its page (whose appearance viewers paint over the page content). */
@@ -427,7 +435,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     whiteNote.hidden = !hasWhite;
     whiteNote.textContent = hasWhite ? WHITE_NOTE : '';
     flattenBox.hidden = !hasWhite;
-    loadAnnots(pageStage.page);
+    void loadAnnots(pageStage.page);
     const cur = pageStage.page;
     prevBtn.disabled = cur <= 0;
     nextBtn.disabled = cur >= pageCount - 1;
@@ -783,6 +791,9 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     status('글자를 넣어 저장하는 중입니다.');
     cancelBtn.focus();
     try {
+      // The annotation lists of every page with an item, before the plan, the picture and the result notes use them.
+      await Promise.all([...new Set(items.map((it) => it.page))].map(loadAnnots));
+      if (id !== runId) return;
       const draws = await plan();
       if (id !== runId) return;
       // pdf-lib takes the buffer it is given (transferred), so it gets a copy.

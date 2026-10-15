@@ -151,13 +151,19 @@ export async function flattenPdf(input: Uint8Array, pages: readonly FlatPageIn[]
   try {
     // The annotations (form widgets among them) of the pages being replaced: their fields go too.
     const gone = new Set<string>();
+    /** Objects of the replaced pages deleted outright: annotations (and their appearance streams), content streams. */
+    const doomed: PDFRef[] = [];
     for (const p of pages) {
       if (p.index < 0 || p.index >= doc.getPageCount()) throw new PdfError('unknown', `no page ${p.index}`);
-      const annots = doc.getPage(p.index).node.Annots();
+      const node = doc.getPage(p.index).node;
+      const annots = node.Annots();
       for (let i = 0; i < (annots?.size() ?? 0); i++) {
         const r = annots!.get(i);
-        if (r instanceof PDFRef) gone.add(r.toString());
+        if (!(r instanceof PDFRef)) continue;
+        gone.add(r.toString());
+        doomed.push(r, ...appearanceRefs(doc, r));
       }
+      doomed.push(...contentRefs(doc, node.get(PDFName.of('Contents'))));
     }
     for (const p of pages) {
       const image = await doc.embedJpg(p.jpeg);
@@ -165,10 +171,13 @@ export async function flattenPdf(input: Uint8Array, pages: readonly FlatPageIn[]
       page.drawImage(image, { x: 0, y: 0, width: p.width, height: p.height });
       doc.removePage(p.index + 1);
     }
-    dropFields(doc, gone);
+    doomed.push(...dropFields(doc, gone));
+    // removePage deletes only the page dictionary. Whatever else still points at the old page's annotations, fields or
+    // contents (the struct tree's OBJR, /AcroForm /CO, another annotation's /Popup or /IRT) would keep them, and their
+    // typed values, in the file: they are deleted outright (a reference to a missing object reads as null, PDF 32000
+    // 7.3.10), then everything no longer reachable from the trailer is dropped.
+    for (const r of doomed) doc.context.delete(r);
     doc.setProducer(PRODUCER);
-    // removePage deletes only the page dictionary: its content streams, fonts, annotations and field values would still
-    // be written. Everything no longer reachable from the trailer is dropped, so the covered text leaves the file.
     dropUnreachable(doc);
     const bytes = await doc.save({ useObjectStreams: true, updateFieldAppearances: false }).catch((err: unknown) => {
       if (/PDF\/A-1 forbids object/i.test(err instanceof Error ? err.message : '')) return doc.save({ useObjectStreams: false, updateFieldAppearances: false });
@@ -185,10 +194,11 @@ export async function flattenPdf(input: Uint8Array, pages: readonly FlatPageIn[]
  * Removes from /AcroForm /Fields every widget in `gone` (a removed page's annotations) and every field left without
  * widgets, so a typed value (/V) on a replaced page does not stay in the form.
  */
-function dropFields(doc: PDFDocument, gone: ReadonlySet<string>): void {
+function dropFields(doc: PDFDocument, gone: ReadonlySet<string>): PDFRef[] {
   const acro = doc.catalog.lookupMaybe(PDFName.of('AcroForm'), PDFDict);
   const fields = acro?.lookupMaybe(PDFName.of('Fields'), PDFArray);
-  if (!acro || !fields || !gone.size) return;
+  const removed: PDFRef[] = [];
+  if (!acro || !gone.size) return removed;
   const KIDS = PDFName.of('Kids');
   /** Prunes `arr` in place; true when something is left. */
   const prune = (arr: PDFArray): boolean => {
@@ -201,11 +211,47 @@ function dropFields(doc: PDFDocument, gone: ReadonlySet<string>): void {
         const kids = node.lookupMaybe(KIDS, PDFArray);
         if (kids && kids.size() > 0) keep = prune(kids);
       }
-      if (!keep) arr.remove(i);
+      if (!keep) {
+        arr.remove(i);
+        if (ref instanceof PDFRef) removed.push(ref, ...appearanceRefs(doc, ref));
+      }
     }
     return arr.size() > 0;
   };
-  prune(fields);
+  if (fields) prune(fields);
+  // The calculation order names fields too.
+  const co = acro.lookupMaybe(PDFName.of('CO'), PDFArray);
+  if (co) {
+    const out = new Set([...gone, ...removed.map(String)]);
+    for (let i = co.size() - 1; i >= 0; i--) if (out.has(String(co.get(i)))) co.remove(i);
+  }
+  return removed;
+}
+
+/** The appearance streams (/AP /N /R /D, plain or by state) of the annotation or field at `ref`. */
+function appearanceRefs(doc: PDFDocument, ref: PDFRef): PDFRef[] {
+  const out: PDFRef[] = [];
+  const ap = doc.context.lookup(ref);
+  const dict = ap instanceof PDFDict ? ap.lookupMaybe(PDFName.of('AP'), PDFDict) : undefined;
+  if (!dict) return out;
+  for (const [, v] of dict.entries()) {
+    if (v instanceof PDFRef) out.push(v);
+    const sub = doc.context.lookup(v);
+    if (sub instanceof PDFDict && !(sub instanceof PDFStream)) for (const [, w] of sub.entries()) if (w instanceof PDFRef) out.push(w);
+  }
+  return out;
+}
+
+/** The refs of a page's /Contents: the stream, or the array and every stream in it. */
+function contentRefs(doc: PDFDocument, contents: PDFObject | undefined): PDFRef[] {
+  if (!contents) return [];
+  const out: PDFRef[] = contents instanceof PDFRef ? [contents] : [];
+  const v = doc.context.lookup(contents);
+  if (v instanceof PDFArray) for (let i = 0; i < v.size(); i++) {
+    const r = v.get(i);
+    if (r instanceof PDFRef) out.push(r);
+  }
+  return out;
 }
 
 /** Deletes every indirect object that the trailer's /Root and /Info no longer reach. */

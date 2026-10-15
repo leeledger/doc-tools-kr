@@ -4,7 +4,7 @@
 // text on the rendered page but the old text stays in the file.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PDFDict, PDFDocument, PDFName, StandardFonts, degrees } from '@cantoo/pdf-lib';
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, StandardFonts, degrees } from '@cantoo/pdf-lib';
 import fontkit from '@cantoo/fontkit';
 import { createCanvas } from '@napi-rs/canvas';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -324,5 +324,85 @@ describe('「그림으로 바꿔 저장」 (E2)', () => {
     const done = await PDFDocument.load(out.bytes, { updateMetadata: false });
     expect(done.getForm().getFields().map((f) => f.getName())).toEqual(['kept']);
     expect(done.getPage(1).node.Annots()?.size() ?? 0).toBe(0);
+  });
+});
+
+describe('「그림으로 바꿔 저장」 round 3: nothing that still points at a replaced page keeps its field values', () => {
+  /**
+   * Page 2 (index 1) is replaced. It holds content text SECRETWORD and two filled fields: FIELDSECRET (with an
+   * appearance stream) and a Korean value 비밀값 (UTF-16BE /V, written without appearances: Helvetica cannot draw it).
+   * Page 1 keeps KEEPME and the field FIELDKEEP. Options: /AcroForm /CO naming the fields; a struct tree whose OBJR
+   * points at the widgets (a tagged PDF).
+   */
+  async function fixture(opts: { co?: boolean; struct?: boolean }): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const keep = doc.addPage([600, 800]);
+    keep.drawText('KEEPME', { x: 50, y: 700, size: 20, font });
+    const cover = doc.addPage([600, 800]);
+    cover.drawText('SECRETWORD', { x: 50, y: 700, size: 20, font });
+    const form = doc.getForm();
+    const latin = form.createTextField('latin');
+    latin.setText('FIELDSECRET');
+    latin.addToPage(cover, { x: 60, y: 600, width: 200, height: 24 });
+    const kept = form.createTextField('kept');
+    kept.setText('FIELDKEEP');
+    kept.addToPage(keep, { x: 60, y: 600, width: 200, height: 24 });
+    form.updateFieldAppearances(font);
+    const korean = form.createTextField('korean');
+    korean.addToPage(cover, { x: 60, y: 500, width: 200, height: 24 });
+    korean.acroField.setValue(PDFHexString.fromText('비밀값'));
+    const ctx = doc.context;
+    const acro = doc.catalog.lookup(PDFName.of('AcroForm'), PDFDict);
+    if (opts.co) acro.set(PDFName.of('CO'), ctx.obj([latin.ref, korean.ref, kept.ref]));
+    if (opts.struct) {
+      const widgets = cover.node.Annots()!;
+      const root = ctx.nextRef();
+      const elems = [0, 1].map((i) => ctx.register(ctx.obj({ Type: 'StructElem', S: 'Form', P: root, Pg: cover.ref, K: ctx.obj({ Type: 'OBJR', Obj: widgets.get(i), Pg: cover.ref }) })));
+      ctx.assign(root, ctx.obj({ Type: 'StructTreeRoot', K: elems }));
+      doc.catalog.set(PDFName.of('StructTreeRoot'), root);
+      doc.catalog.set(PDFName.of('MarkInfo'), ctx.obj({ Marked: true }));
+    }
+    return doc.save({ updateFieldAppearances: false });
+  }
+
+  const blank = (): Uint8Array => {
+    const c = createCanvas(600, 800);
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, 600, 800);
+    return new Uint8Array(c.toBuffer('image/jpeg'));
+  };
+
+  for (const [label, opts] of [
+    ['plain', {}],
+    ['/AcroForm /CO names the fields', { co: true }],
+    ['tagged: StructTree OBJR points at the widgets', { struct: true }],
+    ['both', { co: true, struct: true }],
+  ] as const) {
+    it(label, async () => {
+      const input = await fixture(opts);
+      const before = await pdfTraces(input);
+      // The checker finds every form first (FIELDSECRET also in its appearance stream; 비밀값 as UTF-16BE).
+      for (const s of ['SECRETWORD', 'FIELDSECRET', '비밀값', 'KEEPME', 'FIELDKEEP']) expect(hasSecret(before, s), s).toBe(true);
+      const out = await flattenPdf(input, [{ index: 1, jpeg: blank(), width: 600, height: 800 }]);
+      const after = await pdfTraces(out.bytes);
+      for (const s of ['SECRETWORD', 'FIELDSECRET', '비밀값']) expect(hasSecret(after, s), s).toBe(false);
+      for (const s of ['KEEPME', 'FIELDKEEP']) expect(hasSecret(after, s), s).toBe(true);
+      const done = await PDFDocument.load(out.bytes, { updateMetadata: false });
+      expect(done.getForm().getFields().map((f) => f.getName())).toEqual(['kept']);
+      const co = done.catalog.lookupMaybe(PDFName.of('AcroForm'), PDFDict)?.lookupMaybe(PDFName.of('CO'), PDFArray);
+      if (opts.co) expect(co?.size()).toBe(1);
+      expect(await pageTexts(out.bytes)).toHaveLength(2);
+    });
+  }
+
+  it('hasSecret reads UTF-16BE: raw bytes, hex with and without FEFF, either case', () => {
+    const be = Buffer.from('비밀값', 'utf16le').swap16();
+    expect(hasSecret(be.toString('latin1'), '비밀값')).toBe(true);
+    expect(hasSecret(`<FEFF${be.toString('hex').toUpperCase()}>`, '비밀값')).toBe(true);
+    expect(hasSecret(`<${be.toString('hex')}>`, '비밀값')).toBe(true);
+    expect(hasSecret('<FEFF0046004900450040>', 'FIE')).toBe(true);
+    expect(hasSecret('nothing here', '비밀값')).toBe(false);
   });
 });

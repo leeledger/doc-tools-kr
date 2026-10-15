@@ -44,22 +44,22 @@ sources:
     title: 외교부 여권안내 — 여권 사진 파일 안내
     quote: 배경이 흰색이 아니거나, 배경색을 사진 편집 프로그램으로 제거하여 사진이 변형된 경우
     retrieved: '2026-10-14'
-  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=10
+  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=11
     title: 외교부 여권안내 — 온라인 여권 재발급 신청
     quote: 여권용 사진 파일 규격에 맞지 않는 경우 신청이 진행되지 않거나 반려될 수 있음
-    retrieved: '2026-10-14'
-  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=10
+    retrieved: '2026-10-15'
+  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=11
     title: 외교부 여권안내 — 온라인 여권 재발급 신청
     quote: 여권 수령시 본인이 직접 방문 필요
-    retrieved: '2026-10-14'
-  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=10
+    retrieved: '2026-10-15'
+  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=11
     title: 외교부 여권안내 — 온라인 여권 재발급 신청
     quote: 신청 대상 기존에 전자여권을 한 번 이라도 발급받은 우리 국민 신청 불가 대상 생애 최초 전자여권 신청자 외교관 및 관용여권 신청자 긴급 여권 신청자
-    retrieved: '2026-10-14'
-  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=10
+    retrieved: '2026-10-15'
+  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=11
     title: 외교부 여권안내 — 온라인 여권 재발급 신청
     quote: 18세 미만 미성년자를 위한 온라인 신청 시에는 법정대리인이 본인 인증 후 대리 신청 필요
-    retrieved: '2026-10-14'
+    retrieved: '2026-10-15'
   - preset: passport_online
 faq:
   - q: 여권 재발급 사진 파일은 몇 KB까지 되나요?

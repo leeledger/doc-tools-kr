@@ -48,14 +48,14 @@ sources:
     title: 외교부 여권안내 — 여권 발급 신청
     quote: 여권용 사진 1매 (6개월 이내에 촬영한 사진)
     retrieved: '2026-10-14'
-  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=10
+  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=11
     title: 외교부 여권안내 — 온라인 여권 재발급 신청
     quote: 신청 불가 대상 생애 최초 전자여권 신청자
-    retrieved: '2026-10-14'
-  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=10
+    retrieved: '2026-10-15'
+  - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=11
     title: 외교부 여권안내 — 온라인 여권 재발급 신청
     quote: 18세 미만 미성년자를 위한 온라인 신청 시에는 법정대리인이 본인 인증 후 대리 신청 필요
-    retrieved: '2026-10-14'
+    retrieved: '2026-10-15'
   - preset: passport_online
 faq:
   - q: 신생아 여권사진도 어른과 규격이 같나요?

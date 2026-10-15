@@ -8,7 +8,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import type { Download, Page } from '@playwright/test';
-import { PDFDocument, StandardFonts, degrees } from '@cantoo/pdf-lib';
+import { PDFDocument, PDFHexString, StandardFonts, degrees } from '@cantoo/pdf-lib';
 import { createCanvas } from '@napi-rs/canvas';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { expect, gotoReady, test } from './no-upload';
@@ -51,6 +51,10 @@ test.beforeAll(async () => {
   const f2 = fields.createTextField('other');
   f2.setText('FIELDKEEP');
   f2.addToPage(p2, { x: 60, y: 600, width: 120, height: 24 });
+  // A Korean value (UTF-16BE /V) on page 1, away from the box: the whole page is converted in E2, so it goes too.
+  const f3 = fields.createTextField('korean');
+  f3.addToPage(p1, { x: 60, y: 300, width: 120, height: 24 });
+  f3.acroField.setValue(PDFHexString.fromText('비밀값'));
   writeFileSync(FIELD_FORM, await ff.save());
 });
 
@@ -415,7 +419,7 @@ test('입력 칸 under a 흰 상자 (round 2): the item and the result say the f
   await open(page, FIELD_FORM);
   await stageReady(page);
   await page.locator('#ed-add-white').click();
-  await expect(page.locator('#ed-item-note')).toHaveText('이 자리에 입력 칸이 있어 저장한 파일에서는 칸 내용이 흰 상자 위에 보일 수 있어요. 완전히 가리려면 「흰 상자로 가린 쪽은 그림으로 바꿔 저장」을 켜 주세요.');
+  await expect(page.locator('#ed-item-note')).toHaveText('이 자리에 입력 칸이나 메모가 있어 저장한 파일에서는 그 내용이 흰 상자 위에 보일 수 있어요. 완전히 가리려면 「흰 상자로 가린 쪽은 그림으로 바꿔 저장」을 켜 주세요.');
   // A text item away from the field has no note.
   await page.locator('#ed-add-text').click();
   await page.locator('#ed-text').fill('멀리');
@@ -423,9 +427,10 @@ test('입력 칸 under a 흰 상자 (round 2): the item and the result say the f
   for (let i = 0; i < 30; i++) await page.keyboard.press('Shift+ArrowDown');
   await expect(page.locator('#ed-item-note')).toBeHidden();
   const { bytes } = await save(page);
-  await expect(page.locator('#ed-notes')).toContainText('입력 칸과 겹친 흰 상자나 글자가 있어요. 저장한 파일에서는 칸 내용이 위에 보이거나 넣은 글자가 가려질 수 있어요.');
+  await expect(page.locator('#ed-notes')).toContainText('입력 칸이나 메모와 겹친 흰 상자나 글자가 있어요. 저장한 파일에서는 그 내용이 위에 보이거나 넣은 글자가 가려질 수 있어요.');
   const traces = await pdfTraces(bytes);
   expect(hasSecret(traces, 'FIELDSECRET')).toBe(true);
+  expect(hasSecret(traces, '비밀값')).toBe(true);
   expect(hasSecret(traces, 'COVERTEXT')).toBe(true);
 });
 
@@ -436,9 +441,10 @@ test('입력 칸 under a 흰 상자 with 「그림으로 바꿔 저장」 (round
   await page.locator('#ed-flatten').check();
   const { bytes } = await save(page);
   await expect(page.locator('#ed-notes')).toContainText('1쪽을 그림으로 바꿔 저장했어요.');
-  await expect(page.locator('#ed-notes')).not.toContainText('입력 칸과 겹친');
+  await expect(page.locator('#ed-notes')).not.toContainText('입력 칸이나 메모와 겹친');
   const traces = await pdfTraces(bytes);
   expect(hasSecret(traces, 'FIELDSECRET')).toBe(false);
+  expect(hasSecret(traces, '비밀값')).toBe(false);
   expect(hasSecret(traces, 'COVERTEXT')).toBe(false);
   expect(hasSecret(traces, 'FIELDKEEP')).toBe(true);
   const doc = await PDFDocument.load(bytes, { updateMetadata: false });

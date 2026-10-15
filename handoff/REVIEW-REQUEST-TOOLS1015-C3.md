@@ -4,6 +4,13 @@ Ready for Review: YES
 Branch: tools-1015. Commits: d10488c (E0 refactor only), 75f9bcf (E1 tool), 644ff5a (E2 option, default off). Not pushed.
 Status: DONE (BUILD-LOG "TOOLS1015 E0", "E1", "E2" have gates, probes and decisions).
 
+## Round 3 (after the "round 2" feedback) — one commit on top of 0242667; BUILD-LOG "TOOLS1015 C3 round 3"
+- src/lib/pdf/edit.ts flattenPdf / dropFields / appearanceRefs / contentRefs — Must Fix 1: replaced pages' /Annots (+ /AP streams), pruned fields and emptied parents (+ /AP), old /Contents deleted outright; pruned/gone refs out of /AcroForm /CO; then the unreachable sweep.
+- tests/unit/pdf-edit.test.ts 「round 3」 — plain, /CO, tagged OBJR, both; SECRETWORD, FIELDSECRET (value + /AP) and 비밀값 (UTF-16BE) gone, kept field stays; /CO, tagged and both fail on 0242667.
+- tests/helpers/pdf-traces.ts hasSecret — Must Fix 2: UTF-8 and UTF-16BE raw bytes, UTF-16BE hex with/without FEFF; unit case for it; 비밀값 in the e2e fixture.
+- src/tools/pdf-edit/controller.ts — nits: `!hidden` + zero-size filter, the save awaits annotation lists of pages with items, 「입력 칸이나 메모」 wording (late face).
+- src/content/guides/{baby-passport-photo,passport-photo-error,passport-reissue-photo}.md — passport.go.kr menuPos=10 → menuPos=11 (same page, quotes verbatim, retrieved 2026-10-15).
+
 ## Round 2 (after REVIEW-FEEDBACK-TOOLS1015-C3.md) — one commit on top of 259202c; BUILD-LOG "TOOLS1015 C3 round 2"
 - src/lib/pdf/edit.ts flattenPdf + dropFields + dropUnreachable — Must Fix 1: the replaced pages' widgets leave /AcroForm /Fields (fields left without widgets go, /V with them), then every object unreachable from trailer /Root and /Info is deleted before save.
 - tests/helpers/pdf-traces.ts — raw bytes + every object + every decoded stream; hasSecret checks literal and hex.
