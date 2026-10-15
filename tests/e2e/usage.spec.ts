@@ -330,6 +330,42 @@ test('PDF 글자 넣기·편집 (TOOLS1015 E1): pick, start (o=items, v=mix), su
   expectClean(beacons);
 });
 
+test('도장 만들기 (STAMP1015 D8): start (o=style) once, success, download, next to pdf-sign; never the text, its script, the file name or the date; blocked faces send fail c=font once', async ({ page }) => {
+  const beacons = await record(page);
+  const painted = async (n: number): Promise<void> => {
+    await expect.poll(async () => Number((await page.locator('#sm-tool').getAttribute('data-painted')) ?? 0)).toBeGreaterThan(n);
+  };
+  await gotoReady(page, '/stamp-maker/');
+  await page.locator('#sm-text').focus();
+  await painted(0);
+  await page.locator('#sm-text').fill('홍길동洪');
+  await painted(1);
+  await page.locator('.sm-tile[data-style="square-seal"]').click();
+  await page.locator('.sm-tile[data-style="round"]').click();
+  await Promise.all([page.waitForEvent('download'), page.locator('#sm-save').click()]);
+  await Promise.all([page.waitForURL('**/pdf-sign/'), page.locator('#sm-pdf').click()]);
+  // Let /pdf-sign/ finish reading the picture before leaving (leaving mid-read is not part of this test).
+  await expect(page.locator('#sg-notice')).toHaveText('도장 만들기에서 만든 그림을 가져왔습니다. 이제 PDF 파일을 고르세요.');
+  const mine = () => beacons.filter((b) => b.ev.t === 'stamp-maker');
+  await expect.poll(() => mine().map((b) => b.ev.e)).toEqual(['start', 'success', 'download', 'success', 'next']);
+  expectClean(beacons);
+  expect(mine()[0]!.ev).toMatchObject({ e: 'start', t: 'stamp-maker', o: 'style', v: 'square-seal' });
+  expect(mine()[4]!.ev).toMatchObject({ e: 'next', t: 'stamp-maker', o: 'next', v: 'pdf-sign' });
+  for (const b of beacons) expect(b.body).not.toMatch(/홍길동|洪|도장_|round|hangul|hanja|#D0202E|\d{4}\.\d{2}\.\d{2}/);
+  // Faces blocked: one fail c=font (phase load), however often it repaints.
+  const before = beacons.length;
+  await page.route('**/fonts/hwp/**', (r) => r.abort());
+  await gotoReady(page, '/stamp-maker/');
+  await page.locator('#sm-text').focus();
+  await expect(page.locator('#sm-note')).toBeVisible({ timeout: 15_000 });
+  await page.locator('#sm-text').fill('김');
+  await expect(page.locator('#sm-tool')).toHaveAttribute('data-fonts', 'system');
+  await page.locator('#sm-text').fill('김수');
+  await page.waitForTimeout(500);
+  await expect.poll(() => beacons.slice(before).filter((b) => b.ev.e === 'fail' && b.ev.t === 'stamp-maker').map((b) => b.ev)).toEqual([expect.objectContaining({ e: 'fail', t: 'stamp-maker', c: 'font', p: 'load' })]);
+  expectClean(beacons);
+});
+
 test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

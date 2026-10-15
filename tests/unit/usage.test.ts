@@ -14,6 +14,7 @@ import {
   OUT_DESTS,
   OUT_KEY,
   PRESETS,
+  STAMP_STYLES,
   TOOLS,
   TOOL_OUT,
   UTM_SOURCES,
@@ -32,6 +33,7 @@ import {
   usageSql,
   utmOf,
   validate,
+  VALUE_LABELS,
 } from '../../scripts/lib/usage.mjs';
 import { onRequest as usageFn } from '../../functions/api/usage';
 import { onRequest as adminFn, MIN_PASSWORD, REALM } from '../../functions/admin/[[path]]';
@@ -40,6 +42,7 @@ import { LEVELS } from '../../src/lib/pdf/compress/levels';
 import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { USAGE_ON, UTM_STASH_KEY, UTM_TTL_MS, arrival, browserFamily, buildPayload, createTracker, readUtmStash, startUsage, track, writeUtmStash } from '../../src/lib/ui/usage';
 import { route } from '../../src/sw/sw';
+import { STYLES, STYLE_IDS } from '../../src/tools/stamp-maker/styles';
 import { DEEP_PARAM } from '../../src/lib/ui/deeplink';
 import { campaignSql } from '../../scripts/lib/campaign.mjs';
 import { FULL } from '../fixtures/usage-rows.mjs';
@@ -1436,5 +1439,37 @@ describe('REQ1015 딥링크 비율 해당 없음', () => {
     const guides = shaped.tables.find((t) => t.title === '안내 글에서 도구로')!;
     expect(guides.rows.map((r) => r[3])).toEqual([NO_DEEP_LINK, '75%']);
     expect(NO_DEEP_LINK).toBe('해당 없음');
+  });
+});
+
+describe('도장 만들기 (STAMP1015 D8)', () => {
+  it('tool and 도장 모양 are whitelisted with the 12 style ids only; never text, colours, sizes or dates', () => {
+    expect(TOOLS).toContain('stamp-maker');
+    expect(STAMP_STYLES).toEqual([...STYLE_IDS]);
+    for (const v of STYLE_IDS) expect(validate(body({ ...BASE, t: 'stamp-maker', e: 'start', o: 'style', v })), v).not.toBeNull();
+    for (const v of ['홍길동', '洪', '3', 'red', '#D0202E', '15', '2026.10.16', 'square', 'text']) expect(validate(body({ ...BASE, t: 'stamp-maker', e: 'start', o: 'style', v })), v).toBeNull();
+    for (const c of ['font', 'canvas', 'encoder', 'unknown', 'engine']) {
+      expect(validate(body({ ...BASE, t: 'stamp-maker', e: 'fail', c, p: 'save' })), c).not.toBeNull();
+      expect((FAIL_LABELS as Record<string, string>)[c], c).toBeTruthy();
+    }
+    for (const e of ['success', 'download']) expect(validate(body({ ...BASE, t: 'stamp-maker', e })), e).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'stamp-maker', e: 'next', o: 'next', v: 'pdf-sign' }))).not.toBeNull();
+  });
+
+  it('admin labels are Korean: 도장 만들기, 도장 모양 and the style names', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'stamp-maker', event: 'success', via: 'direct', n: 5 }],
+      settings: [
+        { tool: 'stamp-maker', setting: 'style', value: 'square-seal', n: 3 },
+        { tool: 'stamp-maker', setting: 'style', value: 'corp-round', n: 2 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('도장 만들기');
+    expect(settings!.rows).toEqual([
+      ['도장 만들기', '도장 모양', '사각 인감', '3'],
+      ['도장 만들기', '도장 모양', '법인 직인', '2'],
+    ]);
+    for (const id of STYLE_IDS) expect((VALUE_LABELS as Record<string, string>)[id]).toBe(STYLES[id].name);
   });
 });

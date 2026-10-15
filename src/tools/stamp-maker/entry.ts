@@ -4,6 +4,9 @@
 // load shows the shared engine panel.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
+import { startUsage, track } from '../../lib/ui/usage';
+
+startUsage('stamp-maker');
 
 const root = document.getElementById('sm-tool');
 if (root) {
@@ -17,6 +20,7 @@ if (root) {
       },
       () => {
         loading = null;
+        track({ e: 'fail', t: 'stamp-maker', c: 'engine', p: 'load' });
         void showEngineError();
       },
     ));

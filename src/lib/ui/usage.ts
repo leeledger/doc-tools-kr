@@ -13,6 +13,8 @@ export const USAGE_ON: boolean = __USAGE_STATS__;
 export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker';
 /** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/affiliate.test.ts keeps the links' dests equal to it). */
 export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod';
+/** STAMP_STYLES in scripts/lib/usage.mjs (= the 도장 만들기 style ids). */
+export type StampStyle = 'round' | 'round-double' | 'oval' | 'square-seal' | 'square-round' | 'square-inverse' | 'rect-v' | 'rect-h' | 'plain' | 'corp-round' | 'corp-square' | 'date-round';
 export type UsagePhase = 'load' | 'parse' | 'process' | 'save';
 export type UsageSetting =
   | { o: 'target-kb'; v: 'le100' | 'le200' | 'le300' | 'le500' | 'le1000' | 'gt1000' }
@@ -28,7 +30,8 @@ export type UsageSetting =
   | { o: 'place'; v: 'one' | 'range' | 'all' }
   | { o: 'basis'; v: 'space' | 'nospace' | 'byte2' | 'byte3' }
   | { o: 'mark'; v: 'on' | 'off' }
-  | { o: 'items'; v: 'text' | 'date' | 'white' | 'mix' };
+  | { o: 'items'; v: 'text' | 'date' | 'white' | 'mix' }
+  | { o: 'style'; v: StampStyle };
 
 /** What a tool reports. Tool pages never build the payload themselves. */
 export type UsageEvent =

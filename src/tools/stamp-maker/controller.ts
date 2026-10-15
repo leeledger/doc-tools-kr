@@ -2,6 +2,8 @@
 // HWP faces the text needs (fonts.ts), lays every style out (layout.ts) and paints the tiles, the large preview and the
 // PNG from the same draw list (render.ts). Nothing typed is stored, put in a URL, a file name or the title.
 import { announce, clearAlert } from '../../lib/ui/announce';
+import { HANDOFF_FAILED, sendToPdfSign } from '../../lib/ui/sign-handoff';
+import { track } from '../../lib/ui/usage';
 import { facesFor, loadFaces } from './fonts';
 import { applyInk } from './ink';
 import {
@@ -42,6 +44,8 @@ const COPY = {
   canvas: '도장 그림을 만들지 못했어요. 다른 앱이나 PC에서 다시 해 주세요.',
   encoder: 'PNG 파일을 만들지 못했어요. 「2배로 선명하게」를 끄거나 크기를 줄여 다시 해 주세요.',
   saved: (name: string): string => `PNG를 저장했어요: ${name}`,
+  copied: '복사했어요. 한글·워드에 붙여 넣으세요.',
+  copyFailed: '복사하지 못했어요. PNG 저장을 써 주세요.',
   picked: (name: string): string => `${name} 모양을 골랐어요.`,
   size: (mm: number, w: number, h: number): string => `${mm} mm (${w.toLocaleString('ko-KR')}×${h.toLocaleString('ko-KR')}픽셀)`,
 };
@@ -102,6 +106,14 @@ function check(id: string, label: string, on: boolean, onChange: (v: boolean) =>
   const input = el('input', { id, type: 'checkbox', checked: on });
   input.addEventListener('change', () => onChange(input.checked));
   return { field: el('label', { className: 'check' }, input, ` ${label}`), input };
+}
+
+/** 이미지 복사 is offered only where the page may write a PNG to the clipboard (probe d). */
+function canCopyPng(): boolean {
+  const CI = (window as Window & { ClipboardItem?: typeof ClipboardItem }).ClipboardItem;
+  if (!CI || typeof navigator.clipboard?.write !== 'function') return false;
+  const supports = (CI as unknown as { supports?: (type: string) => boolean }).supports;
+  return typeof supports !== 'function' || supports('image/png');
 }
 
 const dpr = (): number => Math.min(3, Math.max(1, window.devicePixelRatio || 1));
@@ -239,8 +251,10 @@ export function initStampMaker(): void {
     paintAll();
   });
   const saveBtn = el('button', { type: 'button', className: 'btn primary', id: 'sm-save', textContent: 'PNG 저장' });
+  const copyBtn = el('button', { type: 'button', className: 'btn ghost', id: 'sm-copy', textContent: '이미지 복사', hidden: !canCopyPng() });
+  const pdfBtn = el('button', { type: 'button', className: 'btn ghost', id: 'sm-pdf', textContent: 'PDF에 찍기' });
   const signLink = el('a', { className: 'btn ghost', id: 'sm-sign', href: '/stamp-signature/', textContent: '서명도 만들기' });
-  const actions = el('div', { className: 'row sm-actions' }, saveBtn, signLink);
+  const actions = el('div', { className: 'row sm-actions' }, saveBtn, copyBtn, pdfBtn, signLink);
   const panelNote = el('p', { className: 'hint', id: 'sm-panel-note', hidden: true });
   panel.append(
     el('div', { className: 'sm-preview' }, previewCanvas, sizeInfo),
@@ -332,7 +346,7 @@ export function initStampMaker(): void {
     fSize.input.value = String(mm);
     const r = results.get(id);
     const can = !blocked && typed && !!r?.ok;
-    saveBtn.disabled = !can;
+    saveBtn.disabled = copyBtn.disabled = pdfBtn.disabled = !can;
     panelNote.hidden = can || blocked;
     panelNote.textContent = !typed ? COPY.needText : r && !r.ok ? COPY.tooLong : '';
     if (r?.ok) {
@@ -347,6 +361,8 @@ export function initStampMaker(): void {
 
   let run = 0;
   let paints = 0;
+  let fontReported = false;
+  let started = false;
 
   async function refresh(): Promise<void> {
     const id = ++run;
@@ -370,7 +386,11 @@ export function initStampMaker(): void {
     const weight = st.weight === 'light' ? 400 : 700;
     const { ok, late } = await loadFaces(facesFor(texts, st.face, weight));
     if (id !== run) return;
-    if (!ok) void late.then((arrived) => arrived && id === run && void refresh());
+    if (!ok) {
+      void late.then((arrived) => arrived && id === run && void refresh());
+      if (!fontReported) track({ e: 'fail', t: 'stamp-maker', c: 'font', p: 'load' });
+      fontReported = true;
+    }
     inks.clear();
     note.hidden = ok;
     note.textContent = ok ? '' : COPY.font;
@@ -391,6 +411,9 @@ export function initStampMaker(): void {
     }
     panel.hidden = false;
     paintSelected();
+    // D8: one start per page view, with the style id only.
+    if (!started) track({ e: 'start', t: 'stamp-maker', o: 'style', v: id });
+    started = true;
     announce('status', COPY.picked(STYLES[id].name), root);
     if (first) panel.scrollIntoView?.({ block: 'nearest' });
   }
@@ -408,6 +431,7 @@ export function initStampMaker(): void {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
+      track({ e: 'fail', t: 'stamp-maker', c: 'canvas', p: 'process' });
       announce('alert', COPY.canvas, root);
       return null;
     }
@@ -419,6 +443,7 @@ export function initStampMaker(): void {
         ctx.putImageData(img, 0, 0);
       }
     } catch {
+      track({ e: 'fail', t: 'stamp-maker', c: 'canvas', p: 'process' });
       announce('alert', COPY.canvas, root);
       return null;
     }
@@ -426,15 +451,21 @@ export function initStampMaker(): void {
     canvas.width = 0;
     canvas.height = 0;
     if (!blob) {
+      track({ e: 'fail', t: 'stamp-maker', c: 'encoder', p: 'save' });
       announce('alert', COPY.encoder, root);
       return null;
     }
+    let png: Blob;
     try {
-      return new Blob([withPhys(new Uint8Array(await blob.arrayBuffer()), ppi) as Uint8Array<ArrayBuffer>], { type: 'image/png' });
+      png = new Blob([withPhys(new Uint8Array(await blob.arrayBuffer()), ppi) as Uint8Array<ArrayBuffer>], { type: 'image/png' });
     } catch {
+      track({ e: 'fail', t: 'stamp-maker', c: 'unknown', p: 'save' });
       announce('alert', COPY.encoder, root);
       return null;
     }
+    clearAlert(root);
+    track({ e: 'success', t: 'stamp-maker' });
+    return png;
   }
 
   const fileName = (): string => `도장_${st.style}_${stamp8()}.png`;
@@ -444,7 +475,32 @@ export function initStampMaker(): void {
     if (!png) return;
     const name = fileName();
     saveBlob(png, name);
+    track({ e: 'download', t: 'stamp-maker' });
     announce('status', COPY.saved(name), root);
+  });
+
+  // 이미지 복사: the ClipboardItem gets the PNG as a promise, so Safari keeps the click's permission while it is made.
+  copyBtn.addEventListener('click', async () => {
+    let noPng = false;
+    try {
+      const png = makePng().then((b) => {
+        if (b) return b;
+        noPng = true;
+        throw new Error('no PNG');
+      });
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+      track({ e: 'download', t: 'stamp-maker' });
+      announce('status', COPY.copied, root);
+    } catch {
+      // A PNG that could not be made has its own alert; a refused or failing clipboard gets this one.
+      if (!noPng) announce('alert', COPY.copyFailed, root);
+    }
+  });
+
+  // PDF에 찍기 (D7): the PNG goes to /pdf-sign/ in this tab's sessionStorage, with the tool name.
+  pdfBtn.addEventListener('click', async () => {
+    const png = await makePng();
+    if (png && !(await sendToPdfSign(png, 'stamp-maker'))) announce('alert', HANDOFF_FAILED, root);
   });
 
   // ---------- input ----------

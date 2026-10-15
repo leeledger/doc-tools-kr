@@ -74,8 +74,10 @@ export const COUNT_BASES = ['space', 'nospace', 'byte2', 'byte3'];
 export const MARK_STATES = ['on', 'off'];
 /** PDF 글자 넣기·편집 넣은 것 (TOOLS1015 E1): 글자 | 날짜 | 흰 상자 | 여러 가지. Never the text, dates, sizes, places or pages. */
 export const ITEM_KINDS = ['text', 'date', 'white', 'mix'];
+/** 도장 만들기 도장 모양 (STAMP1015 D8): equal to STYLE_IDS in src/tools/stamp-maker/styles.ts (unit test). Never the text, its length or script, colour, size, seed or date. */
+export const STAMP_STYLES = ['round', 'round-double', 'oval', 'square-seal', 'square-round', 'square-inverse', 'rect-v', 'rect-h', 'plain', 'corp-round', 'corp-square', 'date-round'];
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -462,7 +464,7 @@ export const OUT_LABELS = {
 };
 /** The 자리 of the guide rows of the link table (every guide summed). */
 export const OUT_GUIDE_PLACE = '안내 글';
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양' };
 export const VALUE_LABELS = {
   le100: '100KB 이하',
   le200: '200KB 이하',
@@ -525,6 +527,19 @@ export const VALUE_LABELS = {
   date: '날짜',
   white: '흰 상자',
   mix: '여러 가지',
+  // 도장 만들기 도장 모양 (STAMP1015 D3 names).
+  round: '원형',
+  'round-double': '겹원',
+  oval: '타원',
+  'square-seal': '사각 인감',
+  'square-round': '라운드 사각',
+  'square-inverse': '사각 음각',
+  'rect-v': '세로 직사각',
+  'rect-h': '가로 직사각',
+  plain: '선 없는 이름',
+  'corp-round': '법인 직인',
+  'corp-square': '사각 직인',
+  'date-round': '날짜 도장',
 };
 const label = (map, x) => (Object.hasOwn(map, x) ? map[x] : String(x ?? ''));
 const num = (x) => {
