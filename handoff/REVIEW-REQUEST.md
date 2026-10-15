@@ -1,48 +1,38 @@
-# Review Request — REQ1014-A (analytics / admin: 캠페인별 유입, 방문 합계·나라 분리, 서명 넘김, 실패 세부 코드)
-Date: 2026-10-14
+# Review Request — REQ1015 steps 1–4 (HEIC interim copy, admin AI referrers, 해당 없음, PDF→JPG stage codes + reopen)
+Date: 2026-10-15
 Ready for Review: YES
-Status: DONE_WITH_CONCERNS (Step 0 RUM probe not run: owner Chrome on 127.0.0.1:9333 was down; the defaults were built and the post-deploy check replaces the probe, as the brief's decision tree allows)
-Branch: req-1014-a (worktree C:\dev\doc-tools\req-a), base ee4950c, commits 33d180f..(this request). Brief: handoff/ARCHITECT-BRIEF-REQ1014-A.md.
-Note: origin/main has moved to 5bac90a (REQ1014-C merged). `git merge-tree` HEAD vs origin/main: clean (shared files: scripts/lib/usage.mjs and 4 test files, no textual conflict). Gates below are on ee4950c + this branch, not on the merge.
+Status: DONE_WITH_CONCERNS (two gate-forced copy deviations in step 1; the step 4 reopen branch is unit-tested through pure helpers only)
+Branch: req-1015 (worktree C:\dev\doc-tools-kr\wt\req-1015), base origin/main 807d8b8. Brief: handoff/ARCHITECT-BRIEF-REQ1015.md. Steps 5–6 not built (they wait for the owner's HEIC samples).
 
-## Commits (build order, one per step, each reversible)
-- 33d180f step 1 sniff-format + codes · 255867c step 2 usage.mjs whitelist · 6faa664 step 3 tracker / utm-land / site hook · 8cb0175 step 4 sign hand-off `next` · 87a0d6c step 5 campaign table · 6c13225 step 6 visits.mjs D9–D13 (revert this one alone if a RUM node errors live) · ea76e07 step 7 privacy / runbook / T-E1 · d26df38 gate fix (below) · then this request + BUILD-LOG.
+## Commits (one per step, each deployable alone)
+- 4a14c12 step 1 · 058ab5e step 2 · 46bbccd step 3 · d9c1a04 step 4
 
 ## Files Changed
-- src/lib/file/sniff-format.ts (new, 1-141) — `FileFamily`, `sniffFormat(head, tail?)` per brief B D1, `notHwpCode`, `corruptCode` (pure, never throws). Not imported by any page yet (brief B wires the call sites).
-- scripts/lib/usage.mjs:9-10,18,24-25,30,47,80-104,106,109,195,206-207,236-238,295,404-419,513-514 — BLOB_KEYS + us/uc (blob13/14), EVENTS + land, UTM_SOURCES / LAND_PAGES / CAMPAIGN_RE / labels, `utmOf()`, ONLY map, validate land + `t` rule, shapeUsage skips land, `export runSql`, FAIL_LABELS for every not-hwp-* / corrupt-* code. All additive (merge note).
-- src/lib/ui/usage.ts:7,45-48,56-57,78,93-103,132-175,189-191,195,210-214,224-225,236-241,244 — stash `docttak:utm` {s,c,at} on start (always, ko only, not /embed/), land when sampled, us/uc read at send time on start/success only, 3 h TTL, storage errors swallowed.
-- src/lib/ui/utm-land.ts (new, 1-103) — home/guide landing; no runtime imports (own copies of the constants, parity test).
-- src/lib/ui/site.ts:5,12-21 — guarded hook (see Open Question 1: `?worker&url` + module script instead of `import()`).
-- src/lib/ui/sign-handoff.ts:4,77-81,89 — `track({ e:'next', t:'stamp-signature', o:'next', v:'pdf-sign' })` after a successful store, before `go()`; optional `track` dep.
-- scripts/lib/campaign.mjs (new, 1-57) — `campaignSql`, `fetchCampaigns` (via runSql), `shapeCampaigns`, `campaignMarkdown`, CAMPAIGN_NOTE / CAMPAIGN_TOP.
-- functions/admin/[[path]].ts:13,101-103,114 — fetchCampaigns inside usageTask's Promise.all with its own `.catch(() => null)`.
-- scripts/lib/admin-view.mjs:7,173-184,207-209,262-266,270-294,355-382 — 캠페인별 유입 section (or "캠페인 표를 불러오지 못했어요."), 나라 (한국어 페이지) / 나라 (영어 페이지 /en/) + note, pages honest message, mismatch line, 집계 정보 details, `.diag summary` style.
-- scripts/lib/visits.mjs:12-18,41-81,122-126,139-186,216,258-342,418-468 — `total` node drives totals, prev = total only (QUERY_PREV, readTotal), pagesByVisits fallback + pagesSource, countriesKo/En via filterOf (constants only), automatic countryPaths fallback when the API names the like/notlike fields in errors[], REFERRER_LABELS, diag {node, rows, maxSi}, `mismatchOf` (10 %).
-- scripts/ops/growth.mjs:22,84-92,112,139 and scripts/ops/lib/report.mjs:5-6,79,105 — "캠페인별 유입 (7일)" table, top 10, a failure is one note line.
-- scripts/qa/admin-preview.mjs:5-8,17,35,43,50-61,75-80,84,86 — stubs for total / pagesByVisits / countriesKo / countriesEn and the campaign SQL; scenarios campaigns, campaigns-1, campaigns-error, pages-empty, mismatch, countries-fallback.
-- src/data/legal.ts:28-34,49,51 and src/pages/privacy/index.astro:5,104,118 — PRIVACY_UTM (2026년 10월 14일, re-confirm at the gate), PRIVACY_REVISED / PRIVACY_TERMS_UPDATED, link-marker field, 3-hour tab storage sentence, change-history line (usage build only).
-- docs/OPS-RUNBOOK.md:101-106 — §8 utm link format for the blog team, sources list, how to read the table.
-- Tests: tests/unit/{campaign,sniff-format,utm-land}.test.ts (new); usage.test.ts:1115-1318 (+ admin Function campaign failure 725-740); visits.test.ts:87-104,564-683; pdf-sign.test.ts:405-426; deeplink.test.ts:29-34; share.test.ts:37-39; ops.test.ts:539-581; postbuild.test.ts:455-461 (new, gate fix); ga.test.ts / network-guard.test.ts / ga.cloud.spec.ts (privacy date constant, utm-land on the beacon allowlist); tests/fixtures/rum-rows.mjs; admin-full-7 snapshot (+2 lines CSS); tests/e2e/site.spec.ts:306-323 (T-E1); tests/e2e/usage.spec.ts:580-665 (T-E2 a–g).
-- d26df38 gate fix — src/lib/file/sniff-format.ts:73: a literal BOM inside a regex (`/^<U+FEFF>/`) became `/^\uFEFF/`. Root cause of a deterministic firefox failure in polish.spec "UI font … no late face" on /id-photo/: gen-ui-font reads every src/lib file, so U+FEFF entered the late face's unicode-range and Firefox fetched anolim-ui-late-400 on /id-photo/. Proven: ee4950c passes, head failed (2 runs), the fix passes on firefox, chromium and webkit. Regression test postbuild.test.ts:455 (no U+FEFF / U+200B–200F in either UI-font set) fails with the BOM and passes after.
+- src/lib/image/messages.ts:42 — ERRORS.heic = brief text verbatim (shared by every photo tool; e2e substring kept).
+- src/data/tools.ts:283,493,521,592,628 — HEIC FAQ answers (deviation, see Open Question 1); :514 image-to-jpg summary (feeds llms.txt).
+- src/content/guides/heic-to-jpg.md:6,8,35-38,58-70 — one-sentence answer, updated 2026-10-15, F5 USB quote as a source, new section 「PC에서 HEIC가 열리지 않을 때」 (the old 「보낼 때 저절로 바뀌는 경우」 is folded into it).
+- src/i18n/en/tools/image-to-jpg.ts:16, src/i18n/en/tools.ts:105,108,114 — EN error, description (155 limit; dropped "never uploaded"), summary, FAQ.
+- scripts/check-dist.mjs:577-581 — guide/heic-to-jpg and llms.txt must not carry the old unconditional HEIC sentence.
+- scripts/lib/visits.mjs:49-60 (AI_SERVICES), 430-475 (aiServiceOf, referrerLabel, aiReferrers), 510 (shapeVisits.ai).
+- scripts/lib/admin-view.mjs:112-117 (aiSection), 216 (AI_PARTIAL_NOTE), 271 (s-ai after s-referrers).
+- scripts/ops/growth.mjs:100 (visits.ai carried), 115-121 (aiLine), 128 (the line after 방문 7일).
+- scripts/lib/usage.mjs:514-520 (DEEP_LINK_TOOLS, NO_DEEP_LINK), 651 (arrivals cell), 432-438 (6 PDF→JPG FAIL_LABELS).
+- src/tools/pdf-to-jpg/guards.ts:7-57 — RunStage, RunError, WORKER_GONE (pdf.js 6.3.289 messages), runErrorCode(err, isOom, stage), afterRunError, reopenPlan.
+- src/lib/pdf/inspect.ts:49-63 — resetPdfJsWorker() (destroys the shared worker directly; resetPdfJs callers unchanged).
+- src/tools/pdf-to-jpg/controller.ts:20, 110-114 (stale / lastFail / lastPassword), 180-182 (cleared in clearFile), 262 (lastPassword on open), 275-328 (openFailed shared by openWith and the new reopen), 374-490 (run: reopen when stale, stage tracking, one auto-retry on worker-gone, final-failure usage + message).
+- Tests: tests/unit/visits.test.ts:688-780 (aiServiceOf all hosts/apps/www/case/negatives, referrerLabel, aiReferrers, shapeVisits.ai below top 10, s-ai section incl. escaping/empty/partial, weekly line); tests/unit/usage.test.ts:1327-1344 (DEEP_LINK_TOOLS = DEEP_PARAM keys, 해당 없음 vs 75%); tests/unit/pdf-to-jpg.test.ts:150-204 (stage codes, CODE_RE + labels, pinned pdf.js messages, afterRunError, reopenPlan); tests/e2e/pdf-to-jpg.spec.ts:210-241 (two 작게 runs in a row; cancel then 작게 converts).
 
-## Gates (2026-10-14, local, Windows; other builders ran e2e on the same machine)
-- G1: `astro check` 0 errors / 0 warnings / 6 hints (517 files). `vitest` 76 files / 1,600 tests passed (1,599 before the regression test). `check:licenses` OK (54 packages, 5 components).
-- G2: `PUBLIC_SITE_URL=https://docttak.com`, check-dist OK on all five builds. Precache vs ee4950c: default 407.3 → 407.8 KB; AUTOFRAME=1 409.5 → 409.8; BG_REMOVE 410.5 → 411.0; cloud flag-on (BG_REMOVE, BG_CLOUD, officer, contact, USAGE=1, GA test id, AFF_COUPANG=1) 415.4 → 417.3; noauto 407.8. All under 450 KB.
-- G3 chunk graph (module scripts + modulepreload + static imports, hashes normalised), ee4950c vs head, home, the history-exam-photo guide and every tool page: file lists identical in default and cloud builds. Initial gzip: default unchanged everywhere except pdf-sign +77 B (sign-handoff's track call) and stamp-signature −1 B; cloud home / guide +114 B (≤ 150 B), cloud tool pages +574…+578 B (pdf-sign +645 B) = the tracker's stash / attribution code in usage.ts. utm-land-*.js exists only in the usage build and is referenced from site.ts only (lazy). Fonts: not unchanged — see Open Question 2.
-- G4 e2e (E2E_PORT 4273 / 4281 / 4282 / 4283), specs site, usage, id-photo, stamp-signature, pdf-sign, chain, growth, en, polish, sw, ga, ga.cloud on chromium, firefox, webkit, mobile-chrome, mobile-safari, manual-chromium and cloud ×5: 1,351 passed, 95 skipped, 17 flaky (passed on retry; firefox page.goto 20 s timeouts and 3 cloud usage specs, under machine load), 6 failed. `--last-failed --workers=2`: 5 of 6 passed (pdf-sign from-stamp chromium, firefox polish merge, webkit site related-tools, webkit site REV3 affiliate, webkit sw offline); the 6th was the firefox UI-font failure, root-caused and fixed in d26df38 (now passes on firefox, chromium, webkit).
-- G5 Lighthouse (lhci, median of 5, own server on dist-bg like the CI checks job, CI assertions): all assertions pass. / perf 99, LCP 1,675 ms, CLS 0; /id-photo/ perf 100, LCP 1,674 ms, CLS 0; /guide/history-exam-photo/ perf 100, LCP 1,681 ms, CLS 0. The CI runner remains the source of truth.
-- G6: `qa:admin --shots` 18 scenarios (full-7/90, empty, error, xss, visits-1/7/90/error/empty/sampled, usage-error-visits-ok, campaigns, campaigns-1, campaigns-error, pages-empty, mismatch, countries-fallback) × 1280 light, 360 light, 360 dark = 54 PNGs, every 360 px page scrollWidth 360; 1 day = 2 POSTs (current + previous total), 7 days = 1, 90 days = 13. `qa:visual --only static` on the usage build: 402 shots, 0 hard failures; /privacy/ 14 shots, 0 overflow, 0 console errors, max CLS 0.0003; the page shows 시행일 2026년 10월 14일, the link-marker item and the 3-hour sentence.
-- G7: `regress:hwp --fixtures-only` 10/10 conversions, pass rules all pass (same as ee4950c). `regress:idphoto --fixtures-only` 10/11; the one FAIL "2 landmarks … misses committed/p07" is identical on ee4950c (pre-existing).
+## Gates (2026-10-15, local Windows)
+- astro check 0 errors / 0 warnings (6 hints). vitest 79 files / 1,676 passed. check:licenses OK (no new dependency). check:quotes --exact 241 verbatim.
+- check-dist OK on BG_REMOVE, cloud flag-on and AUTOFRAME builds. Precache cloud 421.2 -> 421.8 KB / 450. Initial JS unchanged (base 807d8b8 vs head, KB gzip): image-to-jpg 10.4, jpg-to-pdf 10.5, photo-compress 23.9, id-photo 14.3, pdf-to-jpg 10.3. pdf-to-jpg lazy controller 13.2 -> 13.7 / 14.5. UI fonts preloaded 92.6 KB / 92.66 (unchanged from base).
+- e2e (E2E ports 4573/4581/4582/4583): chromium + mobile-chrome on image-to-jpg, jpg-to-pdf, pdf-to-jpg, en, site + cloud-chromium usage.spec: 264 passed, no-upload fixture on every spec.
 
 ## Open Questions
-1. site.ts deviates from D6's wording: instead of `import('./utm-land')` it imports `./utm-land?worker&url` and appends a `<script type="module">` when the guard holds. Reason (code comment): a dynamic `import()` in site.ts pulls Vite's preload helper (in ui-shared) into every page's initial JS, which broke the guide budget / G3. The file still imports nothing at runtime and is compiled with the build constants; usage-off builds have no utm-land file. Please confirm.
-2. G3 says "Fonts unchanged (core chars)". The core face gained 느붙셉억 and the late face lost 느억 because the new /privacy/ copy (D18, a core page) uses them, so the face files have new hashes. Direct consequence of D18's text; postbuild font budget tests and Lighthouse pass. Arch: accept, or reword the privacy lines?
-3. Step 0 not run. D11 is built with an automatic fallback (if errors[] names `requestPath_like` / `_notlike`, each window is asked again with one countryPaths node, split client-side; qa:admin scenario countries-fallback), so no decision is pending. Post-deploy (owner Chrome): /admin/?days=1 and 7 — KPI vs device sum, pages rows or the honest message, two country tables, app label, 집계 정보 sample intervals; log as "REQ1014-A probe", usBrowsers numbers as a Known Gap.
-4. F5: Play listing status (public production vs internal test track) is for the owner to confirm in Play Console.
-5. PRIVACY_UTM / PRIVACY_TERMS_UPDATED = 2026년 10월 14일 — re-confirm at the deploy gate if deploy slips.
-6. Brief B owns the detailed fail-code call sites; sniff-format.ts exists here first, so B only adds members (no rename). The cloud usage e2e for the detailed codes is a Known Gap handed to B.
+1. Step 1 FAQ wording: the brief's 「PC의 크롬·엣지에서는 … 앞으로 찍을 사진」 adds 롬·엣·앞 to the preloaded core font and fails the 92.66 KB tripwire (92.7 KB). Built as 「PC에서는 열리지 않는 경우가 많아요 … 새로 찍을 사진」 in src/data/tools.ts only; the guide keeps 크롬·엣지 (system-font prose). Arch: accept, or decide the font budget.
+2. Step 4: reopen does not await the old document's destroy (on a dead worker pdf.js waits forever for "Terminate"). Please check the cancel-during-reopen path (controller reopen(): keeps the fresh doc when the bytes are the same, drops it on new file/reset).
+3. Step 4 controller wiring (stale -> reopen, worker-gone -> one retry) has no test that drives it end to end: no deterministic way to kill the pdf.js worker without a production hook. Covered by the pure helpers + the two new e2e runs.
 
-## Out of Scope (logged in BUILD-LOG)
-- Bot heuristics, per-country page tables, EN/embed UTM, utm_medium/content/term, other app referrer labels, GA4 changes (brief Out of scope).
-- Firefox page.goto timeouts under parallel machine load (17 flaky) are environmental; no test change.
+## Out of Scope (logged in BUILD-LOG Known Gaps)
+- ~20 bytes of core-font headroom left; step 7 copy needs a font decision.
+- A pdf.js worker that dies silently leaves getPage pending (no per-page timeout).
+- AI counts limited to the referrer top 50 (partial note).
