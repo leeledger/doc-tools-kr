@@ -1,4 +1,4 @@
-// /stamp-maker/ controller (STAMP1015). Builds the 12 tiles and the fine-tune panel (their labels are late copy), loads the
+// /stamp-maker/ controller (STAMP1015). Paints the 12 static tiles and builds the fine-tune panel (its labels are late copy), loads the
 // HWP faces the text needs (fonts.ts), lays every style out (layout.ts) and paints the tiles, the large preview and the
 // PNG from the same draw list (render.ts). Nothing typed is stored, put in a URL, a file name or the title.
 import { announce, clearAlert } from '../../lib/ui/announce';
@@ -34,7 +34,6 @@ import { DATE_LABELS, SAMPLE_CORP, SAMPLE_PERSONAL, STYLES, STYLE_IDS, type Date
 const COPY = {
   bad: (c: string): string => `도장에 넣을 수 없는 글자: ${c}`,
   badCenter: (c: string): string => `가운데 글자에 넣을 수 없는 글자: ${c}`,
-  over: '글자가 많아 이 모양에는 넣지 못해요',
   // Shown without interaction: preloaded UI-font glyphs only (no 「홍」).
   sample: '예시 글자로 보여 드려요. 위에 글자를 쓰면 바뀌어요.',
   font: '글꼴을 받지 못해 기본 글꼴로 보여 드려요. 인터넷 연결을 확인해 주세요.',
@@ -134,7 +133,7 @@ function saveBlob(blob: Blob, name: string): void {
   a.remove();
 }
 
-export function initStampMaker(): void {
+export function initStampMaker(pending?: StyleId): void {
   const root = must<HTMLDivElement>('sm-tool');
   if (root.dataset.ready) return;
   root.dataset.ready = '1';
@@ -182,21 +181,16 @@ export function initStampMaker(): void {
     return ink;
   };
 
-  // ---------- tiles ----------
+  // ---------- tiles (static in the page: names, empty canvases; painted here) ----------
   const tiles = new Map<StyleId, { btn: HTMLButtonElement; canvas: HTMLCanvasElement; over: HTMLSpanElement }>();
   for (const id of STYLE_IDS) {
-    const canvas = el('canvas', { width: TILE_CSS, height: TILE_CSS });
-    canvas.setAttribute('aria-hidden', 'true');
-    const over = el('span', { className: 'sm-tile-over', textContent: COPY.over, hidden: true });
-    const btn = el('button', { type: 'button', className: 'sm-tile', tabIndex: -1 }, canvas, el('span', { className: 'sm-tile-name', textContent: STYLES[id].name }), over);
-    btn.setAttribute('role', 'radio');
-    btn.setAttribute('aria-checked', 'false');
-    btn.dataset.style = id;
+    const btn = grid.querySelector<HTMLButtonElement>(`.sm-tile[data-style="${id}"]`);
+    const canvas = btn?.querySelector('canvas');
+    const over = btn?.querySelector<HTMLSpanElement>('.sm-tile-over');
+    if (!btn || !canvas || !over) throw new Error(`tile ${id} missing`);
     btn.addEventListener('click', () => pick(id));
-    grid.append(btn);
     tiles.set(id, { btn, canvas, over });
   }
-  tiles.get(STYLE_IDS[0])!.btn.tabIndex = 0;
 
   const enabled = (): StyleId[] => STYLE_IDS.filter((id) => tiles.get(id)!.btn.getAttribute('aria-disabled') !== 'true');
   grid.addEventListener('keydown', (ev) => {
@@ -515,5 +509,8 @@ export function initStampMaker(): void {
     if (lastUrl) URL.revokeObjectURL(lastUrl);
     lastUrl = null;
   });
-  void refresh();
+  void refresh().then(() => {
+    // A tile pressed while this module loaded.
+    if (pending) pick(pending);
+  });
 }

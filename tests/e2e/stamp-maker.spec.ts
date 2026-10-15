@@ -82,6 +82,19 @@ test('홍길동: 12 tiles painted in the web face, all different; the sample sho
   expect(await page.locator('link[href*="/fonts/hwp/"]').count()).toBe(1);
 });
 
+test('static tiles: nothing loads before a user signal; a tile pressed first is picked once the controller starts', async ({ page }) => {
+  await gotoReady(page, '/stamp-maker/');
+  await expect(page.locator('.sm-tile')).toHaveCount(12);
+  await expect(page.locator('.sm-tile-name')).toHaveText(['원형', '겹원', '타원', '사각 인감', '라운드 사각', '사각 음각', '세로 직사각', '가로 직사각', '선 없는 이름', '법인 직인', '사각 직인', '날짜 도장']);
+  await page.waitForTimeout(1500);
+  expect(await page.locator('#sm-tool').getAttribute('data-painted')).toBeNull();
+  expect(await page.locator('link[href*="/fonts/hwp/"]').count()).toBe(0);
+  await tile(page, 'oval').click();
+  await expect(tile(page, 'oval')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#sm-panel')).toBeVisible();
+  await expect(page.locator('#sm-tool')).toHaveAttribute('data-painted', /\d+/);
+});
+
 test('limits: 7 syllables disable the round styles with their text; Hanja paints; an emoji is named and blocks the grid and save', async ({ page }) => {
   await open(page);
   await type(page, '남궁가나다라마');

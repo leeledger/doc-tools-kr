@@ -29,7 +29,7 @@
 .sm-preview { display: grid; justify-items: center; gap: 6px; }
 .sm-preview canvas { display: block; width: 220px; height: 220px; max-width: 100%; background: #ffffff; border-radius: 10px; box-shadow: 0 0 0 1px var(--line); }
 .sm-size-info { margin: 0; font-size: 15px; color: var(--muted); }
-.sm-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 14px; }
+.sm-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px 14px; }
 .sm-field { display: grid; gap: 4px; min-width: 0; }
 .sm-field[hidden] { display: none; }
 .sm-field > label { font-size: 15px; font-weight: 800; }
