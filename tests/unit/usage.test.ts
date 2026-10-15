@@ -932,6 +932,36 @@ describe('PDF 서명·도장 넣기 (TOOLS5 U3)', () => {
   });
 });
 
+describe('글자수 세기 (TOOLS1015 C1)', () => {
+  it('tool and 목표 기준 setting are whitelisted; counts, goals and text are refused as values; next to id-photo passes', () => {
+    expect(TOOLS).toContain('char-count');
+    for (const v of ['space', 'nospace', 'byte2', 'byte3']) expect(validate(body({ ...BASE, t: 'char-count', e: 'start', o: 'basis', v })), v).not.toBeNull();
+    for (const v of ['1000', '1,000', 'SPACE', 'byte', '공백 포함', 'utf8']) expect(validate(body({ ...BASE, t: 'char-count', e: 'start', o: 'basis', v })), v).toBeNull();
+    expect(validate(body({ ...BASE, t: 'char-count', e: 'pick' }))).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'char-count', e: 'next', o: 'next', v: 'id-photo' }))).not.toBeNull();
+  });
+
+  it('admin labels are Korean: 글자수 세기, 목표 기준 and its four values', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'char-count', event: 'pick', via: 'direct', n: 5 }],
+      settings: [
+        { tool: 'char-count', setting: 'basis', value: 'space', n: 3 },
+        { tool: 'char-count', setting: 'basis', value: 'nospace', n: 2 },
+        { tool: 'char-count', setting: 'basis', value: 'byte2', n: 1 },
+        { tool: 'char-count', setting: 'basis', value: 'byte3', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('글자수 세기');
+    expect(settings!.rows).toEqual([
+      ['글자수 세기', '목표 기준', '공백 포함', '3'],
+      ['글자수 세기', '목표 기준', '공백 제외', '2'],
+      ['글자수 세기', '목표 기준', '바이트(한글 2)', '1'],
+      ['글자수 세기', '목표 기준', '바이트(한글 3)', '1'],
+    ]);
+  });
+});
+
 describe('PDF 나누기·쪽 편집 (TOOLS5 U2)', () => {
   it('tool and 저장 방식 setting are whitelisted; its fail codes pass; ranges, counts and names are refused as values', () => {
     expect(TOOLS).toContain('pdf-split');

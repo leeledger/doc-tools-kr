@@ -18,6 +18,7 @@
     "hwp-to-pdf": { "title": "HWP PDF 변환", "line": "한글 프로그램 없이 — 무료, 가입 없이" },
     "hwp-viewer": { "title": "HWP·HWPX 파일 보기", "line": "설치 없이 바로 열기 — 무료, 가입 없이" },
     "hwpx-to-hwp": { "title": "HWPX HWP 변환", "line": "한글 프로그램 없이 — 무료, 가입 없이" },
+    "char-count": { "title": "글자수 세기", "line": "공백 포함·제외, 바이트까지 바로 — 무료" },
     "default": { "title": "문서·사진, 규격에 딱", "line": "PDF·사진·여권사진·HWP — 무료, 가입 없이" }
   },
   "pages": {
@@ -37,6 +38,7 @@
     "/hwp-to-pdf/": { "image": "hwp-to-pdf", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 저장해요. 무료." },
     "/hwp-viewer/": { "image": "hwp-viewer", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 쪽을 넘겨 보고 글자도 찾아요. 무료." },
     "/hwpx-to-hwp/": { "image": "hwpx-to-hwp", "description": "한글 프로그램 없이 HWPX 파일을 HWP 파일로 바꿔 내려받아요. 가입 없이 무료." },
+    "/char-count/": { "image": "char-count", "description": "자소서 글자수를 공백 포함·제외와 바이트로 바로 세어 드려요. 목표까지 남은 글자 수도 보여요. 가입 없이 무료." },
     "/privacy/": { "image": "default", "description": "문서딱은 가입이 없고 개인정보를 받지 않아요. 고른 파일을 어떻게 다루는지 알려 드려요." },
     "/terms/": { "image": "default", "description": "문서딱 이용약관: 무료로 쓰는 문서·사진 도구의 이용 조건과 책임의 범위를 알려 드려요." },
     "/guide/": { "image": "default", "description": "여권사진·증명사진 규격과 사진·PDF 용량 제한을 기관 안내로 확인해 정리했어요. 확인일과 원문 링크 포함." },

@@ -1,0 +1,140 @@
+---
+// /char-count/ (TOOLS1015 C1): 글자수 세기. Text typed or pasted here is counted on this page only: nothing is stored
+// (no localStorage, sessionStorage or IndexedDB) and nothing is sent. The controller is small, so it ships with the page.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { guidePath, publishedGuides } from '../../data/guides';
+// Page-only styles, inlined (the /pdf-sign/ pattern): no other page carries them.
+import ccCss from '../../tools/char-count/char-count.css?inline';
+
+const tool = getTool('char-count');
+const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
+const goals = [500, 700, 1000, 1500];
+const bases = [
+  { value: 'space', label: '공백 포함' },
+  { value: 'nospace', label: '공백 제외' },
+  { value: 'byte2', label: '바이트(한글 2)' },
+  { value: 'byte3', label: '바이트(한글 3)' },
+];
+const counts = [
+  { id: 'cc-n-space', label: '공백 포함', unit: '자' },
+  { id: 'cc-n-nospace', label: '공백 제외', unit: '자' },
+  { id: 'cc-n-byte2', label: '한글 2바이트로 셀 때', unit: '바이트' },
+  { id: 'cc-n-byte3', label: '한글 3바이트로 셀 때', unit: '바이트' },
+  { id: 'cc-n-lines', label: '줄', unit: '줄' },
+  { id: 'cc-n-paras', label: '문단', unit: '개' },
+];
+// The 자소서 chain (brief C1 Chains): the published ones of these guides (a draft is never linked).
+const published = await publishedGuides();
+const chainGuides = ['resume-photo', 'work24-resume-upload'].map((s) => published.find((g) => g.id === s)).filter((g) => g !== undefined);
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={ccCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">붙여 넣은 글의 글자 수를 공백 포함·제외와 바이트로 바로 셉니다. 목표 글자 수를 정하면 남은 글자 수도 함께 보입니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="cc-tool">
+        <div class="cc-field">
+          <label for="cc-text">글자 수를 셀 글</label>
+          <textarea id="cc-text" class="cc-text" rows="10" spellcheck="false" placeholder="자소서나 글을 여기에 붙여 넣거나 바로 쓰세요." aria-describedby="cc-privacy"></textarea>
+          <p class="privacy-note" id="cc-privacy">쓴 글은 저장하지 않고, 이 기기 밖으로 보내지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+        </div>
+
+        <dl class="cc-counts" id="cc-counts">
+          {counts.map((c) => (
+            <div>
+              <dt>{c.label}</dt>
+              <dd><strong id={c.id}>0</strong>{c.unit}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <fieldset class="levels cc-goal" id="cc-goal-box" data-over="false">
+          <legend>목표 글자 수</legend>
+          <div class="cc-goal-row">
+            <label for="cc-goal">목표</label>
+            <input id="cc-goal" class="num-input" type="number" inputmode="numeric" min="1" max="100000" step="1" placeholder="예: 1000">
+            <label for="cc-basis">기준</label>
+            <select id="cc-basis" class="select">
+              {bases.map((b) => <option value={b.value}>{b.label}</option>)}
+            </select>
+          </div>
+          <div class="chips" role="group" aria-label="자주 쓰는 목표">
+            {goals.map((g) => <button type="button" class="btn small ghost" data-goal={g}>{g.toLocaleString('ko-KR')}자</button>)}
+          </div>
+          <div id="cc-goal-out" hidden>
+            <progress id="cc-progress" max="1" value="0" aria-labelledby="cc-goal-text"></progress>
+            <p class="cc-goal-text" id="cc-goal-text"></p>
+          </div>
+        </fieldset>
+
+        <div class="cc-actions">
+          <button type="button" class="btn primary" id="cc-copy" disabled>복사하기</button>
+          <button type="button" class="btn ghost" id="cc-clear" disabled>지우기</button>
+          <button type="button" class="btn ghost" id="cc-undo" hidden>되돌리기</button>
+        </div>
+        <p class="cc-note" id="cc-note"></p>
+        <p class="visually-hidden" id="cc-live" aria-live="polite"></p>
+      </div>
+
+      <section class="cc-chain" id="cc-chain" aria-labelledby="cc-chain-title">
+        <h2 id="cc-chain-title">자소서를 다 쓴 다음에는</h2>
+        <ul>
+          <li>이력서 사진: <a href="/id-photo/?preset=saramin">사람인 규격으로 맞추기</a> · <a href="/id-photo/?preset=jobkorea">잡코리아 규격으로 맞추기</a></li>
+          {chainGuides.map((g) => <li><a href={guidePath(g.id)}>{g.data.title}</a></li>)}
+        </ul>
+      </section>
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>글 붙여 넣기</strong><span>자소서 문항에 쓸 글을 붙여 넣거나 바로 씁니다. 숫자는 쓰는 동안 바로 셉니다.</span></li>
+        <li><strong>목표 정하기</strong><span>문항의 글자 수 제한을 넣고, 공백 포함·제외나 바이트 중 기준을 고릅니다.</span></li>
+        <li><strong>고치고 복사하기</strong><span>남은 글자 수를 보며 고친 뒤 복사하기로 옮겨 붙입니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>세는 법은 곳마다 조금 다를 수 있어요</strong><span>줄바꿈이나 바이트를 세는 법은 받는 곳마다 다를 수 있으니, 제한보다 몇 자 여유를 두세요.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['id-photo', 'photo-compress', 'jpg-to-pdf']} />
+</Base>
+
+<script>
+  import '../../tools/char-count/entry';
+</script>

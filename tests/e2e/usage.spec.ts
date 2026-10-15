@@ -268,6 +268,27 @@ test('PDF 용량 줄이기 with a file that is not a PDF: fail with code not-pdf
   expect(typeof beacons[1]!.ev.br).toBe('string');
 });
 
+test('글자수 세기 (TOOLS1015 C1): pick on the first text, start (o=basis, v=nospace) once when a goal is set, next (v=id-photo) from the 자소서 chain; never the text, a count or the goal', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/char-count/');
+  await page.locator('#cc-text').pressSequentially('자소서 첫 문장');
+  await page.locator('#cc-text').fill('자소서 첫 문장입니다. 비밀 문구 XYZ');
+  await page.locator('#cc-basis').selectOption('nospace');
+  await page.getByRole('button', { name: '1,500자' }).click();
+  await page.getByRole('button', { name: '700자' }).click();
+  await page.locator('#cc-chain').getByRole('link', { name: '사람인 규격으로 맞추기' }).click();
+  await page.waitForURL(/\/id-photo\/\?preset=saramin$/);
+  await expect.poll(() => beacons.map((b) => `${b.ev.e} ${b.ev.t}`)).toEqual(['pick char-count', 'start char-count', 'next char-count']);
+  expectClean(beacons);
+  expect(beacons[1]!.ev).toMatchObject({ e: 'start', t: 'char-count', o: 'basis', v: 'nospace' });
+  expect(beacons[2]!.ev).toMatchObject({ e: 'next', t: 'char-count', o: 'next', v: 'id-photo' });
+  for (const b of beacons) {
+    expect(Object.keys(b.ev).filter((k) => k !== 'w' && typeof b.ev[k] === 'number')).toEqual([]);
+    expect(b.body).not.toMatch(/자소서|XYZ|비밀|1,500/);
+    for (const [k, v] of Object.entries(b.ev)) if (k !== 'b') expect(String(v), k).not.toMatch(/^(1500|700|\d{2,})$/);
+  }
+});
+
 test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

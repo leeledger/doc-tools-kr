@@ -45,7 +45,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out', 'land'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct', 'embed'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -68,8 +68,10 @@ export const IMAGE_TARGETS = ['jpg', 'png', 'webp'];
 export const SAVE_MODES = ['edit', 'extract', 'ranges', 'every', 'each'];
 /** PDF 서명·도장 넣기 넣을 쪽 (TOOLS5 U3): 고른 쪽 | 범위 | 모든 쪽. Never the pages, ranges or positions. */
 export const PLACE_MODES = ['one', 'range', 'all'];
+/** 글자수 세기 목표 기준 (TOOLS1015 C1): 공백 포함 | 공백 제외 | 바이트(한글 2) | 바이트(한글 3). Never the text, counts or goal. */
+export const COUNT_BASES = ['space', 'nospace', 'byte2', 'byte3'];
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -349,6 +351,7 @@ export const TOOL_LABELS = {
   'pdf-split': 'PDF 나누기·쪽 편집',
   'pdf-sign': 'PDF 서명·도장 넣기',
   'hwpx-to-hwp': 'HWPX HWP 변환',
+  'char-count': '글자수 세기',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**
@@ -451,7 +454,7 @@ export const OUT_LABELS = {
 };
 /** The 자리 of the guide rows of the link table (every guide summed). */
 export const OUT_GUIDE_PLACE = '안내 글';
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준' };
 export const VALUE_LABELS = {
   le100: '100KB 이하',
   le200: '200KB 이하',
@@ -504,6 +507,10 @@ export const VALUE_LABELS = {
   one: '고른 쪽',
   range: '범위',
   all: '모든 쪽',
+  space: '공백 포함',
+  nospace: '공백 제외',
+  byte2: '바이트(한글 2)',
+  byte3: '바이트(한글 3)',
 };
 const label = (map, x) => (Object.hasOwn(map, x) ? map[x] : String(x ?? ''));
 const num = (x) => {

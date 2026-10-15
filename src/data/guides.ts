@@ -53,7 +53,8 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
  * 사진 JPG 변환 → 사진 용량 맞추기 (HEIC가 안 열릴 때 포함), 대학 원서 서류 (파일 형식이 안 맞을 때), 큐넷 사진 (JPG만 받는 곳) (TOOLS5 U1);
  * PDF 나누기·쪽 편집 → 대학 원서 서류 (서류마다 PDF 하나), PDF 합치기, 메일 첨부 용량 (나눠 보내기) (TOOLS5 U2);
  * PDF 서명·도장 넣기 → 전자서명법 (그림 서명을 받는지), 도장·서명 이미지 만들기, PDF 암호 해제·설정 (저장 뒤 암호 다시 걸기) (TOOLS5 U3);
- * HWPX HWP 변환 → HWPX란, 한글 없이 HWP 열기, 휴대폰에서 HWP (HWPX2HWP).
+ * HWPX HWP 변환 → HWPX란, 한글 없이 HWP 열기, 휴대폰에서 HWP (HWPX2HWP);
+ * 글자수 세기 → 이력서 사진, 고용24 이력서 올리기 (published later; a draft is skipped), 대학 원서 서류 (TOOLS1015 C1).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
@@ -67,6 +68,7 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'image-to-jpg': ['photo-kb', 'univ-docs-upload', 'qnet-photo'],
   'pdf-split': ['univ-docs-upload', 'pdf-merge', 'email-attachment-limit'],
   'pdf-sign': ['e-signature-law', 'stamp-image', 'pdf-password'],
+  'char-count': ['resume-photo', 'work24-resume-upload', 'univ-docs-upload'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */

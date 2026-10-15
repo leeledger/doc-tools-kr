@@ -645,6 +645,22 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
     budget('hwpx-to-hwp controller (lazy)', closure.filter((f) => !initial.has(f)), 6.5 * KB);
   }
 }
+// 글자수 세기 (TOOLS1015 C1): no engine and no lazy split; the page script (the chunk that owns #cc-text) loads with the
+// page (1.9 KB gzip measured, budget + 20 %; the whole initial JS 10.2 KB measured, 11.6 KB in the cloud build with the
+// usage tracker, budget + 20 % of the larger). It stores nothing:
+// no Web Storage or IndexedDB call in the page script.
+{
+  const html = pageHtml.get('char-count/index.html');
+  if (!html) errors.push('char-count/index.html: no file found');
+  else {
+    const initial = initialJs(html);
+    const own = initial.filter((f) => read(f).includes('cc-text'));
+    if (own.length !== 1) errors.push(`char-count page script: ${own.length} initial chunk(s) name #cc-text, expected 1`);
+    for (const f of own) if (/localStorage|sessionStorage|indexedDB/.test(read(f).toString('utf8'))) errors.push(`${f}: the /char-count/ page script uses Web Storage or IndexedDB`);
+    budget('char-count page script', own, 2.3 * KB);
+    budget('char-count initial JS', initial, 13.9 * KB);
+  }
+}
 count(/(^|\/)rhwp_bg[^/]*\.wasm$/, 1, 'rhwp_bg*.wasm');
 budget('vendor/rhwp/*/rhwp_bg.wasm', match(/^vendor\/rhwp\/[^/]+\/rhwp_bg\.wasm$/), 10.5 * 1024 * KB, raw, 'raw');
 // Quality 5 (about what a CDN uses on the fly; q11 takes a minute on 10 MB). q9 is 2.9 MiB, q4 3.3 MiB.

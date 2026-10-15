@@ -5,7 +5,7 @@ ogDescription: 사람인 100×140픽셀 권장, 잡코리아 150×210픽셀까�
 query: 이력서 사진 규격
 answer: 사람인은 100×140픽셀 권장에 JPG·GIF 10 MB까지, 잡코리아는 150×210픽셀 이하에 GIF·JPG·PNG 5 MB 이내 사진을 받아요.
 published: '2026-09-30'
-updated: '2026-09-30'
+updated: '2026-10-15'
 category: 사진
 topic: 취업·이력서
 tools: [id-photo, photo-compress]
@@ -50,3 +50,5 @@ season: { peak: '3월, 9월', refresh: ['2027-01-20', '2027-07-20'] }
 3. 저장하면 그 사이트의 크기에 맞춘 JPG 파일이 만들어져요.
 
 얼굴이나 배경은 고치지 않아요.
+
+자기소개서 글자 수는 [글자수 세기](/char-count/)에서 공백 포함·제외와 바이트로 바로 셀 수 있어요.

@@ -40,6 +40,7 @@ const PAGES = [
   ['hwp', '/hwp-to-pdf/'],
   ['hwpview', '/hwp-viewer/'],
   ['hwpx', '/hwpx-to-hwp/'],
+  ['charcount', '/char-count/'],
   ['idphoto', '/id-photo/'],
   ['stamp', '/stamp-signature/'],
   ['privacy', '/privacy/'],

@@ -764,6 +764,47 @@ export const TOOLS: Tool[] = [
     ],
     keywords: ['hwpx hwp 변환', 'hwpx를 hwp로', 'hwpx 파일 hwp 변환', '한글 hwpx hwp', 'hwpx hwp 바꾸기'],
   },
+  {
+    // TOOLS1015 C1. name = h1 (COPY.md). The first text tool: last in the list (the PDF, photo, signature and HWP groups
+    // keep their order). No file, nothing stored; no limits to quote. Every string here is in the preloaded UI font.
+    slug: 'char-count',
+    name: '글자수 세기',
+    title: '글자수 세기 — 자소서 공백 포함·제외, 바이트 무료 | 문서딱',
+    description: '자소서 글자수를 공백 포함·제외와 바이트로 바로 셉니다. 목표까지 남은 글자 수도 보여요. 가입 없이 무료.',
+    h1: '글자수 세기',
+    summary: '붙여 넣은 글의 글자 수를 공백 포함·제외와 바이트로 셉니다.',
+    icon: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h5"/>',
+    status: 'live',
+    updated: '2026-10-15',
+    faq: [
+      {
+        q: '공백 포함과 공백 제외는 무엇이 다른가요?',
+        a: '공백 포함은 공백(빈칸)과 줄바꿈까지 모두 셉니다. 공백 제외는 공백(빈칸)과 줄바꿈을 빼고 셉니다. 자소서 문항에 「공백 포함 1,000자」처럼 기준이 적혀 있으면 그 기준의 숫자를 보세요.',
+      },
+      {
+        q: '바이트가 두 가지로 나오는데 어느 것을 보나요?',
+        a: '한글 한 글자를 2바이트로 세는 곳과 3바이트로 세는 곳이 있어 둘 다 보여 드립니다. 영문·숫자·공백은 어느 쪽이든 1바이트입니다. 받는 곳 안내에 적힌 기준을 보고, 알 수 없으면 큰 쪽 숫자에 맞추고 몇 자 여유를 두세요.',
+      },
+      {
+        q: '줄바꿈은 어떻게 세나요?',
+        a: '줄바꿈은 공백 포함에서 1자로 세고, 공백 제외에서는 세지 않습니다. 바이트로는 1바이트로 셉니다. 받는 곳에 따라 조금 다르게 셀 수 있으니 몇 자 여유를 두세요.',
+      },
+      {
+        q: '쓴 글이 저장되나요?',
+        a: '저장하지 않습니다. 이 기기 밖으로 보내지도 않습니다. 페이지를 닫으면 글이 사라지니, 쓴 글은 따로 저장해 두세요.',
+      },
+      {
+        q: '자소서를 다 쓴 다음에는?',
+        a: '이력서 사진도 내야 한다면 사람인·잡코리아 규격에 맞춰 사진을 바로 만들 수 있습니다.',
+        links: [
+          { href: '/id-photo/?preset=saramin', text: '사람인 이력서 사진 맞추기' },
+          { href: '/id-photo/?preset=jobkorea', text: '잡코리아 이력서 사진 맞추기' },
+          { href: '/guide/resume-photo/', text: '이력서 사진 규격, 사람인·잡코리아 크기와 용량' },
+        ],
+      },
+    ],
+    keywords: ['글자수 세기', '글자수 계산기', '자소서 글자수 세기', '공백 제외 글자수', '바이트 계산기'],
+  },
 ];
 
 export const LIVE_TOOLS = TOOLS.filter((t) => t.status === 'live');

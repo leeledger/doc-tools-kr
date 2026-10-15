@@ -1,0 +1,26 @@
+/* 글자수 세기 (/char-count/, TOOLS1015 C1). Inlined on that page only. */
+.cc-field { display: grid; gap: 6px; text-align: left; }
+.cc-field > label { font-weight: 800; }
+.cc-text {
+  width: 100%; min-height: 240px; resize: vertical; padding: 12px 14px; border: 1px solid var(--muted); border-radius: 12px;
+  background: var(--bg); color: var(--text); font: inherit; line-height: 1.6;
+}
+.cc-text:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.cc-counts { margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.cc-counts > div { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; }
+.cc-counts dt { font-size: 14.5px; color: var(--muted); }
+.cc-counts dd { margin: 2px 0 0; font-size: 15px; }
+.cc-counts strong { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cc-goal { margin-top: 14px; text-align: left; }
+.cc-goal-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cc-goal-row label { font-size: 15px; }
+.cc-goal progress { width: 100%; height: 12px; accent-color: var(--brand); }
+.cc-goal[data-over="true"] progress { accent-color: var(--danger); }
+.cc-goal-text { margin: 6px 0 0; font-weight: 800; }
+.cc-goal[data-over="true"] .cc-goal-text { color: var(--danger); }
+.cc-actions { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.cc-note { margin: 8px 0 0; font-size: 15px; color: var(--muted); min-height: 1.5em; text-align: left; }
+.cc-chain { margin-top: 20px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); text-align: left; }
+.cc-chain h2 { margin: 0 0 8px; font-size: 18px; }
+.cc-chain ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.cc-chain a { color: var(--brand); display: inline-block; min-height: 24px; }
