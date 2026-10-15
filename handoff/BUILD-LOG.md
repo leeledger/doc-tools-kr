@@ -3118,3 +3118,11 @@ Known Gaps (REQ1015 steps 1–4)
 - No deterministic worker-kill in e2e without a production hook: the reopen / auto-retry branch is covered by the pure helpers (afterRunError, reopenPlan) only, not by a controller test.
 - A pdf.js worker that dies without rejecting (no "Worker was destroyed" error) leaves getPage pending forever; there is no per-page timeout (not in the brief).
 - AI counts come from the referrer top 50 per chunk (partial note shown); a refererHost_in node stays out of scope.
+
+### REQ1015 round 2 (Bob, 2026-10-15, after REVIEW-FEEDBACK-REQ1015.md) — status DONE
+- Must Fix 1: heic-to-jpg answer now 「아이폰·맥 사파리에서 사진 JPG 변환을 열고 HEIC 사진을 고르면 JPG로 바꿀 수 있고, …」 (119 chars, one sentence).
+- Must Fix 2: jpg-to-pdf.md 안 될 때 bullet quotes the current message 「아이폰 사진(HEIC)을 이 기기에서 열지 못했습니다」 with the new advice (PC에서는 많이 안 열림 → 아이폰에서 사진 PDF 변환 열기, or 「높은 호환성」 for new photos) and the existing heic-to-jpg link.
+- Should Fix: photo-kb.md HEIC FAQ aligned with the tools.ts wording (「이 페이지」 → 「사진 용량 줄이기」 because it is a guide).
+- Logged, not fixed (Richard: non-blocking): visits.mjs `partial` is computed on the merged rows, so a multi-chunk view can over-warn (safe direction); a 「JPG로 변환」 click while a cancelled reopen is still settling does nothing (`opened` null until it settles; no leak, no loop).
+- Orchestrator decisions recorded: deviations 1, 3, 4 accepted; font budget unchanged; the /image-to-jpg/ lead stays until step 7.
+- Gates: check:quotes --exact 241 verbatim; check-dist OK default (PUBLIC_SITE_URL), BG_REMOVE and cloud flag-on (precache 421.8 KB); vitest 79 files / 1,676 passed; astro check 0 errors.

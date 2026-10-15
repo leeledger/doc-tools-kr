@@ -36,3 +36,10 @@ Branch: req-1015 (worktree C:\dev\doc-tools-kr\wt\req-1015), base origin/main 80
 - ~20 bytes of core-font headroom left; step 7 copy needs a font decision.
 - A pdf.js worker that dies silently leaves getPage pending (no per-page timeout).
 - AI counts limited to the referrer top 50 (partial note).
+
+## Round 2 (2026-10-15, after REVIEW-FEEDBACK-REQ1015.md)
+- src/content/guides/heic-to-jpg.md:6 — answer conditioned on 「아이폰·맥 사파리에서 … 바꿀 수 있고」 (119 chars).
+- src/content/guides/jpg-to-pdf.md:92 — the current HEIC message quoted, with the new advice and the heic-to-jpg link.
+- src/content/guides/photo-kb.md:42 — HEIC FAQ matches the tool FAQ.
+- Not fixed, logged in BUILD-LOG: visits partial over-warning across chunks; a click during a cancelled reopen.
+- Gates: check:quotes --exact 241 verbatim; check-dist OK default / BG / cloud; vitest 1,676 passed; astro check 0 errors.
