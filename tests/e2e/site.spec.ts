@@ -72,7 +72,7 @@ for (const [path, name] of [
   ['/hwp-to-pdf/', 'HWP PDF 변환'],
   ['/hwp-viewer/', 'hwp 뷰어'],
   ['/hwpx-to-hwp/', 'hwp로 바꿔요'],
-  ['/stamp-signature/', '도장 이미지 만들기'],
+  ['/stamp-signature/', '전자서명 만들기'],
   ['/char-count/', '자소서 글자수'],
   ['/id-copy/', '주민번호 뒤 7자리'],
   ['/pdf-edit/', '흰 상자로 가려요'],
