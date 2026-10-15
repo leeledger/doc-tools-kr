@@ -11,7 +11,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import pdfFaces from '../../src/generated/hwp-pdf-faces.json';
 import { FaceTable, unpackFaces, type FontMetrics, type LoadedFace, type PackedFaces } from '../../src/lib/hwp/pdf/faces';
 import { woffToSfnt } from '../../src/lib/hwp/pdf/woff';
-import { MissingGlyphError, editPdf, runsOf, type EditDraw } from '../../src/lib/pdf/edit';
+import { MissingGlyphError, editPdf, flattenPdf, runsOf, type EditDraw } from '../../src/lib/pdf/edit';
+import { pagesToFlatten } from '../../src/tools/pdf-edit/flatten';
 import { PRODUCER } from '../../src/lib/pdf/mergePlus';
 import {
   ASCENT,
@@ -254,5 +255,40 @@ describe.skipIf(!HAVE_FACES)('coverage (the face list the item check reads)', ()
     for (const ch of '홍길동가힣 ABCxyz 0123456789 .,-()·「」') expect(covered(ranges, ch.codePointAt(0)!), ch).toBe(true);
     for (const ch of ['😀', '👍', '🇰']) expect(covered(ranges, ch.codePointAt(0)!), ch).toBe(false);
     expect(covered(null, 0x1f600)).toBe(true);
+  });
+});
+
+describe('「그림으로 바꿔 저장」 (E2)', () => {
+  const white = (id: number, page: number): EditItem => ({ id, kind: 'white', page, box: { x: 0, y: 0, w: 20, h: 20 } });
+  const text = (id: number, page: number): EditItem => ({ id, kind: 'text', page, box: { x: 0, y: 0, w: 20, h: 20 }, text: 'a', size: 11, color: 'black', format: 'dot' });
+
+  it('affected pages: those with a white box, once each, in order; text-only pages stay vector', () => {
+    expect(pagesToFlatten([white(1, 3), text(2, 0), white(3, 1), white(4, 3)])).toEqual([1, 3]);
+    expect(pagesToFlatten([text(1, 0)])).toEqual([]);
+  });
+
+  it('flattenPdf: the listed page becomes one picture of the same size as seen, with no text left; the others keep theirs', async () => {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    doc.addPage([600, 800]).drawText('KEEPME', { x: 50, y: 700, size: 20, font });
+    const turned = doc.addPage([600, 800]);
+    turned.drawText('SECRET', { x: 50, y: 700, size: 20, font });
+    turned.setRotation(degrees(90));
+    const input = await doc.save();
+    const c = createCanvas(800, 600);
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, 800, 600);
+    const jpeg = new Uint8Array(c.toBuffer('image/jpeg'));
+    const out = await flattenPdf(input, [{ index: 1, jpeg, width: 800, height: 600 }]);
+    expect(out.pageCount).toBe(2);
+    const texts = await pageTexts(out.bytes);
+    expect(texts[0]).toContain('KEEPME');
+    expect(texts[1]).toBe('');
+    const done = await PDFDocument.load(out.bytes, { updateMetadata: false });
+    const p = done.getPage(1);
+    expect(p.getRotation().angle).toBe(0);
+    expect(p.getSize()).toEqual({ width: 800, height: 600 });
+    expect(done.getProducer()).toBe(PRODUCER);
   });
 });

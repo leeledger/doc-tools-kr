@@ -128,3 +128,42 @@ export async function editPdf(input: Uint8Array, password: string | undefined, d
     throw new PdfCorruptError(err instanceof Error ? err.message : String(err));
   }
 }
+
+/** A page replaced by a picture (PDF 글자 넣기·편집 「그림으로 바꿔 저장」, TOOLS1015 E2). */
+export interface FlatPageIn {
+  /** 0-based page. */
+  index: number;
+  jpeg: Uint8Array;
+  /** The page size as seen (points): the new page has it, unrotated, with the picture over all of it. */
+  width: number;
+  height: number;
+}
+
+/** Replaces each listed page of an unencrypted PDF (the E1 output) by a same-size page holding only its picture. */
+export async function flattenPdf(input: Uint8Array, pages: readonly FlatPageIn[]): Promise<{ bytes: Uint8Array; pageCount: number }> {
+  assertPdfHeader(input);
+  let doc: PDFDocument;
+  try {
+    doc = await PDFDocument.load(input, { updateMetadata: false, throwOnInvalidObject: false });
+  } catch (err) {
+    throw mapLoadError(err, false);
+  }
+  try {
+    for (const p of pages) {
+      if (p.index < 0 || p.index >= doc.getPageCount()) throw new PdfError('unknown', `no page ${p.index}`);
+      const image = await doc.embedJpg(p.jpeg);
+      const page = doc.insertPage(p.index, [p.width, p.height]);
+      page.drawImage(image, { x: 0, y: 0, width: p.width, height: p.height });
+      doc.removePage(p.index + 1);
+    }
+    doc.setProducer(PRODUCER);
+    const bytes = await doc.save({ useObjectStreams: true, updateFieldAppearances: false }).catch((err: unknown) => {
+      if (/PDF\/A-1 forbids object/i.test(err instanceof Error ? err.message : '')) return doc.save({ useObjectStreams: false, updateFieldAppearances: false });
+      throw err;
+    });
+    return { bytes, pageCount: doc.getPageCount() };
+  } catch (err) {
+    if (isOutOfMemory(err) || err instanceof PdfError) throw err;
+    throw new PdfCorruptError(err instanceof Error ? err.message : String(err));
+  }
+}

@@ -3,18 +3,21 @@
 // files under /fonts/hwp/ (font-source.ts guards that); never file data.
 import { isEngineLoadFailure } from '../ui/engine-load';
 import { createFontSource } from '../hwp/pdf/font-source';
-import { MissingGlyphError, editPdf, type EditDraw } from './edit';
+import { MissingGlyphError, editPdf, flattenPdf, type EditDraw, type FlatPageIn } from './edit';
 import { errorCode, type WorkerErrorCode } from './errors';
 import { verifyOutput } from './verify';
 
-export interface EditRequest {
-  type: 'edit';
-  buffer: ArrayBuffer;
-  password?: string;
-  draws: EditDraw[];
-  /** The font-family chain the preview uses (FaceTable.resolve). */
-  chain: string;
-}
+export type EditRequest =
+  | {
+      type: 'edit';
+      buffer: ArrayBuffer;
+      password?: string;
+      draws: EditDraw[];
+      /** The font-family chain the preview uses (FaceTable.resolve). */
+      chain: string;
+    }
+  /** 「그림으로 바꿔 저장」 (E2): the listed pages of the edited PDF replaced by their pictures. */
+  | { type: 'flatten'; buffer: ArrayBuffer; pages: FlatPageIn[] };
 
 export type EditResponse =
   | { type: 'done'; bytes: Uint8Array; signed: boolean }
@@ -34,6 +37,16 @@ const post = (msg: EditResponse, transfer: Transferable[] = []): void => scope.p
 
 scope.onmessage = async (ev) => {
   const req = ev.data;
+  if (req?.type === 'flatten') {
+    try {
+      const out = await flattenPdf(new Uint8Array(req.buffer), req.pages);
+      await verifyOutput(out.bytes, out.pageCount);
+      post({ type: 'done', bytes: out.bytes, signed: false }, [out.bytes.buffer]);
+    } catch (err) {
+      post({ type: 'error', code: isEngineLoadFailure(err) ? 'engine' : errorCode(err) });
+    }
+    return;
+  }
   if (req?.type !== 'edit') return;
   let fontFailed = false;
   try {

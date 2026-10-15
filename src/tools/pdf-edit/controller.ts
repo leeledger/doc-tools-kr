@@ -46,7 +46,8 @@ import {
   type TextItem,
 } from './items';
 import { covered, loadCoverage } from './coverage';
-import { MAX_ITEMS, MAX_TEXT, SIZE_DEFAULT, fileLimitMessage } from './limits';
+import { CanvasFailure, pagesToFlatten, renderFlat, type FlatPage } from './flatten';
+import { MAX_ITEMS, MAX_TEXT, RASTER_LIMITS, SIZE_DEFAULT, fileLimitMessage } from './limits';
 import { textOrigin, whiteRect } from './text-place';
 
 type State = 'empty' | 'opening' | 'locked' | 'ready' | 'working' | 'done';
@@ -59,13 +60,14 @@ const MESSAGES = {
   oom: '이 기기에서 한 번에 처리할 수 있는 양을 넘었습니다. 더 작은 파일로 시도하거나 PC에서 다시 시도해 주세요.',
   unknown: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
   font: '글꼴을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 저장해 주세요.',
+  canvas: '가린 쪽을 그림으로 바꾸지 못했어요. 「그림으로 바꿔 저장」을 끄고 저장하거나, PC에서 다시 해 주세요.',
 } as const;
 
 const OWNER_NOTE = '보안 설정(편집 제한)이 해제된 사본이 만들어집니다.';
 const MULTI_NOTE = 'PDF 파일은 한 번에 하나만 쓸 수 있어 첫 번째 파일만 열었습니다.';
 const SIGNATURE_NOTE = '전자서명이 들어 있는 문서입니다. 글자를 넣어 새로 저장하면 전자서명이 더 이상 유효하지 않습니다. 발급받은 증명서는 원본을 제출하세요.';
-/** Next to the 흰 상자 button while a white box exists (brief: honest scope). */
-const WHITE_NOTE = '흰 상자는 위에 덮는 것이라 밑의 글자는 파일 안에 남습니다.';
+/** Next to the 흰 상자 button while a white box exists (brief: honest scope), with the E2 option right below it. */
+const WHITE_NOTE = '흰 상자는 위에 덮는 것이라 밑의 글자는 파일 안에 남습니다. 남지 않게 하려면 아래 「그림으로 바꿔 저장」을 켜세요.';
 const WHITE_RESULT_NOTE = '흰 상자로 가린 곳의 원래 글자는 파일 안에 그대로 남아 있습니다.';
 const PLACEHOLDER = '글자를 쓰세요';
 const COLOR_LABELS: Record<TextColor, string> = { black: '검정', blue: '파랑' };
@@ -141,6 +143,8 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
   const addDate = must<HTMLButtonElement>('ed-add-date');
   const addWhite = must<HTMLButtonElement>('ed-add-white');
   const whiteNote = must<HTMLParagraphElement>('ed-white-note');
+  const flattenBox = must<HTMLLabelElement>('ed-flatten-box');
+  const flattenInput = must<HTMLInputElement>('ed-flatten');
   const stage = must<HTMLDivElement>('ed-stage');
   const controls = must<HTMLDivElement>('ed-controls');
   const textBoxEl = must<HTMLDivElement>('ed-text-box');
@@ -367,6 +371,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     const hasWhite = items.some((it) => it.kind === 'white');
     whiteNote.hidden = !hasWhite;
     whiteNote.textContent = hasWhite ? WHITE_NOTE : '';
+    flattenBox.hidden = !hasWhite;
     const cur = pageStage.page;
     prevBtn.disabled = cur <= 0;
     nextBtn.disabled = cur >= pageCount - 1;
@@ -487,6 +492,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     items = [];
     drawnW.clear();
     noGlyph.clear();
+    flattenInput.checked = false;
     multiNote = false;
     pwInput.value = '';
     pwInput.type = 'password';
@@ -641,6 +647,43 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     return draws;
   }
 
+  /** One request to a new edit worker (kept in `worker` so cancel and pagehide can stop it). */
+  function inWorker(req: EditRequest, transfer: Transferable[]): Promise<{ bytes: Uint8Array; signed: boolean }> {
+    stopWorker();
+    const w = createEditWorker();
+    worker = w;
+    let answered = false;
+    return new Promise((resolve, reject) => {
+      w.onmessage = (ev: MessageEvent<EditResponse>) => {
+        answered = true;
+        const msg = ev.data;
+        if (msg.type === 'done') resolve({ bytes: msg.bytes, signed: msg.signed });
+        else if (msg.type === 'missing') reject(new MissingChars(msg.chars));
+        else reject(new RunFailure(msg.code));
+      };
+      w.onerror = (ev) => {
+        ev.preventDefault();
+        reject(new RunFailure(answered ? 'unknown' : 'engine'));
+      };
+      w.postMessage(req, transfer);
+    });
+  }
+
+  /** The pages of the saved PDF that get a white box, drawn as JPEGs (E2), one at a time. */
+  async function drawFlat(saved: Uint8Array, pages: readonly number[]): Promise<FlatPage[]> {
+    const { openPdf } = await loadInspect();
+    const o = await openPdf(saved);
+    if (!o) throw new RunFailure('unknown');
+    try {
+      const caps = RASTER_LIMITS[detectDevice()].caps;
+      const out: FlatPage[] = [];
+      for (const index of pages) out.push(await renderFlat(o.doc, index, caps));
+      return out;
+    } finally {
+      await o.close().catch(() => undefined);
+    }
+  }
+
   async function run(): Promise<void> {
     if (state !== 'ready' || !file || !bytes) return;
     const why = blocker();
@@ -661,27 +704,20 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
       if (id !== runId) return;
       // pdf-lib takes the buffer it is given (transferred), so it gets a copy.
       const buffer = bytes.slice().buffer;
-      const w = createEditWorker();
-      worker = w;
-      let answered = false;
-      const out = await new Promise<{ bytes: Uint8Array; signed: boolean }>((resolve, reject) => {
-        w.onmessage = (ev: MessageEvent<EditResponse>) => {
-          answered = true;
-          const msg = ev.data;
-          if (msg.type === 'done') resolve({ bytes: msg.bytes, signed: msg.signed });
-          else if (msg.type === 'missing') reject(new MissingChars(msg.chars));
-          else reject(new RunFailure(msg.code));
-        };
-        w.onerror = (ev) => {
-          ev.preventDefault();
-          reject(new RunFailure(answered ? 'unknown' : 'engine'));
-        };
-        const req: EditRequest = { type: 'edit', buffer, password: pw, draws, chain: FONT_CHAIN };
-        w.postMessage(req, [buffer]);
-      });
+      let out = await inWorker({ type: 'edit', buffer, password: pw, draws, chain: FONT_CHAIN }, [buffer]);
       if (id !== runId) return;
+      const flat = flattenBox.hidden || !flattenInput.checked ? [] : pagesToFlatten(items);
+      if (flat.length) {
+        status('흰 상자로 가린 쪽을 그림으로 바꾸는 중입니다.');
+        const pages = await drawFlat(out.bytes, flat);
+        if (id !== runId) return;
+        const saved = out.bytes.slice().buffer;
+        const flatReq: EditRequest = { type: 'flatten', buffer: saved, pages: pages.map((p) => ({ index: p.index, jpeg: new Uint8Array(p.jpeg), width: p.width, height: p.height })) };
+        out = { bytes: (await inWorker(flatReq, [saved, ...pages.map((p) => p.jpeg)])).bytes, signed: out.signed };
+        if (id !== runId) return;
+      }
       stopWorker();
-      finish(new Blob([out.bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }), out.signed, source);
+      finish(new Blob([out.bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }), out.signed, source, flat.length);
     } catch (err) {
       if (id !== runId) return;
       stopWorker();
@@ -694,14 +730,14 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
         announce('alert', `넣을 수 없는 글자: ${[...err.chars].join(' ')}. 그 글자를 지우고 다시 저장해 주세요.`, root);
         return;
       }
-      const code: WorkerErrorCode | 'font' = err instanceof RunFailure ? err.code : isOutOfMemory(err) ? 'oom' : 'unknown';
+      const code: WorkerErrorCode | 'font' | 'canvas' = err instanceof RunFailure ? err.code : err instanceof CanvasFailure ? 'canvas' : isOutOfMemory(err) ? 'oom' : 'unknown';
       if (code === 'engine') {
         usageFail('engine', 'process');
         void showEngineError();
         return;
       }
       usageFail(code, code === 'verify' ? 'save' : 'process');
-      announce('alert', code === 'corrupt' || code === 'oom' || code === 'font' ? MESSAGES[code] : MESSAGES.unknown, root);
+      announce('alert', code === 'corrupt' || code === 'oom' || code === 'font' || code === 'canvas' ? MESSAGES[code] : MESSAGES.unknown, root);
       runBtn.focus();
     }
   }
@@ -716,7 +752,7 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     status('저장을 취소했습니다. 넣은 글자와 상자는 그대로 있습니다.');
   }
 
-  function finish(out: Blob, signed: boolean, source: File): void {
+  function finish(out: Blob, signed: boolean, source: File, flattened: number): void {
     revokeBlob();
     blobUrl = URL.createObjectURL(out);
     track({ e: 'success', t: 'pdf-edit' });
@@ -726,7 +762,8 @@ export function initPdfEdit(pending?: File[]): { open(files: File[]): Promise<vo
     const pages = new Set(items.map((it) => it.page)).size;
     summary.textContent = `${formatPages(pages)}에 ${items.length.toLocaleString('ko-KR')}개를 넣었습니다 · ${formatSize(out.size)}`;
     const lines: (string | HTMLLIElement)[] = signed ? [SIGNATURE_NOTE] : [];
-    if (items.some((it) => it.kind === 'white')) lines.push(WHITE_RESULT_NOTE);
+    if (flattened) lines.push(`${formatPages(flattened)}을 그림으로 바꿔 저장했어요. 그 쪽의 글자는 복사할 수 없어요.`);
+    else if (items.some((it) => it.kind === 'white')) lines.push(WHITE_RESULT_NOTE);
     if (encrypted === 'user') {
       const li = el('li', undefined, '암호 없이 저장했습니다. 다시 걸려면 ');
       const a = el('a', undefined, 'PDF 암호 해제·설정');

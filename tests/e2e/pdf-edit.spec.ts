@@ -239,7 +239,7 @@ test('흰 상자 over old text: white on the page, and the note says the old tex
   await stageReady(page);
   await expect(page.locator('#ed-white-note')).toBeHidden();
   await page.locator('#ed-add-white').click();
-  await expect(page.locator('#ed-white-note')).toHaveText('흰 상자는 위에 덮는 것이라 밑의 글자는 파일 안에 남습니다.');
+  await expect(page.locator('#ed-white-note')).toContainText('흰 상자는 위에 덮는 것이라 밑의 글자는 파일 안에 남습니다.');
   // The box starts at (60, 80) on a 600 × 800 page, 120 × 24: over OLDTEXT (x 100…, seen y ≈ 86…100).
   near(await boxOf(page, 0, 600), { x: 60, y: 80, w: 120, h: 24 });
   await page.locator('.sign-box').focus();
@@ -363,4 +363,30 @@ test('이어서 하기: a merged PDF opens here as if picked (PDF 합치기 → 
   await expect(page.locator('#ed-notice')).toHaveText('방금 만든 파일을 가져왔습니다.');
   await expect(page.locator('#ed-tool')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('#ed-page-count')).toContainText('/ 3쪽');
+});
+
+test('E2 「그림으로 바꿔 저장」: off by default and shown only with a white box; on, the covered page keeps no text, the other pages keep theirs', async ({ page }) => {
+  await open(page, FORM);
+  await stageReady(page);
+  await expect(page.locator('#ed-flatten-box')).toBeHidden();
+  await page.locator('#ed-add-white').click();
+  await expect(page.locator('#ed-flatten-box')).toBeVisible();
+  await expect(page.locator('#ed-flatten')).not.toBeChecked();
+  await expect(page.locator('#ed-white-note')).toContainText('남지 않게 하려면 아래 「그림으로 바꿔 저장」을 켜세요.');
+  // Page 2 gets text only: it stays real text.
+  await page.locator('#ed-next').click();
+  await expect(page.locator('#ed-goto')).toHaveValue('2');
+  await stageReady(page);
+  await addText(page, '둘째 쪽');
+  await page.locator('#ed-flatten').check();
+  const { bytes } = await save(page);
+  await expect(page.locator('#ed-notes')).toContainText('1쪽을 그림으로 바꿔 저장했어요. 그 쪽의 글자는 복사할 수 없어요.');
+  await expect(page.locator('#ed-notes')).not.toContainText('그대로 남아 있습니다');
+  const seen = await pagesSeen(bytes);
+  expect(seen).toHaveLength(2);
+  expect(seen[0]!.text).toBe('');
+  expect(seen[0]!.dark(60, 80, 120, 24)).toBe(0);
+  expect(seen[1]!.text.replace(/\s+/g, '')).toContain('둘째쪽');
+  const doc = await PDFDocument.load(bytes, { updateMetadata: false });
+  expect(doc.getPage(0).getSize()).toEqual({ width: 600, height: 800 });
 });

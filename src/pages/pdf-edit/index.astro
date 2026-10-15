@@ -1,7 +1,8 @@
 ---
 // /pdf-edit/ (TOOLS1015 E1): one PDF -> text (글자, 오늘 날짜) and white boxes (흰 상자) put where they were placed. Old
 // text cannot be changed; a white box only covers it. The controller loads on the first interaction (entry.ts); pdf.js
-// when a file is chosen; pdf-lib, fontkit and the faces only in edit.worker when saving.
+// when a file is chosen; pdf-lib, fontkit and the faces only in edit.worker when saving. E2: 「그림으로 바꿔 저장」 (off by
+// default) turns the pages under a white box into pictures after the save (flatten.ts).
 import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
@@ -71,6 +72,7 @@ const jsonLd = toolJsonLd(tool, Astro.site);
             <button type="button" class="btn small ghost" id="ed-add-white">흰 상자</button>
           </div>
           <p class="hint" id="ed-white-note" hidden></p>
+          <label class="check edit-flatten" id="ed-flatten-box" hidden><input type="checkbox" id="ed-flatten"> 흰 상자로 가린 쪽은 그림으로 바꿔 저장(가린 글자가 남지 않게)</label>
           <div class="sign-stage" id="ed-stage"></div>
           <p class="hint" id="ed-stage-hint">글자나 상자를 끌어 옮기고, 오른쪽 아래 모서리를 끌어 크기를 바꿉니다. 고른 뒤 화살표 키로도 옮길 수 있습니다.</p>
 
@@ -150,7 +152,7 @@ const jsonLd = toolJsonLd(tool, Astro.site);
       <h2 id="why-title">알아 두면 좋아요</h2>
       <ul class="points">
         <li><strong>원래 글자는 고칠 수 없어요</strong><span>새 글자를 위에 넣는 도구입니다. 잘못 쓴 글자는 흰 상자로 가리고 그 위에 새로 쓰세요.</span></li>
-        <li><strong>흰 상자는 위에 올리는 것입니다</strong><span>가린 곳의 원래 글자는 파일 안에 남아 글자 복사로 볼 수 있습니다.</span></li>
+        <li><strong>흰 상자는 위에 올리는 것입니다</strong><span>가린 곳의 원래 글자는 파일 안에 남아 글자 복사로 볼 수 있습니다. 남지 않게 하려면 저장할 때 「그림으로 바꿔 저장」을 고르세요. 그 쪽은 그림이 되어 글자를 복사할 수 없습니다.</span></li>
         <li><strong>원본은 그대로입니다</strong><span>글자를 넣은 내용은 새 PDF로 저장되고, 고른 원본 파일은 바뀌지 않습니다.</span></li>
       </ul>
     </div>

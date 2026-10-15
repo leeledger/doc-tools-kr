@@ -10,3 +10,8 @@ export const MAX_TEXT = 500;
 export const SIZE_MIN = 6;
 export const SIZE_MAX = 48;
 export const SIZE_DEFAULT = 11;
+
+/** 「그림으로 바꿔 저장」 (TOOLS1015 E2): pages covered by a white box are drawn at this many pixels per inch. */
+export const FLATTEN_PPI = 200;
+/** ... within the canvas caps of PDF JPG 변환 (the same pdf.js page drawing, on the same devices). */
+export { LIMITS as RASTER_LIMITS } from '../pdf-to-jpg/limits';
