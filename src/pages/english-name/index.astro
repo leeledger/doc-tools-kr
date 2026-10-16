@@ -1,0 +1,128 @@
+---
+// /english-name/ (ROMANIZE1016): 영문 이름 변환기. The name is romanized on this page only: the inputs have no name
+// attributes, the form has no action and its submit is prevented, nothing is stored and nothing is sent. The controller
+// is small and has no engine, so it ships with the page (brief D7; check-dist budget). Choices, warnings, the owner's
+// note and every 비율 are built by the controller (late copy; the 비율 come only from mofa.ts). The placeholders are
+// static and use preloaded glyphs only (a late placeholder such as 「예: 홍」 loads the late face before any interaction).
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { PASSPORT_BASIC_URL, ROMANIZATION_URL, SOURCES_RETRIEVED } from '../../tools/english-name/sources';
+import { GIVEN_MAX, SURNAME_MAX } from '../../tools/english-name/romanize';
+// Page-only styles, inlined (the /pdf-sign/ pattern): no other page carries them.
+import enCss from '../../tools/english-name/english-name.css?inline';
+
+const tool = getTool('english-name');
+const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
+const rows = [
+  { shape: 'joined', label: '붙여 쓰기' },
+  { shape: 'hyphen', label: '붙임표 넣기' },
+  { shape: 'space', label: '빈칸 넣기' },
+];
+const [y, m, d] = SOURCES_RETRIEVED.split('-').map(Number);
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={enCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">한글 이름을 쓰면 국어의 로마자 표기법에 맞는 여권 영문 이름을 붙여 쓰기·붙임표 넣기·빈칸 넣기 세 가지로 보여 드립니다. 많이 쓰는 성씨 표기와 비율도 함께 보여 드립니다.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <form class="en-form" id="en-form" novalidate>
+        <div class="en-inputs">
+          <div class="en-field">
+            <label for="en-sur">성</label>
+            <input id="en-sur" class="en-input" type="text" lang="ko" maxlength={SURNAME_MAX} placeholder="예: 이" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" aria-describedby="en-error en-hint">
+          </div>
+          <div class="en-field">
+            <label for="en-given">이름</label>
+            <input id="en-given" class="en-input" type="text" lang="ko" maxlength={GIVEN_MAX} placeholder="예: 서연" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" aria-describedby="en-error en-hint">
+          </div>
+        </div>
+        <p class="field-error" id="en-error" role="alert"></p>
+        <p class="en-hint" id="en-hint"></p>
+        <button type="submit" class="btn primary" id="en-go">영문 이름 보기</button>
+        <p class="privacy-note" id="en-privacy">쓴 이름은 이 기기 밖으로 보내지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+      </form>
+
+      <div class="en-result" id="en-result" hidden tabindex="-1" aria-labelledby="en-result-title">
+        <h2 id="en-result-title">영문 이름</h2>
+        <fieldset class="modes en-case">
+          <legend class="visually-hidden">글자 모양</legend>
+          <label class="radio"><input type="radio" name="en-case" value="upper" checked>여권처럼 모두 대문자</label>
+          <label class="radio"><input type="radio" name="en-case" value="title">첫 글자만 대문자</label>
+        </fieldset>
+        <ul class="en-rows" id="en-rows">
+          {rows.map((r) => (
+            <li class="en-row" data-shape={r.shape}>
+              <span class="en-row-label">{r.label}</span>
+              <span class="en-name" id={`en-${r.shape}`} lang="en"></span>
+              <button type="button" class="btn small" data-copy={r.shape} aria-label={`${r.label} 복사`}>복사</button>
+            </li>
+          ))}
+        </ul>
+        <p class="en-status" id="en-status" role="status"></p>
+        <p class="visually-hidden" id="en-live" aria-live="polite"></p>
+        <div id="en-warn"></div>
+        <fieldset class="levels en-pick" id="en-sur-box">
+          <legend>성 표기</legend>
+          <div class="chips" id="en-sur-choices"></div>
+          <p class="en-caption" id="en-sur-caption"></p>
+        </fieldset>
+        <div class="en-syl" id="en-syl"></div>
+        <div class="en-note" id="en-note"></div>
+      </div>
+
+      <p class="en-source" id="en-source">표기 기준: <a href={ROMANIZATION_URL}>국어의 로마자 표기법(국립국어원)</a>, <a href={PASSPORT_BASIC_URL}>외교부 여권안내 로마자성명 표기 기본방법</a>·통계 예시(2024년 10월 31일 기준). {y}년 {m}월 {d}일 확인</p>
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>성과 이름 쓰기</strong><span>성과 이름을 나눠 한글로 씁니다. 쓰는 대로 바로 영문 이름을 보여 드립니다.</span></li>
+        <li><strong>표기 고르기</strong><span>성은 많이 쓰는 표기 중에서, 이름은 음절마다 표기법대로 쓸지 많이 쓰는 표기로 쓸지 고릅니다.</span></li>
+        <li><strong>복사해 여권 신청서에 쓰기</strong><span>고른 모양 옆의 복사를 눌러 여권 신청서나 항공권 예약에 붙여 넣습니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>처음에 잘 정하세요</strong><span>여권 영문 이름은 한 번 정하면 거의 바꿀 수 없습니다. 지금 쓰는 여권이나 부모님 여권의 성 표기와 맞추고, 마지막 확인은 외교부 여권 안내에서 하세요.</span></li>
+        <li><strong>가입·설치 없이 무료</strong><span>이름을 쓰면 바로 보여 드리고, 쓴 이름은 저장하지 않습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => <p><a href={l.href}>{l.text}</a></p>)}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['id-photo', 'id-copy', 'char-count']} />
+</Base>
+
+<script>
+  import '../../tools/english-name/entry';
+</script>

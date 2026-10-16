@@ -28,6 +28,7 @@ export const liveNames = (tools: readonly Tool[] = LIVE_TOOLS): string => tools.
  */
 export const HOME_DESC_ORDER: readonly string[] = [
   'id-photo',
+  'english-name',
   'pdf-merge',
   'photo-compress',
   'pdf-compress',

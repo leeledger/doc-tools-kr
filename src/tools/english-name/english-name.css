@@ -1,0 +1,36 @@
+/* 영문 이름 변환기 (/english-name/, ROMANIZE1016). Inlined on that page only. */
+.en-form { display: grid; gap: 10px; text-align: left; }
+.en-inputs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 10px; }
+.en-field { display: grid; gap: 6px; }
+.en-field > label { font-weight: 800; }
+.en-input {
+  width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--muted); border-radius: 10px;
+  background: var(--bg); color: var(--text); font: inherit; font-size: 18px;
+}
+.en-input:focus-visible, .en-custom:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.en-input[aria-invalid="true"] { border-color: var(--danger); }
+.en-form .btn { justify-self: start; }
+.en-form .field-error, .en-hint { margin: 0; font-size: 15px; }
+.en-hint:empty { display: none; }
+.en-result { margin-top: 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); text-align: left; display: grid; gap: 12px; }
+.en-result[hidden] { display: none; }
+.en-result:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.en-result h2 { margin: 0; font-size: 18px; }
+.en-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.en-rows[hidden] { display: none; }
+.en-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.en-row-label { grid-column: 1 / -1; font-size: 14.5px; color: var(--muted); }
+.en-name { font-size: 22px; font-weight: 800; letter-spacing: .02em; overflow-wrap: anywhere; user-select: all; }
+.en-status { margin: 0; font-size: 15px; font-weight: 800; color: var(--brand); }
+.en-status:empty { display: none; }
+.en-pick .chips { margin-top: 4px; }
+.en-pick .chip span { font-size: 15px; }
+.en-custom { width: 14em; max-width: 100%; }
+.en-caption { margin: 8px 0 0; font-size: 14.5px; color: var(--muted); }
+.en-syl { display: grid; gap: 10px; }
+.en-syl:empty { display: none; }
+.en-syl > .en-caption { margin-top: 0; }
+.en-owner { margin: 0; font-weight: 800; }
+.en-links { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.en-links a, .en-source a { color: var(--brand); display: inline-block; min-height: 24px; }
+.en-source { margin: 14px 0 0; font-size: 14.5px; color: var(--muted); text-align: left; }

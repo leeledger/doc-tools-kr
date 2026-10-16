@@ -6,6 +6,9 @@ import {
   DEEP_LINK_TOOLS,
   NO_DEEP_LINK,
   CAMPAIGN_LABELS,
+  DOWNLOAD_SETTING,
+  NAME_FORMS,
+  SETTING_VALUE_LABELS,
   EVENTS,
   FAIL_LABELS,
   GUIDE_OUT,
@@ -43,6 +46,7 @@ import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { USAGE_ON, UTM_STASH_KEY, UTM_TTL_MS, arrival, browserFamily, buildPayload, createTracker, readUtmStash, startUsage, track, writeUtmStash } from '../../src/lib/ui/usage';
 import { route } from '../../src/sw/sw';
 import { STYLES, STYLE_IDS } from '../../src/tools/stamp-maker/styles';
+import { SHAPES } from '../../src/tools/english-name/options';
 import { DEEP_PARAM } from '../../src/lib/ui/deeplink';
 import { campaignSql } from '../../scripts/lib/campaign.mjs';
 import { FULL } from '../fixtures/usage-rows.mjs';
@@ -190,7 +194,7 @@ describe('SQL builders and table shaping', () => {
     expect(usageSql('docttak_usage', 7)).toEqual({
       events: "SELECT blob2 AS tool, blob1 AS event, blob9 AS via, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY GROUP BY blob2, blob1, blob9 FORMAT JSON",
       fails: "SELECT blob2 AS tool, blob3 AS code, blob4 AS phase, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'fail' GROUP BY blob2, blob3, blob4 ORDER BY n DESC LIMIT 20 FORMAT JSON",
-      settings: "SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'start' AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
+      settings: "SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND (blob1 = 'start' OR blob1 = 'download') AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
       guides: "SELECT blob7 AS guide, blob2 AS tool, blob8 AS dl, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'arrive' GROUP BY blob7, blob2, blob8 ORDER BY n DESC LIMIT 500 FORMAT JSON",
       chains: "SELECT blob2 AS tool, blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'next' GROUP BY blob2, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
       outs: "SELECT blob2 AS tool, blob7 AS guide, blob6 AS dest, SUM(_sample_interval * double1) AS n FROM docttak_usage WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'out' GROUP BY blob2, blob7, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON",
@@ -961,6 +965,51 @@ describe('글자수 세기 (TOOLS1015 C1)', () => {
       ['글자수 세기', '목표 기준', '공백 제외', '2'],
       ['글자수 세기', '목표 기준', '바이트(한글 2)', '1'],
       ['글자수 세기', '목표 기준', '바이트(한글 3)', '1'],
+    ]);
+  });
+});
+
+describe('영문 이름 변환기 (ROMANIZE1016 D6)', () => {
+  it('start (no o/v), download with o=form, next to id-photo pass; the name, its parts and other settings never do', () => {
+    expect(TOOLS).toContain('english-name');
+    expect([...NAME_FORMS]).toEqual([...SHAPES]);
+    expect(DOWNLOAD_SETTING).toEqual({ 'english-name': 'form' });
+    expect(validate(body({ ...BASE, t: 'english-name', e: 'start' }))).not.toBeNull();
+    for (const v of NAME_FORMS) expect(validate(body({ ...BASE, t: 'english-name', e: 'download', o: 'form', v })), v).toMatchObject({ e: 'download', o: 'form', v });
+    expect(validate(body({ ...BASE, t: 'english-name', e: 'download' }))).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'english-name', e: 'next', o: 'next', v: 'id-photo' }))).not.toBeNull();
+    for (const v of ['홍', '길동', 'GILDONG', 'HONG GILDONG', 'KIM', 'title', 'upper', '3', 'Joined']) expect(validate(body({ ...BASE, t: 'english-name', e: 'download', o: 'form', v })), v).toBeNull();
+    // form only on english-name downloads; other settings never on a download; form never on a start.
+    expect(validate(body({ ...BASE, t: 'char-count', e: 'download', o: 'form', v: 'joined' }))).toBeNull();
+    expect(validate(body({ ...BASE, t: 'english-name', e: 'download', o: 'basis', v: 'space' }))).toBeNull();
+    expect(validate(body({ ...BASE, t: 'photo-compress', e: 'download', o: 'level', v: 'high' }))).toBeNull();
+    expect(validate(body({ ...BASE, t: 'english-name', e: 'start', o: 'form', v: 'joined' }))).not.toBeNull();
+    for (const e of ['pick', 'success']) expect(validate(body({ ...BASE, t: 'english-name', e, o: 'form', v: 'joined' })), e).toBeNull();
+  });
+
+  it('the client payload carries form only on an english-name download', () => {
+    const ctx = { via: 'direct' as const, ua: '', device: 'desktop' as const, build: 'dev', w: 1 };
+    expect(buildPayload({ e: 'download', t: 'english-name', o: 'form', v: 'hyphen' }, ctx)).toEqual({ e: 'download', t: 'english-name', o: 'form', v: 'hyphen', via: 'direct', d: 'desktop', b: 'dev', w: 1 });
+    expect(buildPayload({ e: 'download', t: 'english-name', o: 'form', v: 'HONG' } as never, ctx)).toEqual({ e: 'download', t: 'english-name', via: 'direct', d: 'desktop', b: 'dev', w: 1 });
+    expect(buildPayload({ e: 'download', t: 'char-count', o: 'form', v: 'joined' } as never, ctx)).toEqual({ e: 'download', t: 'char-count', via: 'direct', d: 'desktop', b: 'dev', w: 1 });
+  });
+
+  it('admin labels: 영문 이름 변환기, 이름 모양 and its values (space is 빈칸 here, 공백 포함 for 글자수 세기)', () => {
+    expect(SETTING_VALUE_LABELS.form).toEqual({ joined: '붙여 쓰기', hyphen: '붙임표', space: '빈칸' });
+    const shaped = shapeUsage({
+      events: [{ tool: 'english-name', event: 'download', via: 'direct', n: 4 }],
+      settings: [
+        { tool: 'english-name', setting: 'form', value: 'joined', n: 3 },
+        { tool: 'english-name', setting: 'form', value: 'space', n: 1 },
+        { tool: 'char-count', setting: 'basis', value: 'space', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows.some((r) => r[0] === '영문 이름 변환기')).toBe(true);
+    expect(settings!.rows).toEqual([
+      ['글자수 세기', '목표 기준', '공백 포함', '1'],
+      ['영문 이름 변환기', '이름 모양', '붙여 쓰기', '3'],
+      ['영문 이름 변환기', '이름 모양', '빈칸', '1'],
     ]);
   });
 });

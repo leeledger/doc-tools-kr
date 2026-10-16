@@ -1,7 +1,7 @@
 // The official sources /english-name/ follows (brief ROMANIZE1016, Sources S1-S5), all retrieved 2026-10-16. The source
 // watch (scripts/ops/lib/guides.mjs parseToolSources) reads this file without a build, so every entry keeps the shape
 // `{ id: '…', url: NAME, title: '…', quote: '…' }` with single-quoted strings (NAME = a URL const below); `via: 'browser'`
-// marks a source a script cannot fetch (the 외교부 PDF opens in a viewer), listed for a manual check. A quote may join
+// marks a source a script cannot read (the 외교부 PDF opens in a viewer); it is listed for a manual check. A quote may join
 // parts with " / " (each part must be verbatim on the page).
 
 export interface ToolSource {

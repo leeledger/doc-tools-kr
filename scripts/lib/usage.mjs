@@ -45,7 +45,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out', 'land'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct', 'embed'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -76,8 +76,12 @@ export const MARK_STATES = ['on', 'off'];
 export const ITEM_KINDS = ['text', 'date', 'white', 'mix'];
 /** 도장 만들기 도장 모양 (STAMP1015 D8): equal to STYLE_IDS in src/tools/stamp-maker/styles.ts (unit test). Never the text, its length or script, colour, size, seed or date. */
 export const STAMP_STYLES = ['round', 'round-double', 'oval', 'square-seal', 'square-round', 'square-inverse', 'rect-v', 'rect-h', 'plain', 'corp-round', 'corp-square', 'date-round'];
+/** 영문 이름 변환기 이름 모양 (ROMANIZE1016 D6): 붙여 쓰기 | 붙임표 | 빈칸, on 복사 only. Never the name, its syllables or length, the surname choice, list membership, case or warnings. */
+export const NAME_FORMS = ['joined', 'hyphen', 'space'];
+/** Tool -> the one setting its download event may carry (every other download has no o / v). */
+export const DOWNLOAD_SETTING = { 'english-name': 'form' };
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -114,7 +118,7 @@ export function utmOf(search) {
 export const BLOB_KEYS = ['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'us', 'uc'];
 const KEYS = new Set([...BLOB_KEYS, 'w']);
 /** Keys allowed on the listed event types only. */
-const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'next', 'out'], v: ['start', 'next', 'out'], g: ['arrive', 'out', 'land'], dl: ['arrive'], us: ['land', 'start', 'success'], uc: ['land', 'start', 'success'] };
+const ONLY = { c: ['fail'], p: ['fail'], br: ['fail'], o: ['start', 'download', 'next', 'out'], v: ['start', 'download', 'next', 'out'], g: ['arrive', 'out', 'land'], dl: ['arrive'], us: ['land', 'start', 'success'], uc: ['land', 'start', 'success'] };
 /** The o of a next event (its v is a tool). */
 export const NEXT_KEY = 'next';
 /** The o of an out event (its v is one of OUT_DESTS). */
@@ -251,6 +255,8 @@ export function validate(text) {
   } else if (o.e === 'out') {
     if (o.o !== OUT_KEY || !outDests(Object.hasOwn(o, 'g') ? GUIDE_OUT : TOOL_OUT, o.t).includes(o.v)) return null;
   } else if (Object.hasOwn(o, 'o') && (o.o === NEXT_KEY || o.o === OUT_KEY || !SETTINGS[o.o].includes(o.v))) return null;
+  // A download names a setting only where DOWNLOAD_SETTING allows it (ROMANIZE1016 D6: 영문 이름 변환기 복사, o = form).
+  if (o.e === 'download' && Object.hasOwn(o, 'o') && !(Object.hasOwn(DOWNLOAD_SETTING, o.t) && DOWNLOAD_SETTING[o.t] === o.o)) return null;
   const ev = { w: o.w };
   for (const k of BLOB_KEYS) ev[k] = Object.hasOwn(o, k) ? o[k] : '';
   return ev;
@@ -273,7 +279,7 @@ export function usageSql(dataset, days) {
   return {
     events: `SELECT blob2 AS tool, blob1 AS event, blob9 AS via, ${N} AS n FROM ${dataset} WHERE ${where} GROUP BY blob2, blob1, blob9 FORMAT JSON`,
     fails: `SELECT blob2 AS tool, blob3 AS code, blob4 AS phase, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'fail' GROUP BY blob2, blob3, blob4 ORDER BY n DESC LIMIT 20 FORMAT JSON`,
-    settings: `SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'start' AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
+    settings: `SELECT blob2 AS tool, blob5 AS setting, blob6 AS value, ${N} AS n FROM ${dataset} WHERE ${where} AND (blob1 = 'start' OR blob1 = 'download') AND blob5 != '' GROUP BY blob2, blob5, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
     guides: `SELECT blob7 AS guide, blob2 AS tool, blob8 AS dl, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'arrive' GROUP BY blob7, blob2, blob8 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
     chains: `SELECT blob2 AS tool, blob6 AS dest, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'next' GROUP BY blob2, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
     outs: `SELECT blob2 AS tool, blob7 AS guide, blob6 AS dest, ${N} AS n FROM ${dataset} WHERE ${where} AND blob1 = 'out' GROUP BY blob2, blob7, blob6 ORDER BY n DESC LIMIT 500 FORMAT JSON`,
@@ -363,6 +369,7 @@ export const TOOL_LABELS = {
   'id-copy': '신분증 사본 만들기',
   'pdf-edit': 'PDF 글자 넣기·편집',
   'stamp-maker': '도장 만들기',
+  'english-name': '영문 이름 변환기',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**
@@ -466,7 +473,9 @@ export const OUT_LABELS = {
 };
 /** The 자리 of the guide rows of the link table (every guide summed). */
 export const OUT_GUIDE_PLACE = '안내 글';
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양', form: '이름 모양' };
+/** Values whose label depends on the setting (ROMANIZE1016: form `space` is 빈칸, basis `space` stays 공백 포함). */
+export const SETTING_VALUE_LABELS = { form: { joined: '붙여 쓰기', hyphen: '붙임표', space: '빈칸' } };
 export const VALUE_LABELS = {
   le100: '100KB 이하',
   le200: '200KB 이하',
@@ -603,7 +612,7 @@ export function shapeUsage({ events = [], fails = [], settings = [], guides = []
   const settingRows = [];
   for (const t of [...TOOLS, ...[...bySetting.keys()].filter((k) => !TOOLS.includes(k))]) {
     const list = (bySetting.get(t) ?? []).sort((a, b) => num(b.n) - num(a.n)).slice(0, 5);
-    for (const r of list) settingRows.push([label(TOOL_LABELS, t), label(SETTING_LABELS, r.setting), label(VALUE_LABELS, r.value), count(num(r.n))]);
+    for (const r of list) settingRows.push([label(TOOL_LABELS, t), label(SETTING_LABELS, r.setting), label(Object.hasOwn(SETTING_VALUE_LABELS, r.setting) ? SETTING_VALUE_LABELS[r.setting] : VALUE_LABELS, r.value), count(num(r.n))]);
   }
 
   const arrivals = new Map();

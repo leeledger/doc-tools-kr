@@ -44,6 +44,7 @@ const PAGES = [
   ['idcopy', '/id-copy/'],
   ['pdfedit', '/pdf-edit/'],
   ['stampmaker', '/stamp-maker/'],
+  ['englishname', '/english-name/'],
   ['idphoto', '/id-photo/'],
   ['stamp', '/stamp-signature/'],
   ['privacy', '/privacy/'],

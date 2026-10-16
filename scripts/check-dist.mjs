@@ -24,6 +24,8 @@ import { precacheList } from './gen-sw.mjs';
 const dist = distDir();
 const KB = 1024;
 const STAMP_CONTROLLER_KB = 13.6;
+/** /english-name/ initial JS gzip (ROMANIZE1016 D7: measured + 20 %, < 30 KB; BUILD-LOG R2). */
+const ENGLISH_NAME_INITIAL_KB = 12.2;
 /** The UI font weights (Polish P.12; 700 retired in LCP round 2): one static instance each; no other weight may appear in the CSS. */
 const UI_WEIGHTS = new Set(['400', '800']);
 /** Copy that describes auto-framing; none of it may ship when PUBLIC_ID_PHOTO_AUTOFRAME is off. */
@@ -734,6 +736,31 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
     for (const f of own) if (/localStorage|sessionStorage|indexedDB/.test(read(f).toString('utf8'))) errors.push(`${f}: the /char-count/ page script uses Web Storage or IndexedDB`);
     budget('char-count page script', own, 2.3 * KB);
     budget('char-count initial JS', initial, 13.9 * KB);
+  }
+}
+// 영문 이름 변환기 (ROMANIZE1016 D7, D9, Failure modes): the controller and the 외교부 list ship with the page (no lazy
+// split; the chunk that owns #en-sur-choices). It stores nothing and puts the name in no URL (no Web Storage, IndexedDB
+// or history call; the form has no action and the inputs no name). The page never calls our output 「공식」 or an
+// 「영어 이름」 (외교부 menuPos=36), and every 「N%」 it shows is a 비율 of src/tools/english-name/mofa.ts.
+{
+  const html = pageHtml.get('english-name/index.html');
+  if (!html) errors.push('english-name/index.html: no file found');
+  else {
+    const initial = initialJs(html);
+    const own = initial.filter((f) => read(f).includes('en-sur-choices'));
+    if (own.length !== 1) errors.push(`english-name page script: ${own.length} initial chunk(s) name #en-sur-choices, expected 1`);
+    for (const f of own) if (/localStorage|sessionStorage|indexedDB|history\.(push|replace)State/.test(read(f).toString('utf8'))) errors.push(`${f}: the /english-name/ page script uses storage or the URL`);
+    const form = /<form\b[^>]*id="en-form"[^>]*>([\s\S]*?)<\/form>/.exec(html);
+    if (!form) errors.push('english-name/index.html: no #en-form');
+    else {
+      if (/\baction=/.test(form[0].slice(0, form[0].indexOf('>')))) errors.push('english-name/index.html: #en-form has an action');
+      if (/<input\b[^>]*\bname=/.test(form[1])) errors.push('english-name/index.html: an input in #en-form has a name');
+    }
+    const text = html.replace(/<(style|script)\b[\s\S]*?<\/\1>/g, '').replace(/<[^>]+>/g, '');
+    for (const bad of ['공식', '영어 이름', '외교부 인증', '정확한 여권 이름', '띄어 쓰기']) if (text.includes(bad)) errors.push(`english-name/index.html: says 「${bad}」`);
+    const pcts = new Set([...readFileSync(join(import.meta.dirname, '..', 'src', 'tools', 'english-name', 'mofa.ts'), 'utf8').matchAll(/pct: (\d+\.\d\d)/g)].map((m) => m[1]));
+    for (const m of text.matchAll(/(\d+(?:\.\d+)?)\s*%/g)) if (!pcts.has(Number(m[1]).toFixed(2))) errors.push(`english-name/index.html: 「${m[0]}」 is not a 비율 of the 외교부 list (mofa.ts)`);
+    budget('english-name initial JS', initial, ENGLISH_NAME_INITIAL_KB * KB);
   }
 }
 count(/(^|\/)rhwp_bg[^/]*\.wasm$/, 1, 'rhwp_bg*.wasm');
