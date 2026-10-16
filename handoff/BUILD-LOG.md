@@ -3417,3 +3417,23 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - /privacy/#addr IP sentence now 「너무 많은 요청을 막으려고 접속한 IP 주소로 1분 동안의 요청 수만 세고, 기록하거나 저장하지 않아요.」 (it describes what the limiter does, not how long an idle isolate keeps an entry). e2e copy check updated; check-dist now requires this sentence when PUBLIC_ADDR_EN is on.
 - Optional item done: with Google Analytics on alone, the /privacy/ meta and og descriptions also use 「회원가입이 없고 이름·연락처를 받지 않아요. 보내는 것과 다루는 방법을 알려 드려요.」; check-dist's description assertion covers GA too. Builds with none of GA / cloud / ADDR are unchanged (default build description unchanged). Core glyphs 615, unchanged.
 - Gates: astro check 0 / 0; vitest addren-* + usage + ga + polish + bgcloud + network-guard 472 passed, postbuild + ga on the default build 96 passed; check-dist OK on default (precache 427.9 KB) and cloud + ADDR (440.8 KB); e2e english-address.cloud on cloud-chromium + cloud-webkit (4 workers, ports 4481-4484) 52 passed.
+
+## ADDREN1016 A3 — live probe on Preview (2026-10-16, orchestrator)
+- Preview https://addr-en-1016.doc-tools-kr.pages.dev (PUBLIC_ADDR_EN=1, Preview JUSO_EN_KEY = 1207329 for doc-tools-kr.pages.dev; officer/contact already set). The build passed the legal gate.
+- The key works server-to-server from Cloudflare with the POST form body, so Fallback B and the GET switch are not needed. Latency was 48–297 ms (the first call was cold).
+- 12 public-building queries returned 11 hits. 「남해면 남해대로」 (no building number) returned total 0, which the page shows as the normal empty result.
+  - 세종대로 110 → 110 Sejong-daero, Jung-gu, Seoul 04524
+  - 정부세종청사 → 7 hits; Sejong has an empty sgg, so City = State = Sejong-si
+  - 달구벌대로 2275-12 → Suseong-gu, Daegu 42007
+  - 청와대로 1 → 03048
+  - 국회대로 1 → 07927
+  - 중앙로 79 → Gangjin-eup / Gangjin-gun / **Jeonnam-Gwangju** (juso now returns 전남광주통합특별시)
+  - 분당구 불정로 6 → City 「Bundang-gu, Seongnam-si」, State Gyeonggi-do (Q4: sggNm order as returned, split OK)
+  - 문연로 6 → Jeju-si, Jeju-do 63122
+  - 한누리대로 2130 → Sejong-si 30151
+  - 양평읍 군청앞길 2 → line 1 「2 Guncheongap-gil, Yangpyeong-eup」, City Yangpyeong-gun
+  - 강남대로 지하 396 → B396 Gangnam-daero; detail 「#1203」 → line 2 「1203」
+- UI split was checked in chromium for 분당구 + 「101동 1203호」 (→ 101-dong 1203-ho), Sejong, 지하, -eup and 강진. There were no page errors.
+- The rate limit fired as designed after more than 20 calls a minute during probing.
+- Not done: the local `scripts/probe-addr-en.mjs` fixtures, because the key must not be on the PC or in chat. The Function-level probe above replaces it.
+- Next: O4 (Production PUBLIC_ADDR_EN=1) waits for the owner's go. Then set PRIVACY_ADDR to that date and run the live smoke.
