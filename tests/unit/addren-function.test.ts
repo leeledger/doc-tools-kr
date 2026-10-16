@@ -288,6 +288,22 @@ describe('per-IP limiter (decision 7b)', () => {
     t = 1000;
     expect([l.hit('c'), l.hit('c'), l.hit('c')]).toEqual([true, true, false]);
   });
+
+  it('createLimiter: a call drops every expired window (no IP is kept past its window)', () => {
+    let t = 0;
+    const l = createLimiter({ limit: 2, windowMs: 1000, maxKeys: 100, now: () => t });
+    l.hit('a');
+    t = 500;
+    l.hit('b');
+    expect(l.size).toBe(2);
+    t = 1000;
+    l.hit('c');
+    // 'a' started at 0: expired at 1000 and gone; 'b' (500) is still inside its window.
+    expect(l.size).toBe(2);
+    t = 1600;
+    l.hit('c');
+    expect(l.size).toBe(1);
+  });
 });
 
 describe('privacy greps (decision 6)', () => {

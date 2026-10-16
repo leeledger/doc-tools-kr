@@ -74,6 +74,15 @@ Expect conflicts in `src/data/tools.ts`, `scripts/check-dist.mjs` budgets, `lice
 - Before ads: a service contact email (e.g. a kakao.com mailbox like 아이로그 uses) and a privacy-officer name. Then build a full privacy policy.
 - The ID-photo auto-frame licence decision (Eigen MPL2-only proof, fft2d/Ooura licence). Until then it stays manual-only.
 - Logins and captchas for any dashboard.
+- 영문주소 변환기 (ADDREN1016; brief handoff/ARCHITECT-BRIEF-ADDREN1016.md "Owner-only steps"):
+  - O1 영문주소 검색 API 운영 승인키 (business.juso.go.kr). O2 Pages secret `JUSO_EN_KEY` (Production and Preview).
+  - O3 Preview (branch preview build): text `PUBLIC_ADDR_EN` = `1`, `PUBLIC_PRIVACY_OFFICER`, `PUBLIC_CONTACT_EMAIL` (the build fails without the last two), then redeploy the branch preview for the A3 probe.
+  - O4 Production flag, checklist (in this order):
+    1. A3 logged and Richard CLEAR on A3.
+    2. **Set `PRIVACY_ADDR` in `src/data/legal.ts` (and `PRIVACY_TERMS_UPDATED`'s flag-on date, YYYY-MM-DD) to the actual day the production flag goes on**, commit, deploy with the flag still off.
+    3. Production text `PUBLIC_ADDR_EN` = `1` (officer and contact are already set in Production) → redeploy.
+    4. Live smoke (brief Test map): 「세종대로 110」 → English road address + zip as A3 recorded; headers no-store; 25 rapid POSTs → 429; /privacy/#addr and /terms/ show the section.
+    5. Off = delete `PUBLIC_ADDR_EN` and redeploy (the Function answers 404 off).
 
 ## 9. Resume prompt
 "Read CLAUDE.md and handoff/CLOUD-HANDOFF.md. Check out `hwp-direct`, read its BUILD-LOG 'HWP direct — WIP state' and SPIKE-HWP-DIRECT.md, finish the build, run all gates, then run Richard's review. Follow §3 to ship. Then do the same for `growth-g`. Never stop, never ask; log decisions."

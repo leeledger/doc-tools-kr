@@ -514,6 +514,14 @@ const addrEn = addrEnOn(env);
 // each of which must carry it when on; the CSP's connect-src never names juso (the page posts to its own origin).
 const ADDR_SEND = '행정안전부 주소 검색으로 보내';
 const ADDR_SEND_PAGES = ['privacy/index.html', 'terms/index.html', 'english-address/index.html'];
+// Review ADDREN1016 should-fix 2: a build that sends something (배경 지우기 cloud, 영문주소) or has Google Analytics never
+// tells /privacy/ readers that no personal data is received: not in section 1's heading, not in the meta descriptions.
+{
+  const privacy = pageHtml.get('privacy/index.html') ?? '';
+  const sends = cloudOn || addrEn;
+  if ((sends || ga) && privacy.includes('1. 받는 개인정보가 없어요')) errors.push('privacy/index.html: section 1 says 「받는 개인정보가 없어요」 in a build that sends data or has Google Analytics');
+  if (sends && /<meta (name="description"|property="og:description")[^>]*개인정보를 받지 않아요/.test(privacy)) errors.push('privacy/index.html: its description says 「개인정보를 받지 않아요」 in a build that sends data');
+}
 // Acting-Arch Q1: the service worker gen-sw will write (same code, same env) names /english-address/ only when on.
 {
   let sw = '';

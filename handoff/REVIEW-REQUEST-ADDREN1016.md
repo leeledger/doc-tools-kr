@@ -60,3 +60,13 @@ Please look at:
 1. The sw.js mechanism (header const from gen-sw, mirrored in check-dist) — acceptable, or would you rather drop /english-address/ from RUNTIME_PAGES altogether (it cannot search offline anyway, like /remove-background/)?
 2. Timeout folded into `upstream` per the decision text; the Function still answers 504 `timeout`, so a split later needs only messages.ts.
 3. The pre-existing 8-spawn postbuild test (111 s alone on the checks build here) is close to its 120 s limit on Windows; not touched.
+
+## Round 2 (2026-10-16, after REVIEW-ADDREN1016.md CLEAR) — Ready for Review: YES
+Rebased onto main 222cfb2. BUILD-LOG "ADDREN1016 round 2" has the details and gates.
+- functions/api/addr-en.ts createLimiter — expired windows dropped on every call (+ unit case).
+- src/pages/privacy/index.astro — section 1 heading and the meta / og descriptions correct for every flag combination; #addr rewritten per the acting-Arch legal decision (처리 위탁, address text only, IP about 1 minute, link to https://www.juso.go.kr/Privacy). scripts/check-dist.mjs asserts the heading / descriptions.
+- src/tools/english-address/controller.ts — 더 보기 appends (focus to the first new card, picked mark and split card kept); download counted only on a real copy. english-address.css focus ring on cards. e2e: keyboard 더 보기 test; no download beacon on the manual fallback; privacy wording.
+- src/sw/sw.ts comment; handoff/CLOUD-HANDOFF.md O4 checklist (PRIVACY_ADDR = real flag-on day).
+Please look at:
+1. The limiter prune runs on the next request in the same isolate; an idle isolate keeps an entry until eviction. The policy says 「1분 정도만 잠시 기억해 두고」. Accurate enough?
+2. The cloud/addr meta description change also affects a production build with 배경 지우기 cloud on (the old 「개인정보를 받지 않아요」 was inaccurate there too).

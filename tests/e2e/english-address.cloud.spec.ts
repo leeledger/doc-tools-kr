@@ -149,6 +149,32 @@ test('더 보기: page 2 is appended, the hint shows, the button goes when all a
   expect(calls.bodies).toEqual(['{"q":"세종대로","page":1}', '{"q":"세종대로","page":2}']);
 });
 
+test('더 보기 by keyboard: focus moves to the first new card; the picked card and the split card stay', async ({ page }) => {
+  await api(page, ok(many(10), 25), ok(many(10, 10), 25, 2), ok(many(5, 20), 25, 3));
+  await gotoReady(page, PATH);
+  await search(page, '세종대로');
+  await page.locator('.ea-card').nth(1).getByRole('button', { name: '이 주소 쓰기' }).click();
+  await expect(page.locator('.ea-card').nth(1)).toHaveAttribute('data-picked', 'true');
+  const first = await page.locator('.ea-card').first().elementHandle();
+  await page.locator('.ea-more').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.ea-card')).toHaveCount(20);
+  // Focus is on the 11th card (the first of page 2), never dropped to the page body.
+  await expect(page.locator('.ea-card').nth(10)).toBeFocused();
+  await expect(page.locator('.ea-card').nth(10).locator('.ea-kor')).toHaveText('서울특별시 중구 세종대로 11');
+  // Nothing already shown was rebuilt: the same first card node, the picked mark, the split card and the count.
+  expect(await first!.evaluate((n) => n.isConnected)).toBe(true);
+  await expect(page.locator('.ea-card[data-picked="true"]')).toHaveCount(1);
+  await expect(page.locator('.ea-card').nth(1)).toHaveAttribute('data-picked', 'true');
+  await expect(page.locator('#ea-split-title')).toBeVisible();
+  await expect(page.locator('.ea-count')).toHaveText('찾은 주소 25개');
+  await page.locator('.ea-more').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.ea-card')).toHaveCount(25);
+  await expect(page.locator('.ea-card').nth(20)).toBeFocused();
+  await expect(page.locator('.ea-more')).toHaveCount(0);
+});
+
 // The usage fail code of each answer (acting-Arch Q2: key = engine, juso down / HTTP error / timeout = upstream).
 const FAIL: Record<string, string> = { short: 'query', sido: 'query', digits: 'query', long: 'query', chars: 'query', broad: 'query', busy: 'busy', engine: 'engine', upstream: 'upstream', timeout: 'upstream', off: 'unknown', bad: 'unknown' };
 for (const [code, status] of [['short', 400], ['sido', 400], ['digits', 400], ['long', 400], ['chars', 400], ['broad', 400], ['busy', 429], ['engine', 503], ['upstream', 502], ['timeout', 504], ['off', 404], ['bad', 400]] as const) {
@@ -236,6 +262,7 @@ test('clipboard refused and no execCommand: the value is selected, 「길게 눌
     if (navigator.clipboard) Object.defineProperty(navigator.clipboard, 'writeText', { value: () => Promise.reject(new Error('denied')) });
     Object.defineProperty(document, 'execCommand', { value: () => false });
   });
+  const seen = await beacons(page);
   await api(page, ok([SEJONG]));
   await gotoReady(page, PATH);
   await search(page, '세종대로 110');
@@ -243,6 +270,10 @@ test('clipboard refused and no execCommand: the value is selected, 「길게 눌
   await page.getByRole('button', { name: 'ZIP code 복사' }).click();
   await expect(page.locator('#ea-live')).toHaveText('길게 눌러 복사해 주세요');
   expect(await page.evaluate(() => getSelection()?.toString())).toBe('04524');
+  // Review should-fix 4: nothing was copied, so no download is counted.
+  await expect.poll(() => seen.filter((e) => e.e === 'success').length).toBe(1);
+  await page.waitForTimeout(500);
+  expect(seen.filter((e) => e.e === 'download')).toEqual([]);
 });
 
 test('page: SEO, JSON-LD (WebApplication + FAQPage), related tools, privacy and source links, CSP', async ({ page }) => {
@@ -283,6 +314,12 @@ test('/privacy/ and /terms/ name the address search; home links the tool', async
   await expect(page.locator('main')).toContainText('행정안전부 주소정보누리집 (주소 검색), Cloudflare, Inc. (전달)');
   await expect(page.locator('main')).toContainText('상세주소(동·호)는 보내지 않고 이 기기 안에서 바꿔요.');
   await expect(page.locator('main')).toContainText('개인정보 보호책임자');
+  // Acting-Arch round 2: 처리 위탁 framing, the typed address only, the IP held about a minute, 행정안전부's own policy linked.
+  await expect(page.locator('main')).toContainText('처리 위탁: 행정안전부 주소정보누리집 (주소 검색), Cloudflare, Inc. (전달)');
+  await expect(page.locator('main')).toContainText('찾기 칸에 적은 주소 글자만 보내요.');
+  await expect(page.locator('main')).toContainText('접속한 IP 주소를 1분 정도만 잠시 기억해 두고, 따로 저장하지 않아요.');
+  await expect(page.locator('main').getByRole('link', { name: '주소정보누리집 개인정보처리방침' })).toHaveAttribute('href', 'https://www.juso.go.kr/Privacy');
+  await expect(page.locator('h2').first()).toHaveText('1. 이름·연락처는 받지 않아요');
   await gotoReady(page, '/terms/');
   await expect(page.locator('#addr')).toContainText('상세주소(동·호) 바꾸기는 참고용이니');
   await gotoReady(page, '/');

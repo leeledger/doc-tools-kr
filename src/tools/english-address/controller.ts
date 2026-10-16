@@ -91,7 +91,8 @@ export function initEnglishAddress(opts: { submitNow?: boolean } = {}): void {
   async function copy(field: AddrField, value: string, shown: Element): Promise<void> {
     const how = await copyText(value, shown);
     announce(how === 'copied' ? COPY.copied : COPY.manual);
-    track({ e: 'download', t: T, o: 'field', v: field });
+    // Review should-fix 4: a copy counts only when the clipboard got it (the manual fallback copied nothing yet).
+    if (how === 'copied') track({ e: 'download', t: T, o: 'field', v: field });
   }
 
   function copyButton(field: AddrField, label: string, value: () => string, shown: () => Element): HTMLButtonElement {
@@ -176,16 +177,38 @@ export function initEnglishAddress(opts: { submitNow?: boolean } = {}): void {
     return li;
   }
 
+  const hasMore = (): boolean => items.length < total && page < MAX_PAGE;
+
+  /** The first page: count, hint, list and 더 보기. */
   function renderList(): void {
     const parts: Node[] = [h('p', { class: 'ea-count', text: COPY.count(total) })];
     if (total > PER_PAGE) parts.push(h('p', { class: 'ea-hint', text: COPY.narrow }));
     parts.push(h('ol', { class: 'ea-list' }, ...items.map(card)));
-    if (items.length < total && page < MAX_PAGE) {
+    if (hasMore()) {
       const more = h('button', { type: 'button', class: 'btn ghost ea-more', text: COPY.more });
       more.addEventListener('click', () => void run(page + 1));
       parts.push(more);
     }
     results.replaceChildren(...parts);
+  }
+
+  /**
+   * 더 보기 (review should-fix 3): the new cards are appended to the list, so the picked card keeps its mark, and focus
+   * moves to the first new card (the pressed button may go away). Nothing already shown is rebuilt.
+   */
+  function appendCards(added: AddrItem[]): void {
+    const list = results.querySelector('.ea-list');
+    if (!list) return renderList();
+    const lis = added.map(card);
+    list.append(...lis);
+    const count = results.querySelector('.ea-count');
+    if (count) count.textContent = COPY.count(total);
+    if (!hasMore()) results.querySelector('.ea-more')?.remove();
+    const firstNew = lis[0];
+    if (firstNew) {
+      firstNew.tabIndex = -1;
+      firstNew.focus();
+    }
   }
 
   function fail(code: string, first: boolean): void {
@@ -223,8 +246,10 @@ export function initEnglishAddress(opts: { submitNow?: boolean } = {}): void {
     page = next;
     total = r.total;
     items = [...items, ...r.items];
-    renderList();
-    if (first) track({ e: 'success', t: T });
+    if (first) {
+      renderList();
+      track({ e: 'success', t: T });
+    } else appendCards(r.items);
   }
 
   function submit(): void {

@@ -120,13 +120,20 @@ export function mapUpstream(status: number, body: unknown, page: number): { stat
 
 /**
  * Best-effort per-IP limiter (decision 7b): `limit` requests per `windowMs` for each key, in this isolate's memory only.
- * At most `maxKeys` keys; a new key past that drops the oldest. `hit` returns false when the key is over its limit.
+ * At most `maxKeys` keys; a new key past that drops the oldest. Expired windows are dropped on every call, so an IP is
+ * held for at most `windowMs` after its window started. `hit` returns false when the key is over its limit.
  */
 export function createLimiter({ limit = LIMIT, windowMs = WINDOW_MS, maxKeys = MAX_KEYS, now = () => Date.now() } = {}) {
   const seen = new Map<string, { start: number; count: number }>();
   return {
     hit(key: string): boolean {
       const t = now();
+      // Review should-fix 1: drop every expired window first (the Map is ordered by window start), so no IP stays in
+      // memory longer than one window.
+      for (const [k, v] of seen) {
+        if (t - v.start < windowMs) break;
+        seen.delete(k);
+      }
       const cur = seen.get(key);
       if (cur && t - cur.start < windowMs) {
         cur.count += 1;

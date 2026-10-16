@@ -19,7 +19,7 @@
 /** Injected by scripts/gen-sw.mjs. */
 declare const __BUILD_ID__: string;
 declare const __PRECACHE__: string[];
-/** Flag-gated pages stored when visited (scripts/gen-sw.mjs FLAGGED_RUNTIME_PAGES): only those whose flag is on in this build. */
+/** Flag-gated pages stored when visited (scripts/gen-sw.mjs flaggedRuntimePages()): only those whose flag is on in this build. */
 declare const __RUNTIME_EXTRA__: string[] | undefined;
 
 export const CACHE_PREFIX = 'anolim-';

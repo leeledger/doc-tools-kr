@@ -23,25 +23,38 @@ import { aboutMB } from '../../tools/remove-background/copy';
 const cloud = __BG_CLOUD__;
 const addr = __ADDR_EN__;
 const officer = cloud || addr;
+// Review ADDREN1016 should-fix 2: with anything sent (배경 지우기 사진, 영문주소 주소) or Google Analytics on, the page
+// never says 「받는 개인정보가 없어요」 / 「개인정보를 받지 않아요」; it says what is not taken (이름·연락처). check-dist checks.
+const sends = cloud || addr;
+const desc = sends
+  ? `${SITE.name} 개인정보 처리방침입니다. 회원가입이 없고 이름·연락처를 받지 않아요. 보내는 것과 다루는 방법을 알려 드려요.`
+  : `${SITE.name} 개인정보 처리방침입니다. 회원가입이 없고 개인정보를 받지 않아요. 고른 파일을 어떻게 다루는지 알려 드려요.`;
 const addrSection = 3 + (cloud ? 1 : 0);
 const n = (base: number): number => base + (cloud && base >= 3 ? 1 : 0) + (addr && base >= 3 ? 1 : 0) + (GA_ON && base >= 4 ? 1 : 0) + (USAGE_ON && base >= 5 ? 1 : 0);
 const gaSection = n(4) - 1;
 const deviceMB = aboutMB(Math.max(downloadBytes('webgpu'), downloadBytes('wasm')));
 const CF_POLICY = 'https://www.cloudflare.com/ko-kr/privacypolicy/';
+/**
+ * 주소정보누리집 개인정보처리방침 (행정안전부; route /Privacy, page title 「개인정보처리방침 | 도로명주소 안내시스템」, read from
+ * its app chunk Privacy2026-*.js, fetched 2026-10-16). Acting-Arch (ADDREN1016 round 2): 행정안전부 is described as the
+ * place that processes the address for us (처리 위탁), and its own records follow this policy.
+ */
+const JUSO_PRIVACY = 'https://www.juso.go.kr/Privacy';
 /** Google's privacy contact form (linked from policies.google.com/privacy; checked live 2026-10-08). */
 const GOOGLE_PRIVACY_FORM = 'https://support.google.com/policies/contact/general_privacy_form?hl=ko';
 const GA_OPTOUT = 'https://tools.google.com/dlpage/gaoptout?hl=ko';
 ---
 <Base
   title={`개인정보 처리방침 | ${SITE.name}`}
-  description={`${SITE.name} 개인정보 처리방침입니다. 회원가입이 없고 개인정보를 받지 않아요. 고른 파일을 어떻게 다루는지 알려 드려요.`}
+  description={desc}
+  ogDescription={sends ? `${josa(SITE.name, '은/는')} 가입이 없고 이름·연락처를 받지 않아요. 보내는 것과 다루는 방법을 알려 드려요.` : undefined}
 >
   <div class="prose">
     <div class="wrap narrow">
       <h1>개인정보 처리방침</h1>
       <p class="meta-line">시행일: {PRIVACY_REVISED}</p>
 
-      <h2>{GA_ON ? '1. 이름·연락처는 받지 않아요' : '1. 받는 개인정보가 없어요'}</h2>
+      <h2>{GA_ON || sends ? '1. 이름·연락처는 받지 않아요' : '1. 받는 개인정보가 없어요'}</h2>
       <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. {GA_ON ? `방문 분석을 위해 Google 애널리틱스 쿠키를 써요(${gaSection}항).` : ANALYTICS_ON || USAGE_ON ? '쿠키도 쓰지 않아요.' : '쿠키와 방문 분석 도구도 쓰지 않아요.'}{addr && ` 영문주소 변환기에서 찾는 주소는 ${addrSection}항을 보세요.`}</p>
 
       <h2>2. 고른 파일은 내 폰·컴퓨터 안에서 처리해요</h2>
@@ -76,9 +89,10 @@ const GA_OPTOUT = 'https://tools.google.com/dlpage/gaoptout?hl=ko';
           <p>영문주소 변환기에서 「찾기」를 누를 때만 해당해요.</p>
           <ul>
             <li><strong>목적:</strong> 영문 주소를 찾기 위해서만 써요. 찾는 주소는 행정안전부 주소 검색으로 보내 영문 주소를 받아 와요.</li>
-            <li><strong>항목:</strong> 찾기 칸에 적은 주소 글자. 상세주소(동·호)는 보내지 않고 이 기기 안에서 바꿔요. 이름·연락처 등은 받지 않아요.</li>
-            <li><strong>처리와 보관:</strong> {josa(SITE.name, '은/는')} 찾는 주소를 저장하거나 기록하지 않아요. 결과를 돌려준 뒤 남기지 않아요.</li>
-            <li><strong>처리하는 곳:</strong> 행정안전부 주소정보누리집 (주소 검색), Cloudflare, Inc. (전달)</li>
+            <li><strong>항목:</strong> 찾기 칸에 적은 주소 글자만 보내요. 상세주소(동·호)는 보내지 않고 이 기기 안에서 바꿔요. 이름·연락처 등은 받지 않아요.</li>
+            <li><strong>처리와 보관:</strong> {josa(SITE.name, '은/는')} 찾는 주소를 저장하거나 기록하지 않아요. 결과를 돌려준 뒤 남기지 않아요. 너무 많은 요청을 막으려고 접속한 IP 주소를 1분 정도만 잠시 기억해 두고, 따로 저장하지 않아요.</li>
+            <li><strong>처리 위탁:</strong> 행정안전부 주소정보누리집 (주소 검색), Cloudflare, Inc. (전달)</li>
+            <li><strong>행정안전부의 기록:</strong> 주소 검색에서 남는 기록은 행정안전부의 <a href={JUSO_PRIVACY} rel="noopener">주소정보누리집 개인정보처리방침</a>을 따라요.</li>
           </ul>
           <p><strong>국외 이전</strong></p>
           <ul>
