@@ -241,3 +241,14 @@ test('repeated syllables (영영) get distinct group names, and each picks on it
   await second.locator('label.chip').filter({ hasText: 'YOUNG' }).click();
   await expect(page.locator('#en-joined')).toHaveText('LEE YEONGYOUNG');
 });
+
+test('R4 guide 여권 영문 이름 정하는 법 and the tool link both ways; the 성 table has the 20 surnames', async ({ page }) => {
+  await gotoReady(page, '/guide/passport-english-name/');
+  await expect(page.locator('h1')).toHaveText('여권 영문 이름 정하는 법');
+  await expect(page.locator('main a[href="/english-name/"]').first()).toBeVisible();
+  await expect(page.locator('main table tbody tr')).toHaveCount(20);
+  await expect(page.locator('main table')).toContainText('KIM 8,342,772명(99.55%)');
+  await gotoReady(page, '/english-name/');
+  await expect(page.locator('#en-chain a[href="/guide/passport-english-name/"]')).toHaveCount(1);
+  await expect(page.locator('.faq a[href="/guide/passport-english-name/"]')).toHaveCount(1);
+});

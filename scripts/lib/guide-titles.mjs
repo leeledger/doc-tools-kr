@@ -26,6 +26,7 @@ export default {
   "kosaf-docs": "국가장학금 서류 제출, 대상 확인과 내는 법",
   "kuksiwon-photo": "국시원 원서 사진 규격 (간호사 등 국가시험)",
   "open-hwp-without-hangul": "한글 없이 HWP 파일 여는 법",
+  "passport-english-name": "여권 영문 이름 정하는 법",
   "passport-photo": "여권사진 규격과 사이즈, 귀·눈썹·옷 기준",
   "passport-photo-error": "정부24 여권 재발급 사진 오류 코드별 해결",
   "passport-reissue-photo": "여권 재발급 사진 규격과 온라인 신청",

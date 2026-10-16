@@ -20,6 +20,8 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   'hwpx-to-hwp': ['hwpx-to-hwp'],
   // TOOLS1015 I2: 신분증 사본 만들기 pins its guide (slug id-card-copy).
   'id-copy': ['id-card-copy'],
+  // ROMANIZE1016 R4: 영문 이름 변환기 pins its guide (slug passport-english-name).
+  'english-name': ['passport-english-name'],
   // Part B: shown only in builds with PUBLIC_BG_REMOVE on (the guide requires bg-remove; the tool page exists only then).
   'remove-background': ['remove-background'],
 };

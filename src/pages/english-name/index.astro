@@ -26,7 +26,7 @@ const rows = [
 const [y, m, d] = SOURCES_RETRIEVED.split('-').map(Number);
 // 「여권을 만든다면」 (brief D4): the published ones of these guides (a draft is never linked).
 const published = await publishedGuides();
-const chainGuides = ['passport-photo', 'passport-reissue-photo', 'baby-passport-photo', 'intl-driving-license'].map((s) => published.find((g) => g.id === s)).filter((g) => g !== undefined);
+const chainGuides = ['passport-english-name', 'passport-photo', 'passport-reissue-photo', 'baby-passport-photo', 'intl-driving-license'].map((s) => published.find((g) => g.id === s)).filter((g) => g !== undefined);
 ---
 <Base title={tool.title} description={tool.description}>
   <JsonLd slot="head" data={jsonLd} />

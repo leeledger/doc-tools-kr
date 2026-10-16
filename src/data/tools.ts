@@ -720,7 +720,10 @@ export const TOOLS: Tool[] = [
       {
         q: '이미 받은 여권의 영문 이름을 바꿀 수 있나요?',
         a: '정해진 경우에만 됩니다. 외교부는 여권을 다시 받을 때도 영문 이름을 전과 같게 적는 것이 기본이라고 안내합니다. 개명, 해외 유학·취업, 처음 받은 여권을 아직 쓰지 않은 경우처럼 법령이 정한 이유가 있을 때만 바꿀 수 있습니다.',
-        links: [{ href: 'https://www.passport.go.kr/home/kor/contents.do?menuPos=39', text: '외교부 여권안내: 로마자성명 표기의 변경 허용 요건' }],
+        links: [
+          { href: '/guide/passport-english-name/', text: '여권 영문 이름 정하는 법' },
+          { href: 'https://www.passport.go.kr/home/kor/contents.do?menuPos=39', text: '외교부 여권안내: 로마자성명 표기의 변경 허용 요건' },
+        ],
       },
       {
         q: '쓴 이름이 어디로 보내지나요?',

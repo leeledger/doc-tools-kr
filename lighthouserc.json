@@ -38,6 +38,7 @@
         "http://127.0.0.1:4173/guide/admission-photo/",
         "http://127.0.0.1:4173/guide/teps-photo/",
         "http://127.0.0.1:4173/guide/stamp-image/",
+        "http://127.0.0.1:4173/guide/passport-english-name/",
         "http://127.0.0.1:4173/en/",
         "http://127.0.0.1:4173/en/pdf-merge/"
       ],

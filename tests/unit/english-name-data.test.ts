@@ -89,3 +89,17 @@ describe('tool sources in the source watch (D8)', () => {
     ]);
   });
 });
+
+describe('guide passport-english-name (R4): the 성 table is the 외교부 list', () => {
+  const md = readFileSync(join(process.cwd(), 'src', 'content', 'guides', 'passport-english-name.md'), 'utf8');
+  const fmt = (n: number): string => n.toLocaleString('en-US');
+  it('one row per surname, in PDF order, with every listed spelling, 사용자 수 and 비율', () => {
+    const rows = [...md.matchAll(/^\| (.) \| ([\d,]+)명 \| (.+) \|$/gm)].map((m) => [m[1], m[2], m[3]]);
+    expect(rows.map((r) => r[0])).toEqual(Object.keys(SURNAMES));
+    for (const [h, total, cells] of rows) {
+      const e = SURNAMES[h!]!;
+      expect(total, h).toBe(fmt(e.total));
+      expect(cells, h).toBe(e.spellings.map((s) => `${s.s} ${fmt(s.count)}명(${s.pct.toFixed(2)}%)`).join(' · '));
+    }
+  });
+});

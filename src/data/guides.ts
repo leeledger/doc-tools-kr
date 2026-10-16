@@ -76,7 +76,7 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'id-copy': ['id-card-copy', 'kosaf-docs', 'univ-docs-upload'],
   'pdf-edit': ['pdf-sign', 'gov24-pdf-save', 'e-signature-law'],
   'stamp-maker': ['stamp-image', 'e-signature-law', 'pdf-sign'],
-  'english-name': ['passport-photo', 'passport-reissue-photo', 'intl-driving-license'],
+  'english-name': ['passport-english-name', 'passport-photo', 'passport-reissue-photo', 'intl-driving-license'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */

@@ -370,9 +370,9 @@ describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
     // Any other tool a guide names must not have room for a new guide: a tool with fewer than 4 own guides shows
     // next-step guides after them, and a new guide naming it would push one off. Those tools stay as they are.
     const named = new Set(published.flatMap((g) => g.parsed.tools));
-    const partial = ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'pdf-password', 'image-to-jpg', 'hwp-viewer', 'hwpx-to-hwp', 'stamp-signature', 'hwp-to-pdf', 'remove-background', 'id-copy'];
+    const partial = ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'pdf-password', 'image-to-jpg', 'hwp-viewer', 'hwpx-to-hwp', 'stamp-signature', 'hwp-to-pdf', 'remove-background', 'id-copy', 'english-name'];
     for (const tool of named) if (!FROZEN[tool]) expect(partial, `${tool}: freeze its 4 in TOOL_GUIDE_PINS before a new guide names it`).toContain(tool);
-    const OWN_COUNT: Record<string, number> = { 'jpg-to-pdf': 1, 'pdf-to-jpg': 1, 'pdf-split': 1, 'pdf-sign': 1, 'pdf-password': 1, 'image-to-jpg': 1, 'hwp-viewer': 3, 'hwpx-to-hwp': 2, 'stamp-signature': 3, 'hwp-to-pdf': 4, 'remove-background': 1, 'id-copy': 1 };
+    const OWN_COUNT: Record<string, number> = { 'jpg-to-pdf': 1, 'pdf-to-jpg': 1, 'pdf-split': 1, 'pdf-sign': 1, 'pdf-password': 1, 'image-to-jpg': 1, 'hwp-viewer': 3, 'hwpx-to-hwp': 2, 'stamp-signature': 3, 'hwp-to-pdf': 4, 'remove-background': 1, 'id-copy': 1, 'english-name': 1 };
     for (const tool of partial) expect(published.filter((g) => g.parsed.tools.includes(tool)).length, `${tool}: a new guide names it (its 관련 안내 would change)`).toBe(OWN_COUNT[tool]);
   });
 

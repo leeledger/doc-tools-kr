@@ -763,6 +763,23 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
     budget('english-name initial JS', initial, ENGLISH_NAME_INITIAL_KB * KB);
   }
 }
+// 여권 영문 이름 정하는 법 (ROMANIZE1016 R4, brief Failure modes): every 「N%」 in the guide's visible text is a 비율 of
+// mofa.ts or stands in one of the guide's own source quotes (the 50% rule of 외교부 고시).
+{
+  const html = pageHtml.get('guide/passport-english-name/index.html');
+  if (!html) errors.push('guide/passport-english-name/index.html: no file found');
+  else {
+    const md = readFileSync(join(import.meta.dirname, '..', 'src', 'content', 'guides', 'passport-english-name.md'), 'utf8');
+    const quoted = new Set([...md.matchAll(/^\s+quote: .*$/gm)].flatMap((q) => [...q[0].matchAll(/(\d+(?:\.\d+)?)\s*%/g)].map((m) => Number(m[1]).toFixed(2))));
+    const pcts = new Set([...readFileSync(join(import.meta.dirname, '..', 'src', 'tools', 'english-name', 'mofa.ts'), 'utf8').matchAll(/pct: (\d+\.\d\d)/g)].map((m) => m[1]));
+    const text = html.replace(/<(style|script)\b[\s\S]*?<\/\1>/g, '').replace(/<[^>]+>/g, '');
+    for (const m of text.matchAll(/(\d+(?:\.\d+)?)\s*%/g)) {
+      const v = Number(m[1]).toFixed(2);
+      if (!pcts.has(v) && !quoted.has(v)) errors.push(`guide/passport-english-name/index.html: 「${m[0]}」 is neither a 비율 of mofa.ts nor in a source quote`);
+    }
+    for (const bad of ['정확한 여권 이름', '외교부 인증']) if (text.includes(bad)) errors.push(`guide/passport-english-name/index.html: says 「${bad}」`);
+  }
+}
 count(/(^|\/)rhwp_bg[^/]*\.wasm$/, 1, 'rhwp_bg*.wasm');
 budget('vendor/rhwp/*/rhwp_bg.wasm', match(/^vendor\/rhwp\/[^/]+\/rhwp_bg\.wasm$/), 10.5 * 1024 * KB, raw, 'raw');
 // Quality 5 (about what a CDN uses on the fly; q11 takes a minute on 10 MB). q9 is 2.9 MiB, q4 3.3 MiB.
