@@ -53,3 +53,34 @@ Everything else passes:
 - the TOOL_GUIDE_PINS and OWN_COUNT updates
 - plain-language copy and the 문서딱 brand
 - title and description, and the LHCI entry
+
+---
+
+# Round 2 — ea540e0 (`git diff f0419fd..HEAD`)
+Date: 2026-10-16
+Ready for Builder: YES. CLEAR, deploy B may go.
+
+## Must Fix
+- None.
+
+## Checked
+- The Must Fix (passport-english-name.md:133) is resolved. The new sentence 「외교부 고시는 목록에 없는 성이나 이름도, 발음에
+  맞는 표기라면 나중에 바꿀 수 없다고 정하고 있어요.」 is backed by the quote added to the 고시 PDF entry. 「목록에 없더라도
+  발음이 일치하는 표기는 변경 불가함.」 occurs once in mofa-gosi-2024-10.txt, verbatim, in the 고시's own wording.
+  The quote carries `via: browser`, so I checked it by hand against the local copy.
+- Case 3 and FAQ 4 now carry the 함께 출국 condition. 「여행·이주·유학 등으로」 matches decree 제3호 「국외여행, 해외이주,
+  유학 등의 이유로」.
+- Case 8 now carries the 음절 단위 음역 condition. The new menuPos=39 quote segment 「이 경우에도 변경을 희망하는 로마자 표기가
+  가족관계등록부에 등록된 한글성명을 음절 단위로 음역에 맞게한 표기여야 하며」 is in passport-menuPos39.txt verbatim, and
+  the live check passes: check:quotes --exact 282 verbatim (exit 0).
+- e2e 여권 사진 button (tests/e2e/english-name.spec.ts:221-224): `waitForURL(..., { waitUntil: 'commit' })` followed
+  by `expect(#idp-preset).toHaveValue('passport_online')` still proves both the link target and that the page applied
+  the preset. The assertion retries, so dropping the load wait loses no coverage. Accepted.
+- Scope: only the guide, its quotes and that one test changed. Nothing else drifted.
+
+## Note (no action)
+- Line 133 states the 고시 rule plainly. The 고시 limits only the 제1호 ground (발음 불일치), and the next section lists
+  the other grounds, so a reader is not misled.
+
+## Cleared
+Round 2 resolves the R4 Must Fix and both Should Fix items, and every new quote is verbatim. ROMANIZE1016 R4 is clear.
