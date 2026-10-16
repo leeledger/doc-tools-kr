@@ -167,6 +167,7 @@ const nudges = [
           {!embed && <div id="idp-next" class="next-steps" role="group" aria-labelledby="idp-next-label" hidden></div>}
           <p class="save-name" id="idp-save-name"></p>
           <p class="notice" id="idp-print" hidden></p>
+          {!embed && <p class="notice" id="idp-english" hidden></p>}
           {(infoLinks.length > 0 || aff) && (
             <div class="out-links" id="idp-print-links">
               <p>{PRINT_COPY.lead}</p>

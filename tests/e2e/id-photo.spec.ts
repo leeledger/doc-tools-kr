@@ -240,6 +240,21 @@ for (const id of ['history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', '
   });
 }
 
+// ROMANIZE1016 D5: the passport result (and only it) points to 영문 이름 변환기.
+test('?preset=passport_online: the result has the 영문 이름 변환기 line; id_card does not', async ({ page }) => {
+  await open(page, '/id-photo/?preset=passport_online');
+  await pick(page, PORTRAIT);
+  await expect(tool(page)).toHaveAttribute('data-state', 'adjust');
+  await save(page);
+  await expect(page.locator('#idp-english')).toHaveText('여권 영문 이름도 정해야 한다면 영문 이름 변환기');
+  await expect(page.locator('#idp-english a')).toHaveAttribute('href', '/english-name/');
+  await page.getByRole('button', { name: '다른 규격으로 다시 만들기' }).click();
+  await page.locator('#idp-preset').selectOption('id_card');
+  const { name } = await save(page);
+  expect(name).toBe('idcard_413x531.jpg');
+  await expect(page.locator('#idp-english')).toBeHidden();
+});
+
 // TOOLS4 T1: the select groups its presets (an empty group is left out); a print preset opened from its guide's
 // deep link saves the paper size at 300 and the result says where to print it.
 test('presets in groups; ?preset=id_card: print preset, exact px, the print note', async ({ page }) => {

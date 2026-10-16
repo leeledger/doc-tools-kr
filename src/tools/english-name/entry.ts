@@ -1,5 +1,18 @@
-// /english-name/ page script (ROMANIZE1016 D7): the controller is a few KB with the 외교부 list and no engine, so it
-// loads with the page (check-dist budget `english-name initial JS`).
+// /english-name/ page script (ROMANIZE1016 D6, D7): starts the usage statistics and the controller. The controller is a
+// few KB with the 외교부 list and no engine, so it loads with the page (check-dist budget `english-name initial JS`).
+// Usage: start once per page view at the first valid result, download (o=form) per 복사, next once from the 여권 사진
+// button; never the name, its syllables or length, the surname choice, list membership, case or warnings.
+import { startUsage, track } from '../../lib/ui/usage';
 import { initEnglishName } from './controller';
 
-initEnglishName();
+startUsage('english-name');
+initEnglishName({
+  onResult: () => track({ e: 'start', t: 'english-name' }),
+  onCopy: (shape) => track({ e: 'download', t: 'english-name', o: 'form', v: shape }),
+});
+let nexted = false;
+document.getElementById('en-next')?.addEventListener('click', () => {
+  if (nexted) return;
+  nexted = true;
+  track({ e: 'next', t: 'english-name', o: 'next', v: 'id-photo' });
+});

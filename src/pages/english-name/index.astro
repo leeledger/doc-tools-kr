@@ -10,6 +10,7 @@ import RelatedTools from '../../components/RelatedTools.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
+import { guidePath, publishedGuides } from '../../data/guides';
 import { PASSPORT_BASIC_URL, ROMANIZATION_URL, SOURCES_RETRIEVED } from '../../tools/english-name/sources';
 import { GIVEN_MAX, SURNAME_MAX } from '../../tools/english-name/romanize';
 // Page-only styles, inlined (the /pdf-sign/ pattern): no other page carries them.
@@ -23,6 +24,9 @@ const rows = [
   { shape: 'space', label: '빈칸 넣기' },
 ];
 const [y, m, d] = SOURCES_RETRIEVED.split('-').map(Number);
+// 「여권을 만든다면」 (brief D4): the published ones of these guides (a draft is never linked).
+const published = await publishedGuides();
+const chainGuides = ['passport-photo', 'passport-reissue-photo', 'baby-passport-photo', 'intl-driving-license'].map((s) => published.find((g) => g.id === s)).filter((g) => g !== undefined);
 ---
 <Base title={tool.title} description={tool.description}>
   <JsonLd slot="head" data={jsonLd} />
@@ -80,6 +84,14 @@ const [y, m, d] = SOURCES_RETRIEVED.split('-').map(Number);
         <div class="en-syl" id="en-syl"></div>
         <div class="en-note" id="en-note"></div>
       </div>
+
+      <section class="en-chain" id="en-chain" aria-labelledby="en-chain-title">
+        <h2 id="en-chain-title">여권을 만든다면</h2>
+        <p><a class="btn primary" id="en-next" href="/id-photo/?preset=passport_online">여권 사진 규격 맞추기</a></p>
+        <ul class="en-guides">
+          {chainGuides.map((g) => <li><a href={guidePath(g.id)}>{g.data.title}</a></li>)}
+        </ul>
+      </section>
 
       <p class="en-source" id="en-source">표기 기준: <a href={ROMANIZATION_URL}>국어의 로마자 표기법(국립국어원)</a>, <a href={PASSPORT_BASIC_URL}>외교부 여권안내 로마자성명 표기 기본방법</a>·통계 예시(2024년 10월 31일 기준). {y}년 {m}월 {d}일 확인</p>
     </div>

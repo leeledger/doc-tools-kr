@@ -483,7 +483,7 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
    loading, style already computed) when guide text resolves to the UI font and fetches its late face (LCP CI
    follow-up). check-dist only honours exemptions from this stylesheet. */
 .guide-page, .guide-index .guide-topics, .guide-index section h2,
-.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides, .out-links { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides, .en-guides, .out-links { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
 /* EN1 (brief EN decision 3): English pages use the system font, so they never fetch the UI font. html[lang="en"], never
    :lang(en): the "English" link on Korean pages carries lang="en" and keeps the UI font. */
 html[lang="en"] body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }

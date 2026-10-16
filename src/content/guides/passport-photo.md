@@ -5,7 +5,7 @@ ogDescription: 3.5×4.5 cm, 온라인 신청 413×531픽셀·500 KB 이하. 귀�
 query: 여권사진 규격
 answer: 여권사진은 가로 3.5 cm·세로 4.5 cm이고, 온라인 신청용 파일은 413×531픽셀 권장, JPG, 500 KB 이하여야 해요.
 published: '2026-09-30'
-updated: '2026-09-30'
+updated: '2026-10-16'
 category: 사진
 topic: 여권·신분증
 tools: [id-photo, photo-compress]
@@ -117,3 +117,5 @@ season: { peak: '1–2월, 6–7월', refresh: ['2026-12-01', '2027-05-20'] }
 4. 내기 전에 외교부 [온라인 여권 사진 검증](https://www.passport.go.kr/home/kor/onlinePhotoVerify/index.do?menuPos=33)에서 한 번 더 확인할 수 있어요. 그곳에서는 사진을 외교부로 보내요.
 
 문서딱은 사진을 자르고 크기와 용량만 맞춰요. 얼굴이나 배경은 고치지 않고, 최종 적합 여부는 접수 기관이 판단해요.
+
+여권 신청서에 쓸 영문 이름은 [영문 이름 변환기](/english-name/)에서 한글 이름을 쓰면 미리 볼 수 있어요.

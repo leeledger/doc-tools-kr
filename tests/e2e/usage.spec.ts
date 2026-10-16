@@ -289,6 +289,32 @@ test('글자수 세기 (TOOLS1015 C1): pick on the first text, start (o=basis, v
   }
 });
 
+test('영문 이름 변환기 (ROMANIZE1016 D6): start once at the first valid result, download (o=form) per 복사, next (v=id-photo) once from the 여권 사진 button; never the name, its parts, the surname choice or case', async ({ page, context, browserName }) => {
+  const beacons = await record(page);
+  // Copy must reach the clipboard to count: grant it where Playwright can (Chromium); elsewhere stub writeText.
+  if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  else await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.resolve() }, configurable: true }));
+  await gotoReady(page, '/english-name/');
+  await page.locator('#en-sur').fill('홍');
+  await page.locator('#en-given').fill('길동');
+  await expect(page.locator('#en-joined')).toHaveText('HONG GILDONG');
+  await page.locator('#en-given').fill('길순');
+  await expect(page.locator('#en-joined')).toHaveText('HONG GILSUN');
+  await page.getByLabel('첫 글자만 대문자').check();
+  await page.getByRole('button', { name: '붙임표 넣기 복사' }).click();
+  await expect(page.locator('#en-status')).toHaveText('복사했어요');
+  await page.getByRole('button', { name: '빈칸 넣기 복사' }).click();
+  await page.locator('#en-chain').getByRole('link', { name: '여권 사진 규격 맞추기' }).click();
+  await page.waitForURL(/\/id-photo\/\?preset=passport_online$/);
+  await expect.poll(() => beacons.map((b) => `${b.ev.e} ${b.ev.t}`)).toEqual(['start english-name', 'download english-name', 'download english-name', 'next english-name']);
+  expectClean(beacons);
+  expect(beacons[0]!.ev).not.toHaveProperty('o');
+  expect(beacons[1]!.ev).toMatchObject({ e: 'download', t: 'english-name', o: 'form', v: 'hyphen' });
+  expect(beacons[2]!.ev).toMatchObject({ e: 'download', t: 'english-name', o: 'form', v: 'space' });
+  expect(beacons[3]!.ev).toMatchObject({ e: 'next', t: 'english-name', o: 'next', v: 'id-photo' });
+  for (const b of beacons) expect(b.body).not.toMatch(/홍|길동|길순|HONG|Hong|GIL|Gil|title|upper/i);
+});
+
 test('신분증 사본 만들기 (TOOLS1015 I1): pick, start (o=mark, v=on), success, download; never the 용도 문구, the date, boxes or the file name', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/id-copy/');

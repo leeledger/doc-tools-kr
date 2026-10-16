@@ -44,6 +44,8 @@ export const COPY = {
   fallback: '빠른 방식으로 저장했습니다. 규격과 용량은 같습니다.',
   /** A print preset (TOOLS4 decision 6): the source wants a paper photo of this size. */
   print: (cm: string) => `사진관이나 인화 앱에서 ${cm}로 인화하세요.`,
+  /** ROMANIZE1016 D5: after a passport_online result, before the link 「영문 이름 변환기」. */
+  english: '여권 영문 이름도 정해야 한다면 ',
   summary: (c: Checklist) =>
     c.blocks.length
       ? `저장할 수 없습니다. ${c.blocks[0]!.text}`
@@ -131,6 +133,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
   const saveName = must<HTMLElement>('idp-save-name');
   const fallbackNote = must<HTMLElement>('idp-fallback');
   const printNote = must<HTMLElement>('idp-print');
+  // ROMANIZE1016 D5: the passport preset's result points to 영문 이름 변환기 (late copy; not in the embed widget).
+  const englishNote = document.getElementById('idp-english');
   const result = must<HTMLImageElement>('idp-result');
   const zoom2 = must<HTMLInputElement>('idp-zoom2');
   const againBtn = must<HTMLButtonElement>('idp-again');
@@ -657,6 +661,15 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     const print = p.status === 'print' && p.mm ? COPY.print(cmLabel(p.mm)) : '';
     printNote.hidden = !print;
     printNote.textContent = print;
+    if (englishNote) {
+      englishNote.hidden = p.id !== 'passport_online';
+      if (!englishNote.hidden && !englishNote.firstChild) {
+        const a = document.createElement('a');
+        a.href = '/english-name/';
+        a.textContent = '영문 이름 변환기';
+        englishNote.append(COPY.english, a);
+      }
+    }
     hideError();
     setPhase('done');
     if (nextSlot) showNextSteps(nextSlot, 'id-photo', [{ blob, name }]);

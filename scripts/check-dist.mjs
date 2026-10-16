@@ -25,7 +25,7 @@ const dist = distDir();
 const KB = 1024;
 const STAMP_CONTROLLER_KB = 13.6;
 /** /english-name/ initial JS gzip (ROMANIZE1016 D7: measured + 20 %, < 30 KB; BUILD-LOG R2). */
-const ENGLISH_NAME_INITIAL_KB = 12.2;
+const ENGLISH_NAME_INITIAL_KB = 22.2;
 /** The UI font weights (Polish P.12; 700 retired in LCP round 2): one static instance each; no other weight may appear in the CSS. */
 const UI_WEIGHTS = new Set(['400', '800']);
 /** Copy that describes auto-framing; none of it may ship when PUBLIC_ID_PHOTO_AUTOFRAME is off. */

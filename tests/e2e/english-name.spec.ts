@@ -212,3 +212,20 @@ test('the name never reaches the URL, storage or a request; axe clean with the r
   await expect(page.locator('#en-error')).not.toBeEmpty();
   expect(await serious()).toEqual([]);
 });
+
+test('여권 사진 button opens /id-photo/ with the passport preset; the chain lists the passport guides', async ({ page }) => {
+  await gotoReady(page, '/english-name/');
+  const chain = page.locator('#en-chain');
+  for (const slug of ['passport-photo', 'passport-reissue-photo', 'baby-passport-photo', 'intl-driving-license']) await expect(chain.locator(`a[href="/guide/${slug}/"]`)).toHaveCount(1);
+  await chain.getByRole('link', { name: '여권 사진 규격 맞추기' }).click();
+  await page.waitForURL(/\/id-photo\/\?preset=passport_online$/);
+  await page.waitForFunction(() => document.readyState === 'complete');
+  await expect(page.locator('#idp-preset')).toHaveValue('passport_online');
+});
+
+test('the four passport guides link to /english-name/ in their body (D5)', async ({ page }) => {
+  for (const slug of ['intl-driving-license', 'passport-photo', 'passport-reissue-photo', 'baby-passport-photo']) {
+    await gotoReady(page, `/guide/${slug}/`);
+    await expect(page.locator('main article a[href="/english-name/"], main a[href="/english-name/"]').first(), slug).toBeVisible();
+  }
+});
