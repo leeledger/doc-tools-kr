@@ -26,6 +26,7 @@ const PRIVACY_OUT = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync('src/data/legal.
 const PRIVACY_OUT_ID_PHOTO = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_EMBED = /PRIVACY_EMBED = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_UTM = /PRIVACY_UTM = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_ADDR = /PRIVACY_ADDR = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'us', 'uc', 'w']);
 
 interface Beacon {
@@ -557,7 +558,8 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   await expect(main).toContainText('이 표시는 이 창을 닫으면 지워지는 저장 공간에 최대 3시간 기억해, 같은 창에서 이어서 쓴 도구에도 함께 셉니다.');
   await expect(main).toContainText(`${PRIVACY_UTM}: 익명 사용 통계에 어느 링크로 들어왔는지(정해진 링크 표시)를 더함`);
   await expect(main).not.toContainText(/utm/i);
-  await expect(main).toContainText(`시행일: ${PRIVACY_UTM}`);
+  // ADDREN1016: the cloud build also has 영문주소 변환기 on, whose section is newer (src/data/legal.ts PRIVACY_REVISED).
+  await expect(main).toContainText(`시행일: ${(await page.locator('#addr').count()) ? PRIVACY_ADDR : PRIVACY_UTM}`);
   // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence wins then (ga.cloud.spec.ts
   // checks it); without it, the cookieless sentence. The date is the embed count's (REV5) in both.
   if ((await page.locator('#ga').count()) === 0) {

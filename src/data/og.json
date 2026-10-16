@@ -1,5 +1,5 @@
 {
-  "$comment": "Share previews (Polish Q). scripts/gen-brand.mjs draws /brand/og-<image>.png (1200×630) from each image's title and line; Base.astro picks the page's image and description (og:description and twitter:description: plain words, at most 80 characters). Paths not listed use \"*\". {tools} is the live tool names (tools.ts status), so a preview using it never names a tool that is not live; the home preview stopped listing them in Sprint C (seven names no longer fit 80 characters). Tool image titles equal the tool names in tools.ts (unit test). The remove-background image ships only with PUBLIC_BG_REMOVE on (gen-brand drops it otherwise). domain is printed on the images; the name is always 문서딱.",
+  "$comment": "Share previews (Polish Q). scripts/gen-brand.mjs draws /brand/og-<image>.png (1200×630) from each image's title and line; Base.astro picks the page's image and description (og:description and twitter:description: plain words, at most 80 characters). Paths not listed use \"*\". {tools} is the live tool names (tools.ts status), so a preview using it never names a tool that is not live; the home preview stopped listing them in Sprint C (seven names no longer fit 80 characters). Tool image titles equal the tool names in tools.ts (unit test). The remove-background image ships only with PUBLIC_BG_REMOVE on and the english-address image only with PUBLIC_ADDR_EN on (gen-brand drops them otherwise). domain is printed on the images; the name is always 문서딱.",
   "domain": "docttak.com",
   "images": {
     "home": { "title": "내야 하는 문서·사진", "line": "용량과 규격에 딱 맞춰 드려요 — 무료, 가입 없이" },
@@ -23,6 +23,7 @@
     "char-count": { "title": "글자수 세기", "line": "공백 포함·제외, 바이트까지 바로 — 무료" },
     "id-copy": { "title": "신분증 사본 만들기", "line": "주민번호 가리기·용도 문구 — 무료" },
     "pdf-edit": { "title": "PDF 글자 넣기·편집", "line": "빈칸에 글자·날짜, 흰 상자로 가리기 — 무료" },
+    "english-address": { "title": "영문주소 변환기", "line": "해외직구 주소 칸에 나눠 넣기 — 무료" },
     "default": { "title": "문서·사진, 규격에 딱", "line": "PDF·사진·여권사진·HWP — 무료, 가입 없이" }
   },
   "pages": {
@@ -45,6 +46,7 @@
     "/hwp-viewer/": { "image": "hwp-viewer", "description": "한글 프로그램 없이 HWP·HWPX 문서를 열어 쪽을 넘겨 보고 글자도 찾아요. 무료." },
     "/hwpx-to-hwp/": { "image": "hwpx-to-hwp", "description": "한글 프로그램 없이 HWPX 파일을 HWP 파일로 바꿔 내려받아요. 가입 없이 무료." },
     "/char-count/": { "image": "char-count", "description": "자소서 글자수를 공백 포함·제외와 바이트로 바로 세어 드려요. 목표까지 남은 글자 수도 보여요. 가입 없이 무료." },
+    "/english-address/": { "image": "english-address", "description": "주소를 찾아 영문 도로명주소로 바꾸고, 해외직구 주소 칸에 넣을 값을 칸마다 복사해요. 가입 없이 무료." },
     "/pdf-edit/": { "image": "pdf-edit", "description": "PDF 빈칸에 글자와 오늘 날짜를 넣고, 필요 없는 곳은 흰 상자로 가려요. 원래 있는 글자는 고치지 못해요. 무료." },
     "/id-copy/": { "image": "id-copy", "description": "신분증 사진의 주민번호 뒤 7자리와 주소를 가리고 용도 문구를 넣어 JPG·PDF로 저장해요. 가입 없이 무료." },
     "/privacy/": { "image": "default", "description": "문서딱은 가입이 없고 개인정보를 받지 않아요. 고른 파일을 어떻게 다루는지 알려 드려요." },

@@ -45,6 +45,8 @@ const PAGES = [
   ['pdfedit', '/pdf-edit/'],
   ['stampmaker', '/stamp-maker/'],
   ['englishname', '/english-name/'],
+  // ADDREN1016: only in a PUBLIC_ADDR_EN=1 build (a 404 elsewhere).
+  ['englishaddress', '/english-address/'],
   ['idphoto', '/id-photo/'],
   ['stamp', '/stamp-signature/'],
   ['privacy', '/privacy/'],

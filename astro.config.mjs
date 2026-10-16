@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
-import { addrEnOn, privacyGate as addrEnGate } from './scripts/lib/addren.mjs';
+import { ADDR_EN_PATH, addrEnOn, privacyGate as addrEnGate } from './scripts/lib/addren.mjs';
 import { autoframeOn } from './scripts/lib/autoframe.mjs';
 import { bgCloudOn, privacyGate } from './scripts/lib/bgcloud.mjs';
 import { BG_PATH, bgRemoveOn } from './scripts/lib/bgremove.mjs';
@@ -40,6 +40,8 @@ const bgRemoveRoute = {
   hooks: {
     'astro:config:setup': ({ injectRoute }) => {
       if (bgRemove) injectRoute({ pattern: BG_PATH, entrypoint: './src/tools/remove-background/page.astro' });
+      // ADDREN1016: /english-address/ the same way (PUBLIC_ADDR_EN); a flag-off build has no such route.
+      if (addrEn) injectRoute({ pattern: ADDR_EN_PATH, entrypoint: './src/tools/english-address/page.astro' });
     },
   },
 };

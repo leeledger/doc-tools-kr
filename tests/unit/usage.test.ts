@@ -43,7 +43,7 @@ import { onRequest as usageFn } from '../../functions/api/usage';
 import { onRequest as adminFn, MIN_PASSWORD, REALM } from '../../functions/admin/[[path]]';
 import { PRESET_IDS } from '../../src/data/preset-ids';
 import { LEVELS } from '../../src/lib/pdf/compress/levels';
-import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
+import { ADDR_EN_TOOL, BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { USAGE_ON, UTM_STASH_KEY, UTM_TTL_MS, arrival, browserFamily, buildPayload, createTracker, readUtmStash, startUsage, track, writeUtmStash } from '../../src/lib/ui/usage';
 import { route } from '../../src/sw/sw';
 import { STYLES, STYLE_IDS } from '../../src/tools/stamp-maker/styles';
@@ -65,8 +65,7 @@ const body = (o: Record<string, unknown>): string => JSON.stringify(o);
 
 describe('whitelist (scripts/lib/usage.mjs)', () => {
   it('stays equal to the site: every tool (incl. 배경 지우기), the id-photo presets + custom, the pdf-compress levels', () => {
-    // 영문주소 변환기 (ADDREN1016) is registered in src/data/tools.ts in step A2.
-    expect([...TOOLS].sort()).toEqual([...LIVE_TOOLS.map((t) => t.slug), BG_REMOVE_TOOL.slug, 'english-address'].sort());
+    expect([...TOOLS].sort()).toEqual([...LIVE_TOOLS.map((t) => t.slug), BG_REMOVE_TOOL.slug, ADDR_EN_TOOL.slug].sort());
     expect(PRESETS).toEqual([...PRESET_IDS, 'custom']);
     expect(LEVEL_IDS).toEqual(Object.keys(LEVELS));
   });

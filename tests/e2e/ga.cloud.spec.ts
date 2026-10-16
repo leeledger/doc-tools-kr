@@ -13,6 +13,7 @@ const GA_CSP = /Content-Security-Policy: ([^\r\n]*)/.exec(withGaCsp(readFileSync
 const PRIVACY_GA = /PRIVACY_GA = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 /** The newest privacy change in a usage-stats build: the embed widget count (REV5). */
 const PRIVACY_UTM = /PRIVACY_UTM = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_ADDR = /PRIVACY_ADDR = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const SECRET = '비밀-파일명.pdf';
 
 // The same build has the anonymous usage statistics on: using a tool sends its one allowed POST (usage.spec.ts covers it).
@@ -88,13 +89,18 @@ test('a picked file never reaches Google: its name is not in dataLayer nor in an
 test('/privacy/ in this build (cloud + usage + GA): section 1 names the cookies, GA is section 5, date and change log', async ({ page }) => {
   await gotoReady(page, '/privacy/');
   const main = page.locator('main');
-  await expect(main).toContainText('방문 분석을 위해 Google 애널리틱스 쿠키를 써요(5항).');
+  // ADDREN1016: with 영문주소 변환기 on (PUBLIC_ADDR_EN=1, as in the CI cloud build) its section 4 follows 배경 지우기 and
+  // every later section moves down one; its date is then the newest.
+  const k = (await page.locator('#addr').count()) ? 1 : 0;
+  const s = (n: number): number => n + k;
+  await expect(main).toContainText(`방문 분석을 위해 Google 애널리틱스 쿠키를 써요(${s(5)}항).`);
   await expect(page.locator('#bg')).toHaveText('3. 배경 지우기에서 사진을 보내는 경우');
-  await expect(page.locator('#ga')).toHaveText('5. Google 애널리틱스(방문 분석)');
-  await expect(page.locator('#usage')).toHaveText('7. 익명 사용 통계');
-  await expect(page.locator('h2')).toHaveText([/^1\. /, /^2\. /, /^3\. /, /^4\. 사이트를 여는 기록$/, /^5\. Google/, /^6\. 광고$/, /^7\. 익명/, /^8\. 개인정보 보호책임자$/, /^9\. 변경 이력$/]);
-  // The 인화·사진관 link count (REV2, 2026-10-12, usage-stats builds such as this one) is the newest section.
-  await expect(main).toContainText(`시행일: ${PRIVACY_UTM}`);
+  if (k) await expect(page.locator('#addr')).toHaveText('4. 영문주소 변환기에서 주소를 보내는 경우');
+  await expect(page.locator('#ga')).toHaveText(`${s(5)}. Google 애널리틱스(방문 분석)`);
+  await expect(page.locator('#usage')).toHaveText(`${s(7)}. 익명 사용 통계`);
+  await expect(page.locator('h2')).toHaveText([/^1\. /, /^2\. /, /^3\. /, ...(k ? [/^4\. 영문주소/] : []), new RegExp(`^${s(4)}\\. 사이트를 여는 기록$`), new RegExp(`^${s(5)}\\. Google`), new RegExp(`^${s(6)}\\. 광고$`), new RegExp(`^${s(7)}\\. 익명`), new RegExp(`^${s(8)}\\. 개인정보 보호책임자$`), new RegExp(`^${s(9)}\\. 변경 이력$`)]);
+  // The 인화·사진관 link count (REV2, 2026-10-12, usage-stats builds such as this one) is the newest section (or 영문주소).
+  await expect(main).toContainText(`시행일: ${k ? PRIVACY_ADDR : PRIVACY_UTM}`);
   await expect(main).toContainText(`${PRIVACY_GA}: Google 애널리틱스(방문 분석, 쿠키)와 국외 이전 내용을 더함`);
   await expect(main.locator('a[href="https://tools.google.com/dlpage/gaoptout?hl=ko"]')).toHaveCount(1);
 });

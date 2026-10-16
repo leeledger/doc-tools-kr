@@ -19,7 +19,7 @@ import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
 import { parse as parseYaml } from 'yaml';
 import { MAX_SOURCE_AGE_DAYS, isVisibleGuide, publishedGuideSchema } from '../../src/data/guide-schema';
 import { resolveSources, unsourcedFacts } from '../../src/data/guide-facts';
-import { BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
+import { ADDR_EN_TOOL, BG_REMOVE_TOOL, LIVE_TOOLS } from '../../src/data/tools';
 import { parseHref } from '../../src/lib/ui/deeplink';
 import { HUB_KIND, HUB_SLUGS } from '../../src/data/hubs';
 import { DUP_LIMIT, articleText, duplicatePairs, jaccard, shingles } from '../../scripts/lib/shingles.mjs';
@@ -658,7 +658,11 @@ describe('built output', () => {
    * The live tools of the build under test: a PUBLIC_BG_REMOVE=1 build (Sprint C, C2; the CI checks job) also has
    * /remove-background/, after /stamp-signature/ as in tools.ts. Unit tests themselves run with the flag off.
    */
-  const builtLive = () => (existsSync(join(DIST, 'remove-background')) ? LIVE_TOOLS.flatMap((t) => (t.slug === 'stamp-signature' ? [t, BG_REMOVE_TOOL] : [t])) : LIVE_TOOLS);
+  const builtLive = () => {
+    const live = existsSync(join(DIST, 'remove-background')) ? LIVE_TOOLS.flatMap((t) => (t.slug === 'stamp-signature' ? [t, BG_REMOVE_TOOL] : [t])) : LIVE_TOOLS;
+    // ADDREN1016: a PUBLIC_ADDR_EN=1 build (the CI checks job) also has /english-address/, last as in tools.ts.
+    return existsSync(join(DIST, 'english-address')) ? [...live, ADDR_EN_TOOL] : live;
+  };
 
   /** The env of the build under test: dist/ has MediaPipe only when it was built with auto-framing on (Step 4). */
   const buildEnv = (): NodeJS.ProcessEnv => ({
@@ -675,6 +679,10 @@ describe('built output', () => {
     PUBLIC_ERROR_BEACON_PATH: '',
     PUBLIC_USAGE_SAMPLE: '',
     // Google Analytics (owner 2026-10-08): on when the build has /ga.js (the test ID of the CI cloud build).
+    // ADDREN1016: and 영문주소 변환기 (with the officer and contact it needs) when the page was built.
+    ...(existsSync(join(DIST, 'english-address'))
+      ? { PUBLIC_ADDR_EN: '1', PUBLIC_PRIVACY_OFFICER: process.env.PUBLIC_PRIVACY_OFFICER || '이종림', PUBLIC_CONTACT_EMAIL: process.env.PUBLIC_CONTACT_EMAIL || 'robotncoding@kakao.com' }
+      : { PUBLIC_ADDR_EN: '0' }),
     PUBLIC_GA_ID: existsSync(join(DIST, 'ga.js')) ? (/gtag\('config','(G-[A-Z0-9]+)'/.exec(readFileSync(join(DIST, 'ga.js'), 'utf8'))?.[1] ?? '') : '',
   });
   /** The build under test has the anonymous usage statistics (PUBLIC_USAGE_STATS=1): /privacy/ has id="usage". */
@@ -1070,6 +1078,40 @@ describe('built output', () => {
     const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_BG_REMOVE: on ? '0' : '1' }, encoding: 'utf8' });
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(on ? /names \/remove-background\/ in a build with PUBLIC_BG_REMOVE off/ : /remove-background\/index\.html: no file found/);
+  });
+
+  it('/english-address/ (ADDREN1016): all of it with PUBLIC_ADDR_EN on, no trace with it off; never the key or the juso API; check-dist enforces both', () => {
+    need();
+    const on = existsSync(join(DIST, 'english-address', 'index.html'));
+    const sitemap = readFileSync(join(DIST, 'sitemap.xml'), 'utf8');
+    const llms = readFileSync(join(DIST, 'llms.txt'), 'utf8');
+    const home = readFileSync(join(DIST, 'index.html'), 'utf8');
+    const privacy = readFileSync(join(DIST, 'privacy', 'index.html'), 'utf8');
+    const terms = readFileSync(join(DIST, 'terms', 'index.html'), 'utf8');
+    expect(sitemap.includes('/english-address/')).toBe(on);
+    expect(llms.includes('/english-address/')).toBe(on);
+    expect(home.includes('href="/english-address/"')).toBe(on);
+    expect(existsSync(join(DIST, 'brand', 'og-english-address.png'))).toBe(on);
+    expect(privacy.includes('id="addr"')).toBe(on);
+    expect(terms.includes('id="addr"')).toBe(on);
+    const js = walk(join(DIST, '_astro'), /\.js$/).map((f) => readFileSync(f, 'utf8'));
+    expect(js.filter((t) => t.includes('/api/addr-en')).length).toBe(on ? 1 : 0);
+    for (const t of js) {
+      expect(t).not.toContain('JUSO_EN_KEY');
+      expect(t).not.toContain('juso.go.kr/addrlink');
+    }
+    // The other state is refused by check-dist on this build.
+    const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_ADDR_EN: on ? '0' : '1' }, encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(on ? /the 영문주소 변환기 page in a build with PUBLIC_ADDR_EN off/ : /english-address\/index\.html: no file found/);
+    // On without the officer: the privacy gate refuses it.
+    const gate = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_ADDR_EN: '1', PUBLIC_PRIVACY_OFFICER: '' }, encoding: 'utf8' });
+    expect(gate.status).toBe(1);
+    expect(gate.stderr).toContain('PUBLIC_ADDR_EN is on but PUBLIC_PRIVACY_OFFICER is not set');
+    // A key value set in the build env must not be in any shipped file: a value that is in robots.txt is caught.
+    const key = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), JUSO_EN_KEY: 'User-agent' }, encoding: 'utf8' });
+    expect(key.status).toBe(1);
+    expect(key.stderr).toContain('robots.txt: contains the JUSO_EN_KEY value');
   });
 
   it('precache (Arch C2 ruling 3): no /remove-background/ page, controller, worker, engine or model file', async () => {

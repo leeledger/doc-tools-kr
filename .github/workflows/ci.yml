@@ -29,10 +29,15 @@ jobs:
       # Sprint C, C2: the checks job builds with PUBLIC_BG_REMOVE=1, so Lighthouse covers /remove-background/ and the
       # unit tests read a build that has it. The shipping (flag-off) build is checked by every e2e job's builds
       # (check-dist fails a flag-off build that carries any trace of the page).
-      - name: Build (copy-vendor, gen-licenses, gen-ui-font, astro build, check-dist; 배경 지우기 on)
+      # ADDREN1016 decision 19: 영문주소 변환기 on too (it needs the privacy officer and contact), so Lighthouse covers
+      # /english-address/ and the unit tests read a build that has it.
+      - name: Build (copy-vendor, gen-licenses, gen-ui-font, astro build, check-dist; 배경 지우기 and 영문주소 on)
         run: npm run build
         env:
           PUBLIC_BG_REMOVE: '1'
+          PUBLIC_ADDR_EN: '1'
+          PUBLIC_PRIVACY_OFFICER: '이종림'
+          PUBLIC_CONTACT_EMAIL: 'robotncoding@kakao.com'
       - name: Typecheck
         run: npm run check
       - name: Unit tests (incl. static network-API guard)
@@ -110,6 +115,8 @@ jobs:
           PUBLIC_USAGE_STATS: '1'
           PUBLIC_GA_ID: 'G-TEST000000'
           PUBLIC_AFF_COUPANG: '1'
+          # ADDREN1016 decision 19: english-address.cloud.spec.ts runs here (/api/addr-en is page.route'd).
+          PUBLIC_ADDR_EN: '1'
       - name: Install Playwright browser
         run: |
           case "${{ matrix.project }}" in

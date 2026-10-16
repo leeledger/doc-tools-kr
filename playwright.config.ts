@@ -24,11 +24,12 @@ const BG_SPEC = /remove-background\.spec\.ts$/;
  * nowhere else. /api/remove-bg is answered by page.route fixtures: no test reaches Cloudflare. The same build has the
  * anonymous usage statistics on (PUBLIC_USAGE_STATS=1), so usage.spec.ts runs there too; /api/usage is page.route'd.
  * It also has Google Analytics on (PUBLIC_GA_ID=G-TEST000000; ga.cloud.spec.ts): the `ga` option lets the no-upload
- * fixture stub gtag.js and the collect hosts and accept exactly those requests and the GA CSP.
+ * fixture stub gtag.js and the collect hosts and accept exactly those requests and the GA CSP. ADDREN1016: it has
+ * 영문주소 변환기 on too (PUBLIC_ADDR_EN=1); english-address.cloud.spec.ts answers /api/addr-en with page.route.
  */
 const CLOUD_PORT = Number(process.env.E2E_CLOUD_PORT ?? 4183);
 const CLOUD = existsSync('dist-bgcloud/remove-background/index.html');
-const CLOUD_SPEC = /(remove-background\.cloud|usage|ga\.cloud)\.spec\.ts$/;
+const CLOUD_SPEC = /(remove-background\.cloud|english-address\.cloud|usage|ga\.cloud)\.spec\.ts$/;
 const CLOUD_DEVICES = { chromium: 'Desktop Chrome', firefox: 'Desktop Firefox', webkit: 'Desktop Safari', 'mobile-chrome': 'Pixel 7', 'mobile-safari': 'iPhone 14' } as const;
 /**
  * WebKit projects run with prefers-reduced-motion, which turns the site's `html { scroll-behavior: smooth }` off

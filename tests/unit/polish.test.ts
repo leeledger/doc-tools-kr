@@ -15,7 +15,7 @@ import { nonPdfMessage } from '../../src/lib/ui/pdf-pick';
 import { SIGNALS, schedulePreload, warmWorker } from '../../src/lib/ui/preload';
 import { contactLine, defaultDescription, DESC_MAX, EMAIL_RE, footerContact, HOME_DESC_ORDER, liveNames, sharePreview, SITE, TITLE_SUFFIX } from '../../src/data/site';
 import og from '../../src/data/og.json';
-import { BG_REMOVE_TOOL, LIVE_TOOLS, TOOLS, type Tool } from '../../src/data/tools';
+import { ADDR_EN_TOOL, BG_REMOVE_TOOL, LIVE_TOOLS, TOOLS, type Tool } from '../../src/data/tools';
 import { handleFetch, route, staleCaches, type SwEnv } from '../../src/sw/sw';
 import { parseTargetMb, TARGET_COPY, targetBytes, targetLabel } from '../../src/tools/pdf-compress/target';
 
@@ -458,7 +458,7 @@ describe('live-only description (P.6)', () => {
   });
 
   it('HOME_DESC_ORDER (E-T2-a): every listed id is a tool (pdf-password registered in TOOLS4 T4, image-to-jpg in TOOLS5 U1, pdf-split in U2, pdf-sign in U3, char-count in TOOLS1015 C1, id-copy in I1, pdf-edit in E1, stamp-maker in STAMP1015), no duplicates, every tool listed', () => {
-    const slugs = new Set([...TOOLS, BG_REMOVE_TOOL].map((t) => t.slug));
+    const slugs = new Set([...TOOLS, BG_REMOVE_TOOL, ADDR_EN_TOOL].map((t) => t.slug));
     expect(slugs.has('pdf-password')).toBe(true);
     expect(slugs.has('image-to-jpg')).toBe(true);
     expect(slugs.has('pdf-split')).toBe(true);
@@ -477,6 +477,8 @@ describe('live-only description (P.6)', () => {
     // ROMANIZE1016 D5: english-name right after id-photo (66k searches a month, Naver).
     expect(slugs.has('english-name')).toBe(true);
     expect(HOME_DESC_ORDER.indexOf('english-name')).toBe(HOME_DESC_ORDER.indexOf('id-photo') + 1);
+    // ADDREN1016 A2: english-address right after char-count.
+    expect(HOME_DESC_ORDER.indexOf('english-address')).toBe(HOME_DESC_ORDER.indexOf('char-count') + 1);
     // HWPX2HWP decision 14: right after HWP PDF 변환, before HWP 파일 보기 (searches 1.5만 > 3,560 a month).
     expect(HOME_DESC_ORDER.indexOf('hwpx-to-hwp')).toBe(HOME_DESC_ORDER.indexOf('hwp-to-pdf') + 1);
     expect(HOME_DESC_ORDER.indexOf('hwp-viewer')).toBe(HOME_DESC_ORDER.indexOf('hwpx-to-hwp') + 1);
@@ -686,6 +688,8 @@ describe('service worker (P.11)', () => {
     handleFetch(bg.e, envWith(async () => new Response('bg'), cache));
     await bg.responded;
     expect(cache.store.has('/remove-background/')).toBe(false);
+    // ADDREN1016: the address search is a POST to /api/addr-en: the browser default, never cached.
+    expect(route(req('/api/addr-en', 'POST'), origin)).toBe('default');
   });
 
   it('navigation: network first (refreshing the precache), then the cache, then the offline page', async () => {

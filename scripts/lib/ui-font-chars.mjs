@@ -43,6 +43,8 @@ export const CORE_PATHS = [
   // /remove-background/ is a page under src/tools (flag-gated route) and renders its copy module.
   'tools/remove-background/page.astro',
   'tools/remove-background/copy.ts',
+  // /english-address/ (ADDREN1016) is a flag-gated page under src/tools too; its controller copy stays late.
+  'tools/english-address/page.astro',
 ];
 /** The English catalogs, components and pages (paths relative to src/): in neither the core nor the late set. */
 export const EN_DIRS = ['i18n/', 'pages/en/'];

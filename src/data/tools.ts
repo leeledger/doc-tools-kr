@@ -181,6 +181,45 @@ export const BG_REMOVE_TOOL: Tool = {
   keywords: ['배경 지우기', '누끼 따기', '사진 배경 제거', '배경 투명하게', '누끼'],
 };
 
+/**
+ * 영문주소 변환기 (ADDREN1016 decisions 2, 11). In TOOLS only when PUBLIC_ADDR_EN is on (scripts/lib/addren.mjs): with it
+ * off there is no page, so no nav link, card, sitemap or llms.txt line may name it. The first tool that sends typed text
+ * off the device (the address, to 행정안전부 주소 검색 through /api/addr-en); FAQ 4 says so. name = h1 (COPY.md).
+ * Every string here is in the preloaded UI font (description: 「알려 드려요」, not the brief's 「알려 줘요」: 줘 is not a
+ * core glyph; FAQ 2: 「시나 구 이름」, as 군 is not either).
+ */
+export const ADDR_EN_TOOL: Tool = {
+  slug: 'english-address',
+  name: '영문주소 변환기',
+  title: '영문주소 변환기 — 도로명주소 영문 변환·해외직구 주소 칸 | 문서딱',
+  description: '주소를 찾아 영문 도로명주소로 바꾸고, 해외직구 주소 칸(Address·City·State·ZIP)에 나눠 넣을 값을 알려 드려요. 무료.',
+  h1: '영문주소 변환기',
+  summary: '주소를 찾아 영문 도로명주소로 바꾸고, 해외 직구 주소 칸에 나눠 넣을 값을 알려 드립니다.',
+  icon: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  status: 'live',
+  updated: '2026-10-16',
+  faq: [
+    {
+      q: '어떤 주소로 바꿔 주나요?',
+      a: '행정안전부 주소 검색에서 받은 영문 도로명주소를 그대로 보여 드려요. 문서딱이 글자를 따로 바꾸지 않아서 나라에서 정한 표기와 같아요. 지번 주소의 영문도 함께 보여 드려요.',
+    },
+    {
+      q: '해외직구 칸에는 어떻게 넣나요?',
+      a: 'Address line 1에는 건물 번호와 도로명, Address line 2에는 동·호, City에는 시나 구 이름, State·Province에는 시·도 이름, ZIP code에는 우편번호를 넣어요. 칸마다 복사 버튼이 있어 휴대폰에서도 하나씩 눌러 붙여 넣으면 돼요. 나라는 South Korea를 고르세요.',
+    },
+    {
+      q: '상세주소는 어떻게 쓰나요?',
+      a: '101동 1203호처럼 적으면 101-dong 1203-ho로 바꿔 드려요. 아파트 이름은 빼도 되고, 넣으려면 영문으로 직접 적어 주세요.',
+    },
+    {
+      q: '적은 주소를 저장하나요?',
+      a: '저장하지 않아요. 찾는 주소는 행정안전부 주소 검색으로 보내 영문 주소를 받아 오고, 문서딱은 남기지 않아요. 상세주소(동·호)는 이 기기 안에서 바꿔요.',
+      links: [{ href: '/privacy/#addr', text: '개인정보 처리방침: 영문주소 변환기에서 주소를 보내는 경우' }],
+    },
+  ],
+  keywords: ['영문주소', '영문주소 변환', '영문 주소 변환', '주소 영문 변환', '도로명주소 영문', '해외직구 영문주소'],
+};
+
 export const TOOLS: Tool[] = [
   {
     slug: 'pdf-merge',
@@ -994,6 +1033,8 @@ export const TOOLS: Tool[] = [
     ],
     keywords: ['글자수 세기', '글자수 계산기', '자소서 글자수 세기', '공백 제외 글자수', '바이트 계산기'],
   },
+  // ADDREN1016: last, after the first text tool (HOME_DESC_ORDER: after char-count).
+  ...(__ADDR_EN__ ? [ADDR_EN_TOOL] : []),
 ];
 
 export const LIVE_TOOLS = TOOLS.filter((t) => t.status === 'live');

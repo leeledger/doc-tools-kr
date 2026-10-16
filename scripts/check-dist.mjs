@@ -510,12 +510,45 @@ const addrEn = addrEnOn(env);
     if (buf.includes('juso.go.kr/addrlink')) errors.push(`${f.path}: names the 영문주소 API address (only the Function calls it)`);
   }
 }
+// A2: the outbound wording 「행정안전부 주소 검색으로 보내」 (decisions 13-15) only on /privacy/, /terms/ and the tool page,
+// each of which must carry it when on; the CSP's connect-src never names juso (the page posts to its own origin).
+const ADDR_SEND = '행정안전부 주소 검색으로 보내';
+const ADDR_SEND_PAGES = ['privacy/index.html', 'terms/index.html', 'english-address/index.html'];
+if (files.some((f) => f.path === '_headers') && /connect-src[^;\n]*juso/i.test(read('_headers').toString('utf8'))) errors.push('_headers: connect-src names juso (the page only talks to /api/addr-en)');
 if (!addrEn) {
   for (const f of files) if (f.path.startsWith(ADDR_EN_PATH.slice(1))) errors.push(`${f.path}: the 영문주소 변환기 page in a build with PUBLIC_ADDR_EN off`);
   for (const f of match(/\.(html|xml|txt|json|webmanifest|m?js|css|svg)$|^_headers$|^_redirects$/)) {
     const text = read(f).toString('utf8');
     if (text.includes(ADDR_API)) errors.push(`${f}: names ${ADDR_API} in a build with PUBLIC_ADDR_EN off`);
     if (text.includes('영문주소 변환기')) errors.push(`${f}: names 영문주소 변환기 in a build with PUBLIC_ADDR_EN off`);
+    if (text.includes(ADDR_SEND)) errors.push(`${f}: says 「${ADDR_SEND}」 in a build with PUBLIC_ADDR_EN off`);
+  }
+} else {
+  const html = pageHtml.get('english-address/index.html');
+  if (!html) errors.push('english-address/index.html: no file found');
+  for (const [p, h] of pageHtml) {
+    const says = h.replace(/<[^>]+>/g, '').includes(ADDR_SEND);
+    if (says && !ADDR_SEND_PAGES.includes(p)) errors.push(`${p}: says 「${ADDR_SEND}」 outside ${ADDR_SEND_PAGES.join(', ')}`);
+    if (!says && ADDR_SEND_PAGES.includes(p)) errors.push(`${p}: does not say 「${ADDR_SEND}」 in a build with PUBLIC_ADDR_EN on`);
+  }
+  for (const f of match(/\.(xml|txt|json|webmanifest)$/)) if (read(f).toString('utf8').includes(ADDR_SEND)) errors.push(`${f}: says 「${ADDR_SEND}」 (only the three pages may)`);
+  const privacy = pageHtml.get('privacy/index.html') ?? '';
+  if (!/<h2 id="addr">[^<]*영문주소 변환기/.test(privacy) || !privacy.includes('행정안전부 주소정보누리집')) errors.push('privacy/index.html: no 영문주소 변환기 section (id="addr", naming 행정안전부 주소정보누리집)');
+  if (!privacy.includes(env.PUBLIC_PRIVACY_OFFICER?.trim() || '\u0000')) errors.push('privacy/index.html: the 개인정보 보호책임자 is not named (PUBLIC_ADDR_EN on)');
+  if (!/<p id="addr">영문주소 변환기가 보여 주는 영문 주소는 행정안전부 자료를/.test(pageHtml.get('terms/index.html') ?? '')) errors.push('terms/index.html: no 영문주소 변환기 paragraph (id="addr")');
+  // /api/addr-en only in the controller's lazy chunk (search.ts is bundled into it), never in a page or the initial JS.
+  const callers = match(/\.(html|xml|txt|json|webmanifest|m?js|css)$/).filter((f) => read(f).includes(ADDR_API));
+  const chunks = callers.filter((f) => /^_astro\/controller\.[\w-]{8}\.js$/.test(f));
+  if (callers.length !== 1 || chunks.length !== 1) errors.push(`${ADDR_API} is named in ${callers.join(', ') || 'no file'} (expected one controller chunk)`);
+  if (html) {
+    if (/\bname="/.test(/<input[^>]*id="ea-q"[^>]*>/.exec(html)?.[0] ?? 'name="missing"')) errors.push('english-address/index.html: the search input has a name (or is missing): a submit would put the address in the URL');
+    const initial = initialJs(html);
+    for (const f of callers) if (initial.includes(f)) errors.push(`${f}: the 영문주소 변환기 controller loads with the page`);
+    const lazy = [...new Set(chunks.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.includes(f));
+    for (const f of lazy) if (/localStorage|sessionStorage|indexedDB|history\.(push|replace)State/.test(read(f).toString('utf8'))) errors.push(`${f}: the 영문주소 변환기 controller uses Web Storage, IndexedDB or history`);
+    // Measured at A2: see BUILD-LOG ADDREN1016 A2 (initial JS budget 30 KB per the brief; controller = measured + 20 %).
+    budget('english-address initial JS', initial, 30 * KB);
+    budget('english-address controller (lazy)', lazy, 4.5 * KB);
   }
 }
 // Test inputs never ship: no tests/ path and no file named like a committed corpus photo.

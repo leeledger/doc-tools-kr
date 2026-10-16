@@ -89,6 +89,20 @@ describe('no network APIs in src/', () => {
     expect(bg).toMatch(/if \(__BG_CLOUD__ && !deviceChosen\(\)\) \{/);
   });
 
+  it('영문주소 변환기 (ADDREN1016): one POST of JSON to the same-origin /api/addr-en, imported only by its controller', () => {
+    const src = readFileSync(join(SRC, 'tools', 'english-address', 'search.ts'), 'utf8');
+    expect(src.match(/\bfetcher\(/g)).toHaveLength(1);
+    expect(src).toMatch(/export const API = '\/api\/addr-en';/);
+    expect(src).toMatch(/fetcher\(API, \{\s*method: 'POST',\s*headers: \{ 'Content-Type': 'application\/json' \},\s*body: JSON\.stringify\(\{ q, page \}\)/);
+    expect(src).not.toMatch(/https?:\/\/|localStorage|sessionStorage|indexedDB|history\./);
+    const rel = (f: string): string => relative(SRC, f).split('\\').join('/');
+    const importers = all.filter((f) => (rel(f).startsWith('tools/english-address/') && /from '\.\/search'/.test(readFileSync(f, 'utf8'))) || /english-address\/search'/.test(readFileSync(f, 'utf8'))).map(rel);
+    expect(importers).toEqual(['tools/english-address/controller.ts']);
+    for (const f of ['controller.ts', 'entry.ts', 'copy.ts', 'detail.ts', 'split.ts', 'query.ts', 'messages.ts']) {
+      expect(readFileSync(join(SRC, 'tools', 'english-address', f), 'utf8'), f).not.toMatch(/localStorage|sessionStorage|indexedDB|history\.(push|replace)State|location\.(search|hash)\s*=/);
+    }
+  });
+
   it('uses sendBeacon only in the usage tracker', () => {
     const hits = all.filter((f) => readFileSync(f, 'utf8').includes('sendBeacon')).map((f) => relative(SRC, f).split('\\').join('/'));
     expect(hits).toEqual(BEACON_ALLOWLIST);
