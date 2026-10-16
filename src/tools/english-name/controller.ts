@@ -16,7 +16,8 @@ const T = {
   surCaption: '외교부 여권 통계 예시(2024년 10월 31일 기준)에서 이 성을 가진 사람 중 이 표기를 쓰는 비율',
   surNotListed: '이 성은 외교부 통계 예시에 없어요.',
   sylCaption: '외교부 여권 통계 예시(2024년 10월 31일 기준)에서 이 음절을 이름에 쓰는 사람 중 이 표기를 쓰는 비율',
-  sylLegend: (s: string): string => `이름 「${s}」 표기`,
+  /** Position first, so repeated syllables (똘똘, 영영) get distinct group names; 째 is an existing late glyph. */
+  sylLegend: (n: number, s: string): string => `이름 ${n}번째 글자 「${s}」 표기`,
   negative: '영어로 읽으면 좋지 않은 뜻이 될 수 있는 철자예요(외교부 예시). 다른 표기를 고를 수 있어요.',
   single: '한 글자 영문 이름은 항공권 예약이나 출입국 때 불편할 수 있다고 외교부가 안내해요.',
   copied: '복사했어요',
@@ -119,7 +120,7 @@ export function initEnglishName(hooks: EnglishNameHooks = {}): void {
       const cs = syllableChoices(syl);
       if (!cs) return;
       const box = el('fieldset', 'levels en-pick');
-      box.append(el('legend', undefined, T.sylLegend(syl)));
+      box.append(el('legend', undefined, T.sylLegend(i + 1, syl)));
       const group = el('div', 'chips');
       cs.forEach((c, k) => group.append(chip(`en-syl-${i}`, c.rule ? '' : c.spelling, label(c, T.ruleSyllable), k === 0)));
       box.append(group);

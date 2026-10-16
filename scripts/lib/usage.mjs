@@ -255,7 +255,9 @@ export function validate(text) {
   } else if (o.e === 'out') {
     if (o.o !== OUT_KEY || !outDests(Object.hasOwn(o, 'g') ? GUIDE_OUT : TOOL_OUT, o.t).includes(o.v)) return null;
   } else if (Object.hasOwn(o, 'o') && (o.o === NEXT_KEY || o.o === OUT_KEY || !SETTINGS[o.o].includes(o.v))) return null;
-  // A download names a setting only where DOWNLOAD_SETTING allows it (ROMANIZE1016 D6: 영문 이름 변환기 복사, o = form).
+  // A download names a setting only where DOWNLOAD_SETTING allows it (ROMANIZE1016 D6: 영문 이름 변환기 복사, o = form),
+  // and a download-only setting rides on nothing else (Richard R0-R3 should-fix 1: no form on a start of any tool).
+  if (o.e !== 'download' && Object.hasOwn(o, 'o') && Object.values(DOWNLOAD_SETTING).includes(o.o)) return null;
   if (o.e === 'download' && Object.hasOwn(o, 'o') && !(Object.hasOwn(DOWNLOAD_SETTING, o.t) && DOWNLOAD_SETTING[o.t] === o.o)) return null;
   const ev = { w: o.w };
   for (const k of BLOB_KEYS) ev[k] = Object.hasOwn(o, k) ? o[k] : '';

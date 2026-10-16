@@ -979,11 +979,13 @@ describe('영문 이름 변환기 (ROMANIZE1016 D6)', () => {
     expect(validate(body({ ...BASE, t: 'english-name', e: 'download' }))).not.toBeNull();
     expect(validate(body({ ...BASE, t: 'english-name', e: 'next', o: 'next', v: 'id-photo' }))).not.toBeNull();
     for (const v of ['홍', '길동', 'GILDONG', 'HONG GILDONG', 'KIM', 'title', 'upper', '3', 'Joined']) expect(validate(body({ ...BASE, t: 'english-name', e: 'download', o: 'form', v })), v).toBeNull();
-    // form only on english-name downloads; other settings never on a download; form never on a start.
+    // form only on english-name downloads; other settings never on a download; form never on a start (or any other event, any tool).
     expect(validate(body({ ...BASE, t: 'char-count', e: 'download', o: 'form', v: 'joined' }))).toBeNull();
     expect(validate(body({ ...BASE, t: 'english-name', e: 'download', o: 'basis', v: 'space' }))).toBeNull();
     expect(validate(body({ ...BASE, t: 'photo-compress', e: 'download', o: 'level', v: 'high' }))).toBeNull();
-    expect(validate(body({ ...BASE, t: 'english-name', e: 'start', o: 'form', v: 'joined' }))).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'english-name', e: 'start', o: 'form', v: 'joined' }))).toBeNull();
+    expect(validate(body({ ...BASE, t: 'char-count', e: 'start', o: 'form', v: 'joined' }))).toBeNull();
+    expect(validate(body({ ...BASE, t: 'char-count', e: 'start', o: 'basis', v: 'space' }))).not.toBeNull();
     for (const e of ['pick', 'success']) expect(validate(body({ ...BASE, t: 'english-name', e, o: 'form', v: 'joined' })), e).toBeNull();
   });
 

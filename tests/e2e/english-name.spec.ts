@@ -95,8 +95,8 @@ test('이 + 영희: syllable rows for 영 and 희 with their 비율; picking YOU
   await gotoReady(page, '/english-name/');
   await name(page, '이', '영희');
   await expect(page.locator('#en-joined')).toHaveText('LEE YEONGHUI');
-  const young = page.getByRole('group', { name: '이름 「영」 표기' });
-  const hee = page.getByRole('group', { name: '이름 「희」 표기' });
+  const young = page.getByRole('group', { name: '이름 1번째 글자 「영」 표기' });
+  const hee = page.getByRole('group', { name: '이름 2번째 글자 「희」 표기' });
   await expect(young.locator('label.chip span')).toHaveText(['YEONG 18.65% 표기법', 'YOUNG 79.67%', 'YUNG 1.02%']);
   await expect(hee.locator('label.chip span').nth(1)).toHaveText('HEE 84.24%');
   await young.locator('label.chip').filter({ hasText: 'YOUNG' }).click();
@@ -228,4 +228,16 @@ test('the four passport guides link to /english-name/ in their body (D5)', async
     await gotoReady(page, `/guide/${slug}/`);
     await expect(page.locator('main article a[href="/english-name/"], main a[href="/english-name/"]').first(), slug).toBeVisible();
   }
+});
+
+test('repeated syllables (영영) get distinct group names, and each picks on its own', async ({ page }) => {
+  await gotoReady(page, '/english-name/');
+  await name(page, '이', '영영');
+  await expect(page.locator('#en-joined')).toHaveText('LEE YEONGYEONG');
+  const first = page.getByRole('group', { name: '이름 1번째 글자 「영」 표기', exact: true });
+  const second = page.getByRole('group', { name: '이름 2번째 글자 「영」 표기', exact: true });
+  await expect(first).toHaveCount(1);
+  await expect(second).toHaveCount(1);
+  await second.locator('label.chip').filter({ hasText: 'YOUNG' }).click();
+  await expect(page.locator('#en-joined')).toHaveText('LEE YEONGYOUNG');
 });
