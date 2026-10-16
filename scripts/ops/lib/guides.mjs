@@ -1,6 +1,7 @@
 // Guide and preset data for the ops jobs, read from the repository without a build: the guide frontmatter
-// (src/content/guides/*.md, the shape of src/data/guide-schema.ts) and the official id-photo presets
-// (src/data/id-photo-presets.ts). Only the fields the jobs need are parsed: title, query, draft, sources.
+// (src/content/guides/*.md, the shape of src/data/guide-schema.ts), the official id-photo presets
+// (src/data/id-photo-presets.ts) and the sources a tool page cites (TOOL_SOURCE_FILES, ROMANIZE1016 D8). Only the
+// fields the jobs need are parsed: title, query, draft, sources.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT } from './common.mjs';
@@ -109,13 +110,41 @@ export function parsePresets(ts) {
 
 export const readPresets = (root = ROOT) => parsePresets(readFileSync(join(root, 'src', 'data', 'id-photo-presets.ts'), 'utf8'));
 
+/** Tool pages that cite official sources outside the presets: page path → file (shape: src/tools/english-name/sources.ts). */
+export const TOOL_SOURCE_FILES = { '/english-name/': ['src', 'tools', 'english-name', 'sources.ts'] };
+
+/**
+ * The `{ id, url, title, quote, via? }` entries of a tool sources file: { id, urls, quote, via? }. A URL written as a
+ * constant is resolved from the file's `const NAME = '…'` declarations (as parsePresets).
+ */
+export function parseToolSources(ts) {
+  const consts = Object.fromEntries([...ts.matchAll(new RegExp(String.raw`const\s+([A-Z_][A-Z0-9_]*)\s*=\s*(${STRING})`, 'g'))].map((m) => [m[1], tsString(m[2])]));
+  const blocks = ts.split(/\n\s*\{\s*\n(?=\s*id:\s*')/).slice(1);
+  const out = [];
+  for (const b of blocks) {
+    const id = /id:\s*'([^']+)'/.exec(b)?.[1];
+    const u = new RegExp(String.raw`url:\s*(?:(${STRING})|([A-Z_][A-Z0-9_]*))`).exec(b);
+    const q = new RegExp(String.raw`quote:\s*(${STRING})`).exec(b)?.[1];
+    const url = u ? (u[1] ? tsString(u[1]) : consts[u[2]]) : undefined;
+    if (!id || !url || !q) continue;
+    const via = /via:\s*'([^']+)'/.exec(b)?.[1];
+    out.push({ id, urls: [url], quote: tsString(q), ...(via ? { via } : {}) });
+  }
+  return out;
+}
+
+/** Every tool page's cited sources: { page, sources }. */
+export const readToolSources = (root = ROOT) =>
+  Object.entries(TOOL_SOURCE_FILES).map(([page, parts]) => ({ page, sources: parseToolSources(readFileSync(join(root, ...parts), 'utf8')) }));
+
 /**
  * What the source watch checks: one entry per (quote, url set), with the pages that cite it. A guide's URL
  * source must hold its quote at that URL; a preset quote must be found across the preset's URLs (it joins
- * sentences from more than one official page). Presets are also cited by the /id-photo/ tool itself. A quote
+ * sentences from more than one official page). Presets are also cited by the /id-photo/ tool itself; a tool page's own
+ * sources (readToolSources, ROMANIZE1016 D8) are checked like a guide's. A quote
  * read in a browser (`via: browser`, G2 A1) carries `via` so the watch lists it for a manual check.
  */
-export function watchList(guides, presets) {
+export function watchList(guides, presets, tools = []) {
   const byKey = new Map();
   const add = (pagePath, urls, quote, origin, via) => {
     const key = `${urls.join(' ')}\n${quote}`;
@@ -125,6 +154,7 @@ export function watchList(guides, presets) {
   };
   const presetById = new Map(presets.map((p) => [p.id, p]));
   for (const p of presets) add('/id-photo/', p.urls, p.quote, `preset ${p.id}`);
+  for (const t of tools) for (const src of t.sources) add(t.page, src.urls, src.quote, `tool ${src.id}`, src.via);
   for (const g of guides) {
     if (g.draft) continue;
     for (const s of g.sources) {

@@ -1,0 +1,155 @@
+// 외교부 「로마자표기 성명의 정정 등이 제한되는 예시 목록」 (2024.10.31 기준; brief ROMANIZE1016 S5), transcribed by a script
+// from handoff/sources/romanize1016/mofa-list-2024-10-31.txt (a spelling's column is the one whose 합계 gives its printed
+// 비율). PDF order; tests/unit/english-name-data.test.ts proves the transcription. Never add a number that is not in S5.
+
+export interface Spelling {
+  /** The spelling as printed (A-Z). */
+  readonly s: string;
+  /** 사용자 수. */
+  readonly count: number;
+  /** 비율 as printed (percent, 2 decimals). */
+  readonly pct: number;
+  /** Marked 「*… 부정적 의미로 변경 가능」 in the list. */
+  readonly negative?: true;
+}
+export interface Entry {
+  /** 합계. */
+  readonly total: number;
+  readonly spellings: readonly Spelling[];
+}
+
+export const MOFA_LIST = {
+  title: '로마자표기 성명의 정정 등이 제한되는 예시 목록',
+  pageUrl: 'https://www.passport.go.kr/home/kor/contents.do?menuPos=39',
+  asOf: '2024-10-31',
+  retrieved: '2026-10-16',
+  sha256: '1ea46bbbea47b70d61349a54a1b88942074b92750a9e18eab92f6fa16b85a8d0',
+} as const;
+
+/** 성(姓) 20개. */
+export const SURNAMES: Readonly<Record<string, Entry>> = {
+  '강': { total: 1002206, spellings: [{ s: 'KANG', count: 991959, pct: 98.98 }] },
+  '권': { total: 562113, spellings: [{ s: 'KWON', count: 482240, pct: 85.79 }, { s: 'GWON', count: 44374, pct: 7.89 }, { s: 'KWEON', count: 19044, pct: 3.39 }] },
+  '김': { total: 8380578, spellings: [{ s: 'KIM', count: 8342772, pct: 99.55 }, { s: 'GIM', count: 35451, pct: 0.42 }] },
+  '박': { total: 3289115, spellings: [{ s: 'PARK', count: 3176910, pct: 96.59 }, { s: 'BAK', count: 52906, pct: 1.61 }, { s: 'PAK', count: 49544, pct: 1.51 }] },
+  '배': { total: 314747, spellings: [{ s: 'BAE', count: 305225, pct: 96.97 }] },
+  '백': { total: 303067, spellings: [{ s: 'BAEK', count: 225402, pct: 74.37 }, { s: 'BACK', count: 28752, pct: 9.49 }, { s: 'BAIK', count: 18295, pct: 6.04 }] },
+  '서': { total: 592238, spellings: [{ s: 'SEO', count: 540313, pct: 91.23 }, { s: 'SUH', count: 40604, pct: 6.86 }] },
+  '송': { total: 542142, spellings: [{ s: 'SONG', count: 540866, pct: 99.76 }] },
+  '신': { total: 781429, spellings: [{ s: 'SHIN', count: 749710, pct: 95.94 }, { s: 'SIN', count: 29435, pct: 3.77, negative: true }] },
+  '오': { total: 604923, spellings: [{ s: 'OH', count: 601330, pct: 99.41 }] },
+  '유': { total: 770661, spellings: [{ s: 'YOO', count: 301827, pct: 39.16 }, { s: 'YU', count: 275817, pct: 35.79 }, { s: 'YOU', count: 118163, pct: 15.33 }, { s: 'RYU', count: 60305, pct: 7.83 }] },
+  '윤': { total: 811375, spellings: [{ s: 'YOON', count: 400835, pct: 49.40 }, { s: 'YUN', count: 339337, pct: 41.82 }, { s: 'YOUN', count: 69011, pct: 8.51 }] },
+  '이': { total: 5817761, spellings: [{ s: 'LEE', count: 5746399, pct: 98.77 }, { s: 'YI', count: 53785, pct: 0.92 }] },
+  '임': { total: 796915, spellings: [{ s: 'LIM', count: 568072, pct: 71.28 }, { s: 'IM', count: 186048, pct: 23.35 }, { s: 'YIM', count: 25878, pct: 3.25 }] },
+  '장': { total: 803830, spellings: [{ s: 'JANG', count: 710620, pct: 88.40 }, { s: 'CHANG', count: 90810, pct: 11.30 }] },
+  '전': { total: 588305, spellings: [{ s: 'JEON', count: 433152, pct: 73.63 }, { s: 'JUN', count: 105344, pct: 17.91 }, { s: 'CHUN', count: 27377, pct: 4.65 }] },
+  '정': { total: 1903874, spellings: [{ s: 'JUNG', count: 878290, pct: 46.13 }, { s: 'JEONG', count: 808835, pct: 42.48 }, { s: 'CHUNG', count: 135683, pct: 7.13 }, { s: 'JOUNG', count: 33866, pct: 1.78 }, { s: 'CHEONG', count: 10603, pct: 0.56 }] },
+  '조': { total: 1155692, spellings: [{ s: 'CHO', count: 784101, pct: 67.85 }, { s: 'JO', count: 362092, pct: 31.33 }] },
+  '최': { total: 1840121, spellings: [{ s: 'CHOI', count: 1738027, pct: 94.45 }, { s: 'CHOE', count: 96831, pct: 5.26 }] },
+  '한': { total: 616941, spellings: [{ s: 'HAN', count: 614133, pct: 99.54 }] },
+};
+
+/** 이름 음절 100개. */
+export const GIVEN: Readonly<Record<string, Entry>> = {
+  '건': { total: 221464, spellings: [{ s: 'GEON', count: 128149, pct: 57.86 }, { s: 'GUN', count: 46812, pct: 21.14, negative: true }, { s: 'KUN', count: 20868, pct: 9.42 }, { s: 'KEON', count: 18634, pct: 8.41 }] },
+  '경': { total: 1904704, spellings: [{ s: 'KYUNG', count: 910282, pct: 47.79 }, { s: 'KYOUNG', count: 335048, pct: 17.59 }, { s: 'GYEONG', count: 297729, pct: 15.63 }, { s: 'KYEONG', count: 222471, pct: 11.68 }, { s: 'KYONG', count: 54157, pct: 2.84 }, { s: 'GYUNG', count: 32375, pct: 1.70 }] },
+  '관': { total: 124863, spellings: [{ s: 'KWAN', count: 78110, pct: 62.56 }, { s: 'GWAN', count: 40580, pct: 32.50 }] },
+  '광': { total: 320468, spellings: [{ s: 'KWANG', count: 237315, pct: 74.05 }, { s: 'GWANG', count: 76255, pct: 23.79 }] },
+  '구': { total: 191724, spellings: [{ s: 'GU', count: 100001, pct: 52.16 }, { s: 'GOO', count: 32366, pct: 16.88, negative: true }, { s: 'KOO', count: 30571, pct: 15.95 }, { s: 'KU', count: 27637, pct: 14.41 }] },
+  '국': { total: 142134, spellings: [{ s: 'GUK', count: 41855, pct: 29.45 }, { s: 'KOOK', count: 40503, pct: 28.50, negative: true }, { s: 'KUK', count: 40448, pct: 28.46 }] },
+  '규': { total: 655423, spellings: [{ s: 'KYU', count: 306365, pct: 46.74 }, { s: 'GYU', count: 301535, pct: 46.01 }, { s: 'KYOO', count: 12302, pct: 1.88 }] },
+  '균': { total: 131740, spellings: [{ s: 'KYUN', count: 59632, pct: 45.26 }, { s: 'GYUN', count: 57490, pct: 43.64 }] },
+  '근': { total: 366055, spellings: [{ s: 'GEUN', count: 188174, pct: 51.41 }, { s: 'KEUN', count: 122873, pct: 33.57 }, { s: 'KUN', count: 22768, pct: 6.22 }, { s: 'GUN', count: 16540, pct: 4.52, negative: true }] },
+  '금': { total: 258411, spellings: [{ s: 'GEUM', count: 120363, pct: 46.58 }, { s: 'KEUM', count: 81720, pct: 31.62 }, { s: 'KUM', count: 34959, pct: 13.53 }, { s: 'GUM', count: 15025, pct: 5.81 }] },
+  '기': { total: 817201, spellings: [{ s: 'KI', count: 476546, pct: 58.31 }, { s: 'GI', count: 302038, pct: 36.96 }, { s: 'KEE', count: 25738, pct: 3.15 }] },
+  '길': { total: 204694, spellings: [{ s: 'GIL', count: 130179, pct: 63.60 }, { s: 'KIL', count: 68696, pct: 33.56 }] },
+  '나': { total: 412181, spellings: [{ s: 'NA', count: 375230, pct: 91.04 }, { s: 'NAH', count: 35056, pct: 8.51 }] },
+  '남': { total: 399259, spellings: [{ s: 'NAM', count: 398645, pct: 99.85 }] },
+  '대': { total: 324378, spellings: [{ s: 'DAE', count: 307566, pct: 94.82 }] },
+  '덕': { total: 280680, spellings: [{ s: 'DEOK', count: 149727, pct: 53.34 }, { s: 'DUK', count: 69544, pct: 24.78 }, { s: 'DUCK', count: 33734, pct: 12.02, negative: true }] },
+  '도': { total: 343133, spellings: [{ s: 'DO', count: 248100, pct: 72.30 }, { s: 'DOH', count: 93616, pct: 27.28 }] },
+  '동': { total: 793150, spellings: [{ s: 'DONG', count: 790621, pct: 99.68 }] },
+  '두': { total: 116852, spellings: [{ s: 'DOO', count: 65500, pct: 56.05 }, { s: 'DU', count: 48387, pct: 41.41 }] },
+  '란': { total: 229121, spellings: [{ s: 'RAN', count: 203883, pct: 88.98 }, { s: 'LAN', count: 20467, pct: 8.93 }] },
+  '례': { total: 148965, spellings: [{ s: 'RYE', count: 118635, pct: 79.64 }] },
+  '만': { total: 171929, spellings: [{ s: 'MAN', count: 170352, pct: 99.08 }] },
+  '명': { total: 685338, spellings: [{ s: 'MYUNG', count: 309258, pct: 45.12 }, { s: 'MYEONG', count: 243580, pct: 35.54 }, { s: 'MYOUNG', count: 91377, pct: 13.33 }, { s: 'MYONG', count: 20875, pct: 3.05 }] },
+  '문': { total: 230442, spellings: [{ s: 'MOON', count: 134735, pct: 58.47 }, { s: 'MUN', count: 93395, pct: 40.53 }] },
+  '미': { total: 1501217, spellings: [{ s: 'MI', count: 1416198, pct: 94.34 }, { s: 'MEE', count: 57828, pct: 3.85 }, { s: 'ME', count: 24578, pct: 1.64 }] },
+  '민': { total: 1938277, spellings: [{ s: 'MIN', count: 1935464, pct: 99.85 }] },
+  '범': { total: 212104, spellings: [{ s: 'BEOM', count: 133917, pct: 63.14 }, { s: 'BUM', count: 68747, pct: 32.41, negative: true }] },
+  '병': { total: 459512, spellings: [{ s: 'BYUNG', count: 209343, pct: 45.56 }, { s: 'BYEONG', count: 163062, pct: 35.49 }, { s: 'BYOUNG', count: 59574, pct: 12.96 }, { s: 'BYONG', count: 11793, pct: 2.57 }] },
+  '보': { total: 252866, spellings: [{ s: 'BO', count: 243268, pct: 96.20 }] },
+  '복': { total: 286837, spellings: [{ s: 'BOK', count: 263240, pct: 91.77 }, { s: 'BOG', count: 14011, pct: 4.88 }] },
+  '봉': { total: 219595, spellings: [{ s: 'BONG', count: 217761, pct: 99.16 }] },
+  '분': { total: 113138, spellings: [{ s: 'BUN', count: 77243, pct: 68.27 }, { s: 'BOON', count: 34513, pct: 30.51 }] },
+  '상': { total: 927889, spellings: [{ s: 'SANG', count: 925082, pct: 99.70 }] },
+  '서': { total: 740921, spellings: [{ s: 'SEO', count: 726357, pct: 98.03 }] },
+  '석': { total: 765698, spellings: [{ s: 'SEOK', count: 515474, pct: 67.32 }, { s: 'SUK', count: 186835, pct: 24.40 }, { s: 'SEOG', count: 17106, pct: 2.23 }, { s: 'SUCK', count: 11067, pct: 1.45, negative: true }] },
+  '선': { total: 1316917, spellings: [{ s: 'SUN', count: 811029, pct: 61.59 }, { s: 'SEON', count: 490912, pct: 37.28 }] },
+  '섭': { total: 247482, spellings: [{ s: 'SEOP', count: 77164, pct: 31.18 }, { s: 'SUB', count: 72648, pct: 29.35 }, { s: 'SEOB', count: 53126, pct: 21.47 }, { s: 'SUP', count: 34170, pct: 13.81 }] },
+  '성': { total: 1637023, spellings: [{ s: 'SUNG', count: 944530, pct: 57.70 }, { s: 'SEONG', count: 652515, pct: 39.86 }, { s: 'SOUNG', count: 16857, pct: 1.03 }] },
+  '세': { total: 354617, spellings: [{ s: 'SE', count: 304093, pct: 85.75 }, { s: 'SEI', count: 16448, pct: 4.64 }, { s: 'SAE', count: 16317, pct: 4.60 }, { s: 'SEA', count: 14393, pct: 4.06 }] },
+  '소': { total: 424173, spellings: [{ s: 'SO', count: 351113, pct: 82.78 }, { s: 'SOH', count: 72347, pct: 17.06 }] },
+  '수': { total: 1866303, spellings: [{ s: 'SU', count: 1063469, pct: 56.98 }, { s: 'SOO', count: 799371, pct: 42.83 }] },
+  '숙': { total: 1413801, spellings: [{ s: 'SUK', count: 692592, pct: 48.99 }, { s: 'SOOK', count: 689399, pct: 48.76 }, { s: 'SUG', count: 22858, pct: 1.62 }] },
+  '순': { total: 1545645, spellings: [{ s: 'SOON', count: 984136, pct: 63.67 }, { s: 'SUN', count: 554737, pct: 35.89 }] },
+  '승': { total: 863651, spellings: [{ s: 'SEUNG', count: 807000, pct: 93.44 }, { s: 'SUNG', count: 27642, pct: 3.20 }, { s: 'SEOUNG', count: 11647, pct: 1.35 }] },
+  '식': { total: 392738, spellings: [{ s: 'SIK', count: 334720, pct: 85.23 }, { s: 'SHIK', count: 20440, pct: 5.20 }, { s: 'SIG', count: 19383, pct: 4.94 }] },
+  '신': { total: 189243, spellings: [{ s: 'SHIN', count: 115973, pct: 61.28 }, { s: 'SIN', count: 71831, pct: 37.96, negative: true }] },
+  '아': { total: 679558, spellings: [{ s: 'A', count: 438540, pct: 64.53 }, { s: 'AH', count: 239842, pct: 35.29 }] },
+  '애': { total: 372439, spellings: [{ s: 'AE', count: 353081, pct: 94.80 }] },
+  '양': { total: 131019, spellings: [{ s: 'YANG', count: 129986, pct: 99.21 }] },
+  '연': { total: 1332434, spellings: [{ s: 'YEON', count: 1112460, pct: 83.49 }, { s: 'YOUN', count: 103007, pct: 7.73 }, { s: 'YUN', count: 55098, pct: 4.14 }, { s: 'YEUN', count: 24904, pct: 1.87 }, { s: 'YON', count: 14089, pct: 1.06 }] },
+  '열': { total: 186363, spellings: [{ s: 'YEOL', count: 116793, pct: 62.67 }, { s: 'YOUL', count: 20200, pct: 10.84 }, { s: 'YUL', count: 18354, pct: 9.85 }] },
+  '영': { total: 3298965, spellings: [{ s: 'YOUNG', count: 2628441, pct: 79.67 }, { s: 'YEONG', count: 615328, pct: 18.65 }, { s: 'YUNG', count: 33643, pct: 1.02 }] },
+  '예': { total: 483850, spellings: [{ s: 'YE', count: 390901, pct: 80.79 }, { s: 'YEE', count: 37313, pct: 7.71 }, { s: 'YEA', count: 18986, pct: 3.92 }, { s: 'YEH', count: 11491, pct: 2.37 }] },
+  '오': { total: 146499, spellings: [{ s: 'OH', count: 93824, pct: 64.04 }, { s: 'O', count: 51149, pct: 34.91 }] },
+  '옥': { total: 812172, spellings: [{ s: 'OK', count: 677515, pct: 83.42 }, { s: 'OCK', count: 85719, pct: 10.55 }, { s: 'OG', count: 33840, pct: 4.17 }] },
+  '완': { total: 141145, spellings: [{ s: 'WAN', count: 136487, pct: 96.70 }] },
+  '용': { total: 807735, spellings: [{ s: 'YONG', count: 767099, pct: 94.97 }, { s: 'YOUNG', count: 35019, pct: 4.34 }] },
+  '우': { total: 1114818, spellings: [{ s: 'WOO', count: 1028104, pct: 92.22 }, { s: 'U', count: 81498, pct: 7.31 }] },
+  '욱': { total: 298043, spellings: [{ s: 'WOOK', count: 173115, pct: 58.08 }, { s: 'UK', count: 103559, pct: 34.75 }] },
+  '운': { total: 177952, spellings: [{ s: 'WOON', count: 97408, pct: 54.74 }, { s: 'UN', count: 60499, pct: 34.00 }, { s: 'OUN', count: 12913, pct: 7.26 }] },
+  '웅': { total: 156901, spellings: [{ s: 'WOONG', count: 107574, pct: 68.56 }, { s: 'UNG', count: 38557, pct: 24.57 }] },
+  '원': { total: 1141300, spellings: [{ s: 'WON', count: 1108990, pct: 97.17 }, { s: 'WEON', count: 23312, pct: 2.04 }] },
+  '유': { total: 659741, spellings: [{ s: 'YU', count: 444311, pct: 67.35 }, { s: 'YOU', count: 96105, pct: 14.57 }, { s: 'YOO', count: 94930, pct: 14.39 }, { s: 'EU', count: 21093, pct: 3.20 }] },
+  '윤': { total: 1157716, spellings: [{ s: 'YUN', count: 638016, pct: 55.11 }, { s: 'YOON', count: 431216, pct: 37.25 }, { s: 'YOUN', count: 85056, pct: 7.35 }] },
+  '은': { total: 1840818, spellings: [{ s: 'EUN', count: 1826540, pct: 99.22 }] },
+  '이': { total: 369044, spellings: [{ s: 'YI', count: 137430, pct: 37.24 }, { s: 'I', count: 74265, pct: 20.12 }, { s: 'LEE', count: 49044, pct: 13.29 }, { s: 'E', count: 45861, pct: 12.43 }, { s: 'EI', count: 15915, pct: 4.31 }, { s: 'IH', count: 14840, pct: 4.02 }] },
+  '인': { total: 722940, spellings: [{ s: 'IN', count: 716338, pct: 99.09 }] },
+  '일': { total: 348933, spellings: [{ s: 'IL', count: 331171, pct: 94.91 }, { s: 'ILL', count: 14195, pct: 4.07, negative: true }] },
+  '임': { total: 206448, spellings: [{ s: 'IM', count: 151800, pct: 73.53 }, { s: 'NIM', count: 29894, pct: 14.48 }, { s: 'LIM', count: 18111, pct: 8.77 }] },
+  '자': { total: 1060037, spellings: [{ s: 'JA', count: 1047119, pct: 98.78 }] },
+  '재': { total: 1300982, spellings: [{ s: 'JAE', count: 1239647, pct: 95.29 }, { s: 'JAI', count: 21422, pct: 1.65 }, { s: 'JEA', count: 19412, pct: 1.49 }] },
+  '정': { total: 2575024, spellings: [{ s: 'JUNG', count: 1235257, pct: 47.97 }, { s: 'JEONG', count: 1212626, pct: 47.09 }, { s: 'JOUNG', count: 61246, pct: 2.38 }, { s: 'JEUNG', count: 13895, pct: 0.54 }, { s: 'CHUNG', count: 12832, pct: 0.50 }] },
+  '종': { total: 830262, spellings: [{ s: 'JONG', count: 803232, pct: 96.74 }, { s: 'CHONG', count: 16916, pct: 2.04 }] },
+  '주': { total: 1286877, spellings: [{ s: 'JU', count: 910027, pct: 70.72 }, { s: 'JOO', count: 368130, pct: 28.61 }] },
+  '준': { total: 1244764, spellings: [{ s: 'JUN', count: 1021191, pct: 82.04 }, { s: 'JOON', count: 190029, pct: 15.27 }, { s: 'JUNE', count: 29022, pct: 2.33 }] },
+  '중': { total: 163736, spellings: [{ s: 'JUNG', count: 98816, pct: 60.35 }, { s: 'JOONG', count: 57824, pct: 35.32 }] },
+  '지': { total: 1844899, spellings: [{ s: 'JI', count: 1751927, pct: 94.96 }, { s: 'JEE', count: 62325, pct: 3.38 }, { s: 'GI', count: 10492, pct: 0.57 }] },
+  '진': { total: 2050853, spellings: [{ s: 'JIN', count: 2027273, pct: 98.85 }] },
+  '찬': { total: 369757, spellings: [{ s: 'CHAN', count: 369135, pct: 99.83 }] },
+  '창': { total: 389038, spellings: [{ s: 'CHANG', count: 388301, pct: 99.81 }] },
+  '철': { total: 543903, spellings: [{ s: 'CHEOL', count: 249786, pct: 45.92 }, { s: 'CHUL', count: 248352, pct: 45.66 }, { s: 'CHOL', count: 11274, pct: 2.07 }] },
+  '춘': { total: 219898, spellings: [{ s: 'CHUN', count: 161163, pct: 73.29 }, { s: 'CHOON', count: 56112, pct: 25.52 }] },
+  '태': { total: 876102, spellings: [{ s: 'TAE', count: 832637, pct: 95.04 }, { s: 'TAI', count: 22775, pct: 2.60 }, { s: 'TEA', count: 13429, pct: 1.53 }] },
+  '택': { total: 118220, spellings: [{ s: 'TAEK', count: 92758, pct: 78.46 }] },
+  '하': { total: 580537, spellings: [{ s: 'HA', count: 578862, pct: 99.71 }] },
+  '학': { total: 130286, spellings: [{ s: 'HAK', count: 116736, pct: 89.60 }] },
+  '한': { total: 361332, spellings: [{ s: 'HAN', count: 360064, pct: 99.65 }] },
+  '해': { total: 255159, spellings: [{ s: 'HAE', count: 234636, pct: 91.96 }] },
+  '헌': { total: 138997, spellings: [{ s: 'HEON', count: 93430, pct: 67.22 }, { s: 'HUN', count: 37819, pct: 27.21 }] },
+  '혁': { total: 312790, spellings: [{ s: 'HYEOK', count: 152235, pct: 48.67 }, { s: 'HYUK', count: 127608, pct: 40.80 }, { s: 'HYUCK', count: 14807, pct: 4.73 }] },
+  '현': { total: 2513645, spellings: [{ s: 'HYUN', count: 1708391, pct: 67.96 }, { s: 'HYEON', count: 754964, pct: 30.03 }, { s: 'HYOUN', count: 16562, pct: 0.66 }, { s: 'HYON', count: 12478, pct: 0.50 }] },
+  '형': { total: 494803, spellings: [{ s: 'HYUNG', count: 229076, pct: 46.30 }, { s: 'HYEONG', count: 180475, pct: 36.47 }, { s: 'HYOUNG', count: 67849, pct: 13.71 }] },
+  '혜': { total: 993488, spellings: [{ s: 'HYE', count: 890218, pct: 89.61 }, { s: 'HAE', count: 52868, pct: 5.32 }, { s: 'HEA', count: 28889, pct: 2.91 }] },
+  '호': { total: 1191826, spellings: [{ s: 'HO', count: 1191030, pct: 99.93 }] },
+  '홍': { total: 237522, spellings: [{ s: 'HONG', count: 236373, pct: 99.52 }] },
+  '화': { total: 563040, spellings: [{ s: 'HWA', count: 534805, pct: 94.99 }, { s: 'WHA', count: 19022, pct: 3.38 }] },
+  '환': { total: 523883, spellings: [{ s: 'HWAN', count: 497948, pct: 95.05 }, { s: 'WHAN', count: 15053, pct: 2.87 }] },
+  '효': { total: 316396, spellings: [{ s: 'HYO', count: 313761, pct: 99.17 }] },
+  '훈': { total: 644270, spellings: [{ s: 'HOON', count: 337877, pct: 52.44 }, { s: 'HUN', count: 303789, pct: 47.15 }] },
+  '희': { total: 2309957, spellings: [{ s: 'HEE', count: 1946004, pct: 84.24 }, { s: 'HUI', count: 285019, pct: 12.34 }, { s: 'HI', count: 36946, pct: 1.60 }, { s: 'HEUI', count: 24538, pct: 1.06 }] },
+};

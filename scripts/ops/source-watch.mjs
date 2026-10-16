@@ -1,14 +1,14 @@
 // A-3: weekly source watch (docs/OPS-RUNBOOK.md).
 //   node scripts/ops/source-watch.mjs [--dry-run]
 //   node scripts/ops/source-watch.mjs --exact   (G2 A1 publish gate: no issue, exit 1 on any non-verbatim quote)
-// Every official source a page cites (guide frontmatter `sources`, the official id-photo presets) is fetched
-// once, politely (identifying UA, one request at a time with a pause, retries with backoff), and every quoted
+// Every official source a page cites (guide frontmatter `sources`, the official id-photo presets, a tool page's own
+// sources file: guides.mjs TOOL_SOURCE_FILES) is fetched once, politely (identifying UA, one request at a time with a pause, retries with backoff), and every quoted
 // fragment must still be on that page. A missing fragment or an unreachable source is reported in one issue
 // labelled ops:source-changed: page, URL, the quote we publish and the page text around the closest match.
 // Exit 0 once reported (or all clear); 1 only if the job itself failed.
 import { BOT_UA, cell, fetchText, isMain, isoDate, parseArgs, sleep, today } from './lib/common.mjs';
 import { createGitHub } from './lib/github.mjs';
-import { readGuides, readPresets, watchList } from './lib/guides.mjs';
+import { readGuides, readPresets, readToolSources, watchList } from './lib/guides.mjs';
 import { findQuote, hasExactQuote, pageText, pageTextExact, quoteFragments } from './lib/html.mjs';
 
 export const LABEL = 'ops:source-changed';
@@ -89,7 +89,7 @@ export async function run(argv, io = {}) {
   const exact = flags.has('exact');
   const log = io.log ?? console.log;
   const env = io.env ?? process.env;
-  const list = watchList(io.guides ?? readGuides(), io.presets ?? readPresets());
+  const list = watchList(io.guides ?? readGuides(), io.presets ?? readPresets(), io.tools ?? readToolSources());
   const urls = new Set(list.flatMap((e) => e.urls));
   log(`source-watch: 출처 ${urls.size}곳, 인용 ${list.length}개`);
   let first = true;

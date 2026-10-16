@@ -217,7 +217,7 @@ describe('quotes (A-3)', () => {
     const commentOpen = vi.fn();
     const logs: string[] = [];
     const fetchImpl = vi.fn();
-    const code = await sourceWatch([], { guides: [guide], presets: [], log: (s: string) => logs.push(s), env: {}, fetchImpl, wait: async () => {}, github: { upsert, commentOpen } });
+    const code = await sourceWatch([], { guides: [guide], presets: [], tools: [], log: (s: string) => logs.push(s), env: {}, fetchImpl, wait: async () => {}, github: { upsert, commentOpen } });
     expect(code).toBe(0);
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
