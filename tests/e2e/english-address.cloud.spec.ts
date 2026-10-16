@@ -314,10 +314,10 @@ test('/privacy/ and /terms/ name the address search; home links the tool', async
   await expect(page.locator('main')).toContainText('행정안전부 주소정보누리집 (주소 검색), Cloudflare, Inc. (전달)');
   await expect(page.locator('main')).toContainText('상세주소(동·호)는 보내지 않고 이 기기 안에서 바꿔요.');
   await expect(page.locator('main')).toContainText('개인정보 보호책임자');
-  // Acting-Arch round 2: 처리 위탁 framing, the typed address only, the IP held about a minute, 행정안전부's own policy linked.
+  // Acting-Arch round 2: 처리 위탁 framing, the typed address only, the IP only counted for a minute, 행정안전부's own policy linked.
   await expect(page.locator('main')).toContainText('처리 위탁: 행정안전부 주소정보누리집 (주소 검색), Cloudflare, Inc. (전달)');
   await expect(page.locator('main')).toContainText('찾기 칸에 적은 주소 글자만 보내요.');
-  await expect(page.locator('main')).toContainText('접속한 IP 주소를 1분 정도만 잠시 기억해 두고, 따로 저장하지 않아요.');
+  await expect(page.locator('main')).toContainText('너무 많은 요청을 막으려고 접속한 IP 주소로 1분 동안의 요청 수만 세고, 기록하거나 저장하지 않아요.');
   await expect(page.locator('main').getByRole('link', { name: '주소정보누리집 개인정보처리방침' })).toHaveAttribute('href', 'https://www.juso.go.kr/Privacy');
   await expect(page.locator('h2').first()).toHaveText('1. 이름·연락처는 받지 않아요');
   await gotoReady(page, '/terms/');

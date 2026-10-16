@@ -520,7 +520,8 @@ const ADDR_SEND_PAGES = ['privacy/index.html', 'terms/index.html', 'english-addr
   const privacy = pageHtml.get('privacy/index.html') ?? '';
   const sends = cloudOn || addrEn;
   if ((sends || ga) && privacy.includes('1. 받는 개인정보가 없어요')) errors.push('privacy/index.html: section 1 says 「받는 개인정보가 없어요」 in a build that sends data or has Google Analytics');
-  if (sends && /<meta (name="description"|property="og:description")[^>]*개인정보를 받지 않아요/.test(privacy)) errors.push('privacy/index.html: its description says 「개인정보를 받지 않아요」 in a build that sends data');
+  if ((sends || ga) && /<meta (name="description"|property="og:description")[^>]*개인정보를 받지 않아요/.test(privacy)) errors.push('privacy/index.html: its description says 「개인정보를 받지 않아요」 in a build that sends data or has Google Analytics');
+  if (addrEn && !privacy.includes('접속한 IP 주소로 1분 동안의 요청 수만 세고, 기록하거나 저장하지 않아요.')) errors.push('privacy/index.html: #addr does not say how the IP is used (counted for 1 minute, not recorded or stored)');
 }
 // Acting-Arch Q1: the service worker gen-sw will write (same code, same env) names /english-address/ only when on.
 {

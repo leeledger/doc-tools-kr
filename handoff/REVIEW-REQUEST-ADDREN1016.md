@@ -68,5 +68,5 @@ Rebased onto main 222cfb2. BUILD-LOG "ADDREN1016 round 2" has the details and ga
 - src/tools/english-address/controller.ts — 더 보기 appends (focus to the first new card, picked mark and split card kept); download counted only on a real copy. english-address.css focus ring on cards. e2e: keyboard 더 보기 test; no download beacon on the manual fallback; privacy wording.
 - src/sw/sw.ts comment; handoff/CLOUD-HANDOFF.md O4 checklist (PRIVACY_ADDR = real flag-on day).
 Please look at:
-1. The limiter prune runs on the next request in the same isolate; an idle isolate keeps an entry until eviction. The policy says 「1분 정도만 잠시 기억해 두고」. Accurate enough?
+1. The limiter prune runs on the next request in the same isolate; an idle isolate keeps an entry until eviction. The policy said 「1분 정도만 잠시 기억해 두고」; round 3 changed it to 「…IP 주소로 1분 동안의 요청 수만 세고, 기록하거나 저장하지 않아요.」 (Richard Q1).
 2. The cloud/addr meta description change also affects a production build with 배경 지우기 cloud on (the old 「개인정보를 받지 않아요」 was inaccurate there too).
