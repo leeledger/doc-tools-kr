@@ -89,3 +89,66 @@ No semantic conflict. Main adds the passport-english-name guide check in check-d
 URL (adjacent line: textual conflict only, keep both) and the english-name FAQ link in tools.ts (a different tool). The
 new guide does not mention 영문주소, english-address or the outbound phrase, so the flag-off check stays green. After the
 rebase, rerun check-dist on default + cloud and log precache: the cloud build is at 440.8 / 450 KB.
+
+---
+
+# Round 2 — re-review (ae24c24..HEAD, new work in 92da353)
+Date: 2026-10-16
+Ready for Builder: YES
+Verdict: **CLEAR** (no Must Fix)
+
+Rebase: git diff 674a249 6e24198 (outside handoff/) holds only the main 222cfb2 changes (guide passport-english-name,
+check-dist guide block, lighthouserc, tools.ts english-name link). No ADDR code was changed by the rebase.
+Verified: npm run check 0 errors / 0 warnings; vitest addren-* + usage + network-guard 303 passed.
+
+## Round-1 should-fix items
+1. Limiter (functions/api/addr-en.ts): every call first drops the leading entries whose window has expired. The Map is
+   ordered by window start, because a renewed window is deleted and set again. The loop stops at the first live entry.
+   Correct, and covered by a unit case. Fixed.
+2. /privacy/ section 1 heading uses 이름·연락처 when GA is on or something is sent. The meta and og descriptions follow
+   (description about 64 chars; Base.astro ogDescription prop exists at line 29/53). check-dist guards both. Fixed.
+3. 더 보기 now appends to the existing list, keeps the picked mark and the split card, and moves focus to the first new
+   card (tabIndex -1 plus a CSS focus ring). Keyboard e2e added. Fixed.
+4. A download is counted only when the copy reaches the clipboard. e2e checks that the manual fallback sends no beacon.
+   Fixed.
+5. sw.ts comment fixed.
+
+The legal copy follows the acting-Arch decision: 처리 위탁, address text only, the link to juso /Privacy for the
+records 행정안전부 keeps, and the IP sentence. The O4 checklist in CLOUD-HANDOFF sets PRIVACY_ADDR and
+PRIVACY_TERMS_UPDATED to the real flag-on day before the flag goes on.
+
+## Builder questions
+- Q1, 「1분 정도만 잠시 기억해 두고」: not exact. Pruning runs only when the next request reaches the same isolate. An
+  entry in an isolate that gets no more traffic stays in memory until that isolate is recycled, and Cloudflare publishes
+  no time for that. It is volatile memory, never written anywhere, so the substance (not stored or recorded) is true;
+  only the time promise is too strong. **Should Fix** (src/pages/privacy/index.astro, 처리와 보관 line; confidence 8):
+  say what the IP is used for, not how long memory holds it. For example: 「너무 많은 요청을 막으려고 접속한 IP 주소로
+  1분 동안의 요청 수만 세고, 기록하거나 저장하지 않아요.」 If the wording changes, update the e2e privacy assertion
+  too. Fix it before O4 (the section ships only with the flag on), so it does not block the merge with the flag off.
+- Q2, the meta change on a cloud-only production build: fine, and better than before. Live check (curl
+  https://docttak.com/privacy/ on 2026-10-16): **production is a cloud build.** It has section 3 「배경 지우기에서 사진을
+  보내는 경우」, GA in section 5 and the officer in section 8. Production also already shows 「1. 이름·연락처는 받지
+  않아요」 (GA on). It now says description 「…회원가입이 없고 개인정보를 받지 않아요. 고른 파일을 어떻게 다루는지 알려
+  드려요.」 and the same in og:description. That contradicts sections 3 and 5 (a photo is sent; GA cookies). After the
+  merge it will say 「회원가입이 없고 이름·연락처를 받지 않아요. 보내는 것과 다루는 방법을 알려 드려요.」, which is accurate
+  for production.
+
+## What the flag-off merge changes in production (cloud + GA + usage, PUBLIC_ADDR_EN unset)
+- /privacy/ meta description and og:description: the corrected wording above (intended). The section 1 heading is
+  unchanged (GA on already). No #addr section. 시행일 and sitemap lastmod are unchanged (PRIVACY_REVISED and
+  PRIVACY_TERMS_UPDATED move only with the flag).
+- The late UI font faces gain +8 glyphs, so CSS, HTML, deploy-manifest and sw.js hashes change (accepted in round 1).
+  sw.js does not name /english-address/.
+- functions/api/addr-en.ts is deployed but answers 404 off before reading anything.
+- Nothing else: no route, no tool entry, no JS chunk, no visible copy outside /privacy/ meta.
+
+## Should Fix (new, non-blocking)
+- Q1 wording above (before O4).
+- scripts/check-dist.mjs, privacy block (confidence 5, not a production case): a build with GA on and nothing sent still
+  gets the description 「개인정보를 받지 않아요」 while section 1 says 이름·연락처. Production is not this combination. Consider
+  using the 이름·연락처 description whenever GA is on, too. Optional.
+
+## Cleared
+Round-2 fixes 1-5, the legal copy rework, the flag-dependent privacy heading and descriptions, and the clean rebase onto
+222cfb2 were reviewed and pass. The production delta of the flag-off merge is limited to the intended /privacy/
+description fix and the accepted font/hash changes.
