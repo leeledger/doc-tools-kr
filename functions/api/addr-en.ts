@@ -3,7 +3,11 @@
 // (business.juso.go.kr addrEngApi.do) with the secret JUSO_EN_KEY and answers with whitelisted fields only.
 // Privacy (decision 6): no logging, no storage, no cache; the query and the answer live only for this request.
 // Cost (decision 7): the zone WAF rule, the per-isolate limiter below, submit-only searches on the page, input limits.
-// public/_routes.json runs Functions on /api/* only.
+// public/_routes.json runs Functions on /api/* only. The text rules live in src/tools/english-address/query.ts (the page
+// uses them for instant messages; this Function is the authority).
+import { cleanQuery, lengthProblem, MAX_PAGE } from '../../src/tools/english-address/query';
+
+export { cleanQuery };
 
 export interface Env {
   /** The build flag reaches Functions as a Pages env var; "1" = the tool is on (kill switch: remove it). */
@@ -18,9 +22,6 @@ interface Ctx {
 
 export const UPSTREAM = 'https://business.juso.go.kr/addrlink/addrEngApi.do';
 export const MAX_BODY = 512;
-export const MIN_LEN = 2;
-export const MAX_LEN = 80;
-export const MAX_PAGE = 5;
 export const MAX_ITEMS = 10;
 export const MAX_FIELD = 200;
 export const TIMEOUT_MS = 5000;
@@ -63,16 +64,6 @@ function sameOrigin(request: Request): boolean {
   return request.headers.get('origin') === new URL(request.url).origin;
 }
 
-/** The search text as sent upstream: NFC, whitespace collapsed, control and format characters and `% = < > [ ]` gone. */
-export function cleanQuery(raw: string): string {
-  return raw
-    .normalize('NFC')
-    .replace(/\s+/g, ' ')
-    .replace(/[\p{Cc}\p{Cf}%=<>[\]]/gu, '')
-    .replace(/ {2,}/g, ' ')
-    .trim();
-}
-
 /** The checked request, or the 400 code (decision 8). `body`: the parsed JSON. */
 export function validateQuery(body: unknown): { q: string; page: number } | { error: 'bad' | 'short' | 'long' } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { error: 'bad' };
@@ -80,10 +71,8 @@ export function validateQuery(body: unknown): { q: string; page: number } | { er
   if (typeof q !== 'string') return { error: 'bad' };
   if (typeof page !== 'number' || !Number.isInteger(page) || page < 1 || page > MAX_PAGE) return { error: 'bad' };
   const clean = cleanQuery(q);
-  const len = [...clean].length;
-  if (len < MIN_LEN) return { error: 'short' };
-  if (len > MAX_LEN) return { error: 'long' };
-  return { q: clean, page };
+  const problem = lengthProblem(clean);
+  return problem ? { error: problem } : { q: clean, page };
 }
 
 /** upstream common.errorCode -> our answer (decision 9). */
