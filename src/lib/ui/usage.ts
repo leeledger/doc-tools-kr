@@ -10,7 +10,7 @@ import { detectDevice, type Device } from './device';
 
 export const USAGE_ON: boolean = __USAGE_STATS__;
 
-export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name';
+export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name' | 'english-address';
 /** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/affiliate.test.ts keeps the links' dests equal to it). */
 export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod';
 /** STAMP_STYLES in scripts/lib/usage.mjs (= the 도장 만들기 style ids). */
@@ -18,6 +18,9 @@ export type StampStyle = 'round' | 'round-double' | 'oval' | 'square-seal' | 'sq
 /** NAME_FORMS in scripts/lib/usage.mjs (= the /english-name/ row shapes). */
 export type NameForm = 'joined' | 'hyphen' | 'space';
 const NAME_FORMS: readonly string[] = ['joined', 'hyphen', 'space'];
+/** ADDR_FIELDS in scripts/lib/usage.mjs: the 영문주소 변환기 field a copy button copied. */
+export type AddrField = 'line1' | 'line2' | 'city' | 'state' | 'zip' | 'country' | 'full' | 'road';
+const ADDR_FIELDS: readonly string[] = ['line1', 'line2', 'city', 'state', 'zip', 'country', 'full', 'road'];
 export type UsagePhase = 'load' | 'parse' | 'process' | 'save';
 export type UsageSetting =
   | { o: 'target-kb'; v: 'le100' | 'le200' | 'le300' | 'le500' | 'le1000' | 'gt1000' }
@@ -41,6 +44,8 @@ export type UsageEvent =
   | { e: 'pick' | 'success' | 'download'; t: UsageTool }
   /** 영문 이름 변환기 복사 (ROMANIZE1016 D6): which row was copied; never the name. */
   | { e: 'download'; t: 'english-name'; o: 'form'; v: NameForm }
+  /** 영문주소 변환기 복사 (ADDREN1016 decision 17): which field was copied; never the address. */
+  | { e: 'download'; t: 'english-address'; o: 'field'; v: AddrField }
   | ({ e: 'start'; t: UsageTool } & (UsageSetting | { o?: undefined; v?: undefined }))
   /** 이어서 하기 (CHAIN): the result of `t` was handed to the tool `v`. */
   | { e: 'next'; t: UsageTool; o: 'next'; v: UsageTool }
@@ -99,6 +104,9 @@ export function buildPayload(ev: UsageEvent | Arrive | Land, ctx: PayloadContext
     }
     if (ev.e === 'out' && ev.g !== undefined) p.g = ev.g;
   } else if (ev.e === 'download' && ev.t === 'english-name' && 'o' in ev && ev.o === 'form' && NAME_FORMS.includes(ev.v)) {
+    p.o = ev.o;
+    p.v = ev.v;
+  } else if (ev.e === 'download' && ev.t === 'english-address' && 'o' in ev && ev.o === 'field' && ADDR_FIELDS.includes(ev.v)) {
     p.o = ev.o;
     p.v = ev.v;
   } else if (ev.e === 'arrive') {

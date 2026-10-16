@@ -10,6 +10,7 @@ import { BEACON_SRC, analyticsToken } from './lib/analytics.mjs';
 import { GA_LOADER, gaId, loaderSource } from './lib/ga.mjs';
 import { API_PATH as CLOUD_API, CLAIM_FILE_RE, EXCEPTION_PAGES, EXCEPTION_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, bgCloudOn, claimText, privacyGate, unqualifiedClaims } from './lib/bgcloud.mjs';
 import { bgRemoveOn } from './lib/bgremove.mjs';
+import { ADDR_EN_PATH, API_PATH as ADDR_API, addrEnOn, privacyGate as addrEnGate } from './lib/addren.mjs';
 import { GUIDE_OUT, TOOL_OUT, USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
@@ -493,6 +494,28 @@ if (!cloudOn) {
   if (bgHtml) {
     const initial = new Set(initialJs(bgHtml));
     for (const f of clients) if (initial.has(f)) errors.push(`${f}: the cloud client loads with /remove-background/ (it loads after the pick)`);
+  }
+}
+// 영문주소 변환기 (ADDREN1016 decisions 2, 3, 6): the privacy gate; the secret JUSO_EN_KEY (a Pages secret read only by
+// functions/api/addr-en.ts) and the upstream address never reach a shipped file, its name included; off, nothing of
+// the tool ships: no page, no call to /api/addr-en, no tool name.
+for (const e of addrEnGate(env)) errors.push(e);
+const addrEn = addrEnOn(env);
+{
+  const secret = process.env.JUSO_EN_KEY?.trim();
+  for (const f of files) {
+    const buf = read(f.path);
+    if (buf.includes('JUSO_EN_KEY')) errors.push(`${f.path}: names JUSO_EN_KEY (the key is a Pages secret for the Function only)`);
+    if (secret && secret.length >= 8 && buf.includes(secret)) errors.push(`${f.path}: contains the JUSO_EN_KEY value`);
+    if (buf.includes('juso.go.kr/addrlink')) errors.push(`${f.path}: names the 영문주소 API address (only the Function calls it)`);
+  }
+}
+if (!addrEn) {
+  for (const f of files) if (f.path.startsWith(ADDR_EN_PATH.slice(1))) errors.push(`${f.path}: the 영문주소 변환기 page in a build with PUBLIC_ADDR_EN off`);
+  for (const f of match(/\.(html|xml|txt|json|webmanifest|m?js|css|svg)$|^_headers$|^_redirects$/)) {
+    const text = read(f).toString('utf8');
+    if (text.includes(ADDR_API)) errors.push(`${f}: names ${ADDR_API} in a build with PUBLIC_ADDR_EN off`);
+    if (text.includes('영문주소 변환기')) errors.push(`${f}: names 영문주소 변환기 in a build with PUBLIC_ADDR_EN off`);
   }
 }
 // Test inputs never ship: no tests/ path and no file named like a committed corpus photo.

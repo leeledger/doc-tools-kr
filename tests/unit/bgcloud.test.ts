@@ -205,7 +205,7 @@ describe('privacy greps (brief §6.1): no storage and no logging in functions/ap
   const all = [...files(join(ROOT, 'functions')), ...files(join(ROOT, 'workers', 'bg', 'src')), join(ROOT, 'scripts', 'lib', 'usage.mjs')];
 
   it('scans both trees', () => {
-    expect(all.map((f) => f.split(/[\\/]/).slice(-2).join('/')).sort()).toEqual(['admin/[[path]].ts', 'api/remove-bg.ts', 'api/usage.ts', 'lib/usage.mjs', 'src/index.ts']);
+    expect(all.map((f) => f.split(/[\\/]/).slice(-2).join('/')).sort()).toEqual(['admin/[[path]].ts', 'api/addr-en.ts', 'api/remove-bg.ts', 'api/usage.ts', 'lib/usage.mjs', 'src/index.ts']);
   });
 
   it.each(['caches.', '.put(', 'R2', 'KV', 'console.', 'waitUntil', 'cacheEverything', 'cacheTtl', 'localStorage', 'D1', 'DurableObject'])('never uses %s', (needle) => {

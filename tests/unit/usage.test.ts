@@ -18,6 +18,7 @@ import {
   OUT_KEY,
   PRESETS,
   STAMP_STYLES,
+  ADDR_FIELDS,
   TOOLS,
   TOOL_OUT,
   UTM_SOURCES,
@@ -64,7 +65,8 @@ const body = (o: Record<string, unknown>): string => JSON.stringify(o);
 
 describe('whitelist (scripts/lib/usage.mjs)', () => {
   it('stays equal to the site: every tool (incl. 배경 지우기), the id-photo presets + custom, the pdf-compress levels', () => {
-    expect([...TOOLS].sort()).toEqual([...LIVE_TOOLS.map((t) => t.slug), BG_REMOVE_TOOL.slug].sort());
+    // 영문주소 변환기 (ADDREN1016) is registered in src/data/tools.ts in step A2.
+    expect([...TOOLS].sort()).toEqual([...LIVE_TOOLS.map((t) => t.slug), BG_REMOVE_TOOL.slug, 'english-address'].sort());
     expect(PRESETS).toEqual([...PRESET_IDS, 'custom']);
     expect(LEVEL_IDS).toEqual(Object.keys(LEVELS));
   });
@@ -1522,5 +1524,51 @@ describe('도장 만들기 (STAMP1015 D8)', () => {
       ['도장 만들기', '도장 모양', '법인 직인', '2'],
     ]);
     for (const id of STYLE_IDS) expect((VALUE_LABELS as Record<string, string>)[id]).toBe(STYLES[id].name);
+  });
+});
+
+describe('영문주소 변환기 (ADDREN1016 decision 17; acting-Arch: the DOWNLOAD_SETTING map of main, nothing else widens)', () => {
+  it('tool, its fail codes and the copied field on its own download only; never the text, count, page, zip or region', () => {
+    expect(TOOLS).toContain('english-address');
+    expect(ADDR_FIELDS).toEqual(['line1', 'line2', 'city', 'state', 'zip', 'country', 'full', 'road']);
+    for (const e of ['start', 'success']) expect(validate(body({ ...BASE, t: 'english-address', e })), e).not.toBeNull();
+    for (const v of ADDR_FIELDS) expect(validate(body({ ...BASE, t: 'english-address', e: 'download', o: 'field', v })), v).not.toBeNull();
+    for (const v of ['04524', 'Seoul', 'Jung-gu', '110 Sejong-daero', '세종대로 110', '3', 'address']) expect(validate(body({ ...BASE, t: 'english-address', e: 'download', o: 'field', v })), v).toBeNull();
+    expect(validate(body({ ...BASE, t: 'english-address', e: 'download', o: 'field' }))).toBeNull();
+    // Registered pairs only: no field on another tool's download, no form here, no field on any other event.
+    for (const t of ['english-name', 'char-count', 'pdf-merge']) expect(validate(body({ ...BASE, t, e: 'download', o: 'field', v: 'line1' })), t).toBeNull();
+    expect(validate(body({ ...BASE, t: 'english-address', e: 'download', o: 'form', v: 'joined' }))).toBeNull();
+    for (const e of ['pick', 'success', 'start']) expect(validate(body({ ...BASE, t: 'english-address', e, o: 'field', v: 'line1' })), e).toBeNull();
+    for (const c of ['no-result', 'query', 'busy', 'engine', 'upstream']) {
+      expect(validate(body({ ...BASE, t: 'english-address', e: 'fail', c, p: 'process' })), c).not.toBeNull();
+      expect((FAIL_LABELS as Record<string, string>)[c], c).toBeTruthy();
+    }
+  });
+
+  it('admin labels are Korean: 영문주소 변환기, 복사한 칸 and the field names; 주소 검색 서비스 오류', () => {
+    const shaped = shapeUsage({
+      events: [{ tool: 'english-address', event: 'download', via: 'direct', n: 4 }],
+      settings: [
+        { tool: 'english-address', setting: 'field', value: 'line1', n: 3 },
+        { tool: 'english-address', setting: 'field', value: 'full', n: 1 },
+      ],
+    });
+    const [tools, , settings] = shaped.tables;
+    expect(tools!.rows[0]![0]).toBe('영문주소 변환기');
+    expect(settings!.rows).toEqual([
+      ['영문주소 변환기', '복사한 칸', 'Address line 1', '3'],
+      ['영문주소 변환기', '복사한 칸', '한 줄 주소', '1'],
+    ]);
+    expect(FAIL_LABELS['no-result']).toBe('찾은 주소 없음');
+    expect(FAIL_LABELS.query).toBe('검색어를 고쳐야 함');
+    expect(FAIL_LABELS.busy).toBe('찾기 요청이 많음');
+    expect(FAIL_LABELS.upstream).toBe('주소 검색 서비스 오류·시간 초과');
+    expect(FAIL_LABELS.engine).toBe('기능을 불러오지 못함');
+  });
+
+  it('the page tracker sends the field on its download only', () => {
+    const p = buildPayload({ e: 'download', t: 'english-address', o: 'field', v: 'zip' }, { via: 'direct', device: 'mobile', build: 'abc1234', w: 1, ua: '' });
+    expect(p).toEqual({ e: 'download', t: 'english-address', o: 'field', v: 'zip', via: 'direct', d: 'mobile', b: 'abc1234', w: 1 });
+    expect(validate(JSON.stringify(p))).not.toBeNull();
   });
 });

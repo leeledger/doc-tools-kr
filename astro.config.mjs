@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
+import { addrEnOn, privacyGate as addrEnGate } from './scripts/lib/addren.mjs';
 import { autoframeOn } from './scripts/lib/autoframe.mjs';
 import { bgCloudOn, privacyGate } from './scripts/lib/bgcloud.mjs';
 import { BG_PATH, bgRemoveOn } from './scripts/lib/bgremove.mjs';
@@ -29,7 +30,9 @@ const bgRemove = bgRemoveOn(env.PUBLIC_BG_REMOVE);
 // C2-cloud (scripts/lib/bgcloud.mjs): the page's default path sends a <= 1024 px copy to /api/remove-bg. Needs both
 // flags, and the privacy policy's officer and contact lines: the build stops here without them (brief §7.1).
 const bgCloud = bgCloudOn(env);
-const gate = privacyGate(env);
+// ADDREN1016 (scripts/lib/addren.mjs): 영문주소 변환기 sends the typed address to /api/addr-en. Same privacy gate.
+const addrEn = addrEnOn(env);
+const gate = [...privacyGate(env), ...addrEnGate(env)];
 if (gate.length) throw new Error(gate.join('; '));
 /** @type {import('astro').AstroIntegration} */
 const bgRemoveRoute = {
@@ -94,6 +97,6 @@ export default defineConfig({
     resolve: { alias: [{ find: /^brotli\/decompress(\.js)?$/, replacement: fileURLToPath(new URL('./src/lib/hwp/pdf/brotli-stub.ts', import.meta.url)) }] },
     // rhwpNoDefaultWasm: one rhwp_bg.wasm in dist/ (Step 5; see scripts/lib/vite-rhwp.mjs).
     worker: { format: 'es', plugins: () => [rhwpNoDefaultWasm()] },
-    define: { __USAGE_STATS__: JSON.stringify(usageStats), __USAGE_SAMPLE__: JSON.stringify(usageRate), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe), __BG_REMOVE__: JSON.stringify(bgRemove), __BG_CLOUD__: JSON.stringify(bgCloud) },
+    define: { __USAGE_STATS__: JSON.stringify(usageStats), __USAGE_SAMPLE__: JSON.stringify(usageRate), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe), __BG_REMOVE__: JSON.stringify(bgRemove), __BG_CLOUD__: JSON.stringify(bgCloud), __ADDR_EN__: JSON.stringify(addrEn) },
   },
 });

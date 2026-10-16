@@ -45,7 +45,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out', 'land'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct', 'embed'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -79,9 +79,12 @@ export const STAMP_STYLES = ['round', 'round-double', 'oval', 'square-seal', 'sq
 /** 영문 이름 변환기 이름 모양 (ROMANIZE1016 D6): 붙여 쓰기 | 붙임표 | 빈칸, on 복사 only. Never the name, its syllables or length, the surname choice, list membership, case or warnings. */
 export const NAME_FORMS = ['joined', 'hyphen', 'space'];
 /** Tool -> the one setting its download event may carry (every other download has no o / v). */
-export const DOWNLOAD_SETTING = { 'english-name': 'form' };
+/** 영문주소 변환기 the copied field (ADDREN1016 decision 17), on 복사 only. Never the text, result count, page, zip or region. */
+export const ADDR_FIELDS = ['line1', 'line2', 'city', 'state', 'zip', 'country', 'full', 'road'];
+/** Tool -> the one setting its download event may carry (every other download has no o / v). */
+export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field' };
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS, field: ADDR_FIELDS };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -372,6 +375,7 @@ export const TOOL_LABELS = {
   'pdf-edit': 'PDF 글자 넣기·편집',
   'stamp-maker': '도장 만들기',
   'english-name': '영문 이름 변환기',
+  'english-address': '영문주소 변환기',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**
@@ -460,6 +464,11 @@ export const FAIL_LABELS = {
   'unknown-encode': '알 수 없음: JPG 만들기',
   'unknown-stamp': '알 수 없음: 해상도 기록',
   'unknown-zip': '알 수 없음: ZIP 만들기',
+  // ADDREN1016 decision 17 + acting-Arch Q2: 영문주소 변환기 (engine = key not accepted; upstream = juso down, HTTP error or 5 s timeout).
+  'no-result': '찾은 주소 없음',
+  query: '검색어를 고쳐야 함',
+  busy: '찾기 요청이 많음',
+  upstream: '주소 검색 서비스 오류·시간 초과',
 };
 /** Admin and weekly-report labels of OUT_DESTS. */
 export const OUT_LABELS = {
@@ -475,9 +484,13 @@ export const OUT_LABELS = {
 };
 /** The 자리 of the guide rows of the link table (every guide summed). */
 export const OUT_GUIDE_PLACE = '안내 글';
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양', form: '이름 모양' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양', form: '이름 모양', field: '복사한 칸' };
 /** Values whose label depends on the setting (ROMANIZE1016: form `space` is 빈칸, basis `space` stays 공백 포함). */
-export const SETTING_VALUE_LABELS = { form: { joined: '붙여 쓰기', hyphen: '붙임표', space: '빈칸' } };
+export const SETTING_VALUE_LABELS = {
+  form: { joined: '붙여 쓰기', hyphen: '붙임표', space: '빈칸' },
+  // ADDREN1016: the 영문주소 변환기 copied field.
+  field: { line1: 'Address line 1', line2: 'Address line 2', city: 'City', state: 'State·Province', zip: 'ZIP code', country: 'Country', full: '한 줄 주소', road: '영문 도로명주소(결과 목록)' },
+};
 export const VALUE_LABELS = {
   le100: '100KB 이하',
   le200: '200KB 이하',
