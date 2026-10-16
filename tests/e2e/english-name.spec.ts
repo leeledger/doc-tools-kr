@@ -218,8 +218,9 @@ test('여권 사진 button opens /id-photo/ with the passport preset; the chain 
   const chain = page.locator('#en-chain');
   for (const slug of ['passport-photo', 'passport-reissue-photo', 'baby-passport-photo', 'intl-driving-license']) await expect(chain.locator(`a[href="/guide/${slug}/"]`)).toHaveCount(1);
   await chain.getByRole('link', { name: '여권 사진 규격 맞추기' }).click();
-  await page.waitForURL(/\/id-photo\/\?preset=passport_online$/);
-  await page.waitForFunction(() => document.readyState === 'complete');
+  // The URL is the contract; the preset select proves the page read it. Waiting for the full load event of /id-photo/
+  // timed out under parallel load (its late assets), which says nothing about this link.
+  await page.waitForURL(/\/id-photo\/\?preset=passport_online$/, { waitUntil: 'commit' });
   await expect(page.locator('#idp-preset')).toHaveValue('passport_online');
 });
 
