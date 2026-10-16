@@ -3437,3 +3437,16 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - The rate limit fired as designed after more than 20 calls a minute during probing.
 - Not done: the local `scripts/probe-addr-en.mjs` fixtures, because the key must not be on the PC or in chat. The Function-level probe above replaces it.
 - Next: O4 (Production PUBLIC_ADDR_EN=1) waits for the owner's go. Then set PRIVACY_ADDR to that date and run the live smoke.
+
+## ADDREN1016 O4 — production flag on (2026-10-16)
+- The owner approved (「켜」) and set Production `PUBLIC_ADDR_EN=1`. Redeployed with an empty commit. PRIVACY_ADDR was already 2026-10-16, so no change.
+- Live smoke on docttak.com:
+  - /english-address/ returns 200 with title 「영문주소 변환기 — 도로명주소 영문 변환·해외직구 주소 칸 | 문서딱」.
+  - 세종대로 110 → 110 Sejong-daero, Jung-gu, Seoul 04524.
+  - Responses carry `Cache-Control: no-store, private`.
+  - A cross-site POST returns 403.
+  - 40 rapid POSTs from one IP: 20×200, then 429 (colo HKG).
+  - /privacy/ #addr is present with the IP sentence; /terms/ has the section.
+  - The page is in sitemap, sw.js and the home link.
+  - The UI split for 분당구 + 「101동 1203호」 is correct, with no console errors.
+- Note: an earlier 25-call burst right after deploy got no 429. The in-memory limiter is per isolate, so the limit is best-effort (Known Gap). Fallback if the juso quota is ever abused: a Cloudflare WAF rate-limit rule on /api/addr-en (owner).
