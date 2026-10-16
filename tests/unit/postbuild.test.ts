@@ -1104,15 +1104,13 @@ describe('built output', () => {
     const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_ADDR_EN: on ? '0' : '1' }, encoding: 'utf8' });
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(on ? /the 영문주소 변환기 page in a build with PUBLIC_ADDR_EN off/ : /english-address\/index\.html: no file found/);
-    // On without the officer: the privacy gate refuses it.
-    const gate = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_ADDR_EN: '1', PUBLIC_PRIVACY_OFFICER: '' }, encoding: 'utf8' });
+    // One more run: on without the officer (the privacy gate refuses it) and a JUSO_EN_KEY value in the build env that
+    // is in a shipped file (robots.txt) are both caught.
+    const gate = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_ADDR_EN: '1', PUBLIC_PRIVACY_OFFICER: '', JUSO_EN_KEY: 'User-agent' }, encoding: 'utf8' });
     expect(gate.status).toBe(1);
     expect(gate.stderr).toContain('PUBLIC_ADDR_EN is on but PUBLIC_PRIVACY_OFFICER is not set');
-    // A key value set in the build env must not be in any shipped file: a value that is in robots.txt is caught.
-    const key = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), JUSO_EN_KEY: 'User-agent' }, encoding: 'utf8' });
-    expect(key.status).toBe(1);
-    expect(key.stderr).toContain('robots.txt: contains the JUSO_EN_KEY value');
-  });
+    expect(gate.stderr).toContain('robots.txt: contains the JUSO_EN_KEY value');
+  }, 120_000); // check-dist runs twice (about 17 s each on the checks build on Windows, more under the full suite's load)
 
   it('precache (Arch C2 ruling 3): no /remove-background/ page, controller, worker, engine or model file', async () => {
     need();

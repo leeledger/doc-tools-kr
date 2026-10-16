@@ -2,7 +2,7 @@
 Date: 2026-10-16
 Ready for Review: YES
 Status: DONE (A1, A2). A3 (live key probe) and A4 (guide) not started, as instructed.
-Branch: addr-en-1016 (not pushed). Commits: bd53b44 (A1), b6fe8cf (A2 prep, refactor only), d4ab0e9 (A2).
+Branch: addr-en-1016 (not pushed), rebased onto main f3e423b. Commits: a999b9e (A1), 139d28b (A2 prep, refactor only), ec0c39b (A2), then the acting-Arch round (see the last section).
 
 ## Files Changed
 A1
@@ -47,3 +47,16 @@ A2
 
 ## Out of Scope (logged in BUILD-LOG)
 - A3 live probe (needs O1-O3), A4 guide, English twin, Fallback B — untouched.
+
+## Acting-Arch round (2026-10-16) — Ready for Review: YES
+Decisions applied (BUILD-LOG "ADDREN1016 acting-Arch round"):
+- Q3: no general widening. scripts/lib/usage.mjs DOWNLOAD_SETTING += `'english-address': 'field'`, SETTINGS.field = ADDR_FIELDS, SETTING_VALUE_LABELS.field; src/lib/ui/usage.ts sends o/v for that pair only. tests/unit/usage.test.ts: registered pairs only.
+- Q1: late +8 glyphs accepted. src/sw/sw.ts RUNTIME_PAGES + `__RUNTIME_EXTRA__`; scripts/gen-sw.mjs flaggedRuntimePages(env) and buildServiceWorker(dist, env); scripts/check-dist.mjs builds the same sw.js and asserts /english-address/ appears exactly when the flag is on.
+- Q2: src/tools/english-address/messages.ts failCode: engine (key) / upstream (juso down, HTTP error, timeout) / unknown (rest); FAIL_LABELS.upstream; e2e asserts each answer's fail code.
+- Q6: e2e shows the stripped symbol case (「#1203호」 → line 2 「1203-ho」 and the one-line address) before copying.
+- Q4 → A3; Q5, Q7 agreed.
+
+Please look at:
+1. The sw.js mechanism (header const from gen-sw, mirrored in check-dist) — acceptable, or would you rather drop /english-address/ from RUNTIME_PAGES altogether (it cannot search offline anyway, like /remove-background/)?
+2. Timeout folded into `upstream` per the decision text; the Function still answers 504 `timeout`, so a split later needs only messages.ts.
+3. The pre-existing 8-spawn postbuild test (111 s alone on the checks build here) is close to its 120 s limit on Windows; not touched.

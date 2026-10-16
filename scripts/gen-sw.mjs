@@ -16,6 +16,7 @@ import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import ts from 'typescript';
 import { ROOT, distDir, moduleEntries, publicEnv, readBuildId, staticClosure } from './lib/dist.mjs';
+import { ADDR_EN_PATH, addrEnOn } from './lib/addren.mjs';
 
 export const PRECACHE_LIMIT = 450 * 1024;
 export const SW_LIMIT = 6 * 1024;
@@ -91,14 +92,22 @@ export function precacheList(dist) {
   return { urls: [...urls], bytes };
 }
 
-export function buildServiceWorker(dist) {
+/**
+ * Flag-gated pages for sw.ts RUNTIME_PAGES (ADDREN1016 d20 + acting-Arch Q1): a page is named in sw.js only in a build
+ * with its flag on, so a flag-off sw.js never mentions it (check-dist builds the same code and checks).
+ */
+export function flaggedRuntimePages(env = publicEnv()) {
+  return addrEnOn(env) ? [ADDR_EN_PATH] : [];
+}
+
+export function buildServiceWorker(dist, env = publicEnv()) {
   const buildId = readBuildId(dist);
   const { urls, bytes } = precacheList(dist);
   const source = readFileSync(join(ROOT, 'src', 'sw', 'sw.ts'), 'utf8');
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, removeComments: true },
   });
-  const header = `'use strict';\nvar exports = {};\nconst __BUILD_ID__ = ${JSON.stringify(buildId)};\nconst __PRECACHE__ = ${JSON.stringify(urls)};\n`;
+  const header = `'use strict';\nvar exports = {};\nconst __BUILD_ID__ = ${JSON.stringify(buildId)};\nconst __PRECACHE__ = ${JSON.stringify(urls)};\nconst __RUNTIME_EXTRA__ = ${JSON.stringify(flaggedRuntimePages(env))};\n`;
   return { code: header + outputText.replace(/^"use strict";\s*/, ''), urls, bytes, buildId };
 }
 

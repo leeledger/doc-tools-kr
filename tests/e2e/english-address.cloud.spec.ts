@@ -149,13 +149,17 @@ test('더 보기: page 2 is appended, the hint shows, the button goes when all a
   expect(calls.bodies).toEqual(['{"q":"세종대로","page":1}', '{"q":"세종대로","page":2}']);
 });
 
+// The usage fail code of each answer (acting-Arch Q2: key = engine, juso down / HTTP error / timeout = upstream).
+const FAIL: Record<string, string> = { short: 'query', sido: 'query', digits: 'query', long: 'query', chars: 'query', broad: 'query', busy: 'busy', engine: 'engine', upstream: 'upstream', timeout: 'upstream', off: 'unknown', bad: 'unknown' };
 for (const [code, status] of [['short', 400], ['sido', 400], ['digits', 400], ['long', 400], ['chars', 400], ['broad', 400], ['busy', 429], ['engine', 503], ['upstream', 502], ['timeout', 504], ['off', 404], ['bad', 400]] as const) {
-  test(`answer ${status} ${code} -> its message`, async ({ page }) => {
+  test(`answer ${status} ${code} -> its message and fail ${FAIL[code]}`, async ({ page }) => {
+    const seen = await beacons(page);
     await api(page, { status, body: { error: code } });
     await gotoReady(page, PATH);
     await search(page, '세종대로 110');
     await expect(page.locator('#ea-msg')).toHaveText(MSG[code in MSG ? (code as keyof typeof MSG) : 'other']);
     await expect(page.locator('.ea-card')).toHaveCount(0);
+    await expect.poll(() => seen.filter((e) => e.e === 'fail' && e.t === 'english-address').map((e) => e.c)).toEqual([FAIL[code]]);
   });
 }
 
@@ -201,6 +205,11 @@ test('apartment name in the 상세주소 -> do it by hand, line 2 not copyable; 
   await expect(page.locator('#ea-manual')).toHaveText('동·층·호 말고 다른 한글은 영문으로 직접 적어 주세요. 아파트 이름은 빼도 돼요.');
   await expect(line2.getByRole('button')).toBeDisabled();
   await expect(page.locator('.ea-full')).toHaveText('110 Sejong-daero, Jung-gu, Seoul 04524');
+  // Acting-Arch Q6: symbols are dropped, and the visitor sees the final line 2 and the one-line address before copying.
+  await page.locator('#ea-detail').fill('#1203호');
+  await expect(page.locator('#ea-manual')).toBeHidden();
+  await expect(line2.locator('.ea-val')).toHaveText('1203-ho');
+  await expect(page.locator('.ea-full')).toHaveText('1203-ho, 110 Sejong-daero, Jung-gu, Seoul 04524');
   await page.locator('#ea-detail').fill('지하1층 3호');
   await expect(page.locator('#ea-manual')).toBeHidden();
   await expect(line2.locator('.ea-val')).toHaveText('B1F 3-ho');

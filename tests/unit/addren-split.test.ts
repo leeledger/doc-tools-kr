@@ -85,8 +85,10 @@ describe('messages (decision 13) and usage codes (decision 17)', () => {
     expect(failCode('none')).toBe('no-result');
     for (const c of ['short', 'sido', 'digits', 'long', 'chars', 'broad']) expect(failCode(c)).toBe('query');
     expect(failCode('busy')).toBe('busy');
-    expect(failCode('timeout')).toBe('timeout');
-    for (const c of ['engine', 'upstream', 'off', 'bad', undefined]) expect(failCode(c)).toBe('engine');
+    // Acting-Arch Q2: the key (engine), juso down / HTTP error / timeout (upstream) and the rest (unknown) apart.
+    expect(failCode('engine')).toBe('engine');
+    for (const c of ['upstream', 'timeout']) expect(failCode(c)).toBe('upstream');
+    for (const c of ['off', 'bad', 'other', 'whatever', undefined]) expect(failCode(c)).toBe('unknown');
     expect(failCode('offline')).toBeNull();
   });
 

@@ -20,7 +20,7 @@ import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fon
 import { coupangProblems, disclosureStrings, sponsoredProblems } from './lib/out-links-check.mjs';
 import { EMBED_PAGE_RE, embedHeaderProblems, embedPageProblems } from './lib/embed-check.mjs';
 import { EN_PAGE_RE, enProblems } from './lib/en-check.mjs';
-import { precacheList } from './gen-sw.mjs';
+import { buildServiceWorker, precacheList } from './gen-sw.mjs';
 
 const dist = distDir();
 const KB = 1024;
@@ -514,6 +514,16 @@ const addrEn = addrEnOn(env);
 // each of which must carry it when on; the CSP's connect-src never names juso (the page posts to its own origin).
 const ADDR_SEND = '행정안전부 주소 검색으로 보내';
 const ADDR_SEND_PAGES = ['privacy/index.html', 'terms/index.html', 'english-address/index.html'];
+// Acting-Arch Q1: the service worker gen-sw will write (same code, same env) names /english-address/ only when on.
+{
+  let sw = '';
+  try {
+    sw = buildServiceWorker(dist, env).code;
+  } catch (e) {
+    errors.push(`sw.js could not be built for the check: ${e.message}`);
+  }
+  if (sw && sw.includes(ADDR_EN_PATH) !== addrEn) errors.push(`sw.js ${addrEn ? 'does not name' : 'names'} ${ADDR_EN_PATH} in a build with PUBLIC_ADDR_EN ${addrEn ? 'on' : 'off'}`);
+}
 if (files.some((f) => f.path === '_headers') && /connect-src[^;\n]*juso/i.test(read('_headers').toString('utf8'))) errors.push('_headers: connect-src names juso (the page only talks to /api/addr-en)');
 if (!addrEn) {
   for (const f of files) if (f.path.startsWith(ADDR_EN_PATH.slice(1))) errors.push(`${f.path}: the 영문주소 변환기 page in a build with PUBLIC_ADDR_EN off`);

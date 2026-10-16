@@ -27,12 +27,18 @@ export function messageCode(error: unknown): MessageCode {
   return typeof error === 'string' && KNOWN.has(error) ? (error as MessageCode) : 'other';
 }
 
-/** Usage fail code (decision 17): never the text, count, page, zip or region. null: nothing to report (offline). */
-export function failCode(error: unknown): 'no-result' | 'query' | 'busy' | 'engine' | 'timeout' | null {
+/**
+ * Usage fail code (decision 17; acting-Arch Q2): never the text, count, page, zip or region. `engine` = the key was not
+ * accepted (the Function's 503 engine: E0001 / E0014 or no secret); `upstream` = 주소 검색 서비스 down, an HTTP error, an
+ * answer that is not its JSON, or the 5 s timeout (the Function's 502 upstream / 504 timeout); `unknown` = anything else
+ * (flag off, a malformed request, a Cloudflare limit page). null: nothing to report (offline).
+ */
+export function failCode(error: unknown): 'no-result' | 'query' | 'busy' | 'engine' | 'upstream' | 'unknown' | null {
   if (error === 'none') return 'no-result';
   if (error === 'offline') return null;
   if (error === 'busy') return 'busy';
-  if (error === 'timeout') return 'timeout';
+  if (error === 'engine') return 'engine';
+  if (error === 'upstream' || error === 'timeout') return 'upstream';
   if (typeof error === 'string' && ['short', 'sido', 'digits', 'long', 'chars', 'broad'].includes(error)) return 'query';
-  return 'engine';
+  return 'unknown';
 }

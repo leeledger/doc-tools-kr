@@ -1,5 +1,8 @@
 // 영문주소 변환기 build flag and privacy gate (ADDREN1016 decisions 2-3; scripts/lib/addren.mjs).
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { flaggedRuntimePages } from '../../scripts/gen-sw.mjs';
 import { addrEnFlag, addrEnOn, API_PATH, DEFAULT, privacyGate } from '../../scripts/lib/addren.mjs';
 
 describe('PUBLIC_ADDR_EN', () => {
@@ -27,5 +30,14 @@ describe('PUBLIC_ADDR_EN', () => {
     expect(privacyGate({ PUBLIC_ADDR_EN: '1', PUBLIC_PRIVACY_OFFICER: '홍길동', PUBLIC_CONTACT_EMAIL: 'not-an-email' })).toHaveLength(1);
     expect(privacyGate({ PUBLIC_ADDR_EN: '1', PUBLIC_PRIVACY_OFFICER: ' ', PUBLIC_CONTACT_EMAIL: 'a@b.co' })).toHaveLength(1);
     expect(privacyGate({ PUBLIC_ADDR_EN: '1', PUBLIC_PRIVACY_OFFICER: '홍길동', PUBLIC_CONTACT_EMAIL: 'a@b.co' })).toEqual([]);
+  });
+});
+
+describe('service worker (acting-Arch Q1)', () => {
+  it('names /english-address/ only in a build with PUBLIC_ADDR_EN on; sw.ts itself never does', () => {
+    expect(flaggedRuntimePages({})).toEqual([]);
+    expect(flaggedRuntimePages({ PUBLIC_ADDR_EN: '0' })).toEqual([]);
+    expect(flaggedRuntimePages({ PUBLIC_ADDR_EN: '1' })).toEqual(['/english-address/']);
+    expect(readFileSync(join(__dirname, '..', '..', 'src', 'sw', 'sw.ts'), 'utf8')).not.toContain('english-address');
   });
 });
