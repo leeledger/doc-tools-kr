@@ -3450,3 +3450,8 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   - The page is in sitemap, sw.js and the home link.
   - The UI split for 분당구 + 「101동 1203호」 is correct, with no console errors.
 - Note: an earlier 25-call burst right after deploy got no 429. The in-memory limiter is per isolate, so the limit is best-effort (Known Gap). Fallback if the juso quota is ever abused: a Cloudflare WAF rate-limit rule on /api/addr-en (owner).
+
+## GUIDE1017 — 안내 글 「PDF 합치기 무료로 하려면 프로그램을 깔아야 하나요?」 (2026-10-17, 사이티드 세션)
+- Owner: 「바로 올려」 (2026-10-17) — client guide published directly, no Arch/Richard round. Asked for by the Cited improvement loop (query 「pdf 합치기 무료」, task #1121).
+- New src/content/guides/pdf-merge-free.md: Mac Finder 「빠른 동작 > PDF 생성」 and 미리보기 sidebar merge (Apple ko-kr support, 5 quotes, retrieved 2026-10-17), 윈도·휴대폰 → /pdf-merge/ with toolFacts 50개·500/150 MB, one don't (쪽마다 캡처해서 묶지 않기). pdf-merge.md PC line links to it (orphan rule).
+- Checks: check:quotes --exact 0 failures, npm run check 0 errors, npm test 1998/1998, build + check-dist OK. Playwright e2e not run (content-only change).

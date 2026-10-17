@@ -32,6 +32,7 @@ export default {
   "passport-reissue-photo": "여권 재발급 사진 규격과 온라인 신청",
   "pdf-compress": "PDF 용량 줄이기, 폰·맥북·PC에서 무료로 하는 법",
   "pdf-merge": "PDF 합치기, 아이폰·갤럭시·PC에서 하는 법",
+  "pdf-merge-free": "PDF 합치기 무료로 하려면 프로그램을 깔아야 하나요?",
   "pdf-password": "PDF 암호 해제·설정, 폰·PC에서 하는 법",
   "pdf-sign": "PDF에 서명·도장 넣는 법 (휴대폰·PC)",
   "pdf-split": "PDF 페이지 삭제·추출·회전하는 법",
