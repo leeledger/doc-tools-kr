@@ -272,7 +272,8 @@ export function initEnglishName(hooks: EnglishNameHooks = {}): void {
       surPick = t.value === 'custom' ? -1 : Number(t.value);
       if (surPick < 0) {
         renderRows();
-        customInput?.focus();
+        // WebKit moves focus to the clicked radio after this change event, so focus on the next frame.
+        requestAnimationFrame(() => customInput?.focus());
         return;
       }
     } else if (t.name.startsWith('en-syl-')) {

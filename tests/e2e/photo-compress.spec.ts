@@ -373,7 +373,7 @@ test('bad inputs: HEIC guidance, animated GIF, truncated JPEG, text and a 0-byte
   await expect(err('not_image.txt')).toHaveText('사진 파일이 아닙니다. JPG·PNG·WebP 파일을 선택해 주세요.');
   await expect(err('zero.jpg')).toHaveText('빈 파일입니다. 원본을 다시 저장해 선택해 주세요.');
   await run(page);
-  await expect(err('fake.heic')).toHaveText(/^아이폰 사진 형식\(HEIC\)은 지금 쓰는 앱에서 열 수 없습니다\./);
+  await expect(err('fake.heic')).toHaveText(/^아이폰 사진\(HEIC\)을 이 기기에서 열지 못했습니다\./);
   await expect(page.locator('#ph-status')).toHaveText('사진 5장: 못 줄임 5장');
 });
 

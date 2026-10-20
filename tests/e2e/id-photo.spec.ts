@@ -495,7 +495,7 @@ test.describe('warnings', () => {
 // ---------- 9 bad inputs, 10 orientation ----------
 
 for (const [file, text] of [
-  [photoRuntime('fake.heic'), '아이폰 사진 형식(HEIC)은 지금 쓰는 앱에서 열 수 없습니다.'],
+  [photoRuntime('fake.heic'), '아이폰 사진(HEIC)을 이 기기에서 열지 못했습니다.'],
   // UX-AUDIT-2 §7.3: this tool does not compress, so never "줄일 수 없습니다".
   [photoFixture('anim.gif'), '움직이는 이미지는 여권·증명사진으로 쓸 수 없습니다. 사진 파일을 선택해 주세요.'],
   [photoRuntime('truncated.jpg'), '파일이 중간에 끊겨 있습니다.'],
