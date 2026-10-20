@@ -156,8 +156,8 @@ test.describe('guides (G.1, G.2)', () => {
   });
 
   // TOOL-GUIDES Part A: each tool's how-to guide opens, its CTA reaches the tool, and the tool's 관련 안내 lists it first.
-  test('the five tool how-to guides: CTA reaches the tool, whose 관련 안내 starts with the guide', async ({ page }) => {
-    for (const tool of ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp']) {
+  test('the tool how-to guides (five + FORM1020 위임장): CTA reaches the tool, whose 관련 안내 starts with the guide', async ({ page }) => {
+    for (const tool of ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'power-of-attorney']) {
       await gotoReady(page, `/guide/${tool}/`);
       await expect(page.locator('.guide-answer'), tool).toBeVisible();
       await page.locator('.guide-cta a').click();

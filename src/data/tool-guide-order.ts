@@ -22,6 +22,8 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   'id-copy': ['id-card-copy'],
   // ROMANIZE1016 R4: 영문 이름 변환기 pins its guide (slug passport-english-name).
   'english-name': ['passport-english-name'],
+  // FORM1020 F4: 위임장 만들기 pins its guide (slug power-of-attorney).
+  'power-of-attorney': ['power-of-attorney'],
   // Part B: shown only in builds with PUBLIC_BG_REMOVE on (the guide requires bg-remove; the tool page exists only then).
   'remove-background': ['remove-background'],
 };

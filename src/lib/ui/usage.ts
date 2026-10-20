@@ -10,7 +10,7 @@ import { detectDevice, type Device } from './device';
 
 export const USAGE_ON: boolean = __USAGE_STATS__;
 
-export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name' | 'english-address';
+export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name' | 'english-address' | 'power-of-attorney';
 /** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/affiliate.test.ts keeps the links' dests equal to it). */
 export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod';
 /** STAMP_STYLES in scripts/lib/usage.mjs (= the 도장 만들기 style ids). */
@@ -21,6 +21,9 @@ const NAME_FORMS: readonly string[] = ['joined', 'hyphen', 'space'];
 /** ADDR_FIELDS in scripts/lib/usage.mjs: the 영문주소 변환기 field a copy button copied. */
 export type AddrField = 'line1' | 'line2' | 'city' | 'state' | 'zip' | 'country' | 'full' | 'road';
 const ADDR_FIELDS: readonly string[] = ['line1', 'line2', 'city', 'state', 'zip', 'country', 'full', 'road'];
+/** FORM_FORMATS in scripts/lib/usage.mjs: the 위임장 만들기 file downloaded. */
+export type FormFormat = 'hwp' | 'pdf';
+const FORM_FORMATS: readonly string[] = ['hwp', 'pdf'];
 export type UsagePhase = 'load' | 'parse' | 'process' | 'save';
 export type UsageSetting =
   | { o: 'target-kb'; v: 'le100' | 'le200' | 'le300' | 'le500' | 'le1000' | 'gt1000' }
@@ -37,7 +40,8 @@ export type UsageSetting =
   | { o: 'basis'; v: 'space' | 'nospace' | 'byte2' | 'byte3' }
   | { o: 'mark'; v: 'on' | 'off' }
   | { o: 'items'; v: 'text' | 'date' | 'white' | 'mix' }
-  | { o: 'style'; v: StampStyle };
+  | { o: 'style'; v: StampStyle }
+  | { o: 'build'; v: 'blank' | 'filled' };
 
 /** What a tool reports. Tool pages never build the payload themselves. */
 export type UsageEvent =
@@ -46,6 +50,8 @@ export type UsageEvent =
   | { e: 'download'; t: 'english-name'; o: 'form'; v: NameForm }
   /** 영문주소 변환기 복사 (ADDREN1016 decision 17): which field was copied; never the address. */
   | { e: 'download'; t: 'english-address'; o: 'field'; v: AddrField }
+  /** 위임장 만들기 내려받기 (FORM1020 D9): HWP or PDF; never a value. */
+  | { e: 'download'; t: 'power-of-attorney'; o: 'format'; v: FormFormat }
   | ({ e: 'start'; t: UsageTool } & (UsageSetting | { o?: undefined; v?: undefined }))
   /** 이어서 하기 (CHAIN): the result of `t` was handed to the tool `v`. */
   | { e: 'next'; t: UsageTool; o: 'next'; v: UsageTool }
@@ -107,6 +113,9 @@ export function buildPayload(ev: UsageEvent | Arrive | Land, ctx: PayloadContext
     p.o = ev.o;
     p.v = ev.v;
   } else if (ev.e === 'download' && ev.t === 'english-address' && 'o' in ev && ev.o === 'field' && ADDR_FIELDS.includes(ev.v)) {
+    p.o = ev.o;
+    p.v = ev.v;
+  } else if (ev.e === 'download' && ev.t === 'power-of-attorney' && 'o' in ev && ev.o === 'format' && FORM_FORMATS.includes(ev.v)) {
     p.o = ev.o;
     p.v = ev.v;
   } else if (ev.e === 'arrive') {

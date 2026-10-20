@@ -18,6 +18,7 @@
     "test:e2e": "playwright test",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check:quotes": "node scripts/ops/source-watch.mjs --exact",
+    "forms:hancom": "node scripts/forms/hancom-check.mjs",
     "lhci": "lhci autorun",
     "smoke:assets": "node scripts/smoke-assets.mjs",
     "ping:indexnow": "node scripts/indexnow.mjs",

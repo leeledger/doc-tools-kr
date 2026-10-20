@@ -27,6 +27,9 @@ export function stripComments(s) {
     // (.out-links, .guide-page; src/data/print-links.ts, src/data/affiliate.ts: every visible string is in the constants below).
     .replace(/\b(?:PRINT_COPY|AFF_COPY)\s*=\s*\{[^}]*\}/g, '')
     .replace(/\bAFF_LINKS\b[^=\n]*=\s*\[[^\]]*\]/g, '')
+    // FORM1020: a form's document text (src/lib/form/spec.ts keys doc, docLabel, docSection) is drawn only in the
+    // document's own faces (the HWP, the PDF and their preview), never in the UI font.
+    .replace(/\b(?:doc|docLabel|docSection):\s*'(?:[^'\\\n]|\\.)*'/g, '')
     .replace(/\bCOUPANG_DISCLOSURE\s*=\s*'(?:[^'\\\n]|\\.)*'/g, '');
 }
 

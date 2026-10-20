@@ -1,0 +1,19 @@
+tableEx 6000,9000,27000 {"ok":true,"paraIdx":0,"controlIdx":2,"logicalOffset":1}
+w0 w1 w2 6000,9000,27000
+tableProps {"cellSpacing":0,"paddingLeft":510,"paddingRight":510,"paddingTop":141,"paddingBottom":141,"pageBreak":2,"repeatHeader":false,"borderFillId":3,"borderLeft":{"type":1,"width":1,"color":"#000000"},"borderRight":{"type":1,"width":1,"color":"#000000"},"borderTop":{"type":1,"width":1,"color":"#000000"},"borderBottom":{"type":1,"width":1,"color":"#000000"},"fillType":"none","fillColor":"#ffffff","patter
+tableEx 8000,10000,24520 {"ok":true,"paraIdx":0,"controlIdx":2,"logicalOffset":1}
+w0 w1 w2 8000,10000,24520
+tableProps {"cellSpacing":0,"paddingLeft":510,"paddingRight":510,"paddingTop":141,"paddingBottom":141,"pageBreak":2,"repeatHeader":false,"borderFillId":3,"borderLeft":{"type":1,"width":1,"color":"#000000"},"borderRight":{"type":1,"width":1,"color":"#000000"},"borderTop":{"type":1,"width":1,"color":"#000000"},"borderBottom":{"type":1,"width":1,"color":"#000000"},"fillType":"none","fillColor":"#ffffff","patter
+setCellProperties width {"borderFillLenBefore":3,"changes":[],"docInfoDirtyBefore":false,"ok":true,"zones":[]}
+widths after set 6000,13984,13984,13984
+resize {"ok":true}
+widths after resize 200,13984,13984,6000,13984,13984,6000,13984,13984
+merge {"ok":true,"cellCount":7}
+info 0 {"row":0,"col":0,"rowSpan":3,"colSpan":1}
+info 1 {"row":0,"col":1,"rowSpan":1,"colSpan":1}
+info 2 {"row":0,"col":2,"rowSpan":1,"colSpan":1}
+info 3 {"row":1,"col":1,"rowSpan":1,"colSpan":1}
+info 4 {"row":1,"col":2,"rowSpan":1,"colSpan":1}
+info 5 {"row":2,"col":1,"rowSpan":1,"colSpan":1}
+info 6 {"row":2,"col":2,"rowSpan":1,"colSpan":1}
+bboxes [{"cellIdx":0,"row":0,"col":0,"rowSpan":3,"colSpan":1,"pageIndex":0,"x":113.4,"y":132.3,"w":80.0,"h":51.3},{"cellIdx":1,"row":0,"col":1,"rowSpan":1,"colSpan":1,"pageIndex":0,"x":193.4,"y":132.3,"w":186.5,"h":17.1},{"cellIdx":2,"row":0,"col":2,"rowSpan":1,"colSpan":1,"pageIndex":0,"x":379.8,"y":132.3,"w":186.5,"h":17.1},{"cellIdx":3,"row":1,"col":1,"rowSpan":1,"colSpan":1,"pageIndex":0,"x":193.4,"y

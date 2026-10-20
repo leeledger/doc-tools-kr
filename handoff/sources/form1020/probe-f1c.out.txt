@@ -1,0 +1,17 @@
+paras before 3
+table at para 1 {"ok":true,"paraIdx":1,"controlIdx":0,"logicalOffset":1}
+paras after 3
+para len 0 1
+para len 1 0
+para len 2 1
+bbox y before spacing 157.4
+spacingBefore 1000 {"ok":true}
+para props 13.3
+bbox y after spacing 157.4
+cell height set {"borderFillLenBefore":3,"changes":[],"docInfoDirtyBefore":true,"ok":true,"zones":[]}
+bbox h [[0,37.8,133.3],[1,37.8,426],[2,17.1,133.3],[3,17.1,426]]
+cell va {"borderFillLenBefore":3,"changes":[],"docInfoDirtyBefore":true,"ok":true,"zones":[]}
+loss {"schemaVersion":1,"outputFormat":"hwp","count":0,"losses":[]}
+reload pages 1
+reload paras 3
+reload bbox [[0,37.8,133.3,157.4],[1,37.8,426,157.4],[2,17.1,133.3,195.2],[3,17.1,426,195.2]]

@@ -18,6 +18,7 @@ import { LIMITS as ID_COPY_LIMITS } from '../tools/id-copy/limits';
 import { LIMITS as PDF_EDIT_LIMITS } from '../tools/pdf-edit/limits';
 import { LIMITS as PHOTO_LIMITS } from '../tools/photo-compress/limits';
 import { KB_BYTES, RANGES } from '../tools/photo-compress/options';
+import { POWER_OF_ATTORNEY } from './forms/power-of-attorney';
 
 /** A unit the fact check knows (a fact without one is a count or a word and is not number-checked). */
 export type FactUnit = 'KB' | 'MB';
@@ -72,6 +73,9 @@ export const TOOL_FACTS = {
   'pdf-sign.maxFileMb.mobile': { value: PDF_SIGN_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
   'id-copy.maxFileMb.desktop': { value: ID_COPY_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
   'id-copy.maxFileMb.mobile': { value: ID_COPY_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
+  // FORM1020: the 위임장 form (src/data/forms/power-of-attorney.ts).
+  'power-of-attorney.taskMaxLines': { value: POWER_OF_ATTORNEY.fields.find((f) => f.id === 'task')?.maxLines ?? 0 },
+  'power-of-attorney.taskMaxLength': { value: POWER_OF_ATTORNEY.fields.find((f) => f.id === 'task')?.maxLength ?? 0 },
   'pdf-edit.maxFileMb.desktop': { value: PDF_EDIT_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
   'pdf-edit.maxFileMb.mobile': { value: PDF_EDIT_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
   // HWP (1 MB = 1,000,000 bytes there): the largest file a device opens, the PDF caps on phones, the search span.

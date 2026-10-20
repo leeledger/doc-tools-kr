@@ -914,6 +914,42 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
     budget('english-name initial JS', initial, ENGLISH_NAME_INITIAL_KB * KB);
   }
 }
+// 위임장 만들기 (FORM1020 D7, D10): the controller (the controller*.js chunk that owns #pa-hwp-error, and what only it
+// imports) loads after the first user signal, never with the page; no initial script names the HWP worker, the rhwp glue,
+// the viewer or the PDF export. Nothing typed is stored or put in the URL: no Web Storage, IndexedDB or history call in
+// the page's own initial chunk or the controller's closure (the 이어서 하기 handoff chunk loads on its click only); the
+// form has no action and its fields no name. The page offers no 인감증명 form: 「인감」 appears only in the caution
+// (#pa-caution) and its 정부24 link. Not an ads content page (no AdSense tag), and no off-site script besides the
+// visitor-count beacon of an analytics build. Budgets: measured + 20 % of the larger build (initial 9.1 KB default, 10.7 KB in
+// the cloud build with the usage tracker; controller 7.0 KB gzip; FORM1020).
+{
+  const html = pageHtml.get('power-of-attorney/index.html');
+  if (!html) errors.push('power-of-attorney/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const own = [...initial].filter((f) => read(f).includes('pa-blank'));
+    if (own.length !== 1) errors.push(`power-of-attorney page script: ${own.length} initial chunk(s) name #pa-blank, expected 1`);
+    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('pa-hwp-error'));
+    if (controller.length !== 1) errors.push(`power-of-attorney controller: ${controller.length} chunk(s) name #pa-hwp-error, expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /power-of-attorney/ controller loads with the page');
+    for (const f of initial) if (/hwp\.worker|rhwp_bg|HwpDocument|__wbindgen|createViewer|exportPdf/.test(read(f).toString('utf8'))) errors.push(`${f}: the HWP worker, the rhwp glue, the viewer or the PDF export in the /power-of-attorney/ initial JS`);
+    const lazyOwn = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
+    for (const f of [...own, ...lazyOwn]) if (/localStorage|sessionStorage|indexedDB|history\.(push|replace)State/.test(read(f).toString('utf8'))) errors.push(`${f}: the /power-of-attorney/ scripts use storage or the URL`);
+    const form = /<form\b[^>]*id="pa-form"[^>]*>([\s\S]*?)<\/form>/.exec(html);
+    if (!form) errors.push('power-of-attorney/index.html: no #pa-form');
+    else {
+      if (/\baction=/.test(form[0].slice(0, form[0].indexOf('>')))) errors.push('power-of-attorney/index.html: #pa-form has an action');
+      if (/<(input|textarea)\b[^>]*\bname=/.test(form[1])) errors.push('power-of-attorney/index.html: a field in #pa-form has a name');
+    }
+    const outside = html.replace(/<div class="notice pa-caution" id="pa-caution">[\s\S]*?<\/div>/, '');
+    if (outside === html) errors.push('power-of-attorney/index.html: no #pa-caution');
+    if (outside.includes('인감')) errors.push('power-of-attorney/index.html: 「인감」 outside the caution');
+    if (/adsbygoogle|pagead2\.googlesyndication/.test(html)) errors.push('power-of-attorney/index.html: carries the AdSense tag (a tool page, not a content page)');
+    for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`power-of-attorney/index.html: off-site script ${m[2]}`);
+    budget('power-of-attorney initial JS', [...initial], 12.8 * KB);
+    budget('power-of-attorney controller (lazy)', lazyOwn, 8.4 * KB);
+  }
+}
 // 여권 영문 이름 정하는 법 (ROMANIZE1016 R4, brief Failure modes): every 「N%」 in the guide's visible text is a 비율 of
 // mofa.ts or stands in one of the guide's own source quotes (the 50% rule of 외교부 고시).
 {

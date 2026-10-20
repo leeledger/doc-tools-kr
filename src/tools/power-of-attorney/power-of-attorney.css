@@ -1,0 +1,36 @@
+/* 위임장 만들기 (/power-of-attorney/, FORM1020). Inlined on that page only. */
+.pa-form { display: grid; gap: 14px; text-align: left; }
+.pa-group { margin: 0; padding: 12px 14px 14px; border: 1px solid var(--line); border-radius: var(--radius); display: grid; gap: 10px; }
+.pa-group legend { padding: 0 6px; font-weight: 800; }
+.pa-field { display: grid; gap: 6px; }
+.pa-field > label { font-weight: 800; }
+.pa-input {
+  width: 100%; min-height: 48px; padding: 8px 12px; border: 1px solid var(--muted); border-radius: 10px;
+  background: var(--bg); color: var(--text); font: inherit; font-size: 17px;
+}
+textarea.pa-input { min-height: 7.5em; resize: vertical; line-height: 1.5; }
+.pa-date .pa-input { max-width: 16em; }
+.pa-input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.pa-caution p { margin: 4px 0; }
+.pa-caution a, .pa-with a { color: var(--brand); display: inline-block; min-height: 24px; }
+.pa-actions .btn { flex: none; }
+.pa .btn[aria-disabled="true"] { opacity: .55; cursor: progress; }
+.pa-result { margin-top: 20px; display: grid; gap: 12px; text-align: left; }
+.pa-result[hidden] { display: none; }
+.pa-result:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.pa-result h2 { margin: 0; font-size: 18px; }
+.pa-done { margin: 0; overflow-wrap: anywhere; }
+.pa-done:empty { display: none; }
+.pa-downloads[hidden] { display: none; }
+.pa .error-box p { margin: 0 0 10px; }
+.hw-preview { max-height: 80vh; overflow: auto; padding: 12px; border-radius: var(--radius); background: #e5e7eb; }
+.hw-preview:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.hw-preview .page { width: 100%; margin: 0 auto 12px; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .18); overflow: hidden; }
+.hw-preview .page svg { display: block; width: 100%; height: auto; }
+.hw-preview .page-failed { margin: 0; padding: 24px; color: #444; text-align: center; }
+.pa-with { margin-top: 20px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); text-align: left; }
+.pa-with h2 { margin: 0 0 10px; font-size: 18px; }
+.pa-with ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.pa-with span { color: var(--muted); font-size: 15px; }
+.tool-legal { margin-top: 12px; color: var(--muted); font-size: 14px; }
+.tool-legal p { margin: 4px 0; }

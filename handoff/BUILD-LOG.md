@@ -3497,3 +3497,67 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   - Hub.astro gets the byline and the Person author.
   - Footer: with OPERATOR_ON, the 「문의」 link to /contact/ replaces the 「문의: email」 line (a business number stays). Otherwise the old email line stays.
   - The e2e `isAdsRequest` also requires the page origin to be our own site.
+
+## ADS1020 — deployed + live smoke (2026-10-20, orchestrator)
+- Owner: 「배포해」. CLAUDE.md wording from the brief applied (kept). a38b947 pushed (rebased over efa356b ops report); live build-id a38b9475f64f.
+- Preview probe before deploy (wrangler deploy of an ads-on build to ads1020-probe): exactly one CSP per route; content CSP (fenced-frame-src) on /, /guide/, /guide/passport-photo/, /about/, /contact/; site CSP on /pdf-merge/, /privacy/, /en/, /id-photo/, 404; embed CSP on /embed/id-photo/; /ads-cfg.js max-age=3600. The probe deployment could not be deleted non-interactively (wrangler prompt); it is noindex (pages.dev header) — owner may delete it in the dashboard.
+- Live: /about/ /contact/ 200, footer 소개·문의 links; 0 「coupang|쿠팡」 on 6 guide/tool pages; /licenses/ meta robots noindex; sitemap has no /licenses/ or /embed/; x-default → Korean; adsbygoogle absent (PUBLIC_ADSENSE_ON not set in Production, as decided); smoke:assets OK 2526 URLs.
+- Owner next: keep PUBLIC_ADSENSE_ON off until re-application (mid-November or later, after P1); then OPS-RUNBOOK §11.
+
+## FORM1020 — 위임장 만들기 + 양식 채우기 엔진 (brief written 2026-10-20, Arch) — status BRIEFED
+- Brief: handoff/ARCHITECT-BRIEF-FORM1020.md (copied to ARCHITECT-BRIEF.md). Owner 「다음 툴 작업해」 → scout 2026-10-16 #2.
+- Spike (Arch): @rhwp/core 0.8.6 in Node builds blank doc + table + cell text → exportHwp 13,312 B, loss 0, reload 1 page;
+  한글 2018 (HOffice100, COM HWPFrame.HwpObject) on this PC opens it: open=True, pages=1, every cell text read back.
+  Evidence handoff/sources/form1020/{probe.mjs,open.ps1,probe.hwp.txt}. The "opens in real 한글" risk becomes a local
+  scripted gate (D12, npm run forms:hancom) instead of an owner-only check; newer 한글 / mobile = owner O1, non-blocking.
+- Locked: general 위임장 only, never statutory forms (D1); runtime build from TS FormSpec in the existing HWP worker, no
+  template asset (D2–D4); HWP + PDF from the same document (HWP via the existing export-hwp.ts gate, PDF via the existing
+  pdf/export.ts), each fails independently (D4); blank-form button, no required fields (D6); typed text never stored or
+  sent, fixed filenames (D7); chain → pdf-sign/pdf-edit/pdf-compress + static links id-copy/stamp-maker/pdf-merge (D8);
+  if the 한글 gate fails: PDF only + DOCX follow-up brief (D12); guide power-of-attorney ≥2,500 chars, stays a draft if
+  < 2 official quotes (D13).
+- Known Gaps (pre-logged): DOCX/HWPX outputs, images in forms, saved drafts, pdf-merge as handoff target, /en/ twin.
+
+## FORM1020 build (Bob, 2026-10-20) — DONE_WITH_CONCERNS
+- Built F0–F4 of handoff/ARCHITECT-BRIEF-FORM1020.md on main (uncommitted). Line ranges, numbers: handoff/REVIEW-REQUEST-FORM1020.md.
+- **F0 sources** (handoff/sources/form1020/, fetched 2026-10-20, curl, server HTML): minbeop.txt (민법 [시행 2026. 3. 17.] 제114조, 제680조, 제681조; lsiSeq=284415), ingam-decree.txt (인감증명법 시행령 [시행 2024. 12. 27.] 제13조 ①·⑦ and the 별지 제13호서식 entry; lsiSeq=266801), gov24-ingam.txt (정부24 인감증명서 발급, CappBizCD=13100000025, found by title over the 131000000xx codes; 구비서류 「대리인이 신청하는 경우」). Not found: an easylaw.go.kr 위임/대리 page (its search URL answers 「페이지 오류」); not needed (≥ 2 official quotes).
+- **F1 probes** (handoff/sources/form1020/probe-f1{,b,c,d}.mjs + .out.txt), verbatim results:
+  - applyCharFormat props `{"fontSize":2000,"bold":true}` (fontSize = pt × 100), applyParaFormat `{"alignment":"center"}`; read back by getCharPropertiesAt / getParaPropertiesAt.
+  - createTableEx colWidths (HWPUNIT) are honoured only with `treatAsChar: true` (with false all cells stay 13,984); an inline table in an empty paragraph adds no paragraph.
+  - After mergeTableCells(0,0,n-1,0): getCellInfo order is row-major over anchors (merged cell 0, then [label, value] per row) → build.ts fills cells before the merge.
+  - insertTextInCell does not split on "\n" (one cell paragraph); splitParagraphInCell → `{"cellParaIndex":1}` does.
+  - setCellProperties `{height}` = the row's minimum height (2,835 → 37.8 px), survives export/reload.
+  - exportHwp is byte-identical within one run (13,312 B twice); tests never assert bytes.
+  - **rhwp 0.8.6 layout bug:** applyCharFormat on a paragraph after a table (in either order) breaks the page early, in rhwp's layout and in the saved file (probe-f1d: A 3 pages, B 1 page, C 2 pages). reflowLinesegs (0 reflowed) and set_respect_vpos_reset(false) do not fix it. build.ts therefore writes all paragraphs first, then the tables, then char formats only before the first table; spec lint makes everything after the first table body text. So D5's 11 pt 「위 사람에게…」 and bold 12 pt 「… 귀중」 are body 10 pt.
+- **F2:** worker message `form-build {specId, values}` (spec looked up by id; values normalized again) → `parsed`; render + export-hwp unchanged. scripts/forms/hancom-check.mjs + hancom-open.ps1, `npm run forms:hancom`.
+- **D12 result (한글 2018, HOffice100 COM):** 한글 shows its 보안 승인 window (「접근 허용 / 모두 허용 / 허용 안 함 / 모두 안 함」) on every file because the FilePathCheckerModule is not registered (HKCU\SOFTWARE\HNC\HwpAutomation\Modules absent). The script never answers it (a person must; it waits 10 min per file, then ends only the 한글 process it started). Answered at the PC (20:56–20:57) on the first layout (cols 10,500/25,452, values centred): blank PASS (open, 1 page, every label), sample PASS (open, 1 page, every value + label; 한글 PDF spikes/forms-hancom/*.hancom.pdf looks right). Unattended runs on the final layout (cols 12,000/23,952, values left) timed out: **pending — run `npm run forms:hancom` at the PC and answer 「접근 허용」 4 times (blank, sample, all-max, all-max-lines-25) before Deploy A.** 한글 version string not captured (the passing run crashed on the third file before printing it).
+- **F3 decisions:**
+  - Glyphs: core and late UI sets identical to main (0 new). Page labels 「위임하는 사람 (위임인)」「대신 가는 사람 (대리인)」「위임할 일」「부탁할 일」「서류를 낼 곳」「관계」 instead of the brief's 「맡기는 …」 (맡 is not a core glyph). Stale line 「고친 내용으로 다시 만들어 주세요.」 instead of 「바뀐 …」 (뀐 made late-800 8.0 KB = its 8 KB budget). 「만듭니다」 avoided (듭 would become core). Document text (spec keys doc / docLabel / docSection) is left out of the UI glyph sets by a scripts/lib/ui-font-chars.mjs rule (drawn only in the HWP/PDF faces).
+  - D10 「인감」 only in #pa-caution: the FAQ asks 「관공서가 정한 위임장도 만들 수 있나요?」; the tools.ts entry has no 「인감」 (unit test).
+  - Spec lint "every field used exactly once" = exactly one home (a table row or the date line); the sign line and the 귀중 line only refer to fields.
+  - Layout: A4 blank2010 template, title 20 pt bold, 3 tables (section · label · value = 6,000 / 12,000 / 23,952 HWPUNIT, rows 2,268 = 8 mm, 맡기는 일 ×4), body 10 pt, date line centred, sign line right. maxLength: names/birth/phone/relation 20, addresses 50, 제출할 곳 30, 맡기는 일 120 / 6 lines. All-max (and 6 lines of 15–40 wide chars) is 1 page in rhwp (unit) and in the browser preview (e2e).
+  - Date field: `<input type=date>`, today (device date) filled by the page script; reset puts today back.
+  - Usage: start o=build (blank|filled), success, download o=format (hwp|pdf), next; fail codes engine/oom/timeout/export/unverified/pdf. Never a value.
+  - 이어서 하기 uses the existing handoff chunk (IndexedDB + sessionStorage marker) only when a 이어서 하기 button is pressed; check-dist checks the page's own chunk and the controller closure for storage calls.
+  - Reverse links: /id-copy/, /stamp-maker/, /pdf-sign/ RelatedTools now end with 위임장 만들기.
+  - CLAUDE.md line 3 (「위임장 만들기」) not edited: the orchestrator told me not to touch CLAUDE.md → orchestrator applies it.
+- **F4:** guide /guide/power-of-attorney/ 「위임장 쓰는 법: 들어갈 내용과 정해진 서식이 있는 경우」 (7 quotes: 민법 680·681·114, 시행령 13조 ①·⑦, 정부24 구비서류, 금감원 보도자료), 2,552 non-space body characters in the markdown, FAQ ×4; inbound links from id-card-copy and stamp-image; pinned on the tool (TOOL_GUIDE_PINS), partial list + own count in the GROWTH3 G0 test.
+- Known Gaps (new): check:quotes reports 3 UNREACHABLE quotes on /guide/hanja-exam-photo/ (hanja.re.kr applyMeth.do HTTP 404; pre-existing, not FORM1020). FilePathCheckerModule registration for unattended forms:hancom (owner: system change). rhwp char-format-after-table bug (report upstream).
+- Gates (local): check 0 errors; vitest 2,057/2,058 (char-count 50 ms timing test under load, passes alone); builds + check-dist OK (production-like 2,527 files, precache 431.1/450 KB; cloud flag-on 442.4/450 KB); UI glyph sets identical to main (core 615, late 81; tripwire 92.1/92.66 KB; late-800 7.9/8 KB); check:licenses OK; check:quotes --exact: 7/7 new quotes verbatim, full run 3 UNREACHABLE (hanja-exam-photo, pre-existing); e2e power-of-attorney 45/45 on 5 projects; usage (cloud) 5/5 projects; regression chromium 303 passed / 11 skipped (tool counts 19 → 20 updated), HWP specs on the other 4 projects 297 passed / 1 flaky (firefox adm28) / 26 skipped, cloud-chromium 83 passed / 5 skipped; regress:hwp --fixtures-only all pass; LHCI median of 5 (/power-of-attorney/, /guide/power-of-attorney/, /id-copy/): perf/a11y/BP/SEO 1, LCP 1,663–1,668 ms, CLS 0; forms:hancom Node PASS, 한글 pending (see D12 above).
+- Status: DONE_WITH_CONCERNS (D12 final-layout run needs a person to answer 한글's 「접근 허용」). Review request: handoff/REVIEW-REQUEST-FORM1020.md (= REVIEW-REQUEST.md).
+
+## FORM1020 round 2 (Bob, 2026-10-20) — Richard's 4 Should Fix
+- Guide line 79 is now advice: 「마지막 칸에는 맡기는 사람이 서명하거나 도장을 찍어요. 받는 곳이 정한 방법이 있으면 그것을 따르세요.」
+- **AdSense P1 length metric (orchestrator decision; use it for every later guide):** rendered `div.guide-body` prose of the built page (up to the FAQ section), with tags removed, entities decoded, URLs dropped and no whitespace. The title, answer box, sources, FAQ, nav, footer and related lists do not count. Bar: 2,500.
+  - Helper: scripts/lib/guide-length.mjs, with a unit test in tests/unit/guide-length.test.ts.
+  - CLI: `node scripts/guide-length.mjs [slug ...]`, which reads dist/.
+  - /guide/power-of-attorney/ went from 2,311 to **2,592**. I added three 「안 될 때」 items. Two are backed by saved quotes (시행령 13조 ⑦: 6월; 13조 ①: 17세 이상); the third (bring the papers bundled) is practical advice. For reference, id-card-copy is 966 and stamp-image is 720.
+- Known Gap made explicit: because of the rhwp char-format-after-table bug, 「위 사람에게 위 내용에 관한 권한을 위임합니다.」 is body 10 pt (brief: 11 pt), and 「… 귀중」 is plain 10 pt (brief: bold 12 pt). This stays until rhwp is fixed. The orchestrator accepted the deviation.
+- hancom-open.ps1 records the Hwp PIDs before creating the COM object. It proceeds only if exactly one new Hwp process appeared, and writes only that PID for the caller to end on a timeout. If no new process or several appear, it does nothing to 한글: no Clear and no Quit, the object is only released, and it reports open=false. hancom-check.mjs ends only a numeric PID from that file. The "newest process" pick is gone.
+  - Not run against live 한글 this round: every open waits for a person to click 「접근 허용」. D12 is still pending at the PC, per REVIEW-FEEDBACK.
+- Gates:
+  - check: 0 errors.
+  - vitest: 2,060/2,060.
+  - Production-like build + check-dist OK: 2,527 files, precache 431.1/450 KB.
+  - check:quotes --exact on the guide: 7/7 verbatim.
+  - e2e chromium: growth + power-of-attorney 24/24.

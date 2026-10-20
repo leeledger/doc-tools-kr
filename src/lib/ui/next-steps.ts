@@ -22,7 +22,8 @@ export type NextSource =
   | 'remove-background'
   | 'id-photo'
   | 'id-copy'
-  | 'pdf-edit';
+  | 'pdf-edit'
+  | 'power-of-attorney';
 
 /**
  * Button order = array order. A tool never offers itself. The 배경 지우기 row exists only in a build with
@@ -46,6 +47,8 @@ export const FLOW = {
   'id-copy': ['pdf-password', 'pdf-compress'],
   // TOOLS1015 E1: sign the filled-in form, make it smaller, or lock it.
   'pdf-edit': ['pdf-sign', 'pdf-compress', 'pdf-password'],
+  // FORM1020 D8: the 위임장 PDF: 도장·서명 넣기 first, then 글자 넣기 or a smaller file.
+  'power-of-attorney': ['pdf-sign', 'pdf-edit', 'pdf-compress'],
   ...(__BG_REMOVE__ ? { 'remove-background': ['jpg-to-pdf', 'photo-compress'] } : {}),
 } as Readonly<Record<NextSource, readonly NextTarget[] | undefined>>;
 

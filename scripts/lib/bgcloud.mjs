@@ -61,7 +61,7 @@ export const QUALIFIER_AFTER = 80;
  * The 배경 지우기 guide (guide/remove-background/, TOOL-GUIDES Part B) is about the tool that may send, so it is checked.
  * The embed widget (REV5): the id-photo widget page and the info page /embed/ (about that widget only).
  */
-export const LOCAL_SCOPE_RE = /^(pdf-merge|pdf-compress|jpg-to-pdf|pdf-to-jpg|pdf-password|pdf-split|pdf-sign|image-to-jpg|photo-compress|id-photo|stamp-signature|hwp-to-pdf|hwp-viewer|hwpx-to-hwp|char-count|id-copy|pdf-edit|stamp-maker|english-name)\/|^guide\/(?!remove-background\/)[^/]+\/index\.html$|^embed\/(id-photo\/)?index\.html$/;
+export const LOCAL_SCOPE_RE = /^(pdf-merge|pdf-compress|jpg-to-pdf|pdf-to-jpg|pdf-password|pdf-split|pdf-sign|image-to-jpg|photo-compress|id-photo|stamp-signature|hwp-to-pdf|hwp-viewer|hwpx-to-hwp|char-count|id-copy|pdf-edit|stamp-maker|english-name|power-of-attorney)\/|^guide\/(?!remove-background\/)[^/]+\/index\.html$|^embed\/(id-photo\/)?index\.html$/;
 /** Text files checked for claims: pages, llms.txt, the sitemap, the manifest and any JSON. */
 export const CLAIM_FILE_RE = /\.(html|txt|xml|json|webmanifest)$/;
 

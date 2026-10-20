@@ -40,6 +40,7 @@ export default {
   "photo-kb": "사진 용량 줄이기, 원하는 KB 이하로 맞추는 법",
   "photo-sizes": "증명사진 규격 모음, 기관별 크기·용량 한눈에",
   "police-exam-photo": "경찰 증명사진 규격, 원서 사진 3×4 cm",
+  "power-of-attorney": "위임장 쓰는 법: 들어갈 내용과 정해진 서식이 있는 경우",
   "qnet-photo": "큐넷 사진 등록 규격과 안 될 때 확인할 점",
   "remove-background": "누끼 따기 쉽게 하는 법, 사진 배경 지우기",
   "resume-photo": "이력서 사진 규격, 사람인·잡코리아 크기와 용량",

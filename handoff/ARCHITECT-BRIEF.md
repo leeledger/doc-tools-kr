@@ -1,125 +1,189 @@
-# Architect Brief — ADS1020 (애드센스 재신청 P0)
+# Architect Brief — FORM1020 위임장 만들기 + 양식 채우기 엔진
 
-Source: owner paste 2026-10-20 (AdSense rejected 2026-10-20 05:40 KST, 「가치가 별로 없는 콘텐츠」). P0 only; P1 content consolidation/expansion is a later sprint (do not start it).
-Base: main 5a56a39. Supersedes REV4 where they differ (REV4 was never built; its CSP mechanics, privacy-section shape and test pattern are reused).
+Owner 2026-10-20: 「다음 툴 작업해」 → scout 2026-10-16 rank #2 (reports/growth/tool-scout-2026-10-16.md). Arch decides
+everything below; owner-only items are at the end and never block the build.
+Same house rules as ROMANIZE1016 / TOOLS1015: zero new core glyphs, registration list (D9), NOT_PRECACHED +
+RUNTIME_PAGES, budgets never raised, every guide quote verbatim (check:quotes), plain language (docs/COPY.md).
 
 ## Goal
-Production shows no Coupang link anywhere, carries the AdSense tag on content pages only (with a content-only CSP and an AdSense privacy section), has /about/ and /contact/, honest guide bylines, noindexed /licenses/ and /embed/, and hreflang x-default pointing to Korean.
+/power-of-attorney/ 「위임장 만들기」: the visitor fills blanks (or none) and downloads the same document as **HWP and
+PDF**, built on the device by the HWP engine we already ship; the engine (FormSpec → rhwp document) is reusable for
+차용증·사직서·이력서 without new engine code.
 
-## Locked decisions (log in BUILD-LOG "ADS1020")
-- D1 **Coupang off by one constant.** `src/data/affiliate.ts`: `export const AFF_ENABLED = false;` and `affOn(v)` returns `AFF_ENABLED && v?.trim() === '1'`. All data (AFF_LINKS, maps, copy) stays. Production keeps `PUBLIC_AFF_COUPANG=1` and still renders 0 links (the constant wins). Re-enabling later (a few long guides) = flip the constant + a new brief. The page files need no change beyond what follows from `affOn` (leave their imports).
-- D2 **AdSense client is a committed constant** `ADSENSE_CLIENT_DEFAULT = 'ca-pub-6478963235198426'` (public: already in public/ads.txt). Env: `PUBLIC_ADSENSE_ON=1` turns the tag on; optional `PUBLIC_ADSENSE_CLIENT` overrides (format `ca-pub-` + 16 digits, build fails naming the variable, value not echoed; tests use `ca-pub-0000000000000000`). ON fails the build without `PUBLIC_CONTACT_EMAIL` and `PUBLIC_PRIVACY_OFFICER` (both already set in Production). Slot env vars are NOT built now (serve stage = later sprint). public/ads.txt stays as is.
-- D3 **Review stage = tag only, no units.** On content pages, in `<head>`, in this order, right after the GA tag:
-  1. `<script src="/ads-cfg.js" data-site-ads-cfg></script>` (same-origin, classic, sync, tiny). Body exactly: `(window.adsbygoogle=window.adsbygoogle||[]).pauseAdRequests=1;window.adsbygoogle.requestNonPersonalizedAds=1;` Written at postbuild only when ON (pattern of gen-ga); OFF build has no dist/ads-cfg.js.
-  2. `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=<client>" crossorigin="anonymous"></script>` (Google's snippet verbatim, so the review crawler finds it in static HTML; no self-hosted injector).
-  pauseAdRequests=1 guarantees no ad is requested even if the console turns Auto ads on; requestNonPersonalizedAds=1 = owner decision 2026-10-12 (비맞춤 광고만). `_headers` (ON only): `/ads-cfg.js` with `Cache-Control: public, max-age=3600`.
-  Flag (unverified claim): both properties must be cited from Google's AdSense help (verbatim line + URL + fetch date) in REVIEW-REQUEST. If pauseAdRequests is not documented for AdSense, drop that half, keep NPA, and say so (console Auto ads off then carries the guarantee).
-- D4 **Content routes (single source)** `CONTENT_ROUTES` in `scripts/lib/adsense.mjs`, mirrored in `src/data/adsense.ts` with a unit test keeping them equal (pattern of usage.mjs/affiliate.ts): `/` (home: Arch call; tool list + FAQ, no file handling; the URL Google most likely checks), `/guide/` and everything under it (index, hubs, articles), `/about/`, `/contact/`. Never: tool pages, result screens, 404 (incl. en/404), /offline/, /privacy/, /terms/, /licenses/, /en/*, /embed/*. Base.astro decides from `Astro.url.pathname` with `isContentPath()`; BaseEn and Embed layouts never render it.
-  Pre-locked fallback: if the ON-build Lighthouse run of `/` breaks a threshold, drop `/` from CONTENT_ROUTES (never lower thresholds).
-- D5 **Route CSP** (REV4 decision 5 reused; gen-headers postbuild, ON only, appended after the GA/analytics extensions so the `/*` line stays exactly what those produce). For each content pattern (`/`, `/guide/*`, `/about/`, `/contact/`): `! Content-Security-Policy`, then
-  `default-src 'self'; script-src 'self' https: 'unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https:; img-src 'self' data: blob: https:; frame-src https:; fenced-frame-src https:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'`
-  It covers pagead2/tpc.googlesyndication.com, googleads.g.doubleclick.net and Google's other ad hosts without a brittle host list; GA and the CF beacon are covered by https:. OFF: `_headers` byte-identical to today.
-  Flag (unverified until probed): cite the Cloudflare doc lines for `!` detach and for exact `/` vs splat `/guide/*` matching `/guide/` itself; paste `curl -sI` of preview `/`, `/guide/`, one guide article, `/about/`, `/pdf-merge/`, `/embed/id-photo/` showing exactly one CSP each and the right one. tests/e2e/serve.mjs already models detach; make sure it matches an exact `/` rule the way Cloudflare does.
-  Accepted (log): a 404 served under `/guide/<missing>` gets the content CSP (no tag on it).
-- D6 **Privacy section** (ON only) replaces the body of the existing 「{n(4)}. 광고」 section (numbering unchanged; OFF keeps today's 「지금은 광고가 없어요…」), `id="ads"`. Plain Korean, format of the GA section: 어디에 (첫 화면·안내 글·소개·문의 페이지에만 Google 애드센스 코드가 있어요; 도구 화면과 결과 화면에는 없어요); 지금 상태 (광고 심사 중이라 광고를 보여 주지 않아요; 보여 줄 때도 맞춤 광고가 아닌 광고만 보여요); 쿠키 (비맞춤 광고도 노출 횟수 제한·부정 클릭 방지에 쿠키를 쓸 수 있다는 Google 문장: cite verbatim + URL + fetch date in REVIEW-REQUEST); 국외 이전 list (받는 자 Google LLC + the existing Google privacy form link; 미국; 페이지를 열 때마다 인터넷으로 전송; 항목 IP 주소·쿠키·본 페이지 주소·기기 정보; 목적 광고 표시와 부정 클릭 방지; 기간 Google 정책에 따름 + https://policies.google.com/technologies/ads); 문서딱은 그 정보를 받지 않아요; 거부 방법 (쿠키 차단, 광고 차단 기능; 막아도 모든 도구를 그대로 쓸 수 있어요); 14세 미만 (맞춤 광고를 쓰지 않아요). `PRIVACY_ADS = '2026년 10월 20일'` (re-confirmed at the gate = the day ON goes live), history line, PRIVACY_REVISED / PRIVACY_TERMS_UPDATED take it when ON. Terms unchanged (3항 already allows ads after the policy is amended).
-- D7 **Privacy, Coupang off:** the usage sentence 「도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)」 becomes, while `!AFF_ENABLED`, 「증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)」. History line (USAGE builds): `PRIVACY_AFF_OFF = '2026년 10월 20일'` 「상품 링크를 없애 익명 사용 통계에서 상품 링크 누름을 뺌」. PRIVACY_REVISED = newest active date (ADS ON → PRIVACY_ADS; else USAGE → PRIVACY_AFF_OFF; else ADDR → PRIVACY_ADDR; else PRIVACY_CHAIN); PRIVACY_TERMS_UPDATED likewise ('2026-10-20' when ADS or USAGE). Old history lines stay.
-- D8 **Operator gate** `OPERATOR_ON = !!(CONTACT_EMAIL && PRIVACY_OFFICER)` in src/data/site.ts. /about/ and /contact/ are generated only then (e.g. `src/pages/about/[...p].astro` with `getStaticPaths` returning `OPERATOR_ON ? [{ params: { p: undefined } }] : []`; Bob's call, but zero files when off). Footer links 「소개」「문의」 only then (right after 「안내」). Production has both env vars, so the pages go live. Default build: no page, no link (owner rule "no operator lines until ads" holds).
-- D9 **/about/** (title ≤ 40, description 40–80, docs/COPY.md plain language: no 업로드/서버/브라우저/네트워크/EXIF/dpi): H1 「문서딱 소개」. Sections:
-  - 만든 사람: 「문서딱은 {officer}{josa 이/가} 만들고 운영해요.」 + link to /contact/. No team, title, 사업자 info or biography.
-  - 왜 만들었나: one honest purpose paragraph from SITE.tagline (서류·사진을 낼 때 용량·규격에 막히지 않게; 가입 없이 무료). No invented story.
-  - 파일을 다루는 방법 (not the page lead): 대부분의 도구는 고른 파일을 이 기기 안에서 처리하고 문서딱으로 보내지 않아요. In the same section: `__BG_CLOUD__` → the 배경 지우기 exception sentence with the wording privacy/terms already use (EXCEPTION_RE); `__ADDR_EN__` → 「영문주소 변환기는 적은 주소 글자만 행정안전부 주소 검색에 전달해요.」 (must NOT contain ADDR_SEND 「행정안전부 주소 검색으로 보내」); link 「자세한 내용: 개인정보 처리방침」.
-  - 규격 정보를 확인하는 방법: 안내 글마다 공식 출처와 확인일을 적고, 옮긴 문장은 원문과 다시 맞춰 봐요 (check:quotes is the fact); 「틀린 곳을 알려 주세요」 → /contact/.
-  - 고친 기록 (generated, honest): live tool count (LIVE_TOOLS.length), published guide count, earliest guide `published`, latest `updated`, the 5 most recently updated guides (title link + date); plus a short milestone list in `src/data/about.ts` (date + one plain line), each date proven by `git log --diff-filter=A --format=%ad --date=short -- <page file>` with the commit hash in a code comment (e.g. 사이트 공개와 첫 도구, 안내 글 시작, HWP 도구, 영문 이름·영문주소 변환기). Only what git proves; no plans.
-  - JSON-LD: AboutPage with a Person (name = officer, url = /about/); sameAs only BLOGS.
-- D10 **/contact/** (same rules): email (mailto, escaped like footerContact); 「보통 3일 안에 답장해요.」 (Arch call; the owner may change it); 「틀린 내용 알리기」 list: 페이지 주소, 쓰는 기기와 앱 (예: 아이폰 카카오톡), 무엇이 틀렸는지, 공식 출처 링크가 있으면 함께; 「서류 파일은 보내지 마세요. 주민등록번호 같은 개인정보가 들어 있을 수 있어요.」; links to /about/ and /privacy/.
-- D11 **Guide byline** (Guide.astro `.guide-dates`): OPERATOR_ON → 「글: {officer} · <a href="/about/">소개</a> · 처음 쓴 날 … · 고친 날 …」; off → 「글: 문서딱 · 처음 쓴 날 … · 고친 날 …」 (no link). jsonld.ts guide `author`: OPERATOR_ON → `{ '@type': 'Person', name, url: <absolute /about/> }`, else Organization; publisher stays Organization.
-- D12 **noindex + sitemap:** /licenses/ and /embed/ pass Base `noindex` (drops canonical); sitemap drops `/embed/` and `/licenses/`; /embed/id-photo/ unchanged (already noindex). Sitemap adds `/about/` and `/contact/` when OPERATOR_ON (lastmod = an ADS1020 date constant). llms.txt: remove the /embed/ line only if a test ties llms.txt to the sitemap; otherwise leave it (log which).
-- D13 **/en/ stays indexed** (EN brief); sitemap hreflang x-default → the Korean URL on both twins. Flip the en-check rule and its unit test (the 「x-default to Korean」 case becomes the passing one). Reason: Korean is the primary audience; EN pages carry no ads; noindexing 6 working pages buys nothing for the review.
-- D14 **CLAUDE.md**: text below; the orchestrator applies it at the deploy gate. Bob does not edit CLAUDE.md.
+## Demand (scout, Naver keyword tool via next-t, 2026-10-16, monthly)
+위임장 양식 15,220 · 위임장 10,230 · 인감증명서 위임장 5,280 · 대리인 위임장 양식 4,010 · 대리인 위임장 2,290 ·
+위임장 쓰는법 1,990; ad clicks 410 (양식). Competitors: 비즈폼·예스폼 (paid / sign-up).
+
+## Spike already done by Arch (2026-10-20; scripts + output in handoff/sources/form1020/)
+- Node, vendored @rhwp/core 0.8.6: `HwpDocument.createEmpty()` → `createBlankDocument()` (embedded blank2010.hwp,
+  fonts 함초롬돋움/함초롬바탕) → `insertText` → `splitParagraph` → `createTable(0,1,0,4,2)` → `insertTextInCell` ×8 →
+  `mergeTableCells` → `exportHwpWithReport()` loss count 0, 13,312 B → reload pages 1, SVG contains the text;
+  `exportHwpx()` 8,054 B.
+- **Real 한글 check works on this PC:** 한글 2018 (HOffice100) is installed with COM automation (`HWPFrame.HwpObject`).
+  open.ps1 opened probe.hwp: `open=True pages=1`, `GetTextFile("UNICODE")` = the title + all 8 cell texts
+  (probe.hwp.txt). So the "does an rhwp-generated HWP open in 한글" risk is testable by script, not owner-only.
+  Residual risk: newer 한글 (2022/2024), 한글 viewer, mobile 한글 → owner O1 (non-blocking).
+
+## Locked decisions
+- **D1 Scope: a general 위임장 only.** Never recreate a statutory form (인감증명서 발급 위임장 or any form an agency
+  fixes by 별지 서식). The page and the guide say: an agency that has its own 위임장 form wants that form; for
+  인감증명서 link the official page found in F0. If F0 finds no fetchable official page, say only 「관공서에 따라 정해진
+  위임장 서식이 있어요. 내기 전에 그 기관에 확인하세요.」 — no law names, no form numbers.
+- **D2 Build model: runtime from a declarative spec, no template asset.** `FormSpec` (TS data) → rhwp calls in the
+  existing HWP worker → in-memory document. One source of truth (the spec), no binary in git, no extra fetch. Rejected:
+  committed template .hwp (two truths, drift), hand-written HWPX XML (unverified OWPML), ClickHere 누름틀 fields
+  (unverified in 한글), DOCX (not needed once HWP is proven; Known Gap).
+- **D3 Engine = `src/lib/form/`** (pure, rhwp injected like export-hwp.ts):
+  - `spec.ts` types: `FormSpec { id, fileBase, title, blocks[] }`; blocks: `title` (centered, bold, size),
+    `para` (text with `{field}` slots, align), `table` (rows of `[label, field]`, optional section label merged
+    down the left column, column widths), `dateLine` (field, align), `signLine` (label + field + 「(서명 또는 인)」).
+    Field: `{ id, label (UI), docLabel, kind: text | multiline | date, maxLength, maxLines?, placeholder? }`.
+    No computed fields, images or validation rules in v1 (차용증 금액 한글 comes with its own step).
+  - `values.ts`: normalize (NFC, strip C0/C1 controls except newline for multiline, cut to maxLength by code
+    points, cap lines at maxLines); empty allowed everywhere (D6). Pure, unit-tested.
+  - `build.ts`: `buildForm(Doc, spec, values)` using only spike-proven calls plus formatting calls Bob proves in F1
+    (`applyCharFormat`, `applyParaFormat[InCell]`, `createTableEx` colWidths, `splitParagraphInCell` for multiline).
+    Any rhwp call that returns ok:false or throws → HwpError `export` (one code path).
+  - `src/data/forms/power-of-attorney.ts`: the 위임장 spec (D5). Future forms = one data file + one page.
+- **D4 Worker:** one new message `form-build {specId, values}` on the existing hwp.worker.ts: builds, keeps the doc
+  as the session doc, replies `parsed` (pages, pageInfos) exactly like `open`. Then the existing `render` (preview +
+  PDF) and the existing `export-hwp` (reload gate; export-hwp.ts unchanged) run as today. The spec is looked up by id
+  inside the worker (never sent as code). Order on 「만들기」: form-build → render all pages (keep SVG + runs) →
+  export-hwp → HWP blob ready. PDF is built on 「PDF로 받기」 from the kept SVGs with the existing
+  src/lib/hwp/pdf/export.ts (fonts fetched then). A failed HWP gate still leaves PDF available (and vice versa); each
+  button shows its own error.
+- **D5 위임장 content (our layout; no legal claim in the document):** title 「위 임 장」; table 위임하는 사람(위임인):
+  성명, 생년월일(주민등록번호), 주소, 연락처; table 위임받는 사람(대리인): 성명, 생년월일(주민등록번호), 주소,
+  연락처, 위임인과의 관계; table 위임하는 내용: 제출할 곳, 맡기는 일 (multiline, maxLines 6); para 「위 사람에게 위
+  내용에 관한 권한을 위임합니다.」; dateLine (default today, 「2026년 10월 20일」; empty → 「     년     월     일」);
+  signLine 「위임인  {성명}  (서명 또는 인)」; para 「{제출할 곳} 귀중」 only when filled. UI labels plain
+  (「맡기는 사람」「맡는 사람(대리인)」「맡기는 일」), document labels as listed. maxLength per field chosen so the
+  all-max case is **1 page** in rhwp layout AND in 한글 (F2 proves both).
+- **D6 Blank form is a feature:** no required fields; a secondary button 「빈 양식으로 받기」 builds with all fields
+  empty (date line blank) → HWP/PDF for handwriting. This serves the biggest query (위임장 양식).
+- **D7 Privacy:** typed text never leaves the device and is never stored: no localStorage/sessionStorage/IndexedDB,
+  no values in URL, history, filenames, usage beacon or GA. Filenames fixed: 「위임장.hwp」「위임장.pdf」 (download.ts
+  withExt). Reset clears all fields. Tool page CSP stays self (not a content page; ADS1020 unchanged).
+- **D8 Chain:** NextSource `power-of-attorney` (PDF result) → FLOW `[pdf-sign, pdf-edit, pdf-compress]` (pdf-sign
+  first: 도장·서명 넣기). Plus a static 「함께 준비하는 것」 link row (not a file handoff): /id-copy/ 신분증 사본
+  만들기, /stamp-maker/ 도장 만들기, /pdf-merge/ PDF 합치기 (위임장 + 신분증 사본을 한 파일로). Reverse: a related
+  link to /power-of-attorney/ from id-copy, stamp-maker, pdf-sign (related lists, no handoff). pdf-merge as a handoff
+  target = Known Gap.
+- **D9 Registration** = TOOLS1015 decision 3 / ROMANIZE D8 list: tools.ts (after stamp-signature), page
+  src/pages/power-of-attorney/index.astro, og.json + OG image, JSON-LD (WebApplication + FAQPage), sitemap/llms via
+  generators, tool-facts, NEXT_GUIDES + tool-guide-order, lighthouserc, qa:visual, site/polish/growth e2e lists,
+  postbuild OG list, CLAUDE.md line 3 (「위임장 만들기」), docs/COPY.md line, bgcloud LOCAL_SCOPE_RE, HOME_DESC_ORDER
+  (after stamp-signature), usage TOOLS/labels (events: start, build {blank|filled}, download {hwp|pdf}, next; never
+  values), gen-sw NOT_PRECACHED + RUNTIME_PAGES, check-dist block (D10).
+- **D10 check-dist block:** /power-of-attorney/ offers no 인감증명 form (the word appears only in the D1 caution and
+  its link); no off-site script; not an ads content page; no localStorage/sessionStorage in the tool chunks; initial
+  JS logged and within the hwpx-to-hwp budget class.
+- **D11 Fonts / PDF:** rhwp reports 함초롬돋움/함초롬바탕 → existing faces.ts resolution (Nanum + Noto fallback).
+  F1 proves glyph coverage for all 11,172 Hangul syllables, ASCII, common punctuation and the Hanja in the fallback
+  slice; a missing glyph takes the writer's existing per-page raster fallback (never silent tofu: e2e with an emoji
+  and a rare Hanja). PDF fonts embedded (pdf-lib check: every font has FontFile2/FontFile3).
+- **D12 Real-한글 gate (local, this PC):** `scripts/forms/hancom-check.mjs` + `scripts/forms/hancom-open.ps1` (from
+  handoff/sources/form1020/open.ps1): for every spec, build {blank, sample, all-max} in Node with the real engine,
+  write .hwp, open each in 한글 via COM: open=True, PageCount == 1, UTF-8 text contains every non-empty value and every
+  docLabel. Also save 한글's own PDF (SaveAs ... PDF) next to it for Richard's visual compare. `npm run forms:hancom`;
+  without HWPFrame.HwpObject it exits 0 with 「SKIP: 한글 not installed」 (never in CI). Must pass before every deploy
+  that changes a spec or build.ts; result + 한글 version logged in BUILD-LOG. If it fails and cannot be fixed: ship
+  PDF only (HWP button off via a `FORM_HWP` constant in the spec module), log the gap, and Arch briefs DOCX as the
+  editable fallback next.
+- **D13 Guide (F4)** slug `power-of-attorney`, title 「위임장 쓰는 법: 들어갈 내용과 정해진 서식이 있는 경우」,
+  query 「위임장 쓰는법」/「위임장 양식」, tools: power-of-attorney. ≥2,500 chars unique body (AdSense P1 bar); every
+  legal statement backed by a verbatim quote with fetch date (F0). H2s: 위임장이 하는 일 (민법 위임·대리 quotes),
+  들어가는 내용 (described as what our form contains, not as a legal requirement unless quoted), 정해진 서식이 있는
+  위임장 (인감증명서 etc., official link), 대리인이 챙길 것 (quoted items only), 빈 양식으로 손으로 쓰기, 안 될 때,
+  FAQ ×4 not copied from tools.ts. One-sentence inbound link from guides id-card-copy and the stamp guide. If F0
+  yields < 2 official quotes, the guide stays a draft (Known Gap) and the tool ships alone.
 
 ## Flow
 ```
-build env ─┬─ PUBLIC_ADSENSE_ON unset ─> no tags, no dist/ads-cfg.js, _headers as today, privacy 「지금은 광고가 없어요」
-           └─ ON=1 (+CONTACT_EMAIL +PRIVACY_OFFICER, else build fails)
-                 ├─ content page (/, /guide/**, /about/, /contact/):
-                 │     head: … GA tag → /ads-cfg.js (pause=1, NPA=1) → async adsbygoogle.js?client=…
-                 │     _headers: ! CSP → content CSP (https: scheme)
-                 ├─ every other page: no tag; '/*' CSP unchanged
-                 └─ /privacy/: section 4 = 애드센스 (id="ads")
-affOn(env) = AFF_ENABLED(false) && env==='1' ─> affBlock null everywhere ─> 0 Coupang links, 0 disclosure lines
-OPERATOR_ON ─┬─ yes: /about/, /contact/, footer 소개·문의, byline 「글: <officer> · 소개」, sitemap +2
-             └─ no : none of it; byline 「글: 문서딱」
+ form inputs --(만들기 | 빈 양식으로 받기)--> values.ts normalize (main thread)
+        |
+        v postMessage form-build {specId, values}
+ hwp.worker: createEmpty -> createBlankDocument -> build.ts(spec) --fail--> error export -> 「만들지 못했어요」 + 다시 해 보기
+        | parsed {pages}
+        v render i = 0..n-1 (SVG + runs kept) --> preview page 1
+        v export-hwp (export-hwp.ts: loss count, CFB magic, reload, page tolerance)
+        |        +--fail--> HWP button error (unverified | export); PDF button still works
+        v HWP blob ready --> 「한글(HWP)로 받기」
+ 「PDF로 받기」 --> pdf/export.ts (fonts fetched, per-page raster fallback) --> PDF blob --> 이어서 하기 (D8)
+ any field edited after a build --> result marked stale, download buttons hidden until 만들기 again
 ```
-
-## Build Order (separate commits; refactor before behavior)
-- A. Coupang off: `AFF_ENABLED` + `affOn`; privacy D7. check-dist + out-links-check: while AFF_ENABLED is false (read from affiliate.ts source, like AFF_COPY today), every dist text file (html, js, json, xml, txt) has 0 `link.coupang.com`, 0 AFF_COPY.top, 0 AFF_COPY.ad, 0 AFF_COPY.heading, 0 COUPANG_DISCLOSURE, **whatever PUBLIC_AFF_COUPANG says**; while true, today's env rules. embed-check / en-check Coupang rules stay. Keep the old affiliate unit coverage by calling the pure `affBlock(kind, tool, true)`; add affOn('1') === false.
-- B. `scripts/lib/adsense.mjs` (pure): `adsenseConfig(env)` → `{ on, client }` + validation + operator-gate errors; `CONTENT_ROUTES`, `isContentPath(path)`, `CONTENT_CSP`, `withContentCsp(headers)` (throws without a `/*` CSP), `ADS_CFG_SOURCE`. `src/data/adsense.ts` mirror (ADS_ON, ADS_CLIENT, isContentPath) from `import.meta.env`; equality unit test; unit: committed client === the pub in public/ads.txt.
-- C. Base.astro head tags (D3) gated `ADS_ON && isContentPath(path)`; postbuild writes dist/ads-cfg.js (ON only); gen-headers D5 + the `/ads-cfg.js` cache rule.
-- D. Privacy D6 + legal.ts dates.
-- E. Operator gate, /about/, /contact/, footer, byline, JSON-LD author (D8–D11); src/data/about.ts milestones with commit hashes.
-- F. noindex + sitemap (D12), hreflang (D13).
-- G. check-dist (new rules; never weaken an old one):
-  - ON: every content page has exactly one adsbygoogle tag with the configured client and `crossorigin="anonymous"`, preceded by exactly one `/ads-cfg.js` tag; no other HTML file contains `adsbygoogle`, `googlesyndication` or `/ads-cfg.js` (tool pages, 404s, offline, privacy, terms, licenses, /en/*, /embed/* by name); dist/ads-cfg.js === ADS_CFG_SOURCE; `_headers` has detach + CONTENT_CSP once per content pattern and the `/*` CSP still has no `https:` scheme source; /privacy/ has `id="ads"`; contact + officer set.
-  - OFF: none of those strings in any dist text file; no dist/ads-cfg.js; `_headers` has no `fenced-frame-src`.
-  - Always: /licenses/ and /embed/ HTML carry the robots noindex meta and are absent from sitemap.xml; public/ads.txt line format valid; OPERATOR_ON iff about/index.html and contact/index.html exist iff both in sitemap iff footer links on every Korean page; ON implies OPERATOR_ON.
-  - bgcloud: `EXCEPTION_PAGES` gains `about/index.html` only when OPERATOR_ON (cloud on: /about/ must carry the exception; cloud off: must not). LOCAL_SCOPE_RE unchanged. Assert /about/ never contains ADDR_SEND.
-- H. Tests: the cloud build gets `PUBLIC_ADSENSE_ON=1` + `PUBLIC_ADSENSE_CLIENT=ca-pub-0000000000000000` (the default build stays OFF). New `tests/e2e/ads.cloud.spec.ts`. The no-upload fixture gets an `ads` option (pattern of `ga`): route the adsbygoogle.js URL to a stub that records `window.adsbygoogle.pauseAdRequests` / `requestNonPersonalizedAds`; allow only that bodiless GET and only on content URLs; every other spec keeps zero off-site requests.
-- I. Docs: `docs/OPS-RUNBOOK.md` new §11 「애드센스 재신청 (대표만)」 = the owner checklist below; `scripts/ops/monetize.mjs` ticks match it; `docs/REVENUE-MODEL.md` status (Coupang off 2026-10-20; AdSense review stage). OPS-RUNBOOK §10 gets: 「2026-10-20부터 코드에서 꺼 둠(AFF_ENABLED). 환경 변수만으로는 다시 켜지지 않아요.」
-- J. BUILD-LOG + `handoff/REVIEW-REQUEST-ADS1020.md` with line ranges, probes, citations, Lighthouse numbers.
-- Flag: never raise a budget or lower a threshold. New footer/about/contact text must pass the UI-font gates (rephrase, or use the system-font prose path earlier sprints used; log any glyph decision).
-- Flag: Korean pages only; 「Docttak」 never appears on them.
 
 ## Failure modes
 | Path | Realistic failure | Handling | User sees |
 |---|---|---|---|
-| Coupang | Production env PUBLIC_AFF_COUPANG=1 still set | AFF_ENABLED wins; check-dist asserts 0 in a build with the env set | No links |
-| Coupang | A disclosure string left in a JS chunk | dist-wide text scan | Build fails |
-| Tag | Tag leaks onto a tool/404/embed/en page | check-dist named-page rule + e2e on /pdf-merge/, /id-photo/ result, /404, /embed/id-photo/, /en/ | Build fails |
-| Tag | Review crawler misses the code | Static async tag in head, Google snippet verbatim | n/a |
-| Ads | Auto ads turned on in console after approval: personalized/anchor ads on content pages | pauseAdRequests=1 + NPA=1 (cited) + owner checklist | No ads until the serve sprint |
-| CSP | Two CSP headers on a content route: tag blocked | detach + unit + curl probe | Caught by probe before ship |
-| CSP | /guide/* misses /guide/, or the / rule matches everything | doc citation + curl probe + serve.mjs model test | Caught by probe |
-| CSP | GA/analytics extension rewrites the content line | withContentCsp runs after them; unit with GA+CF+ADS | CI red |
-| Perf | adsbygoogle.js hurts home/guide Lighthouse | ON-build LH (median of 5) of / and one guide pasted; / over threshold: drop / (pre-locked) | No regression shipped |
-| Gate | ON without contact/officer | build fails naming the variable | Failed deploy log |
-| Operator | Default build ships /about/ without a name | OPERATOR_ON gate + check-dist iff rule | Build fails |
-| Privacy | ON without the section, or the section without ON | check-dist id="ads" iff ON | Build fails |
-| Claims | /about/ unqualified "files never leave" in a cloud build | EXCEPTION_PAGES + existing unqualifiedClaims scan | Build fails |
-| SEO | /embed/ or /licenses/ still indexable or in sitemap | check-dist noindex + absence | Build fails |
-| hreflang | x-default still EN | en-check rule flipped + unit | Build fails |
-No silent and untested path remains.
+| form-build | rhwp call ok:false / throws (rhwp upgrade, odd input) | HwpError export; unit test per block type with the real engine | clear error + retry |
+| Overflow | long values push to 2 pages | maxLength/maxLines; all-max unit test pages == 1 (rhwp) + D12 (한글) | prevented |
+| HWP gate | reload fails | existing export-hwp.ts codes; PDF unaffected | clear HWP error |
+| 한글 compat | opens in rhwp, not in 한글 | D12 COM gate before deploy; O1 for newer 한글 | prevented / owner check |
+| PDF fonts | font slice fetch fails (offline) | existing export.ts error path | existing clear error |
+| Missing glyph | emoji / rare Hanja | existing raster page fallback + e2e | correct page (raster) |
+| Worker OOM / engine load | low-end phone | existing oom / engine codes | existing clear errors |
+| Stale result | user edits after build, downloads old file | input event marks stale, hides buttons | 「바뀐 내용으로 다시 만들어 주세요」 |
+| Privacy | value leaks to beacon / URL / storage / filename | D7; unit + e2e: beacon whitelist, no storage writes, URL unchanged, fixed names | n/a |
+No silent untested path remains.
 
-## Test map
-- affOn('1') false; affBlock with affOn('1') null for every TOOL_AFF/GUIDE_AFF key [GAP→unit]; pure affBlock(kind, tool, true) cases [TESTED, adapted].
-- Coupang-zero rule with PUBLIC_AFF_COUPANG=1 [GAP→unit on out-links-check + one build run].
-- adsense.mjs: config/validation/operator gate; isContentPath table (true: /, /guide/, /guide/x/, /guide/photo-sizes/, /about/, /contact/; false: /pdf-merge/, /privacy/, /licenses/, /embed/, /embed/id-photo/, /en/, /404.html, /offline/); CONTENT_CSP; withContentCsp; TS/MJS equality; client === ads.txt [GAP→unit].
-- gen-headers: OFF byte-identical to main; ON with GA+CF [GAP→unit].
-- check-dist ON/OFF/always rules [GAP→unit on lib functions + both builds in CI].
-- e2e ads.cloud.spec (5 cloud projects): content pages request the stub once, pause=1 and NPA=1 set before it runs, 0 securitypolicyviolation events, no ad iframe; /pdf-merge/, /id-photo/ result, /404, /embed/id-photo/, /en/, /privacy/ request nothing off-site [GAP→e2e].
-- e2e /about/ + /contact/ (cloud build): headings, officer name, mailto, footer links on a tool page, guide byline link, axe clean [GAP→e2e]; default build: no about/contact file, no footer link [GAP→check-dist].
-- Byline both forms; JSON-LD author Person iff operator [GAP→unit].
-- Sitemap: no /embed/, /licenses/; about/contact iff operator; x-default = ko [GAP→unit].
-- Regression: all gates (check, unit, check-dist both builds, licenses, e2e 5 projects + cloud + axe, Lighthouse CI unchanged thresholds, qa:visual, regress --fixtures-only); GA cloud, usage, embed, en specs [TESTED].
-- Manual: ON-build Lighthouse / + one guide; preview curl probes (D5) [GAP→REVIEW-REQUEST].
+## Unverified claims (Bob probes in F1, logs verbatim; nothing assumed)
+- `applyCharFormat` / `applyParaFormat(InCell)` props JSON keys (bold, size, align): read rhwp.d.ts docs, probe.
+- `createTableEx` colWidths unit; `splitParagraphInCell` for multiline; whether `insertTextInCell` accepts a newline.
+- Cell index order after `mergeTableCells` (spike: 8 cells → 7).
+- Whether exportHwp output is byte-deterministic (tests never assert bytes unless proven).
+- 한글 PDF via COM SaveAs format string (optional evidence only).
 
-## Out of Scope (→ BUILD-LOG Known Gaps)
-- Ad units/slots, serve stage, ad notice line, CLS reserves, COOP same-origin-allow-popups check for ad clicks (serve sprint).
-- P1: guide consolidation/expansion, thin-page pruning, Coupang return on long guides.
-- google-adsense-account meta tag, CMP/Funding Choices, Kakao AdFit.
-- English /about/ or /contact/.
+## Test map ([GAP → new] unless marked)
+- values.ts: NFC, control strip, maxLength by code points, maxLines, empty → blank [GAP → unit].
+- build.ts with the real engine: each block type; blank / sample / all-max → loss 0, reload ok, pages 1, glyphText has
+  every value + docLabel; ok:false → HwpError export (fake doc) [GAP → unit].
+- Spec lint: every field used exactly once, maxLength set, docLabel non-empty [GAP → unit].
+- Worker form-build → parsed → render → export-hwp on the built doc [GAP → unit/e2e]; export-hwp.ts [TESTED].
+- e2e /power-of-attorney/ (5 projects, no-upload guard): fill → 만들기 → preview → HWP download (reloaded in Node
+  rhwp, text check) → PDF download (pdf.js text has the values, fonts embedded); 빈 양식 → 1-page HWP/PDF; stale
+  marking; reset clears; emoji + Hanja → raster page; 이어서 하기 → /pdf-sign/ receives the PDF; 함께 준비 links; axe
+  on form, error and result; no storage writes; cloud spec: beacon payload has no typed value [GAP → e2e].
+- Regression: hwp-to-pdf, hwp-viewer, hwpx-to-hwp e2e + hwp unit suites after the worker change [TESTED → rerun];
+  regress:hwp --fixtures-only [TESTED → rerun]; chain FLOW tests [TESTED → extend].
+- check-dist D10 [GAP → check-dist + postbuild test]; LHCI /power-of-attorney/ (+ guide) median of 5.
+- forms:hancom D12 [GAP → local script, logged].
+- Guide: guides-schema, link-graph, check:quotes --exact [TESTED → extend].
+
+## Build order (commits; each green before the next)
+- **F0** sources to handoff/sources/form1020/ (date, URL, verbatim; law.go.kr via the lsInfoR.do form the other guides
+  use): 민법 제680조 (위임) and 제114조 (대리행위의 효력); 인감증명법 시행령 article on 대리 발급 / 위임장 and its
+  별지 서식; 정부24 인감증명서 발급 service page (구비서류); 찾기쉬운 생활법령 (easylaw.go.kr) 위임/대리 page if found.
+  Log what could not be fetched. No page.
+- **F1** engine src/lib/form/{spec,values,build}.ts + the probes above + unit tests with the real engine.
+- **F2** worker message + spec power-of-attorney.ts + D12 hancom-check; run it, log the result and 한글 version.
+- **F3** page + controller + entry + CSS + preview + downloads + stale/reset + D6 + D7 + chain D8 + registration D9 +
+  check-dist D10 + e2e + axe + glyph log. → **Deploy A** after Richard "clear". Live smoke: phone + PC, filled and
+  blank; the live-downloaded HWP through forms:hancom-open; the PDF opened; 이어서 하기 → pdf-sign; no off-site
+  requests. After A (PC session): IndexNow ping, Naver 수집 요청 for /power-of-attorney/.
+- **F4** guide (D13) if its gates pass. → **Deploy B**.
+
+## Gates (per deploy; CLOUD-HANDOFF §3)
+astro check 0 · vitest all · check:licenses OK (no new package) · check:quotes --exact · check-dist OK on default,
+cloud flag-on, autoframe and bg builds (precache KB logged; 450 never raised; no budget raised) · 0 new core glyphs
+(late face only; list + tripwire margin logged) · forms:hancom PASS (D12) · new + regression e2e on 5 projects with the
+no-upload guard · lhci median of 5 · Richard "clear" · live smoke.
+
+## Out of Scope (BUILD-LOG Known Gaps)
+- 차용증·사직서·이력서 pages (next steps reuse the engine); DOCX / HWPX outputs; images (도장 image in the HWP, 이력서
+  photo); 누름틀 fields; saved drafts; field deep links (personal data in URLs, never); statutory forms of any kind;
+  /en/ twin; pdf-merge as a handoff target; multi-page forms; computed fields (금액 한글).
 
 ## Acceptance
-- Default build: check-dist OK; 0 Coupang strings with and without PUBLIC_AFF_COUPANG=1; no ad strings; `_headers` identical to main's; no /about/, /contact/.
-- Production-like build (CONTACT_EMAIL, PRIVACY_OFFICER, GA, CF, ADDR_EN, AFF_COUPANG=1, ADSENSE_ON=1, test client): check-dist OK; tag on exactly the content pages; /privacy/#ads; /about/, /contact/, footer links, bylines; sitemap without /embed/ and /licenses/, x-default = ko.
-- All gates green, thresholds unchanged; LH numbers, curl probes and Google doc citations pasted. Richard "clear".
+- /power-of-attorney/ live in menu (after 서명·도장 이미지), home, sitemap, llms.txt, OG, JSON-LD; filled and blank
+  builds give a 1-page HWP that opens in 한글 2018 (D12 log) and a 1-page PDF with embedded fonts; all e2e above pass
+  on 5 projects; no typed value in storage, URL, filenames, beacon or GA; D1 caution present; chain to /pdf-sign/
+  works; budgets and precache ≤ 450 KB unchanged; 0 new core glyphs; LHCI thresholds; COPY.md and CLAUDE.md updated;
+  Richard "clear"; live smoke done. Deploy B: guide live, ≥2,500 chars body, check:quotes --exact green.
 
-## Owner checklist (대표만; becomes OPS-RUNBOOK §11)
-1. Cloudflare Pages → Production 변수 `PUBLIC_ADSENSE_ON` = `1` (`PUBLIC_ADSENSE_CLIENT`는 넣지 않아도 됨; 연락처·보호책임자는 이미 있음) → 재배포. 확인: 첫 화면과 안내 글의 페이지 소스에 adsbygoogle 코드가 있고, /pdf-merge/에는 없음. (The orchestrator may do this through the owner's logged-in Chrome if the owner allows; otherwise the owner.)
-2. 애드센스 콘솔 → 광고 → 사이트별 → docttak.com: 자동 광고 끄기 (앵커·전면(비네트) 포함).
-3. 검토 요청은 11월 중순 이후 한 번만, P1(안내 글 정리·보강)이 배포된 뒤에. 거절 뒤 반복해서 누르지 않기.
-4. 승인 전에는 광고가 나오지 않아요 (코드가 광고 요청을 멈춰 둠). 광고 단위는 승인 뒤 다음 스프린트에서.
-5. `PUBLIC_AFF_COUPANG`는 지워도, 그대로 둬도 돼요 (코드에서 꺼져 있음).
-
-## CLAUDE.md edits (orchestrator applies at the deploy gate)
-- Privacy/runtime bullet, after the Google Analytics sentence (ends "…stubbed."), insert: "Google AdSense (`PUBLIC_ADSENSE_ON=1`, scripts/lib/adsense.mjs; owner-approved 2026-10-12, code requested 2026-10-20): Google's async adsbygoogle.js tag (client ca-pub-6478963235198426) plus the same-origin /ads-cfg.js (non-personalized only; ad requests paused until ad units exist) only on content pages (home, /guide/*, /about/, /contact/), each served with its own scheme-source CSP (`! Content-Security-Policy` detach); tool and result pages, 404, offline, privacy/terms/licenses, /en/* and /embed/* never load it and keep script-src/connect-src 'self'; auto, anchor and vignette ads stay off in the AdSense console; the build fails with it on and no contact email or privacy officer. Coupang Partners links are off in code (`AFF_ENABLED = false`, src/data/affiliate.ts, 2026-10-20); check-dist asserts 0 Coupang links and disclosure lines in dist."
-- No-contact bullet: replace "the 배경 지우기 exception is named only on /privacy/, /terms/ and /remove-background/" with "the 배경 지우기 exception is named only on /privacy/, /terms/, /remove-background/ and /about/". Append: "Exception (ADS1020): with `PUBLIC_CONTACT_EMAIL` and `PUBLIC_PRIVACY_OFFICER` both set, /about/ names the operator, /contact/ gives the email, the footer links both and guide bylines name the operator; without both, none of it is built."
+## Owner decisions (build proceeds on the defaults)
+- **O1 (non-blocking):** open one downloaded 위임장.hwp in the newest 한글 you have (2022/2024) and on a phone (한컴
+  오피스 앱 / 한글 뷰어). Until then the HWP ships on the 한글 2018 COM proof.
+- **O2 push:** standing go-ahead per deploy when Richard is clear and CI is green.
+- Arch-decided: slug /power-of-attorney/; runtime build from spec (no template asset); HWP + PDF only; blank-form
+  button; no required fields; fixed filenames; chain to pdf-sign/pdf-edit/pdf-compress + static links.

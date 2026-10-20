@@ -670,7 +670,7 @@ describe('service worker (P.11)', () => {
 
   it('C2 round 2 + TOOLS4 T4 round 2: legal pages and the non-precached tool pages are stored when visited; offline they come from the cache', async () => {
     const cache = new FakeCache();
-    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/']) {
+    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/']) {
       const ev = event(req(path, 'GET', 'navigate'));
       handleFetch(ev.e, envWith(async () => new Response(`page ${path}`), cache));
       await ev.responded;

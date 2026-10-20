@@ -395,6 +395,37 @@ test('도장 만들기 (STAMP1015 D8): start (o=style) once, success, download, 
   expectClean(beacons);
 });
 
+test('위임장 만들기 (FORM1020 D7, D9): start (o=build, filled|blank), success, download (o=format, hwp|pdf), next to pdf-sign; never a typed value, a length or the file name', async ({ page }) => {
+  test.setTimeout(300_000);
+  const beacons = await record(page);
+  await gotoReady(page, '/power-of-attorney/');
+  await page.locator('[data-field="giverName"]').fill('홍길동');
+  await page.locator('[data-field="giverPhone"]').fill('010-1234-5678');
+  await page.locator('[data-field="task"]').fill('등본 발급 신청');
+  await page.locator('#pa-make').click();
+  await expect(page.locator('#pa-tool')).toHaveAttribute('data-state', 'ready', { timeout: 180_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#pa-hwp').click()]);
+  await Promise.all([page.waitForEvent('download', { timeout: 90_000 }), page.locator('#pa-pdf').click()]);
+  await page.locator('#pa-blank').click();
+  await expect(page.locator('#pa-tool')).toHaveAttribute('data-state', 'ready', { timeout: 180_000 });
+  await Promise.all([page.waitForEvent('download', { timeout: 90_000 }), page.locator('#pa-pdf').click()]);
+  await Promise.all([page.waitForURL('**/pdf-sign/'), page.locator('#pa-next').getByRole('button', { name: 'PDF 서명·도장 넣기' }).click()]);
+  await expect(page.locator('#sg-notice')).toHaveText('방금 만든 파일을 가져왔습니다.');
+  const mine = () => beacons.filter((b) => b.ev.t === 'power-of-attorney');
+  await expect.poll(() => mine().map((b) => [b.ev.e, b.ev.o ?? '', b.ev.v ?? ''].join(' '))).toEqual([
+    'start build filled',
+    'success  ',
+    'download format hwp',
+    'download format pdf',
+    'start build blank',
+    'success  ',
+    'download format pdf',
+    'next next pdf-sign',
+  ]);
+  expectClean(beacons);
+  for (const b of beacons) expect(b.body).not.toMatch(/홍길동|010-1234|5678|등본|위임장\.|\.hwp|\.pdf/);
+});
+
 test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');
