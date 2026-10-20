@@ -660,7 +660,8 @@ describe('built output', () => {
    * /remove-background/, after /stamp-signature/ as in tools.ts. Unit tests themselves run with the flag off.
    */
   const builtLive = () => {
-    const live = existsSync(join(DIST, 'remove-background')) ? LIVE_TOOLS.flatMap((t) => (t.slug === 'stamp-signature' ? [t, BG_REMOVE_TOOL] : [t])) : LIVE_TOOLS;
+    // tools.ts places BG_REMOVE_TOOL right before hwp-to-pdf (FORM1020 put power-of-attorney between it and stamp-signature).
+    const live = existsSync(join(DIST, 'remove-background')) ? LIVE_TOOLS.flatMap((t) => (t.slug === 'hwp-to-pdf' ? [BG_REMOVE_TOOL, t] : [t])) : LIVE_TOOLS;
     // ADDREN1016: a PUBLIC_ADDR_EN=1 build (the CI checks job) also has /english-address/, last as in tools.ts.
     return existsSync(join(DIST, 'english-address')) ? [...live, ADDR_EN_TOOL] : live;
   };
