@@ -3566,3 +3566,10 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Owner: 「계속진행해」. D12 (`npm run forms:hancom`) could not finish: run 1 was reaped by Claude Code under low memory; run 2 (foreground) timed out because nobody answered 한글 2018's 「접근 허용」 window.
 - Decision: ship with FORM_HWP = true instead of the PDF-only fallback. Reasons: the same engine's HWP opened in real 한글 2018 twice today (Arch spike; Bob's run before the final layout tweak: 1 page, all text); the only change since is label column width and value alignment; the rhwp re-open verification passes on every build; FORM_HWP is a one-line kill switch. A PDF-only ship would need title/description/FAQ/guide copy changes and another review round.
 - Open (owner, at the PC): run `npm run forms:hancom` and click 「접근 허용」 4 times, or register 한글's FilePathCheckerModule. On any FAIL: set FORM_HWP = false and fix the copy (title, description, summary, FAQ, guide lines 112/130).
+
+## FORM1020 — live smoke (2026-10-21, orchestrator)
+- Live build f3ed590 then c570168. /power-of-attorney/ and /guide/power-of-attorney/ 200, both in the sitemap.
+- Playwright on docttak.com (chromium, webkit): 「빈 양식으로 받기」 → 위임장.hwp 13,824 B (OLE d0cf11e0) and 위임장.pdf 22,834 B (%PDF); 0 off-site or non-GET requests (analytics routes aborted by the probe itself).
+- smoke:assets OK, 2,602 URLs.
+- CI on f3ed590 failed one unit test (postbuild Growth T8: the test inserted BG_REMOVE_TOOL after stamp-signature; tools.ts puts it before hwp-to-pdf). Fixed in c570168; CI green.
+- Still open: D12 real-한글 run at the PC (see the deploy decision above).
