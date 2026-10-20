@@ -117,6 +117,10 @@ jobs:
           PUBLIC_AFF_COUPANG: '1'
           # ADDREN1016 decision 19: english-address.cloud.spec.ts runs here (/api/addr-en is page.route'd).
           PUBLIC_ADDR_EN: '1'
+          # ADS1020: the AdSense review-stage tag on the content pages, with a test client (ads.cloud.spec.ts; adsbygoogle.js
+          # is stubbed by the no-upload fixture). The default and checks builds stay AdSense-off.
+          PUBLIC_ADSENSE_ON: '1'
+          PUBLIC_ADSENSE_CLIENT: 'ca-pub-0000000000000000'
       - name: Install Playwright browser
         run: |
           case "${{ matrix.project }}" in

@@ -53,8 +53,9 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * REV5 (Decision 6): /embed/ (the embed widget's info page) and anything under it, like the guides. The widget itself
  * (/embed/id-photo/) is not in the sitemap at all; the prefix keeps it out even if it ever were.
  * EN1 (brief EN decision 8): every English page (/en/...): network-only, sw.ts RUNTIME_PAGES unchanged.
+ * ADS1020 D8: /about/ and /contact/ (operator pages, in the sitemap only when built): nobody needs them offline.
  */
-export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/english-address/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/') || path.startsWith('/embed/') || path.startsWith('/en/');
+export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/about/', '/contact/', '/remove-background/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/english-address/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/') || path.startsWith('/embed/') || path.startsWith('/en/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

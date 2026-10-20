@@ -10,6 +10,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { createCanvas } from '@napi-rs/canvas';
 import type { Locator, Page, Request } from '@playwright/test';
 import { validate } from '../../scripts/lib/usage.mjs';
+import { AFF_ENABLED } from '../../src/data/affiliate';
 import { expect, gotoReady, test } from './no-upload';
 import { startHost } from './host-page';
 import { fixturePath, photoFixture, photoRuntime, runtimePath } from './paths';
@@ -26,7 +27,8 @@ const PRIVACY_OUT = /PRIVACY_OUT = '([^']+)'/.exec(readFileSync('src/data/legal.
 const PRIVACY_OUT_ID_PHOTO = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_EMBED = /PRIVACY_EMBED = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const PRIVACY_UTM = /PRIVACY_UTM = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
-const PRIVACY_ADDR = /PRIVACY_ADDR = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_ADS = /PRIVACY_ADS = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_AFF_OFF = /PRIVACY_AFF_OFF = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const KEYS = new Set(['e', 't', 'c', 'p', 'o', 'v', 'g', 'dl', 'via', 'd', 'br', 'b', 'us', 'uc', 'w']);
 
 interface Beacon {
@@ -471,6 +473,7 @@ test('인화·사진관 링크 (REV2): a click on the info link sends exactly on
 });
 
 test('쿠팡 제휴 링크 (REV2 round 2; this build has PUBLIC_AFF_COUPANG=1 like production): disclosure first, three sponsored links, a click sends out with the link kind only', async ({ page, network }) => {
+  test.skip(!AFF_ENABLED, 'ADS1020 D1: the Coupang links are off in code (src/data/affiliate.ts AFF_ENABLED)');
   const beacons = await record(page);
   const COUPANG = 'https://link.coupang.com/a/hM1VvrGKdg';
   // The external site is a stub: no test reaches Coupang.
@@ -547,7 +550,9 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   await expect(main).toContainText('보내지 않는 것: 파일 이름, 크기, 내용, IP 주소, 쿠키, 나를 알아볼 수 있는 값.');
   await expect(main).toContainText(`${PRIVACY_USAGE}: 익명 사용 통계를 더함`);
   await expect(main).toContainText('이어서 하기(보낸 도구·받을 도구 이름)');
-  await expect(main).toContainText('도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)');
+  // ADS1020 D7: with the Coupang links off in code the count names only the 사진관 찾기 link, and the change log says so.
+  await expect(main).toContainText('증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)');
+  await expect(main).toContainText(`${PRIVACY_AFF_OFF}: 상품 링크를 없애고 익명 사용 통계의 상품 링크 누름 항목을 지움`);
   await expect(main).toContainText(`${PRIVACY_OUT}: 익명 사용 통계에 도구 결과 화면과 안내 글의 상품 링크 누름을 더함`);
   await expect(main).toContainText(`${PRIVACY_OUT_ID_PHOTO}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`);
   // REV5: the embed widget count (via=embed) is the newest change.
@@ -559,7 +564,8 @@ test('/privacy/ names the usage statistics: the section, its date, the cookie se
   await expect(main).toContainText(`${PRIVACY_UTM}: 익명 사용 통계에 어느 링크로 들어왔는지(정해진 링크 표시)를 더함`);
   await expect(main).not.toContainText(/utm/i);
   // ADDREN1016: the cloud build also has 영문주소 변환기 on, whose section is newer (src/data/legal.ts PRIVACY_REVISED).
-  await expect(main).toContainText(`시행일: ${(await page.locator('#addr').count()) ? PRIVACY_ADDR : PRIVACY_UTM}`);
+  // ADS1020: AdSense (#ads) is newest when on, else the product links taken out of the count (PRIVACY_AFF_OFF).
+  await expect(main).toContainText(`시행일: ${(await page.locator('#ads').count()) ? PRIVACY_ADS : PRIVACY_AFF_OFF}`);
   // The cloud build also has Google Analytics (owner 2026-10-08): its cookie sentence wins then (ga.cloud.spec.ts
   // checks it); without it, the cookieless sentence. The date is the embed count's (REV5) in both.
   if ((await page.locator('#ga').count()) === 0) {
@@ -608,6 +614,7 @@ async function expectBlock(block: Locator, lead: string, dests: string[]): Promi
 }
 
 test('REV3 PDF 합치기: the block shows only with a result, inside it before 이어서 하기; a click opens a new tab and sends out (t=pdf-merge, v=cp-mfp); axe', async ({ page, network }) => {
+  test.skip(!AFF_ENABLED, 'ADS1020 D1: the Coupang links are off in code (src/data/affiliate.ts AFF_ENABLED)');
   const beacons = await record(page);
   await stubCoupang(page);
   await gotoReady(page, '/pdf-merge/');
@@ -636,6 +643,7 @@ test('REV3 PDF 합치기: the block shows only with a result, inside it before �
 });
 
 test('STAMP1015 도장 만들기: the 실물 도장 block shows with the picked stamp, below the buttons; a click sends { e: out, t: stamp-maker, v: cp-stamp }', async ({ page, network }) => {
+  test.skip(!AFF_ENABLED, 'ADS1020 D1: the Coupang links are off in code (src/data/affiliate.ts AFF_ENABLED)');
   const beacons = await record(page);
   await stubCoupang(page);
   await gotoReady(page, '/stamp-maker/');
@@ -659,6 +667,7 @@ test('STAMP1015 도장 만들기: the 실물 도장 block shows with the picked 
 });
 
 test('REV3 PDF 서명·도장 넣기: a click on the result block sends exactly { e: out, t: pdf-sign, o: out, v: cp-stamp } with no URL', async ({ page, network }) => {
+  test.skip(!AFF_ENABLED, 'ADS1020 D1: the Coupang links are off in code (src/data/affiliate.ts AFF_ENABLED)');
   const beacons = await record(page);
   await stubCoupang(page);
   await gotoReady(page, '/pdf-sign/');
@@ -680,6 +689,7 @@ test('REV3 PDF 서명·도장 넣기: a click on the result block sends exactly 
 });
 
 test('REV3 guide (passport-photo): the first-part line under the H1, the block first in the aside; a click sends one out with g and via=guide; axe', async ({ page, network }) => {
+  test.skip(!AFF_ENABLED, 'ADS1020 D1: the Coupang links are off in code (src/data/affiliate.ts AFF_ENABLED)');
   const beacons = await record(page);
   await stubCoupang(page);
   await gotoReady(page, '/guide/passport-photo/');
@@ -703,6 +713,21 @@ test('REV3 guide (passport-photo): the first-part line under the H1, the block f
   expectClean(beacons);
   expect(beacons[0]!.ev).toEqual({ e: 'out', t: 'id-photo', o: 'out', v: 'cp-backdrop', g: 'passport-photo', via: 'guide', d: expect.any(String), b: expect.any(String), w: 1 });
   expect(beacons[0]!.body).not.toMatch(/https?:|coupang|hM1/i);
+});
+
+test('ADS1020 D1: this build has PUBLIC_AFF_COUPANG=1 like production, and still no Coupang link, block or first-part line anywhere', async ({ page }) => {
+  test.skip(AFF_ENABLED, 'only while the Coupang links are off in code');
+  for (const path of ['/id-photo/', '/pdf-merge/', '/pdf-sign/', '/stamp-maker/', '/hwp-viewer/', '/jpg-to-pdf/', '/remove-background/', '/guide/passport-photo/', '/guide/hwp-on-phone/', '/guide/stamp-image/']) {
+    await page.goto(path);
+    await expect(page.locator('a[rel~="sponsored"]'), path).toHaveCount(0);
+    await expect(page.locator('a[href^="https://link.coupang.com/"]'), path).toHaveCount(0);
+    await expect(page.locator('.guide-aff-top'), path).toHaveCount(0);
+    await expect(page.locator('main'), path).not.toContainText('쿠팡');
+  }
+  // /id-photo/ keeps its 사진관 찾기 info link (not sponsored), alone.
+  await page.goto('/id-photo/');
+  await expect(page.locator('#idp-print-links a')).toHaveCount(1);
+  await expect(page.locator('#idp-print-links a')).toHaveAttribute('data-out', 'photo-studio');
 });
 
 test('REV3 No-block screens: no sponsored link, no first-part line on pdf-compress, photo-compress, a size guide, the guide index, the home page and 404', async ({ page }) => {

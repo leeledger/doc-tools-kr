@@ -46,6 +46,8 @@ export interface GuideLd {
   faq: readonly { q: string; a: string }[];
   /** Source URLs (preset sources resolved). */
   citations: readonly string[];
+  /** ADS1020 D11: the operator's name when the operator pages are built (OPERATOR_ON); else the author is 문서딱. */
+  author?: string;
 }
 
 const organization = (site: URL | undefined): Record<string, unknown> => ({
@@ -69,7 +71,7 @@ export function guideJsonLd(g: GuideLd, site: URL | undefined): Record<string, u
       description: g.description,
       datePublished: g.published,
       dateModified: g.updated,
-      author: organization(site),
+      author: g.author ? { '@type': 'Person', name: g.author, url: new URL('/about/', site).href } : organization(site),
       publisher: organization(site),
       image: guideOgUrl(g.slug, site),
       mainEntityOfPage: { '@type': 'WebPage', '@id': url },

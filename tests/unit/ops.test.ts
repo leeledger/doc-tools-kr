@@ -366,12 +366,11 @@ describe('weeks and the R1 trigger (M-3)', () => {
     const notYet = fakeGitHub();
     await monetize([], { ...quiet, sitemapCount: 21, reports: reports.slice(1), github: notYet });
     expect(notYet.create).not.toHaveBeenCalled();
-    // REV2 decision 11: ads only on /guide/, route CSP, about 50 guides, under-14 personalised ads off
+    // ADS1020: the owner checklist of OPS-RUNBOOK §11 (tests/unit/adsense.test.ts keeps them word for word).
     const body = gh.create.mock.calls[0]![0].body as string;
-    expect(body).toContain('- [ ] CSP: 광고용 CSP는 /guide/* 경로에만(_headers 경로별; 정적 배포라 nonce 대신 해시 기반 strict CSP 또는 Functions 검토). 도구·결과·404 화면은 지금 CSP 그대로');
-    expect(body).toContain('- [ ] 광고는 안내 글(/guide/) 페이지에만. 도구 화면·결과 화면·404에는 넣지 않는다(구글 게시자 정책)');
-    expect(body).toContain('- [ ] 안내 글 50편 안팎, 기관 이름만 바꾼 글 없음(구글 스팸 정책)');
-    expect(body).toMatch(/- \[ \] 개인정보처리방침 v2: [^\n]*14세 미만 맞춤광고 끄기/);
+    expect(body).toContain('## 애드센스 재신청 체크리스트 (docs/OPS-RUNBOOK.md §11, 대표만)');
+    expect(body).toContain('- [ ] 애드센스 콘솔 → 광고 → 사이트별 → docttak.com: 자동 광고 끄기 (앵커·전면(비네트) 포함)');
+    expect(body).toContain('- [ ] Cloudflare Pages → Production 변수 `PUBLIC_ADSENSE_ON` = `1`');
     expect(body).not.toMatch(/광고 출처만 허용|예약 슬롯/);
   });
 });

@@ -139,7 +139,7 @@ describe('en-check (d): id parity with the Korean twin', () => {
 describe('en-check (e): sitemap alternates and canonicals', () => {
   const S = 'https://docttak.com';
   const alt = (ko: string, en: string) =>
-    `<xhtml:link rel="alternate" hreflang="ko" href="${S}${ko}"/><xhtml:link rel="alternate" hreflang="en" href="${S}${en}"/><xhtml:link rel="alternate" hreflang="x-default" href="${S}${en}"/>`;
+    `<xhtml:link rel="alternate" hreflang="ko" href="${S}${ko}"/><xhtml:link rel="alternate" hreflang="en" href="${S}${en}"/><xhtml:link rel="alternate" hreflang="x-default" href="${S}${ko}"/>`;
   const url = (p: string, links = '') => `<url><loc>${S}${p}</loc><lastmod>2026-10-13</lastmod>${links}</url>`;
   const xml = (...urls: string[]) => `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls.join('')}</urlset>`;
   const good = xml(url('/pdf-merge/', alt('/pdf-merge/', '/en/pdf-merge/')), url('/en/pdf-merge/', alt('/pdf-merge/', '/en/pdf-merge/')), url('/guide/'));
@@ -150,16 +150,16 @@ describe('en-check (e): sitemap alternates and canonicals', () => {
   ]);
 
   it('reads entries with their alternates', () => {
-    expect(sitemapEntries(good)[0]).toEqual({ loc: `${S}/pdf-merge/`, alt: { ko: `${S}/pdf-merge/`, en: `${S}/en/pdf-merge/`, 'x-default': `${S}/en/pdf-merge/` } });
+    expect(sitemapEntries(good)[0]).toEqual({ loc: `${S}/pdf-merge/`, alt: { ko: `${S}/pdf-merge/`, en: `${S}/en/pdf-merge/`, 'x-default': `${S}/pdf-merge/` } });
   });
-  it('passes: reciprocal ko/en/x-default (= en) on both twins, self canonical, the 404 left out', () => {
+  it('passes: reciprocal ko/en/x-default (= ko, ADS1020 D13) on both twins, self canonical, the 404 left out', () => {
     expect(sitemapProblems(pages, good)).toEqual([]);
   });
-  it('fails: one-way pair, x-default to Korean, an English page without a twin or not listed, a wrong canonical, no namespace', () => {
+  it('fails: one-way pair, x-default to English, an English page without a twin or not listed, a wrong canonical, no namespace', () => {
     const oneWay = xml(url('/pdf-merge/', alt('/pdf-merge/', '/en/pdf-merge/')), url('/en/pdf-merge/'));
     expect(sitemapProblems(pages, oneWay).join()).toContain('/en/pdf-merge/ alternates {}');
-    const koDefault = good.replaceAll(`hreflang="x-default" href="${S}/en/pdf-merge/"`, `hreflang="x-default" href="${S}/pdf-merge/"`);
-    expect(sitemapProblems(pages, koDefault)).toHaveLength(2);
+    const enDefault = good.replaceAll(`hreflang="x-default" href="${S}/pdf-merge/"`, `hreflang="x-default" href="${S}/en/pdf-merge/"`);
+    expect(sitemapProblems(pages, enDefault)).toHaveLength(2);
     expect(sitemapProblems(pages, xml(url('/en/pdf-merge/'))).join()).toContain('/en/pdf-merge/ has no Korean twin /pdf-merge/');
     expect(sitemapProblems(pages, xml(url('/guide/'))).join()).toContain('en/pdf-merge/index.html: not in the sitemap');
     expect(sitemapProblems(new Map([['en/pdf-merge/index.html', page(`${S}/pdf-merge/`)]]), good).join()).toContain('canonical https://docttak.com/pdf-merge/ is not /en/pdf-merge/');

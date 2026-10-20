@@ -2,6 +2,7 @@
 // covers it under "no-upload allowlist"). No Playwright import here, so the unit tests can load it.
 import { isDesignedConnectSrc } from '../../scripts/lib/csp-connect.mjs';
 import { GA_CONNECT_SRC, GTAG_ORIGIN } from '../../scripts/lib/ga.mjs';
+import { ADSBYGOOGLE_URL, CONTENT_CSP, isContentPath } from '../../scripts/lib/adsense.mjs';
 
 /**
  * A request that may carry data (C2-cloud, brief §10): the method and the exact same-origin path, no query. Only
@@ -16,6 +17,8 @@ export interface RequestLike {
   url(): string;
   method(): string;
   postDataBuffer(): Buffer | null;
+  /** The URL of the page (frame) that made the request, '' when unknown (a worker or service-worker request). */
+  frameUrl?(): string;
 }
 
 export interface ResponseLike {
@@ -58,6 +61,24 @@ export function isGaRequest(method: string, url: string): boolean {
   return u.hostname.endsWith('.google-analytics.com') || u.hostname.endsWith('.analytics.google.com');
 }
 
+/**
+ * Google AdSense, review stage (ADS1020 Build Order H): in a build with PUBLIC_ADSENSE_ON=1 (the cloud-* projects set
+ * `ads`), the bodiless GET of adsbygoogle.js is expected, and only from a content page (scripts/lib/adsense.mjs
+ * isContentPath) of our own site (`origin`; round 2); those pages are served with CONTENT_CSP. The fixture stubs the script:
+ * no test reaches Google.
+ */
+export function isAdsRequest(method: string, url: string, frameUrl: string, origin: string): boolean {
+  let u: URL;
+  let page: URL;
+  try {
+    u = new URL(url);
+    page = new URL(frameUrl);
+  } catch {
+    return false;
+  }
+  return method === 'GET' && `${u.origin}${u.pathname}` === ADSBYGOOGLE_URL && page.origin === origin && isContentPath(page.pathname);
+}
+
 const SELF_ONLY = /(^|;)\s*connect-src 'self'\s*(;|$)/;
 const SELF_AND_GA = new RegExp(`(^|;)\\s*connect-src 'self' ${GA_CONNECT_SRC.replace(/[.*]/g, (c: string) => `\\${c}`)}\\s*(;|$)`);
 
@@ -66,7 +87,7 @@ const SELF_AND_GA = new RegExp(`(^|;)\\s*connect-src 'self' ${GA_CONNECT_SRC.rep
  * smoke only, INTERNAL-TRAFFIC round 2): the deployed site may send any designed connect-src, i.e. 'self' plus exactly
  * the Web Analytics and GA hosts gen-headers adds (scripts/lib/csp-connect.mjs); any other host still fails.
  */
-export function uploadProblems(log: GuardLog, baseURL: string, allow: readonly AllowedUpload[] = [], ga = false, designedCsp = false): string[] {
+export function uploadProblems(log: GuardLog, baseURL: string, allow: readonly AllowedUpload[] = [], ga = false, designedCsp = false, ads = false): string[] {
   const origin = new URL(baseURL).origin;
   const problems: string[] = [];
   for (const r of log.requests) {
@@ -75,7 +96,8 @@ export function uploadProblems(log: GuardLog, baseURL: string, allow: readonly A
     const allowed = isAllowedUpload(r.method(), url, origin, allow);
     if (!['GET', 'HEAD'].includes(r.method()) && !allowed) problems.push(`${r.method()} ${url}`);
     if (r.postDataBuffer() !== null && !allowed) problems.push(`request body on ${url}`);
-    if (scheme !== 'blob:' && scheme !== 'data:' && new URL(url).origin !== origin && !(ga && r.postDataBuffer() === null && isGaRequest(r.method(), url))) problems.push(`third-party ${url}`);
+    const adsOk = ads && r.postDataBuffer() === null && isAdsRequest(r.method(), url, r.frameUrl?.() ?? '', origin);
+    if (scheme !== 'blob:' && scheme !== 'data:' && new URL(url).origin !== origin && !(ga && r.postDataBuffer() === null && isGaRequest(r.method(), url)) && !adsOk) problems.push(`third-party ${url}`);
   }
   for (const ws of log.websockets) problems.push(`websocket ${ws}`);
   for (const r of log.responses) {
@@ -84,7 +106,8 @@ export function uploadProblems(log: GuardLog, baseURL: string, allow: readonly A
     // The allowed endpoint answers with an image or JSON, never a document (Pages Functions get no _headers).
     if (isAllowedUpload(r.request().method(), url, origin, allow)) continue;
     const csp = r.headers()['content-security-policy'] ?? '';
-    if (!SELF_ONLY.test(csp) && !(ga && SELF_AND_GA.test(csp)) && !(designedCsp && isDesignedConnectSrc(csp))) problems.push(`no CSP connect-src 'self' on ${url}`);
+    const content = ads && csp === CONTENT_CSP && isContentPath(new URL(url).pathname);
+    if (!SELF_ONLY.test(csp) && !(ga && SELF_AND_GA.test(csp)) && !(designedCsp && isDesignedConnectSrc(csp)) && !content) problems.push(`no CSP connect-src 'self' on ${url}`);
   }
   return problems;
 }

@@ -5,7 +5,10 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
+import { ADS_CFG_PATH, ADS_CFG_SOURCE, adsHeaderProblems, adsOffTextProblems, adsPageProblems, adsenseConfig, adsenseGate } from './lib/adsense.mjs';
 import { autoframeOn } from './lib/autoframe.mjs';
+import { plainWordProblems } from './lib/plain-words.mjs';
+import { siteHeaders } from './gen-headers.mjs';
 import { BEACON_SRC, analyticsToken } from './lib/analytics.mjs';
 import { GA_LOADER, gaId, loaderSource } from './lib/ga.mjs';
 import { API_PATH as CLOUD_API, CLAIM_FILE_RE, EXCEPTION_PAGES, EXCEPTION_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, bgCloudOn, claimText, privacyGate, unqualifiedClaims } from './lib/bgcloud.mjs';
@@ -17,7 +20,7 @@ import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mj
 import { headMeta, metaLen, metaProblems } from './lib/meta-length.mjs';
 import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fontcover.mjs';
-import { coupangProblems, disclosureStrings, sponsoredProblems } from './lib/out-links-check.mjs';
+import { AFF_TEXT_RE, affEnabled, coupangOffProblems, coupangProblems, disclosureStrings, sponsoredProblems } from './lib/out-links-check.mjs';
 import { EMBED_PAGE_RE, embedHeaderProblems, embedPageProblems } from './lib/embed-check.mjs';
 import { EN_PAGE_RE, enProblems } from './lib/en-check.mjs';
 import { buildServiceWorker, precacheList } from './gen-sw.mjs';
@@ -140,6 +143,67 @@ if (ga) {
   const TEXT = /\.(html|m?js|css|txt|xml|json|webmanifest|svg)$|^_headers$|^_redirects$/;
   for (const f of files) if (TEXT.test(f.path) && read(f.path).includes('googletagmanager')) errors.push(`${f.path}: names googletagmanager although PUBLIC_GA_ID is not set`);
 }
+// Google AdSense, review stage (ADS1020 Build Order G): on, the tag pair on exactly the content pages, dist/ads-cfg.js,
+// the content CSP in the _headers gen-headers will write (same code, same env; it runs after this script), the
+// privacy section and the operator; off, none of it in any dist text file.
+let adsense = { on: false, client: '' };
+try {
+  adsense = adsenseConfig(env);
+} catch (e) {
+  errors.push(e.message);
+}
+for (const e of adsenseGate(env)) if (!errors.includes(e)) errors.push(e);
+errors.push(...adsPageProblems(pageHtml, adsense));
+const adsCfgFile = files.some((f) => f.path === ADS_CFG_PATH.slice(1));
+if (adsense.on) {
+  if (!adsCfgFile || read(ADS_CFG_PATH.slice(1)).toString('utf8') !== ADS_CFG_SOURCE) errors.push(`dist${ADS_CFG_PATH} is missing or not ADS_CFG_SOURCE (postbuild gen-ads-cfg)`);
+  if (!(pageHtml.get('privacy/index.html') ?? '').includes('id="ads"')) errors.push('privacy/index.html: no AdSense section (id="ads") although PUBLIC_ADSENSE_ON is on');
+} else {
+  if (adsCfgFile) errors.push(`dist${ADS_CFG_PATH} ships although PUBLIC_ADSENSE_ON is off`);
+  errors.push(...adsOffTextProblems(match(/\.(html|m?js|css|txt|xml|json|webmanifest|svg)$/).map((f) => [f, read(f).toString('utf8')])));
+  if ((pageHtml.get('privacy/index.html') ?? '').includes('id="ads"')) errors.push('privacy/index.html: an AdSense section (id="ads") although PUBLIC_ADSENSE_ON is off');
+}
+if (files.some((f) => f.path === '_headers')) {
+  try {
+    errors.push(...adsHeaderProblems(siteHeaders(read('_headers').toString('utf8'), env).headers, adsense.on));
+  } catch (e) {
+    if (!errors.includes(e.message)) errors.push(e.message);
+  }
+}
+// Operator pages (ADS1020 D8, D12): /about/ and /contact/ exist iff the contact and the officer are both set, iff both are
+// in the sitemap, iff every Korean page's footer links both; ads on implies them. /licenses/ and /embed/ are noindex and
+// not in the sitemap; public/ads.txt keeps the IAB line format.
+const operatorOn = Boolean(email && env.PUBLIC_PRIVACY_OFFICER?.trim());
+{
+  const operator = operatorOn;
+  const sitemapXml = files.some((f) => f.path === 'sitemap.xml') ? read('sitemap.xml').toString('utf8') : '';
+  const inSitemap = (p) => new RegExp(`<loc>[^<]*${p.replace(/\//g, '\\/')}</loc>`).test(sitemapXml);
+  if (adsense.on && !operator) errors.push('PUBLIC_ADSENSE_ON is on but /about/ and /contact/ are not built (PUBLIC_CONTACT_EMAIL and PUBLIC_PRIVACY_OFFICER)');
+  for (const [file, path] of [['about/index.html', '/about/'], ['contact/index.html', '/contact/']]) {
+    if (pageHtml.has(file) !== operator) errors.push(`${file}: ${operator ? 'missing although' : 'built although not'} PUBLIC_CONTACT_EMAIL and PUBLIC_PRIVACY_OFFICER are both set`);
+    if (inSitemap(path) !== operator) errors.push(`sitemap.xml: ${path} ${operator ? 'missing' : 'listed'} (operator pages ${operator ? 'on' : 'off'})`);
+  }
+  for (const [p, html] of pageHtml) {
+    if (EN_PAGE_RE.test(p) || EMBED_PAGE_RE.test(p)) continue;
+    const foot = /<nav class="foot-links"[\s\S]*?<\/nav>/.exec(html)?.[0];
+    if (!foot) continue;
+    const links = ['/about/', '/contact/'].filter((h) => foot.includes(`href="${h}"`)).length;
+    if (links !== (operator ? 2 : 0)) errors.push(`${p}: the footer has ${links} of the 소개·문의 links (expected ${operator ? 2 : 0})`);
+  }
+  for (const p of ['licenses/index.html', 'embed/index.html']) {
+    const html = pageHtml.get(p);
+    if (!html) errors.push(`${p}: no file found`);
+    else if (!html.includes('<meta name="robots" content="noindex">')) errors.push(`${p}: no robots noindex meta`);
+    if (inSitemap(`/${p.replace(/index\.html$/, '')}`)) errors.push(`sitemap.xml: /${p.replace(/index\.html$/, '')} is listed (noindex page)`);
+  }
+  const adsTxt = readFileSync(join(import.meta.dirname, '..', 'public', 'ads.txt'), 'utf8');
+  for (const line of adsTxt.split('\n').filter((l) => l.trim() && !l.startsWith('#'))) {
+    if (!/^[a-z0-9.-]+\.[a-z]+, pub-\d{16}, (DIRECT|RESELLER)(, [0-9a-f]+)?$/.test(line.trim())) errors.push(`public/ads.txt: "${line.trim()}" is not an ads.txt record`);
+  }
+}
+// Plain language (Polish Q; ADS1020 round 2): every page of this build, so the flag-only sections (GA, AdSense, cloud
+// paths on /privacy/) are checked too, not only the default build the unit test reads.
+for (const [p, html] of pageHtml) errors.push(...plainWordProblems(p, html));
 const initialJs = (html) => [...new Set(moduleEntries(html).flatMap((e) => staticClosure(dist, e)))];
 /** The chunks a module imports with a relative import(`./x.js`) (lazy controllers; Vite writes a template literal). */
 const dynamicImports = (path) => [...read(path).toString('utf8').matchAll(/import\(\s*["'`](\.{1,2}\/[^"'`]+\.js)["'`]\s*\)/g)].map((m) => posix.join(posix.dirname(path), m[1]));
@@ -481,8 +545,10 @@ if (!cloudOn) {
     if (LOCAL_SCOPE_RE.test(f)) continue;
     for (const c of unqualifiedClaims(text)) errors.push(`${f}: "files never leave" without the 배경 지우기 exception (PUBLIC_BG_CLOUD on): …${c}…`);
   }
-  for (const p of exceptionPages) if (!EXCEPTION_PAGES.includes(p)) errors.push(`${p}: 배경 지우기 exception wording outside ${EXCEPTION_PAGES.join(', ')}`);
-  for (const p of EXCEPTION_PAGES) if (!exceptionPages.includes(p)) errors.push(`${p}: no 배경 지우기 exception wording in a build with PUBLIC_BG_CLOUD on`);
+  // ADS1020 D9: /about/ (built only with the operator pages) names the exception too.
+  const allowed = operatorOn ? [...EXCEPTION_PAGES, 'about/index.html'] : EXCEPTION_PAGES;
+  for (const p of exceptionPages) if (!allowed.includes(p)) errors.push(`${p}: 배경 지우기 exception wording outside ${allowed.join(', ')}`);
+  for (const p of allowed) if (!exceptionPages.includes(p)) errors.push(`${p}: no 배경 지우기 exception wording in a build with PUBLIC_BG_CLOUD on`);
   const privacy = pageHtml.get('privacy/index.html') ?? '';
   if (!privacy.includes('id="bg"')) errors.push('privacy/index.html: no 배경 지우기 section (id="bg")');
   if (!privacy.includes(env.PUBLIC_PRIVACY_OFFICER?.trim() || '\u0000')) errors.push('privacy/index.html: the 개인정보 보호책임자 is not named');
@@ -514,6 +580,8 @@ const addrEn = addrEnOn(env);
 // each of which must carry it when on; the CSP's connect-src never names juso (the page posts to its own origin).
 const ADDR_SEND = '행정안전부 주소 검색으로 보내';
 const ADDR_SEND_PAGES = ['privacy/index.html', 'terms/index.html', 'english-address/index.html'];
+// ADS1020 D9: /about/ names the 영문주소 path in its own words, never this one (any build).
+if ((pageHtml.get('about/index.html') ?? '').replace(/<[^>]+>/g, '').includes(ADDR_SEND)) errors.push(`about/index.html: says 「${ADDR_SEND}」`);
 // Review ADDREN1016 should-fix 2: a build that sends something (배경 지우기 cloud, 영문주소) or has Google Analytics never
 // tells /privacy/ readers that no personal data is received: not in section 1's heading, not in the meta descriptions.
 {
@@ -590,10 +658,18 @@ else {
 }
 // Link blocks (REV2, REV3 R3.6): sponsored links only on the screens of the placement map, inside .out-links after their
 // disclosure, new tab, labelled 광고; a guide with one shows AFF_COPY.top first; none at all while PUBLIC_AFF_COUPANG is off.
-const disclosures = disclosureStrings(readFileSync(join(import.meta.dirname, '..', 'src', 'data', 'affiliate.ts'), 'utf8'));
-if (!disclosures) errors.push('src/data/affiliate.ts: AFF_COPY.ad, AFF_COPY.top or COUPANG_DISCLOSURE not found');
-else errors.push(...sponsoredProblems(pageHtml, disclosures, { TOOL_OUT, GUIDE_OUT }));
-errors.push(...coupangProblems(pageHtml, env.PUBLIC_AFF_COUPANG?.trim() === '1'));
+// ADS1020 D1: while AFF_ENABLED is false in src/data/affiliate.ts, the flag counts as off whatever PUBLIC_AFF_COUPANG says,
+// and no dist text file carries a Coupang link or a disclosure line (rule f).
+const affiliateSource = readFileSync(join(import.meta.dirname, '..', 'src', 'data', 'affiliate.ts'), 'utf8');
+const disclosures = disclosureStrings(affiliateSource);
+const affCode = affEnabled(affiliateSource);
+if (affCode === null) errors.push('src/data/affiliate.ts: `export const AFF_ENABLED = true|false;` not found');
+if (!disclosures) errors.push('src/data/affiliate.ts: AFF_COPY.ad, AFF_COPY.top, AFF_COPY.heading or COUPANG_DISCLOSURE not found');
+else {
+  errors.push(...sponsoredProblems(pageHtml, disclosures, { TOOL_OUT, GUIDE_OUT }));
+  if (affCode === false) errors.push(...coupangOffProblems(match(AFF_TEXT_RE).map((f) => [f, read(f).toString('utf8')]), disclosures));
+}
+errors.push(...coupangProblems(pageHtml, affCode === true && env.PUBLIC_AFF_COUPANG?.trim() === '1'));
 
 // UI fonts (Polish P.12; 600 dropped in G2 ci-green; core + late split in the LCP fix after TOOLS4; 700 retired in
 // LCP round 2): two static core instances (400, 800), ≤ 50 KB each; up to two late instances (controller-only

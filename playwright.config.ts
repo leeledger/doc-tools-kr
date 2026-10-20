@@ -26,10 +26,12 @@ const BG_SPEC = /remove-background\.spec\.ts$/;
  * It also has Google Analytics on (PUBLIC_GA_ID=G-TEST000000; ga.cloud.spec.ts): the `ga` option lets the no-upload
  * fixture stub gtag.js and the collect hosts and accept exactly those requests and the GA CSP. ADDREN1016: it has
  * 영문주소 변환기 on too (PUBLIC_ADDR_EN=1); english-address.cloud.spec.ts answers /api/addr-en with page.route.
+ * ADS1020: and Google AdSense (PUBLIC_ADSENSE_ON=1, test client; ads.cloud.spec.ts): the `ads` option lets the no-upload
+ * fixture stub adsbygoogle.js and accept that one GET, and the content CSP, on content pages only.
  */
 const CLOUD_PORT = Number(process.env.E2E_CLOUD_PORT ?? 4183);
 const CLOUD = existsSync('dist-bgcloud/remove-background/index.html');
-const CLOUD_SPEC = /(remove-background\.cloud|english-address\.cloud|usage|ga\.cloud)\.spec\.ts$/;
+const CLOUD_SPEC = /(remove-background\.cloud|english-address\.cloud|usage|ga\.cloud|ads\.cloud)\.spec\.ts$/;
 const CLOUD_DEVICES = { chromium: 'Desktop Chrome', firefox: 'Desktop Firefox', webkit: 'Desktop Safari', 'mobile-chrome': 'Pixel 7', 'mobile-safari': 'iPhone 14' } as const;
 /**
  * WebKit projects run with prefers-reduced-motion, which turns the site's `html { scroll-behavior: smooth }` off
@@ -41,7 +43,7 @@ const CLOUD_DEVICES = { chromium: 'Desktop Chrome', firefox: 'Desktop Firefox', 
  */
 const WEBKIT_MOTION = { reducedMotion: 'reduce' } as const;
 
-export default defineConfig<{ ga: boolean }>({
+export default defineConfig<{ ga: boolean; ads: boolean }>({
   testDir: 'tests/e2e',
   timeout: 60_000,
   expect: { timeout: 15_000 },
@@ -91,7 +93,7 @@ export default defineConfig<{ ga: boolean }>({
           testIgnore: [],
           testMatch: CLOUD_SPEC,
           ...(name === 'firefox' ? { retries: process.env.CI ? 2 : 1 } : {}),
-          use: { ...devices[device], ...(devices[device].defaultBrowserType === 'webkit' ? WEBKIT_MOTION : {}), baseURL: `http://127.0.0.1:${CLOUD_PORT}`, ga: true },
+          use: { ...devices[device], ...(devices[device].defaultBrowserType === 'webkit' ? WEBKIT_MOTION : {}), baseURL: `http://127.0.0.1:${CLOUD_PORT}`, ga: true, ads: true },
         }))
       : []),
   ],

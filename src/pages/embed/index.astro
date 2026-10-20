@@ -1,6 +1,7 @@
 ---
 // 무료 임베드 위젯 안내 (REV5 Decision 6): what the widget is, a live preview on demand, the snippet with a copy button, the
-// conditions and the white-label contact. Indexable (sitemap, llms.txt), never precached (gen-sw NOT_PRECACHED). The
+// conditions and the white-label contact. ADS1020 D12: noindex and out of the sitemap (llms.txt keeps its line), never
+// precached (gen-sw NOT_PRECACHED). The
 // text renders in the system font (.guide-page, app.css), and the copy uses characters the UI font already has. Inline
 // style attributes, not a page stylesheet: a second render-blocking CSS file put local LCP at 1,962 ms.
 import Base from '../../layouts/Base.astro';
@@ -11,7 +12,7 @@ const snippet = embedSnippet(Astro.site!);
 const preview = new URL('/embed/id-photo/', Astro.site).pathname;
 const description = '사진관·학원·행정사 누리집에 증명사진 규격 맞추기 도구를 무료로 넣어 보세요. 코드만 넣으면 되고, 사진은 손님 기기 밖으로 나가지 않아요.';
 ---
-<Base title={`내 누리집에 증명사진 도구 넣기 (무료) | ${SITE.name}`} description={description} ogDescription={description}>
+<Base title={`내 누리집에 증명사진 도구 넣기 (무료) | ${SITE.name}`} description={description} ogDescription={description} noindex>
   <div class="prose guide-page">
     <div class="wrap narrow">
       <h1>내 누리집에 증명사진 도구 넣기 (무료)</h1>

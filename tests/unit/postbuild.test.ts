@@ -29,7 +29,8 @@ import { CORE_PATHS, stripComments, uiCharSets } from '../../scripts/lib/ui-font
 import { ID_PHOTO_PAGE, coupangProblems, disclosureStrings, placement, sponsoredProblems } from '../../scripts/lib/out-links-check.mjs';
 import { GUIDE_OUT, TOOL_OUT } from '../../scripts/lib/usage.mjs';
 import { PRINT_COPY } from '../../src/data/print-links';
-import { AFF_COPY, COUPANG_DISCLOSURE } from '../../src/data/affiliate';
+import { JARGON, plainWordProblems, userText } from '../../scripts/lib/plain-words.mjs';
+import { AFF_COPY, COUPANG_DISCLOSURE, affOn } from '../../src/data/affiliate';
 
 const ROOT = join(__dirname, '..', '..');
 const DIST = join(ROOT, 'dist');
@@ -547,7 +548,7 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
   const page = (path: string, html: string) => sponsoredProblems(new Map([[path, html]]), d, maps);
 
   it('reads the disclosure strings from src/data/affiliate.ts', () => {
-    expect(d).toEqual({ generic: AFF_COPY.ad, top: AFF_COPY.top, coupang: COUPANG_DISCLOSURE });
+    expect(d).toEqual({ generic: AFF_COPY.ad, top: AFF_COPY.top, heading: AFF_COPY.heading, coupang: COUPANG_DISCLOSURE });
     expect(disclosureStrings('const x = 1;')).toBeNull();
     expect(placement('pdf-merge/index.html', '')).toEqual({ kind: 'tool', key: 'pdf-merge' });
     expect(placement('guide/passport-photo/index.html', guide('id-photo'))).toEqual({ kind: 'guide', key: 'id-photo' });
@@ -794,7 +795,9 @@ describe('built output', () => {
     const legal = readFileSync(join(ROOT, 'src', 'data', 'legal.ts'), 'utf8');
     const date = /PRIVACY_OUT = '([^']+)'/.exec(legal)![1]!;
     const rev2 = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(legal)![1]!;
-    expect(html.includes('도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)')).toBe(on);
+    // ADS1020 D7: with the Coupang links off in code the count names only the 사진관 찾기 link.
+    expect(html.includes('도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)')).toBe(false);
+    expect(html.includes('증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)')).toBe(on);
     expect(html.includes('증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크를 눌렀는지')).toBe(false);
     expect(html.includes(`${date}: 익명 사용 통계에 도구 결과 화면과 안내 글의 상품 링크 누름을 더함`)).toBe(on);
     expect(html.includes(`${rev2}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`)).toBe(on);
@@ -803,7 +806,7 @@ describe('built output', () => {
 
   it('REV3 blocks in the build: flag off, none anywhere; flag on, inside the result containers and on the id-photo guides with the first-part line', () => {
     need();
-    const aff = process.env.PUBLIC_AFF_COUPANG?.trim() === '1';
+    const aff = affOn(process.env.PUBLIC_AFF_COUPANG); // ADS1020 D1: false while AFF_ENABLED is false
     const read = (p: string) => readFileSync(join(DIST, p), 'utf8');
     for (const p of ['pdf-merge/index.html', 'pdf-split/index.html', 'jpg-to-pdf/index.html', 'pdf-sign/index.html', 'stamp-signature/index.html', 'hwp-to-pdf/index.html', 'hwp-viewer/index.html', 'hwpx-to-hwp/index.html', 'guide/passport-photo/index.html', 'guide/hwp-on-phone/index.html']) {
       expect(read(p).includes('rel="sponsored'), p).toBe(aff);
@@ -836,7 +839,7 @@ describe('built output', () => {
       expect(html).toMatch(/<div class="out-links" id="idp-print-links">/);
       expect(html).toContain('<a href="https://map.naver.com/p/search/%EC%82%AC%EC%A7%84%EA%B4%80" rel="noopener noreferrer" target="_blank" data-out="photo-studio">가까운 사진관 찾기 (네이버 지도, 새 창)</a>');
     }
-    const aff = process.env.PUBLIC_AFF_COUPANG?.trim() === '1';
+    const aff = affOn(process.env.PUBLIC_AFF_COUPANG); // ADS1020 D1: false while AFF_ENABLED is false
     expect(html.includes('rel="sponsored')).toBe(aff);
     expect(html.includes(AFF_COPY.ad)).toBe(aff);
   });
@@ -854,22 +857,36 @@ describe('built output', () => {
     expect(JSON.parse(readFileSync(join(DIST, '_routes.json'), 'utf8'))).toEqual({ version: 1, include: ['/api/*', '/admin', '/admin/*'], exclude: [] });
   });
 
-  it('REV5 embed: /embed/ in the sitemap and llms.txt, the widget in neither; neither precached; the widget has no site script', async () => {
+  it('REV5 embed: /embed/ in llms.txt only (ADS1020 D12: noindex, not in the sitemap), the widget in neither; neither precached; the widget has no site script', async () => {
     need();
     const { precacheList } = await import('../../scripts/gen-sw.mjs');
     const { urls } = precacheList(DIST);
     for (const u of urls as string[]) expect(u.startsWith('/embed/'), u).toBe(false);
-    for (const f of ['sitemap.xml', 'llms.txt']) {
-      const text = readFileSync(join(DIST, f), 'utf8');
-      expect(text, f).toMatch(/\/embed\/[)<]/);
-      expect(text, f).not.toContain('/embed/id-photo/');
-    }
+    for (const f of ['sitemap.xml', 'llms.txt']) expect(readFileSync(join(DIST, f), 'utf8'), f).not.toContain('/embed/id-photo/');
+    expect(readFileSync(join(DIST, 'llms.txt'), 'utf8')).toMatch(/\/embed\/\)/);
+    expect(readFileSync(join(DIST, 'sitemap.xml'), 'utf8')).not.toContain('/embed/');
+    expect(readFileSync(join(DIST, 'embed', 'index.html'), 'utf8')).toContain('<meta name="robots" content="noindex">');
     const widget = readFileSync(join(DIST, 'embed', 'id-photo', 'index.html'), 'utf8');
     const home = readFileSync(join(DIST, 'index.html'), 'utf8');
     const siteScript = /src="(\/_astro\/SiteScript\.astro_astro_type_script[^"]+)"/.exec(home)![1]!; // EN1: the site script moved to src/components/SiteScript.astro
     expect(widget).not.toContain(siteScript);
     expect(widget).not.toContain('rel="manifest"');
     expect(widget).toContain('data-embed-credit');
+  });
+
+  it('ADS1020 D8, D12, D13: /licenses/ noindex and out of the sitemap; /about/ and /contact/ in it iff built; x-default = Korean', async () => {
+    need();
+    const sitemap = readFileSync(join(DIST, 'sitemap.xml'), 'utf8');
+    expect(sitemap).not.toMatch(/<loc>[^<]*\/(licenses|embed)\/<\/loc>/);
+    expect(readFileSync(join(DIST, 'licenses', 'index.html'), 'utf8')).toContain('<meta name="robots" content="noindex">');
+    const operator = existsSync(join(DIST, 'about', 'index.html'));
+    expect(existsSync(join(DIST, 'contact', 'index.html'))).toBe(operator);
+    for (const p of ['/about/', '/contact/']) expect(sitemap.includes(`/${p.slice(1)}</loc>`), p).toBe(operator);
+    const defaults = [...sitemap.matchAll(/hreflang="x-default" href="([^"]+)"/g)].map((m) => new URL(m[1]!).pathname);
+    expect(defaults.length).toBeGreaterThan(0);
+    for (const d of defaults) expect(d.startsWith('/en/'), d).toBe(false);
+    const { precacheList } = await import('../../scripts/gen-sw.mjs');
+    for (const u of precacheList(DIST).urls as string[]) expect(['/about/', '/contact/'], u).not.toContain(u);
   });
 
   it('service worker: /offline/ is precached as the fallback, /404.html is not; the kill switch never reloads a tab', async () => {
@@ -927,21 +944,10 @@ describe('built output', () => {
   });
 
   // Polish Q (owner): ordinary users do not know these words. Where a number must be read or typed, "픽셀(px)"
-  // may appear once per page; everything else says 픽셀, 해상도, "이 기기", "밖으로 보내지 않음".
-  const JARGON = /업로드|서버|브라우저|네트워크|메모리|개발자 도구|(?<![A-Za-z])(?:px|dpi|exif)(?![A-Za-z])/gi;
+  // may appear once per page; everything else says 픽셀, 해상도, "이 기기", "밖으로 보내지 않음". JARGON and userText live in
+  // scripts/lib/plain-words.mjs (ADS1020 round 2: check-dist also runs them on every page of every build).
   // /licenses/ lists software as its authors name it. (/hwp-to-pdf/ has no exemption since HWP direct.)
   const COPY_EXEMPT_PAGES = ['licenses'];
-
-  /**
-   * What a user reads on a page: the title, the meta/og texts, alt/aria-label/placeholder/title attributes and the body
-   * text. A <pre> block is code to copy, not prose (REV5: the /embed/ snippet keeps its CSS max-width:720px).
-   */
-  const userText = (html: string): string =>
-    [
-      html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '',
-      ...[...html.matchAll(/\s(?:content|alt|aria-label|placeholder|title)="([^"]*)"/g)].map((m) => m[1]!),
-      html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<pre[\s>][\s\S]*?<\/pre>|<[^>]+>/g, ' '),
-    ].join('\n');
 
   it('plain language (Polish Q): no 업로드·서버·브라우저·네트워크·메모리·EXIF·px·dpi in the pages or in our UI strings', () => {
     need();
@@ -1202,7 +1208,14 @@ describe('built output', () => {
       expect(html.match(/<title>([^<]*)<\/title>/)![1], path).toMatch(/ \| 문서딱$/);
       expect(html.match(/<meta property="og:image:alt" content="([^"]*)"/)![1], path).toMatch(/^문서딱: /);
       for (const ld of jsonLdOf(html)) {
-        for (const who of [ld.author, ld.publisher] as ({ name?: string } | undefined)[]) if (who) expect(who.name, path).toBe('문서딱');
+        // ADS1020 D11: with the operator pages built, a guide's author is the operator (a Person whose url is /about/).
+        const author = ld.author as { '@type'?: string; name?: string; url?: string } | undefined;
+        if (author?.['@type'] === 'Person') {
+          expect(existsSync(join(DIST, 'about', 'index.html')), path).toBe(true);
+          expect(new URL(author.url!).pathname, path).toBe('/about/');
+          expect(author.name, path).not.toBe('문서딱');
+        } else if (author) expect(author.name, path).toBe('문서딱');
+        if (ld.publisher) expect((ld.publisher as { name?: string }).name, path).toBe('문서딱');
         const crumbs = ld.itemListElement as { name: string }[] | undefined;
         if (ld['@type'] === 'BreadcrumbList') expect(crumbs![0]!.name).toBe('문서딱');
       }

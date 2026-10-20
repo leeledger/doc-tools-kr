@@ -97,7 +97,7 @@
 
 ## 출시 체크리스트
 - 도구를 공개하거나 내릴 때는 tools.ts status만 바꾼다. 홈·메타·OG·JSON-LD·404·메뉴가 따라 바뀌고 테스트가 확인한다.
-- 도구 페이지를 실제로 바꾸면 tools.ts의 `updated`(YYYY-MM-DD)를, 약관·개인정보·라이선스 페이지를 바꾸면 legal.ts의 `LEGAL_UPDATED`를 올린다. sitemap의 lastmod가 된다.
+- 도구 페이지를 실제로 바꾸면 tools.ts의 `updated`(YYYY-MM-DD)를, 약관·개인정보 페이지를 바꾸면 legal.ts의 `PRIVACY_TERMS_UPDATED`를 올린다. sitemap의 lastmod가 된다. (/licenses/와 /embed/는 ADS1020부터 noindex라 sitemap에 없다.)
 
 ## 안내 페이지 (Growth G)
 - 안내(/guide/)는 해요체로 쓴다. 느낌표, 과장 없음. 쉬운 말 규칙은 같다(테스트가 막음).

@@ -1,0 +1,71 @@
+---
+// /about/ (ADS1020 D8, D9): who makes 문서딱, why, how files are handled, how the size and spec facts are checked, and a
+// record generated from the data and git (src/data/about.ts). Built only when the contact and the privacy officer are
+// both set (OPERATOR_ON): otherwise getStaticPaths returns nothing and no file is written. The page text renders in the
+// system font (.site-info; this folder is in SYSTEM_FONT_PATHS of scripts/lib/ui-font-chars.mjs).
+import Base from '../../layouts/Base.astro';
+import { BLOGS, OPERATOR_ON, PRIVACY_OFFICER, SITE } from '../../data/site';
+import { LIVE_TOOLS } from '../../data/tools';
+import { guidePath, publishedGuides } from '../../data/guides';
+import { MILESTONES } from '../../data/about';
+import { josa } from '../../lib/ui/josa';
+
+export function getStaticPaths() {
+  return OPERATOR_ON ? [{ params: { p: undefined } }] : [];
+}
+
+const officer = PRIVACY_OFFICER!;
+const guides = await publishedGuides();
+const first = guides.reduce((a, g) => (g.data.published < a ? g.data.published : a), guides[0]!.data.published);
+const latest = guides.reduce((a, g) => (g.data.updated > a ? g.data.updated : a), guides[0]!.data.updated);
+const recent = [...guides].sort((a, b) => b.data.updated.localeCompare(a.data.updated) || a.data.title.localeCompare(b.data.title, 'ko')).slice(0, 5);
+const milestones = MILESTONES.filter((m) => m.flag !== 'addrEn' || __ADDR_EN__);
+const title = `${SITE.name} 소개 — 누가, 왜 만들었나요 | ${SITE.name}`;
+const description = `${josa(SITE.name, '을/를')} 누가 왜 만들었는지, 고른 파일을 어떻게 다루는지, 규격 정보를 어떻게 확인하는지 알려 드려요.`;
+const url = new URL('/about/', Astro.site).href;
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: title,
+    url,
+    description,
+    inLanguage: 'ko-KR',
+    isPartOf: { '@type': 'WebSite', name: SITE.name, url: new URL('/', Astro.site).href },
+    mainEntity: { '@type': 'Person', name: officer, url, sameAs: BLOGS.map((b) => b.url) },
+  },
+];
+---
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <div class="prose site-info">
+    <div class="wrap narrow">
+      <h1>{SITE.name} 소개</h1>
+
+      <h2>만든 사람</h2>
+      <p>{josa(SITE.name, '은/는')} {josa(officer, '이/가')} 만들고 운영해요. 궁금한 점은 <a href="/contact/">문의</a>로 알려 주세요.</p>
+
+      <h2>왜 만들었나</h2>
+      <p>서류나 사진을 낼 때 「용량이 너무 커요」, 「규격이 맞지 않아요」 같은 말에 막히는 일이 많아요. {josa(SITE.name, '은/는')} 내야 하는 문서·사진을 용량과 규격에 맞게 바꾸는 일을 가입 없이 무료로 할 수 있게 하려고 만들었어요.</p>
+
+      <h2>파일을 다루는 방법</h2>
+      <p>대부분의 도구는 고른 파일을 이 기기 안에서 처리하고 {josa(SITE.name, '으로/로')} 보내지 않아요.{__BG_CLOUD__ && ' 다만 사진 배경 지우기는 예외로, 줄인 사진 1장을 보내 배경을 지우고 바로 지워요.'}{__ADDR_EN__ && ' 영문주소 변환기는 적은 주소 글자만 행정안전부 주소 검색에 전달해요.'} 자세한 내용: <a href="/privacy/">개인정보 처리방침</a></p>
+
+      <h2>규격 정보를 확인하는 방법</h2>
+      <p>안내 글마다 공식 출처와 확인일을 적어요. 글에 옮긴 문장은 원문과 다시 맞춰 봐요. 틀린 곳을 보셨다면 <a href="/contact/">틀린 곳을 알려 주세요</a>.</p>
+
+      <h2>고친 기록</h2>
+      <ul>
+        <li>지금 쓸 수 있는 도구: {LIVE_TOOLS.length}가지</li>
+        <li>안내 글: {guides.length}개 (처음 쓴 날 <time datetime={first}>{first}</time>, 마지막으로 고친 날 <time datetime={latest}>{latest}</time>)</li>
+      </ul>
+      <h3>최근에 고친 안내 글</h3>
+      <ul>
+        {recent.map((g) => <li><a href={guidePath(g.id)}>{g.data.title}</a> · <time datetime={g.data.updated}>{g.data.updated}</time></li>)}
+      </ul>
+      <h3>지나온 길</h3>
+      <ul>
+        {milestones.map((m) => <li><time datetime={m.date}>{m.date}</time> {m.text}</li>)}
+      </ul>
+    </div>
+  </div>
+</Base>

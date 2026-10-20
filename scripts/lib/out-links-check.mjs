@@ -11,6 +11,9 @@
 //     description, og, JSON-LD).
 // (e) flag off: no link.coupang.com link and no sponsored link anywhere; flag on: /id-photo/ keeps its three Coupang links.
 //     Never a Coupang script (src or inline), iframe, image, link, source, object or embed.
+// (f) ADS1020 D1: while AFF_ENABLED is false in src/data/affiliate.ts, no dist text file (html, js, json, xml, txt) names
+//     link.coupang.com or carries AFF_COPY.top, AFF_COPY.ad, AFF_COPY.heading or COUPANG_DISCLOSURE, whatever
+//     PUBLIC_AFF_COUPANG says.
 
 export const ID_PHOTO_PAGE = 'id-photo/index.html';
 
@@ -18,8 +21,35 @@ export const ID_PHOTO_PAGE = 'id-photo/index.html';
 export function disclosureStrings(source) {
   const generic = /^\s*ad:\s*'([^'\n]+)'/m.exec(source)?.[1];
   const top = /^\s*top:\s*'([^'\n]+)'/m.exec(source)?.[1];
+  const heading = /^\s*heading:\s*'([^'\n]+)'/m.exec(source)?.[1];
   const coupang = /\bCOUPANG_DISCLOSURE\s*=\s*'([^'\n]+)'/.exec(source)?.[1];
-  return generic && top && coupang ? { generic, top, coupang } : null;
+  return generic && top && heading && coupang ? { generic, top, heading, coupang } : null;
+}
+
+/** AFF_ENABLED of src/data/affiliate.ts: true or false, or null when the line is missing. */
+export function affEnabled(source) {
+  const m = /^export const AFF_ENABLED\s*=\s*(true|false);/m.exec(source);
+  return m ? m[1] === 'true' : null;
+}
+
+/** The dist text files rule (f) scans. */
+export const AFF_TEXT_RE = /\.(html|m?js|json|xml|txt)$/;
+
+/**
+ * (f) Problems of `texts` (iterable of [dist path, text]) while AFF_ENABLED is false: a Coupang link or one of the
+ * disclosure strings `{ generic, top, heading, coupang }` anywhere. [] passes.
+ */
+export function coupangOffProblems(texts, { generic, top, heading, coupang }) {
+  const problems = [];
+  const needles = [
+    ['link.coupang.com', 'a Coupang link'],
+    [top, 'AFF_COPY.top'],
+    [generic, 'AFF_COPY.ad'],
+    [heading, 'AFF_COPY.heading'],
+    [coupang, 'COUPANG_DISCLOSURE'],
+  ];
+  for (const [path, text] of texts) for (const [needle, name] of needles) if (text.includes(needle)) problems.push(`${path}: ${name} while AFF_ENABLED is false (src/data/affiliate.ts)`);
+  return problems;
 }
 
 const ENTITIES = { lt: '<', gt: '>', quot: '"', apos: "'", amp: '&', '#39': "'" };

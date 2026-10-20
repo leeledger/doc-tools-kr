@@ -130,7 +130,7 @@ export function sitemapEntries(xml) {
 
 /**
  * Rule (e): every English page (but its 404) is in the sitemap with a Korean twin there; both twins carry exactly the
- * alternates ko, en and x-default (= the English URL), pointing at each other; no Korean page without a twin carries
+ * alternates ko, en and x-default (= the Korean URL, ADS1020 D13), pointing at each other; no Korean page without a twin carries
  * any; every English page's canonical is itself.
  */
 export function sitemapProblems(pages, xml) {
@@ -161,9 +161,9 @@ export function sitemapProblems(pages, xml) {
       continue;
     }
     const origin = new URL(e.loc).origin;
-    const want = { ko: `${origin}${koPath}`, en: `${origin}${enPath}`, 'x-default': `${origin}${enPath}` };
+    const want = { ko: `${origin}${koPath}`, en: `${origin}${enPath}`, 'x-default': `${origin}${koPath}` };
     const got = JSON.stringify(Object.fromEntries(Object.entries(e.alt).sort()));
-    if (got !== JSON.stringify(Object.fromEntries(Object.entries(want).sort()))) out.push(`sitemap.xml: ${path} alternates ${got}, expected ko, en and x-default (= en) of the pair`);
+    if (got !== JSON.stringify(Object.fromEntries(Object.entries(want).sort()))) out.push(`sitemap.xml: ${path} alternates ${got}, expected ko, en and x-default (= ko) of the pair`);
   }
   return out;
 }

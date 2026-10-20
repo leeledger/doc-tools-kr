@@ -2,9 +2,10 @@
 import '../generated/anolim-ui.css';
 import '../styles/global.css';
 import '../styles/app.css';
-import { BLOGS, SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } from '../data/site';
+import { BLOGS, OPERATOR_ON, SITE, VERIFICATION, defaultDescription, footerContact, sharePreview } from '../data/site';
 import { ANALYTICS_ON, BEACON_SRC, CF_ANALYTICS_TOKEN } from '../data/analytics';
 import { GA_LOADER, GA_ON } from '../data/ga';
+import { ADSBYGOOGLE_URL, ADS_CFG_PATH, ADS_CLIENT, ADS_ON, isContentPath } from '../data/adsense';
 import { BUILD_ID } from '../data/build';
 import { LIVE_TOOLS } from '../data/tools';
 import JsonLd from '../components/JsonLd.astro';
@@ -54,7 +55,10 @@ const share = {
 };
 const nav = isHome ? '' : '/';
 const path = Astro.url.pathname;
-const footOp = footerContact();
+// ADS1020 round 2: with the operator pages built, the footer's 「문의」 link to /contact/ replaces the email line (no
+// 「문의: email」 next to a 「문의」 link); a business number, if set, stays.
+const footOp = OPERATOR_ON ? footerContact('') : footerContact();
+const ads = ADS_ON && isContentPath(path);
 // EN1 (brief EN decision 9): the English twin of this page, if any, in the footer (hreflang pairs: sitemap.xml).
 const english = enTwin(path);
 const favicon =
@@ -101,6 +105,10 @@ const favicon =
 {/* Google Analytics 4 (owner 2026-10-08): a classic defer script, so it runs before the page's module scripts (document
     order) and reads the URL before quicklinks drops utm_*. It loads gtag.js only after the page has loaded. */}
 {GA_ON && <script is:inline defer src={GA_LOADER} data-site-ga></script>}
+{/* Google AdSense, review stage (ADS1020 D3): content pages only. /ads-cfg.js (classic, sync) pauses ad requests and asks
+    for non-personalized ads before Google's async tag (its snippet verbatim, so the review crawler finds it) runs. */}
+{ads && <script is:inline src={ADS_CFG_PATH} data-site-ads-cfg></script>}
+{ads && <script is:inline async src={`${ADSBYGOOGLE_URL}?client=${ADS_CLIENT}`} crossorigin="anonymous"></script>}
 {ANALYTICS_ON && <script is:inline defer src={BEACON_SRC} data-cf-beacon={JSON.stringify({ token: CF_ANALYTICS_TOKEN })} data-site-analytics></script>}
 </head>
 <body>
@@ -145,6 +153,8 @@ const favicon =
     {footOp && <p class="foot-op" set:html={footOp} />}
     <nav class="foot-links" aria-label="사이트 정보">
       <a href="/guide/">안내</a>
+      {OPERATOR_ON && <a href="/about/">소개</a>}
+      {OPERATOR_ON && <a href="/contact/">문의</a>}
       <a href="/terms/">이용약관</a>
       <a href="/privacy/">개인정보 처리방침</a>
       <a href="/licenses/">오픈소스 라이선스</a>

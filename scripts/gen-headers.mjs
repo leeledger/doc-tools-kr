@@ -3,9 +3,12 @@
 // - HSTS on that host, max-age one year. No includeSubDomains and no preload yet: preload is hard to
 //   undo, so it is a later owner decision (docs/DOMAIN-RUNBOOK.md step 10).
 // - noindex on the pages.dev production host, which then only redirects to the domain.
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+// Also the flagged CSP extensions (Web Analytics, GA4) and, with PUBLIC_ADSENSE_ON=1, the content-page CSP blocks (ADS1020 D5).
+// siteHeaders is pure: check-dist runs it on the same input to check what will ship.
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { ADS_CFG_PATH, CONTENT_ROUTES, adsenseConfig, withContentCsp } from './lib/adsense.mjs';
 import { analyticsToken, withAnalyticsCsp } from './lib/analytics.mjs';
 import { BG_PATH, bgRemoveOn } from './lib/bgremove.mjs';
 import { GA_LOADER, gaId, withGaCsp } from './lib/ga.mjs';
@@ -40,29 +43,47 @@ export function bgRemoveHeaders(on) {
   return on ? COEP_PATHS.map((p) => `${p}\n  Cross-Origin-Embedder-Policy: require-corp\n`).join('') : '';
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const file = join(distDir(), '_headers');
-  if (!existsSync(file)) throw new Error('gen-headers: dist/_headers is missing (public/_headers is copied by the build)');
-  const env = publicEnv();
+/**
+ * The final dist/_headers for `headers` (the copy of public/_headers) and the PUBLIC_* values `env`, plus the log lines.
+ * Pure, so check-dist (which runs before this script) can check exactly what will ship.
+ */
+export function siteHeaders(headers, env) {
+  let out = headers;
+  const log = [];
   const site = env.PUBLIC_SITE_URL;
   const coep = bgRemoveHeaders(bgRemoveOn(env.PUBLIC_BG_REMOVE));
   // Visitor counts (owner 2026-10-05): the site-wide CSP lets the Cloudflare Web Analytics beacon load and report.
   if (analyticsToken(env.PUBLIC_CF_ANALYTICS_TOKEN)) {
-    writeFileSync(file, withAnalyticsCsp(readFileSync(file, 'utf8')));
-    console.log('gen-headers: CSP allows the Cloudflare Web Analytics beacon');
+    out = withAnalyticsCsp(out);
+    log.push('CSP allows the Cloudflare Web Analytics beacon');
   }
   // Google Analytics 4 (owner 2026-10-08): the CSP lets gtag.js load and report; /ga.js is unhashed, so it is
   // revalidated on every load (a changed ID must not stick in caches).
   if (gaId(env.PUBLIC_GA_ID)) {
-    writeFileSync(file, `${withGaCsp(readFileSync(file, 'utf8'))}${GA_LOADER}
+    out = `${withGaCsp(out)}${GA_LOADER}
   Cache-Control: no-cache
-`);
-    console.log(`gen-headers: CSP allows Google Analytics; ${GA_LOADER} no-cache`);
+`;
+    log.push(`CSP allows Google Analytics; ${GA_LOADER} no-cache`);
+  }
+  // Google AdSense, review stage (ADS1020 D5): after the GA and Web Analytics extensions, so the `/*` line stays what they
+  // made; each content route detaches it and sets the scheme-source content CSP; /ads-cfg.js is cached for an hour.
+  if (adsenseConfig(env).on) {
+    out = withContentCsp(out);
+    log.push(`content CSP on ${CONTENT_ROUTES.join(', ')}; ${ADS_CFG_PATH} max-age=3600`);
   }
   // Path rules before the host rules: the COEP block applies on every host.
-  if (coep) appendFileSync(file, coep);
+  if (coep) out += coep;
   const block = domainHeaders(site);
-  if (block) appendFileSync(file, `${block}`);
-  if (coep) console.log(`gen-headers: COEP require-corp on ${COEP_PATHS.join(', ')}`);
-  console.log(block ? `gen-headers: HSTS for ${new URL(site).host}, noindex on ${PAGES_DEV}` : 'gen-headers: pages.dev site, nothing added');
+  if (block) out += block;
+  if (coep) log.push(`COEP require-corp on ${COEP_PATHS.join(', ')}`);
+  log.push(block ? `HSTS for ${new URL(site).host}, noindex on ${PAGES_DEV}` : 'pages.dev site, nothing added');
+  return { headers: out, log };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const file = join(distDir(), '_headers');
+  if (!existsSync(file)) throw new Error('gen-headers: dist/_headers is missing (public/_headers is copied by the build)');
+  const { headers, log } = siteHeaders(readFileSync(file, 'utf8'), publicEnv());
+  writeFileSync(file, headers);
+  for (const l of log) console.log(`gen-headers: ${l}`);
 }

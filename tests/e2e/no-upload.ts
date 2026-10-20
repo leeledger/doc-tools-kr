@@ -11,18 +11,24 @@ export interface NetworkLog {
   requests: Request[];
   responses: Response[];
   websockets: string[];
+  /** The URL of the page that made each request, read when it was made ('' for a worker or service-worker request). */
+  pages: WeakMap<Request, string>;
 }
 
 export function recordNetwork(context: BrowserContext, page: Page): NetworkLog {
-  const log: NetworkLog = { requests: [], responses: [], websockets: [] };
-  context.on('request', (r) => log.requests.push(r));
+  const log: NetworkLog = { requests: [], responses: [], websockets: [], pages: new WeakMap() };
+  context.on('request', (r) => {
+    log.requests.push(r);
+    log.pages.set(r, frameUrl(r));
+  });
   context.on('response', (r) => log.responses.push(r));
   page.on('websocket', (ws) => log.websockets.push(ws.url()));
   return log;
 }
 
-export function expectNoUpload(log: NetworkLog, baseURL: string, navigated = true, allowUpload: readonly AllowedUpload[] = [], ga = false, designedCsp = false): void {
-  expect(uploadProblems(log, baseURL, allowUpload, ga, designedCsp), 'network activity that could carry file data').toEqual([]);
+export function expectNoUpload(log: NetworkLog, baseURL: string, navigated = true, allowUpload: readonly AllowedUpload[] = [], ga = false, designedCsp = false, ads = false): void {
+  const requests = log.requests.map((r) => ({ url: () => r.url(), method: () => r.method(), postDataBuffer: () => r.postDataBuffer(), frameUrl: () => log.pages.get(r) ?? '' }));
+  expect(uploadProblems({ ...log, requests }, baseURL, allowUpload, ga, designedCsp, ads), 'network activity that could carry file data').toEqual([]);
   if (navigated) expect(log.requests.length, 'the recorder saw the page load').toBeGreaterThan(0);
 }
 
@@ -36,6 +42,23 @@ export const GTAG_STUB =
   "var dl=window.dataLayer||[];for(var i=0;i<dl.length;i++){var a=dl[i];if(a&&a[0]==='config'){" +
   "fetch('https://region1.google-analytics.com/g/collect?v=2&en=page_view&tid='+encodeURIComponent(a[1])+'&dl='+encodeURIComponent(a[2].page_location),{mode:'no-cors'}).catch(function(){});}}})();";
 
+/** The URL of the page that made `r`, '' for a worker or service-worker request (Playwright throws there). */
+function frameUrl(r: Request): string {
+  try {
+    return r.frame().url();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Google AdSense, review stage (ADS1020), for the AdSense-on build (the cloud-* projects): adsbygoogle.js is answered by
+ * this stub, which records what /ads-cfg.js set before it ran (pauseAdRequests, requestNonPersonalizedAds) and requests
+ * nothing. No test reaches Google.
+ */
+export const ADS_STUB =
+  'window.__adsStub={pause:(window.adsbygoogle||{}).pauseAdRequests,npa:(window.adsbygoogle||{}).requestNonPersonalizedAds,runs:((window.__adsStub||{}).runs||0)+1};';
+
 /**
  * INTERNAL-TRAFFIC: the requests blockAnalytics aborted never left the browser, so the guard does not count them.
  * Only used with the noAnalytics option, where every such request is routed to abort before the page loads.
@@ -44,25 +67,29 @@ export function withoutBlockedAnalytics(log: NetworkLog): NetworkLog {
   return { ...log, requests: log.requests.filter((r) => !isAnalyticsUrl(r.url())) };
 }
 
-export const test = base.extend<{ network: NetworkLog; allowUpload: AllowedUpload[]; ga: boolean; noAnalytics: boolean; liveCsp: boolean }>({
+export const test = base.extend<{ network: NetworkLog; allowUpload: AllowedUpload[]; ga: boolean; ads: boolean; noAnalytics: boolean; liveCsp: boolean }>({
   // Empty for every spec: only the 배경 지우기 cloud spec sets it (test.use), for its one endpoint.
   allowUpload: [[], { option: true }],
   // False for every project but cloud-* (their build has PUBLIC_GA_ID): only then Google Analytics may load (stubbed).
   ga: [false, { option: true }],
+  // False for every project but cloud-* (their build has PUBLIC_ADSENSE_ON=1): only then adsbygoogle.js may load (stubbed),
+  // and only on a content page.
+  ads: [false, { option: true }],
   // True only in playwright.live.config.ts (INTERNAL-TRAFFIC): our runs on the deployed site send no analytics.
   noAnalytics: [false, { option: true }],
   // True only in playwright.live.config.ts: the deployed site's CSP may name the analytics and GA hosts it is built with.
   liveCsp: [false, { option: true }],
   network: [
-    async ({ context, page, baseURL, allowUpload, ga, noAnalytics, liveCsp }, use) => {
+    async ({ context, page, baseURL, allowUpload, ga, ads, noAnalytics, liveCsp }, use) => {
       if (noAnalytics) await blockAnalytics(context);
       if (ga) {
         await context.route(/^https:\/\/www\.googletagmanager\.com\/gtag\/js\?/, (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: GTAG_STUB }));
         await context.route(/^https:\/\/[^/]+\.(google-analytics\.com|analytics\.google\.com)\//, (r) => r.fulfill({ status: 204 }));
       }
+      if (ads) await context.route(/^https:\/\/pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js\?/, (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: ADS_STUB }));
       const log = recordNetwork(context, page);
       await use(log);
-      expectNoUpload(noAnalytics ? withoutBlockedAnalytics(log) : log, baseURL!, page.url() !== 'about:blank', allowUpload, ga, liveCsp);
+      expectNoUpload(noAnalytics ? withoutBlockedAnalytics(log) : log, baseURL!, page.url() !== 'about:blank', allowUpload, ga, liveCsp, ads);
     },
     { auto: true },
   ],

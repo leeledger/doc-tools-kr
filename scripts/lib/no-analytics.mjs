@@ -7,8 +7,11 @@ import { USAGE_PATH } from './usage.mjs';
 
 /** Hosts whose every request is analytics (exact host match). */
 export const ANALYTICS_HOSTS = ['static.cloudflareinsights.com', 'cloudflareinsights.com', 'www.googletagmanager.com', 'google-analytics.com'];
-/** Host suffixes whose every request is analytics (region1.google-analytics.com, *.analytics.google.com). */
-export const ANALYTICS_HOST_SUFFIXES = ['.google-analytics.com', '.analytics.google.com'];
+/**
+ * Host suffixes whose every request is analytics (region1.google-analytics.com, *.analytics.google.com), plus Google's ad
+ * hosts (ADS1020: our automated runs on the live site never load the AdSense script, so they never count as ad traffic).
+ */
+export const ANALYTICS_HOST_SUFFIXES = ['.google-analytics.com', '.analytics.google.com', '.googlesyndication.com', '.doubleclick.net', '.adtrafficquality.google'];
 
 /** Whether a browser request to `url` would feed visitor or usage statistics (any origin for /api/usage). */
 export function isAnalyticsUrl(url) {

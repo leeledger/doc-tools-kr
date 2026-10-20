@@ -1,4 +1,5 @@
 // M-3: the R1 (AdSense) trigger (docs/REVENUE-MODEL.md §1, docs/OPS-RUNBOOK.md).
+// ADS1020: the issue carries the owner checklist of docs/OPS-RUNBOOK.md §11 (the code side shipped in ADS1020).
 //   node scripts/ops/monetize.mjs [--reports reports/growth] [--dry-run]
 // Conditions: the live sitemap lists ≥ 15 pages, and the committed weekly reports show ≥ 100 Search Console
 // clicks in each of the last 4 consecutive ISO weeks. When both hold, one ops:monetize issue with the AdSense
@@ -15,17 +16,12 @@ export function checklist(status) {
   return [
     `R1 조건을 충족했습니다(M-3): 색인 대상 페이지 ${status.sitemapCount}개(기준 ${R1.minPages}), 주 ${R1.minWeeklyClicks}클릭 이상 ${status.streak}주 연속(기준 ${R1.weeks}주: ${status.recent.map((r) => `${r.week} ${r.clicks}`).join(', ')}).`,
     '',
-    '## 애드센스 신청 준비 체크리스트 (docs/REVENUE-MODEL.md §1·§3)',
-    '- [ ] 개인정보처리방침 v2: 광고·쿠키, 14세 미만 맞춤광고 끄기, 보호책임자(아이로그와 같은 방식), 연락처 `robotncoding@kakao.com`',
-    '- [ ] `PUBLIC_CONTACT_EMAIL` 설정(Cloudflare Pages 환경 변수). 없으면 광고를 켠 빌드가 실패한다(check-dist)',
-    '- [ ] 동의 처리(CMP) — 구글 인증 CMP 또는 자체 동의 배너, 동의 전 광고 요청 없음',
-    '- [ ] `public/ads.txt` (게시자 ID는 승인 화면에서 받는다)',
-    '- [ ] CSP: 광고용 CSP는 /guide/* 경로에만(_headers 경로별; 정적 배포라 nonce 대신 해시 기반 strict CSP 또는 Functions 검토). 도구·결과·404 화면은 지금 CSP 그대로',
-    '- [ ] 광고는 안내 글(/guide/) 페이지에만. 도구 화면·결과 화면·404에는 넣지 않는다(구글 게시자 정책)',
-    '- [ ] 안내 글 50편 안팎, 기관 이름만 바꾼 글 없음(구글 스팸 정책)',
-    '- [ ] e2e no-upload 검사가 광고 켠 빌드에서도 파일 바이트가 나가지 않음을 보장하는지 확인',
-    '- [ ] (대표) 애드센스 계정 신청 버튼, 세금 정보, 지급 계좌',
-    '- [ ] 승인 후 `ADS_ENABLED` 플래그를 켜고 M-4(수익 리포트)를 설정',
+    '## 애드센스 재신청 체크리스트 (docs/OPS-RUNBOOK.md §11, 대표만)',
+    '- [ ] Cloudflare Pages → Production 변수 `PUBLIC_ADSENSE_ON` = `1` (`PUBLIC_ADSENSE_CLIENT`는 넣지 않아도 됨; 연락처·보호책임자는 이미 있음) → 재배포. 확인: 첫 화면과 안내 글의 페이지 소스에 adsbygoogle 코드가 있고, /pdf-merge/에는 없음',
+    '- [ ] 애드센스 콘솔 → 광고 → 사이트별 → docttak.com: 자동 광고 끄기 (앵커·전면(비네트) 포함)',
+    '- [ ] 검토 요청은 11월 중순 이후 한 번만, P1(안내 글 정리·보강)이 배포된 뒤에. 거절 뒤 반복해서 누르지 않기',
+    '- [ ] 승인 전에는 광고가 나오지 않아요 (코드가 광고 요청을 멈춰 둠). 광고 단위는 승인 뒤 다음 스프린트에서',
+    '- [ ] `PUBLIC_AFF_COUPANG`는 지워도, 그대로 둬도 돼요 (코드에서 꺼져 있음)',
   ].join('\n');
 }
 

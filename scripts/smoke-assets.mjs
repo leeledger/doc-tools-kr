@@ -7,11 +7,13 @@
 // of /deploy-manifest.json. Every same-origin reference must return 200 with the right type; off-site references
 // (the analytics beacon) are not ours and are not fetched; og:image names the canonical host and is checked on the
 // deploy under test. /_astro/* must be immutable, /sw.js no-cache, and every HTML response must carry a designed
-// CSP connect-src: 'self', plus exactly the analytics and GA hosts when those are on (scripts/lib/csp-connect.mjs).
+// CSP connect-src: 'self', plus exactly the analytics and GA hosts when those are on (scripts/lib/csp-connect.mjs); a content
+// page (scripts/lib/adsense.mjs isContentPath; ADS1020) may instead carry exactly the AdSense content policy.
 // --previous: every file of an earlier manifest with gen ≥ current gen − 2 must still return 200.
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { isDesignedConnectSrc } from './lib/csp-connect.mjs';
+import { CONTENT_CSP, isContentPath } from './lib/adsense.mjs';
 
 const PARALLEL = 8;
 /**
@@ -104,7 +106,8 @@ export async function smokeAssets(baseUrl, { previous = null, fetchImpl = fetch,
     for (const [re, ok, want] of TYPE_RULES) if (re.test(path) && !ok(r.type)) fail(url, `content-type "${r.type}", expected ${want}`);
     if (path.startsWith('/_astro/') && !/immutable/.test(r.cache)) fail(url, `cache-control "${r.cache}" is not immutable`);
     if (path === '/sw.js' && !/no-cache/.test(r.cache)) fail(url, `cache-control "${r.cache}" is not no-cache`);
-    if (/^text\/html/.test(r.type) && !isDesignedConnectSrc(r.csp)) fail(url, "HTML without a designed CSP connect-src ('self', plus only the analytics and GA hosts)");
+    const content = isContentPath(path) && r.csp === CONTENT_CSP;
+    if (/^text\/html/.test(r.type) && !isDesignedConnectSrc(r.csp) && !content) fail(url, "HTML without a designed CSP connect-src ('self', plus only the analytics and GA hosts; or the AdSense content policy on a content page)");
   }
 
   const queue = [];

@@ -1,9 +1,10 @@
 // Google Analytics 4 (owner 2026-10-08) on the GA-on build (dist-bgcloud, PUBLIC_GA_ID=G-TEST000000), served with its
 // real _headers. The no-upload fixture (ga: true on the cloud-* projects) answers gtag.js with a stub that sends one
 // GET collect hit carrying page_location, and every Google Analytics host with 204: no test reaches Google.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { withGaCsp } from '../../scripts/lib/ga.mjs';
+import { CONTENT_CSP } from '../../scripts/lib/adsense.mjs';
 import { expect, gotoReady, test, type NetworkLog } from './no-upload';
 import { fixturePath } from './paths';
 
@@ -11,10 +12,11 @@ const ID = 'G-TEST000000';
 const GA_CSP = /Content-Security-Policy: ([^\r\n]*)/.exec(withGaCsp(readFileSync('public/_headers', 'utf8')))![1]!;
 /** legal.ts reads build-time constants, so the date is read from its source here. */
 const PRIVACY_GA = /PRIVACY_GA = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
-/** The newest privacy change in a usage-stats build: the embed widget count (REV5). */
-const PRIVACY_UTM = /PRIVACY_UTM = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
-const PRIVACY_ADDR = /PRIVACY_ADDR = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_ADS = /PRIVACY_ADS = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_AFF_OFF = /PRIVACY_AFF_OFF = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const SECRET = '비밀-파일명.pdf';
+/** ADS1020: the cloud build has PUBLIC_ADSENSE_ON=1 (CI), so the home page carries the AdSense pair and CONTENT_CSP. */
+const ADS_BUILD = existsSync('dist-bgcloud/ads-cfg.js');
 
 // The same build has the anonymous usage statistics on: using a tool sends its one allowed POST (usage.spec.ts covers it).
 test.use({ allowUpload: [{ method: 'POST', path: '/api/usage' }] });
@@ -23,6 +25,9 @@ test.use({ allowUpload: [{ method: 'POST', path: '/api/usage' }] });
 async function watchCsp(page: Page): Promise<string[]> {
   const seen: string[] = [];
   page.on('console', (m) => {
+    // ADS1020: WebKit names a directive it does not know (fenced-frame-src of the home page's content policy): a notice,
+    // not a violation (the securitypolicyviolation listener below still catches every real one).
+    if (/^Unrecognized Content-Security-Policy directive 'fenced-frame-src'/.test(m.text())) return;
     if (/Content[- ]Security[- ]Policy|\bCSP\b/i.test(m.text())) seen.push(m.text());
   });
   await page.addInitScript(() => {
@@ -47,7 +52,10 @@ test('every page carries the /ga.js tag; gtag.js loads after the load event; one
   for (const path of ['/', '/pdf-compress/', '/privacy/']) {
     const before = collectHits(network).length;
     const res = await gotoReady(page, path);
-    expect(res!.headers()['content-security-policy']).toBe(GA_CSP);
+    // ADS1020 D5: with AdSense on (this build), the home page is a content page with its own policy.
+    const ads = (await page.locator('script[data-site-ads-cfg]').count()) > 0;
+    expect(ads).toBe(path === '/' && ADS_BUILD);
+    expect(res!.headers()['content-security-policy']).toBe(ads ? CONTENT_CSP : GA_CSP);
     await expect(page.locator('script[src="/ga.js"][data-site-ga]')).toHaveCount(1);
     await expect.poll(() => collectHits(network).length, { timeout: 10_000 }).toBe(before + 1);
     expect(await page.evaluate(() => (window as unknown as { __gtagStub?: { afterLoad: boolean } }).__gtagStub)).toEqual({ afterLoad: true });
@@ -100,7 +108,8 @@ test('/privacy/ in this build (cloud + usage + GA): section 1 names the cookies,
   await expect(page.locator('#usage')).toHaveText(`${s(7)}. 익명 사용 통계`);
   await expect(page.locator('h2')).toHaveText([/^1\. /, /^2\. /, /^3\. /, ...(k ? [/^4\. 영문주소/] : []), new RegExp(`^${s(4)}\\. 사이트를 여는 기록$`), new RegExp(`^${s(5)}\\. Google`), new RegExp(`^${s(6)}\\. 광고$`), new RegExp(`^${s(7)}\\. 익명`), new RegExp(`^${s(8)}\\. 개인정보 보호책임자$`), new RegExp(`^${s(9)}\\. 변경 이력$`)]);
   // The 인화·사진관 link count (REV2, 2026-10-12, usage-stats builds such as this one) is the newest section (or 영문주소).
-  await expect(main).toContainText(`시행일: ${k ? PRIVACY_ADDR : PRIVACY_UTM}`);
+  // ADS1020: AdSense (#ads, on in the CI cloud build) is the newest change, else the product links taken out of the count.
+  await expect(main).toContainText(`시행일: ${(await page.locator('#ads').count()) ? PRIVACY_ADS : PRIVACY_AFF_OFF}`);
   await expect(main).toContainText(`${PRIVACY_GA}: Google 애널리틱스(방문 분석, 쿠키)와 국외 이전 내용을 더함`);
   await expect(main.locator('a[href="https://tools.google.com/dlpage/gaoptout?hl=ko"]')).toHaveCount(1);
 });

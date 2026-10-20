@@ -39,7 +39,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   expect(await serious()).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/privacy/', '/terms/', '/licenses/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/privacy/', '/terms/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -161,15 +161,27 @@ test('related tools: each tool page links to the other live tools (the HWP tools
   }
 });
 
+test('ADS1020 D12: /licenses/ and /embed/ are noindex (no canonical) and out of the sitemap', async ({ page }) => {
+  for (const path of ['/licenses/', '/embed/']) {
+    const res = await gotoReady(page, path);
+    expect(res?.status(), path).toBe(200);
+    await expect(page.locator('meta[name="robots"]'), path).toHaveAttribute('content', 'noindex');
+    await expect(page.locator('link[rel="canonical"]'), path).toHaveCount(0);
+    await expect(page.locator('h1'), path).toHaveCount(1);
+  }
+});
+
 test('sitemap lists exactly the live pages; robots points to it', async ({ request }) => {
   const xml = await (await request.get('/sitemap.xml')).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
   // EN1: the English twins are listed too (hreflang alternates: scripts/lib/en-check.mjs rule e).
   expect(locs.filter((p) => p.startsWith('/en/')).sort()).toEqual(['/en/', '/en/image-to-jpg/', '/en/pdf-compress/', '/en/pdf-merge/', '/en/privacy/', '/en/terms/']);
-  const pages = locs.filter((p) => !p.startsWith('/guide/') && !p.startsWith('/en/'));
-  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/licenses/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/char-count/', '/id-copy/', '/pdf-edit/', '/photo-compress/', '/privacy/', '/stamp-maker/', '/english-name/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/', '/embed/'].sort());
-  // REV5: the widget's info page is listed, the widget itself (noindex) never.
-  expect(locs).not.toContain('/embed/id-photo/');
+  // ADS1020 D8, D12: /about/ and /contact/ only with the operator pages built; /licenses/ and /embed/ (noindex) never.
+  const operator = (await request.get('/about/')).status() === 200;
+  const pages = locs.filter((p) => !p.startsWith('/guide/') && !p.startsWith('/en/') && !['/about/', '/contact/'].includes(p));
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/char-count/', '/id-copy/', '/pdf-edit/', '/photo-compress/', '/privacy/', '/stamp-maker/', '/english-name/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/'].sort());
+  expect(locs.filter((p) => ['/about/', '/contact/'].includes(p))).toEqual(operator ? ['/about/', '/contact/'] : []);
+  for (const p of ['/embed/', '/embed/id-photo/', '/licenses/']) expect(locs).not.toContain(p);
   // Growth G: /guide/ and every published guide (drafts never). G2 A1: hwp-to-pdf is published; both hubs are in.
   const guides = locs.filter((p) => p.startsWith('/guide/'));
   expect(guides).toContain('/guide/');

@@ -2,7 +2,7 @@
 // "Test map"): the id-photo info link, the link data, the placement maps, affBlock (flag, missing dests, max 3) and the
 // drift guard between src/data/affiliate.ts and the server whitelist in scripts/lib/usage.mjs.
 import { describe, expect, it } from 'vitest';
-import { AFF_COPY, AFF_DISCLOSURE, AFF_LINKS, AFF_MAX, COUPANG_DISCLOSURE, GUIDE_AFF, GUIDE_LEAD, TOOL_AFF, TOOL_LEAD, affBlock, affOn, type AffLink } from '../../src/data/affiliate';
+import { AFF_COPY, AFF_DISCLOSURE, AFF_LINKS, AFF_MAX, COUPANG_DISCLOSURE, GUIDE_AFF, GUIDE_LEAD, TOOL_AFF, TOOL_LEAD, AFF_ENABLED, affBlock, affOn, type AffLink } from '../../src/data/affiliate';
 import { PHOTO_STUDIO_URL, printLinks } from '../../src/data/print-links';
 import { GUIDE_OUT, OUT_DESTS, OUT_LABELS, TOOLS, TOOL_OUT } from '../../scripts/lib/usage.mjs';
 
@@ -71,10 +71,9 @@ describe('affiliate link data (src/data/affiliate.ts)', () => {
     expect(GUIDE_LEAD['id-photo']).toBe('photo-guide');
   });
 
-  it('affOn: only "1"', () => {
-    for (const v of [undefined, '', '0', 'true', 'on', '11']) expect(affOn(v), String(v)).toBe(false);
-    expect(affOn('1')).toBe(true);
-    expect(affOn(' 1\n')).toBe(true);
+  it('affOn: never while AFF_ENABLED is false (ADS1020 D1), "1" included', () => {
+    expect(AFF_ENABLED).toBe(false);
+    for (const v of [undefined, '', '0', 'true', 'on', '11', '1', ' 1\n']) expect(affOn(v), String(v)).toBe(false);
   });
 
   it('affBlock: none while off or without a block; the links in map order with the lead line while on', () => {

@@ -24,6 +24,11 @@ describe('isAnalyticsUrl', () => {
     'https://docttak.com/api/usage',
     'http://127.0.0.1:4173/api/usage',
     'https://STATIC.CloudflareInsights.com/beacon.min.js',
+    // ADS1020: the AdSense script and Google's ad hosts.
+    'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6478963235198426',
+    'https://tpc.googlesyndication.com/sodar/x.js',
+    'https://googleads.g.doubleclick.net/pagead/ads?x=1',
+    'https://ep1.adtrafficquality.google/getconfig/sodar',
   ])('blocks %s', (url) => expect(isAnalyticsUrl(url)).toBe(true));
 
   it.each([
@@ -36,6 +41,7 @@ describe('isAnalyticsUrl', () => {
     'https://docttak.com/_astro/app.js',
     'https://notcloudflareinsights.com/cdn-cgi/rum',
     'https://google-analytics.com.evil.example/collect',
+    'https://googlesyndication.com.evil.example/x.js',
     'https://www.google.com/search?q=x',
     'blob:https://docttak.com/0b5c',
     'data:text/plain,hi',

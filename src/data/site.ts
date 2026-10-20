@@ -106,6 +106,11 @@ export const CONTACT_EMAIL = env(import.meta.env.PUBLIC_CONTACT_EMAIL);
  * the build fails without it then (scripts/lib/bgcloud.mjs privacyGate).
  */
 export const PRIVACY_OFFICER = env(import.meta.env.PUBLIC_PRIVACY_OFFICER);
+/**
+ * ADS1020 D8: with both the contact and the privacy officer set, /about/ and /contact/ are built, the footer links them
+ * and guide bylines name the operator. Without both, none of it is built (owner rule: no operator lines until ads).
+ */
+export const OPERATOR_ON = !!(CONTACT_EMAIL && PRIVACY_OFFICER);
 /** Optional; rendered only when set. */
 export const BIZ_REG_NO = env(import.meta.env.PUBLIC_BIZ_REG_NO);
 

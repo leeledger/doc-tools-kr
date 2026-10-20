@@ -1,726 +1,125 @@
-> **Current step (2026-10-12): `handoff/ARCHITECT-BRIEF-REV2.md`** (수익 계획 재정렬 + 증명사진 인화·사진관 링크와 클릭 수). This file remains the program plan.
+# Architect Brief — ADS1020 (애드센스 재신청 P0)
 
-# Architect Brief — 안올림 (doc-tools-kr) — Program plan + Step 2
-
-Author: Arch. Date: 2026-09-29.
-Evidence (local only; `spikes/` is git-ignored):
-- `spikes/pdf/SPIKE-PDF.md`
-- `spikes/photo/SPIKE-PHOTO.md`
-- `spikes/hwp/SPIKE-HWP.md`
-
-## 0. Non-negotiables
-- Everything runs in the browser. No backend.
-- Zero AI/LLM at runtime.
-- Shipped code uses only these licenses: MIT, Apache-2.0, BSD-2/3, ISC, 0BSD, Zlib, IJG, and OFL-1.1 for fonts.
-- No GPL, AGPL, LGPL or MPL in shipped code.
-- Korean UI.
-- Quality comes before speed.
-
-## 1. Stack decision (locked)
-
-| Choice | Decision | Reason |
-|---|---|---|
-| Site generator | **Astro 7.x, `output:'static'`**, pinned exactly (7.3.5 today) | One HTML page per tool, which is good for SEO. A shared layout instead of copy-paste. Zero JS by default. Vite handles module workers and `?url` assets. No server runtime to maintain. |
-| Language | TypeScript `strict`. Pin TS to the newest version that `@astrojs/check` accepts. If TS 7.x has a peer conflict, use the latest 5.9.x and log it. | Typed PDF object plumbing. |
-| Heavy work | **Module Web Workers**. WASM is lazy-loaded inside the worker only after a file is chosen. | The UI stays responsive on 100 MB inputs. Cancel is `worker.terminate()`, which also frees WASM memory. |
-| UI framework | **None.** Astro markup plus one plain TS controller per tool. | Fewer deps and less upgrade churn. Each tool is a small state machine. |
-| Hosting | Cloudflare Pages, static only, no Functions | Current setup. Zero server upkeep. |
-| Self-hosting | All JS, WASM, pdf.js CMaps, fonts and models come from our origin. This includes replacing the jsDelivr Pretendard link. | Keeps the privacy claim true, allows CSP `connect-src 'self'`, and makes versions deterministic. |
-| Versions | Exact pins (no `^`/`~`). Commit `package-lock.json`. `.node-version` = `22`. | Reproducible CF builds. The spike harnesses serve as the upgrade regression reference. |
-
-**Cloudflare Pages 25 MiB per-file limit: every known asset passes.**
-- The largest is MediaPipe `vision_wasm_internal.wasm` at 11.76 MB.
-- rhwp_bg.wasm is 9.94 MB.
-- face_landmarker.task is 3.76 MB.
-- avif_enc.wasm is 3.49 MB (opt-in only).
-- qpdf.wasm is about 1.2 MB raw.
-- The pdf.js worker and wasm together are under 2 MB.
-- The file count (Pretendard dynamic subset, about 100 files) is far below the 20,000 limit.
-- Guard: `scripts/check-dist.mjs` fails the build if any `dist/` file is ≥ 24 MiB, if there are more than 15,000 files, or if any `.map` file is present.
-
-**Runtime dependencies by step (exact versions as measured in the spikes):**
-- Step 1:
-  - `@cantoo/pdf-lib@2.11.1` (MIT)
-  - `pdfjs-dist@6.3.289` (Apache-2.0; its bundled wasm: openjpeg BSD-2, jbig2 BSD-3, qcms MIT)
-  - `pretendard@1.3.9` (OFL, fonts only)
-- Step 2 adds `@neslinesli93/qpdf-wasm@0.3.0` (qpdf Apache-2.0, wrapper ISC), `@jsquash/jpeg@1.6.0` and `@jsquash/resize@2.1.1` (Apache-2.0).
-- Step 3 adds `@jsquash/webp@1.5.0` (opt-in).
-- Step 4 adds `@mediapipe/tasks-vision@1.0.1` and `face_landmarker.task` (Apache-2.0; re-read the model card before shipping).
-- Step 5 adds `@rhwp/core@0.8.6` (MIT) and OFL fonts as woff2 unicode-range slices.
-
-**Dev-only, never shipped:**
-- `astro`, `typescript`, `@astrojs/check`
-- `vitest`, `@playwright/test`
-- `@axe-core/playwright` (MPL-2.0, acceptable because it is dev-only)
-- `@lhci/cli`
-
-Any new dependency must first be logged in BUILD-LOG with its license.
-
-## 2. Release plan (demand × readiness)
-
-| Step | Tool (URL) | Naver/mo | Readiness | Ships when |
-|---|---|---|---|---|
-| 1 | Foundation + **PDF 합치기** `/pdf-merge/` | 53,930 | GO (mergePlus proven) | **Live** (44af82c, 2026-09-29) |
-| **2** | **PDF 용량 줄이기** `/pdf-compress/` | 26,210 | GO | **Full spec below** |
-| 3 | **사진 용량 줄이기** `/photo-compress/` | 29,000 | GO | After Step 2 |
-| 4 | **여권·증명사진 규격** `/id-photo/` | 56,600 | GO, as auto-frame plus confirmation. 5.6 MB model. Presets need re-verification. | After Step 3 |
-| 5 | **HWP → PDF** `/hwp-to-pdf/` | 11,930 + 8,330 | GO with conditions | **Gated** on a re-test with a corpus of 100+ files: broken ≤ 5 %, no page-count mismatches, and a Wilson 95 % upper bound < 10 % |
-
-**Why this order:**
-- Step 2 comes before Step 3 even though its demand is slightly lower. It reuses Step 1's PDF infrastructure: the worker, pdf.js, and password and damage handling.
-- Step 4 has the highest demand but the most UX and legal surface. It waits until Step 3 has proven the photo encoder.
-
-### Later steps (brief — each gets a full brief when it starts)
-
-**Step 2 — PDF 용량 줄이기:** full build spec at the end of this file. Owner decision (2026-09-29): the opt-in "이미지로 변환" is **in** Step 2, with a warning.
-
-**Step 3 — 사진 용량 줄이기**
-- Decode with `createImageBitmap(...,{imageOrientation:'from-image'})`.
-- Detect HEIC by magic bytes and show the guidance copy.
-- Size search:
-  - `fitToTarget` on the canvas encoder, with a q floor of 0.5 and downscaling below that.
-  - Final MozJPEG encode in a worker.
-- Presets: 500 KB, 200 KB, 100 KB, 50 %, and a custom KB value.
-- Output guarantees:
-  - Size ≤ target.
-  - EXIF/GPS stripped, and the UI says so.
-  - Baseline JPEG.
-
-**Step 4 — 여권·증명사진**
-- FaceLandmarker auto-frame, a guide overlay, and a **mandatory confirmation checkbox before download**.
-- Launch presets: passport_online, qnet, gosi and half_card_3x4.
-- Presets with secondary confidence ship only after re-verification.
-- Every preset shows a source link and 기준일.
-- Blocking checks and warnings follow spike §3.3.
-- If the model fails, fall back to the manual guide.
-- Before launch, test the HEIC and file-input path on a real iPhone.
-
-**Step 5 — HWP → PDF**
-- First, a corpus expansion task (research, not build).
-- Then port `spikes/hwp/convert.html`:
-  - Include the 4 mandatory fixes plus the image clamp and downsample.
-  - Output through print-to-PDF, with per-browser guidance.
-- Mobile gate: viewer-only above 20 MB, or above 5 MB of images on mobile.
-- Show the Hancom notice and the trademark line.
-- Add the OFL texts to /licenses/.
-
-**Candidate Step 1b (after Step 2; owner to confirm) — page-level editing in the merge tool**
-- Page thumbnails.
-- Delete, rotate and reorder pages across files.
-- UI only: mergePlus already accepts `pages` and `rotate`.
-
-## 3. Quality gates (every step; a step is not "clear" until all pass)
-
-1. **Typecheck + unit tests.**
-   - `npm run check` runs astro check.
-   - `npm test` runs Vitest in Node.
-   - Engine logic stays framework-free so it can run in Node.
-2. **E2E tests.**
-   - `@playwright/test` against the production build, served by `tests/e2e/serve.mjs` (see Step 1 A6).
-   - Projects: `chromium`, `firefox`, `webkit`, `mobile-chrome` (Pixel 7) and `mobile-safari` (iPhone 14).
-   - Fixtures come only from `tests/fixtures/`, which is committed and ≤ 3 MB.
-3. **No-upload assertion.** Every tool e2e test calls the shared helper `tests/e2e/no-upload.ts`.
-   - It records `context.on('request')`, which includes worker requests in Chromium, and `page.on('websocket')`.
-   - Every request must:
-     - use GET or HEAD
-     - have `postDataBuffer() === null`
-     - be same-origin, `blob:` or `data:`
-   - There must be zero websockets.
-   - Responses must carry a CSP with `connect-src 'self'`.
-   - A static unit test checks `src/`:
-     - it has no `sendBeacon`, `XMLHttpRequest`, `WebSocket` or `EventSource`
-     - `fetch(` appears only in allowlisted files that load our own static assets
-4. **Regression harness.**
-   - Run with `npm run regress:*`, locally, not in CI.
-   - The large corpus is read from `CORPUS_DIR` (default `spikes/pdf/corpus`).
-   - Output goes to `regress-out/` (git-ignored).
-   - It reuses the spike metrics: page count, per-page pdf.js text equality, render SSIM on sampled pages, and form, bookmark and link counts.
-   - It is required for every step and every engine-dependency upgrade, with a summary in REVIEW-REQUEST.
-5. **Cross-browser.**
-   - Chromium, Firefox and WebKit must all be green.
-   - A real browser limitation may be skipped only with a stated reason. Never skip silently.
-6. **Mobile limits.**
-   - Mobile means `matchMedia('(pointer: coarse)')` and `screen.width < 1024`.
-   - Each step defines a soft limit (warn and confirm) and a hard limit (block with a message).
-   - At 360 px width there is no horizontal scroll.
-   - Tap targets are ≥ 44 px.
-7. **Accessibility.**
-   - axe finds zero serious or critical violations on every page.
-   - A keyboard-only e2e covers each tool end to end.
-   - Focus is visible and every control is labelled.
-   - Progress and results are announced through an `aria-live="polite"` region.
-   - `prefers-reduced-motion` is respected.
-8. **Lighthouse CI.**
-   - `@lhci/cli`, mobile preset, on `/` and on each tool page before any file is picked.
-   - Scores: Performance ≥ 95, Accessibility = 100, Best Practices ≥ 95, SEO = 100.
-   - CLS ≤ 0.01 and LCP ≤ 2.0 s.
-   - Initial JS ≤ 30 KB gzip per page. Engines load only after a file is picked, or after the first interaction plus idle (Polish P.7 preload; Lighthouse never interacts).
-9. **License gate.**
-   - `npm run check:licenses` walks `npm ls --omit=dev --all --json` and reads each `license` field.
-   - It fails on anything outside the §0 allowlist, and on any match for `/GPL|MPL/i`.
-10. **Dist gate.** `scripts/check-dist.mjs` (limits in §1).
-11. **Manual check.**
-    - Reviewer opens the Cloudflare preview or the local build in real Chrome, Firefox and Edge, plus one phone if available.
-    - Reviewer runs each tool once with a real file.
-
-**CI.** `.github/workflows/ci.yml` runs gates 1–3, 5 and 7–10 on push and on PR. Cloudflare Pages keeps doing its own build and deploy.
-
-## 4. Privacy and legal texts
-
-**`/privacy/` — 개인정보 처리방침** (합니다체)
-- Files and their contents are never collected, stored or transmitted. Processing happens in the browser.
-- No sign-up, no cookies and no analytics in this phase.
-- Cloudflare, as host, may process access logs (IP, User-Agent) for security and operations. Link to Cloudflare's privacy policy.
-- Include a 시행일 and a 변경 이력 section.
-- Note that enabling ads (AdSense) will come with an update and a consent mechanism beforehand.
-- Contact channel: **owner decision**. Until then, show the placeholder "문의처는 곧 안내합니다". No personal email.
-
-**`/licenses/` — 오픈소스 라이선스**
-- Generated at build by `scripts/gen-licenses.mjs` from an explicit `licenses.manifest.json` listing shipped packages and assets.
-- It embeds the LICENSE and NOTICE texts from `node_modules`, including the pdf.js wasm notices and the Pretendard OFL.
-- The build fails if a manifest entry's license file is missing.
-
-**Step 4 notice** (fixed, near the download button). It must say:
-- "이 도구는 자르기·크기 조정·재압축만 합니다. 얼굴·피부·배경을 수정하지 않습니다."
-- The 외교부 quote that retouched photos are not accepted (보정 사진 불가).
-- "최종 적합 여부는 접수 기관 심사로 결정되며, 이 도구는 통과를 보장하지 않습니다."
-- "머리 길이는 추정값입니다."
-
-**Step 5 notice** (HWP page footer, /licenses/, and the help text):
-- "본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다."
-- "한글, 한컴, HWP, HWPX는 한글과컴퓨터의 등록상표이며, 본 서비스는 한글과컴퓨터와 무관합니다."
-
-**Every tool page**
-- Put "파일은 이 기기 밖으로 전송되지 않습니다." next to the file picker, with a link to /privacy/.
-- Make no absolute claims such as "100 % 안전". Claim only what the e2e test proves.
-
-## 5. SEO basics
-- **Single source of truth: `src/data/tools.ts`.** Each tool has `slug`, `title`, `description`, `h1`, `status` (`'live'|'soon'`), `faq[]` and `keywords[]`. `keywords[]` is for copy only; do not emit a meta keywords tag.
-  - Title pattern: `{도구명} — 업로드 없이 브라우저에서 무료로 | 안올림`.
-  - Description: 80–120 characters. It contains the exact Naver keyword (for example "pdf 합치기") and the no-upload benefit.
-- **Canonical.**
-  - `site` comes from env `PUBLIC_SITE_URL`, default `https://doc-tools-kr.pages.dev`. Moving to a custom domain later means changing one variable.
-  - Config: `trailingSlash:'always'` and `build.format:'directory'`.
-  - Every page has an absolute canonical, plus `og:url`, `og:title`, `og:description`, `og:image` (`/og.png`, 1200×630) and `og:locale=ko_KR`.
-- **Preview URLs are not indexed.** `_headers` sets `X-Robots-Tag: noindex` on `https://:hash.doc-tools-kr.pages.dev/*`.
-- **JSON-LD.**
-  - Home: `WebSite` + `Organization`.
-  - Tool pages: `WebApplication` + `BreadcrumbList`. Set `applicationCategory:"UtilitiesApplication"`, `operatingSystem:"웹 브라우저"`, `offers{price:0, priceCurrency:"KRW"}` and `inLanguage:"ko"`.
-  - No FAQPage markup, since it has had little value since 2023. The FAQ stays as visible content.
-- **Sitemap.**
-  - Hand-rolled `src/pages/sitemap.xml.ts` listing home, the `live` tools, /privacy/ and /licenses/. `soon` tools have no page and are not listed.
-  - `public/robots.txt` points to the absolute sitemap URL.
-  - Optional env vars `PUBLIC_NAVER_SITE_VERIFICATION` and `PUBLIC_GOOGLE_SITE_VERIFICATION` render verification meta tags only when set.
-- **Korean copy guidelines.** Write them to `docs/COPY.md` in Step 1, ≤ 40 lines:
-  - Body text uses 합니다체.
-  - Buttons are short: "PDF 파일 선택", "PDF 합치기", "내려받기", "처음부터".
-  - No exclamation marks and no jargon. Write "여기에 파일을 끌어다 놓으세요", not "드롭존".
-  - Errors are two sentences: what happened, then what to do. Never blame the user.
-  - Put a space between numbers and units: `12.4 MB`, `3쪽`. PDF pages are counted in 쪽.
-  - Each tool page has:
-    - an H1 containing the exact keyword
-    - a 3-step 사용 방법
-    - a 안전한 이유 block
-    - 4–6 FAQ items that answer real search intent
-  - No unverifiable superlatives ("최고", "완벽").
-- **Ads (not in this phase).**
-  - `src/components/AdSlot.astro` takes `id` and `size`: `'rect'` (300×250) or `'leaderboard'` (728×90 desktop, 320×100 mobile).
-  - It renders **nothing** while `ADS_ENABLED` is `false` (`src/data/site.ts`).
-  - When enabled, it renders a box with a fixed `min-height`, so it causes no CLS.
-  - Placement:
-    - allowed: below the tool's result area, and above the footer
-    - never above the tool
-    - never between the file picker and the download button (AdSense accidental-click policy)
-
-## 6. Handoff protocol (this repo)
-
-All handoff files live in `C:\dev\doc-tools-kr\handoff\`:
-- `ARCHITECT-BRIEF.md`: Arch.
-- `BUILD-LOG.md`: owned by Arch. Everyone appends decisions and Known Gaps as they happen.
-- `REVIEW-REQUEST.md`: Bob, when done. It contains:
-  - files and line ranges touched
-  - each gate with its result
-  - the regress table
-  - deviations from the brief
-  - a "Blocked" section
-- `REVIEW-FEEDBACK.md`: Richard. Findings are marked blocking or non-blocking. The final line is "Step N is clear".
-- `SESSION-CHECKPOINT.md`: Arch, at the end of each session.
-
-Loop:
-1. Arch writes the brief.
-2. Bob builds and writes REVIEW-REQUEST.
-3. Richard writes REVIEW-FEEDBACK.
-4. Bob fixes, and steps 2–4 repeat until Richard writes "Step N is clear".
-5. Arch runs the deploy gate.
-
-Deploy rules:
-- Local commits are pre-authorized at the gate.
-- **A push to `main` deploys to production and needs the owner's explicit go-ahead.** Standing instruction since Step 2: the orchestrator pushes after Richard's "Step N is clear", then runs the live smoke test.
-- Anything marked **Flag** must not be guessed. Record it under "Blocked".
-
-Commit message format:
-```
-[Step N] <short description>
-
-Built: ...
-Reviewed: ...
-Decisions: ...
-```
-
-
----
-
-# Step 2 — Build spec: PDF 용량 줄이기 `/pdf-compress/`
-
-Step 1 is live (44af82c). Its spec is in git history. Everything it built stays as is unless listed below.
+Source: owner paste 2026-10-20 (AdSense rejected 2026-10-20 05:40 KST, 「가치가 별로 없는 콘텐츠」). P0 only; P1 content consolidation/expansion is a later sprint (do not start it).
+Base: main 5a56a39. Supersedes REV4 where they differ (REV4 was never built; its CSP mechanics, privacy-section shape and test pattern are reused).
 
 ## Goal
-`/pdf-compress/` shrinks one PDF in the browser at three levels (고화질 / **권장** / 강력) plus an opt-in "이미지로 변환". Text is never rasterized in the three normal levels. A result that is not smaller is never offered. The home card and the merge page link to it.
+Production shows no Coupang link anywhere, carries the AdSense tag on content pages only (with a content-only CSP and an AdSense privacy section), has /about/ and /contact/, honest guide bylines, noindexed /licenses/ and /embed/, and hreflang x-default pointing to Korean.
+
+## Locked decisions (log in BUILD-LOG "ADS1020")
+- D1 **Coupang off by one constant.** `src/data/affiliate.ts`: `export const AFF_ENABLED = false;` and `affOn(v)` returns `AFF_ENABLED && v?.trim() === '1'`. All data (AFF_LINKS, maps, copy) stays. Production keeps `PUBLIC_AFF_COUPANG=1` and still renders 0 links (the constant wins). Re-enabling later (a few long guides) = flip the constant + a new brief. The page files need no change beyond what follows from `affOn` (leave their imports).
+- D2 **AdSense client is a committed constant** `ADSENSE_CLIENT_DEFAULT = 'ca-pub-6478963235198426'` (public: already in public/ads.txt). Env: `PUBLIC_ADSENSE_ON=1` turns the tag on; optional `PUBLIC_ADSENSE_CLIENT` overrides (format `ca-pub-` + 16 digits, build fails naming the variable, value not echoed; tests use `ca-pub-0000000000000000`). ON fails the build without `PUBLIC_CONTACT_EMAIL` and `PUBLIC_PRIVACY_OFFICER` (both already set in Production). Slot env vars are NOT built now (serve stage = later sprint). public/ads.txt stays as is.
+- D3 **Review stage = tag only, no units.** On content pages, in `<head>`, in this order, right after the GA tag:
+  1. `<script src="/ads-cfg.js" data-site-ads-cfg></script>` (same-origin, classic, sync, tiny). Body exactly: `(window.adsbygoogle=window.adsbygoogle||[]).pauseAdRequests=1;window.adsbygoogle.requestNonPersonalizedAds=1;` Written at postbuild only when ON (pattern of gen-ga); OFF build has no dist/ads-cfg.js.
+  2. `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=<client>" crossorigin="anonymous"></script>` (Google's snippet verbatim, so the review crawler finds it in static HTML; no self-hosted injector).
+  pauseAdRequests=1 guarantees no ad is requested even if the console turns Auto ads on; requestNonPersonalizedAds=1 = owner decision 2026-10-12 (비맞춤 광고만). `_headers` (ON only): `/ads-cfg.js` with `Cache-Control: public, max-age=3600`.
+  Flag (unverified claim): both properties must be cited from Google's AdSense help (verbatim line + URL + fetch date) in REVIEW-REQUEST. If pauseAdRequests is not documented for AdSense, drop that half, keep NPA, and say so (console Auto ads off then carries the guarantee).
+- D4 **Content routes (single source)** `CONTENT_ROUTES` in `scripts/lib/adsense.mjs`, mirrored in `src/data/adsense.ts` with a unit test keeping them equal (pattern of usage.mjs/affiliate.ts): `/` (home: Arch call; tool list + FAQ, no file handling; the URL Google most likely checks), `/guide/` and everything under it (index, hubs, articles), `/about/`, `/contact/`. Never: tool pages, result screens, 404 (incl. en/404), /offline/, /privacy/, /terms/, /licenses/, /en/*, /embed/*. Base.astro decides from `Astro.url.pathname` with `isContentPath()`; BaseEn and Embed layouts never render it.
+  Pre-locked fallback: if the ON-build Lighthouse run of `/` breaks a threshold, drop `/` from CONTENT_ROUTES (never lower thresholds).
+- D5 **Route CSP** (REV4 decision 5 reused; gen-headers postbuild, ON only, appended after the GA/analytics extensions so the `/*` line stays exactly what those produce). For each content pattern (`/`, `/guide/*`, `/about/`, `/contact/`): `! Content-Security-Policy`, then
+  `default-src 'self'; script-src 'self' https: 'unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https:; img-src 'self' data: blob: https:; frame-src https:; fenced-frame-src https:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'`
+  It covers pagead2/tpc.googlesyndication.com, googleads.g.doubleclick.net and Google's other ad hosts without a brittle host list; GA and the CF beacon are covered by https:. OFF: `_headers` byte-identical to today.
+  Flag (unverified until probed): cite the Cloudflare doc lines for `!` detach and for exact `/` vs splat `/guide/*` matching `/guide/` itself; paste `curl -sI` of preview `/`, `/guide/`, one guide article, `/about/`, `/pdf-merge/`, `/embed/id-photo/` showing exactly one CSP each and the right one. tests/e2e/serve.mjs already models detach; make sure it matches an exact `/` rule the way Cloudflare does.
+  Accepted (log): a 404 served under `/guide/<missing>` gets the content CSP (no tag on it).
+- D6 **Privacy section** (ON only) replaces the body of the existing 「{n(4)}. 광고」 section (numbering unchanged; OFF keeps today's 「지금은 광고가 없어요…」), `id="ads"`. Plain Korean, format of the GA section: 어디에 (첫 화면·안내 글·소개·문의 페이지에만 Google 애드센스 코드가 있어요; 도구 화면과 결과 화면에는 없어요); 지금 상태 (광고 심사 중이라 광고를 보여 주지 않아요; 보여 줄 때도 맞춤 광고가 아닌 광고만 보여요); 쿠키 (비맞춤 광고도 노출 횟수 제한·부정 클릭 방지에 쿠키를 쓸 수 있다는 Google 문장: cite verbatim + URL + fetch date in REVIEW-REQUEST); 국외 이전 list (받는 자 Google LLC + the existing Google privacy form link; 미국; 페이지를 열 때마다 인터넷으로 전송; 항목 IP 주소·쿠키·본 페이지 주소·기기 정보; 목적 광고 표시와 부정 클릭 방지; 기간 Google 정책에 따름 + https://policies.google.com/technologies/ads); 문서딱은 그 정보를 받지 않아요; 거부 방법 (쿠키 차단, 광고 차단 기능; 막아도 모든 도구를 그대로 쓸 수 있어요); 14세 미만 (맞춤 광고를 쓰지 않아요). `PRIVACY_ADS = '2026년 10월 20일'` (re-confirmed at the gate = the day ON goes live), history line, PRIVACY_REVISED / PRIVACY_TERMS_UPDATED take it when ON. Terms unchanged (3항 already allows ads after the policy is amended).
+- D7 **Privacy, Coupang off:** the usage sentence 「도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)」 becomes, while `!AFF_ENABLED`, 「증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)」. History line (USAGE builds): `PRIVACY_AFF_OFF = '2026년 10월 20일'` 「상품 링크를 없애 익명 사용 통계에서 상품 링크 누름을 뺌」. PRIVACY_REVISED = newest active date (ADS ON → PRIVACY_ADS; else USAGE → PRIVACY_AFF_OFF; else ADDR → PRIVACY_ADDR; else PRIVACY_CHAIN); PRIVACY_TERMS_UPDATED likewise ('2026-10-20' when ADS or USAGE). Old history lines stay.
+- D8 **Operator gate** `OPERATOR_ON = !!(CONTACT_EMAIL && PRIVACY_OFFICER)` in src/data/site.ts. /about/ and /contact/ are generated only then (e.g. `src/pages/about/[...p].astro` with `getStaticPaths` returning `OPERATOR_ON ? [{ params: { p: undefined } }] : []`; Bob's call, but zero files when off). Footer links 「소개」「문의」 only then (right after 「안내」). Production has both env vars, so the pages go live. Default build: no page, no link (owner rule "no operator lines until ads" holds).
+- D9 **/about/** (title ≤ 40, description 40–80, docs/COPY.md plain language: no 업로드/서버/브라우저/네트워크/EXIF/dpi): H1 「문서딱 소개」. Sections:
+  - 만든 사람: 「문서딱은 {officer}{josa 이/가} 만들고 운영해요.」 + link to /contact/. No team, title, 사업자 info or biography.
+  - 왜 만들었나: one honest purpose paragraph from SITE.tagline (서류·사진을 낼 때 용량·규격에 막히지 않게; 가입 없이 무료). No invented story.
+  - 파일을 다루는 방법 (not the page lead): 대부분의 도구는 고른 파일을 이 기기 안에서 처리하고 문서딱으로 보내지 않아요. In the same section: `__BG_CLOUD__` → the 배경 지우기 exception sentence with the wording privacy/terms already use (EXCEPTION_RE); `__ADDR_EN__` → 「영문주소 변환기는 적은 주소 글자만 행정안전부 주소 검색에 전달해요.」 (must NOT contain ADDR_SEND 「행정안전부 주소 검색으로 보내」); link 「자세한 내용: 개인정보 처리방침」.
+  - 규격 정보를 확인하는 방법: 안내 글마다 공식 출처와 확인일을 적고, 옮긴 문장은 원문과 다시 맞춰 봐요 (check:quotes is the fact); 「틀린 곳을 알려 주세요」 → /contact/.
+  - 고친 기록 (generated, honest): live tool count (LIVE_TOOLS.length), published guide count, earliest guide `published`, latest `updated`, the 5 most recently updated guides (title link + date); plus a short milestone list in `src/data/about.ts` (date + one plain line), each date proven by `git log --diff-filter=A --format=%ad --date=short -- <page file>` with the commit hash in a code comment (e.g. 사이트 공개와 첫 도구, 안내 글 시작, HWP 도구, 영문 이름·영문주소 변환기). Only what git proves; no plans.
+  - JSON-LD: AboutPage with a Person (name = officer, url = /about/); sameAs only BLOGS.
+- D10 **/contact/** (same rules): email (mailto, escaped like footerContact); 「보통 3일 안에 답장해요.」 (Arch call; the owner may change it); 「틀린 내용 알리기」 list: 페이지 주소, 쓰는 기기와 앱 (예: 아이폰 카카오톡), 무엇이 틀렸는지, 공식 출처 링크가 있으면 함께; 「서류 파일은 보내지 마세요. 주민등록번호 같은 개인정보가 들어 있을 수 있어요.」; links to /about/ and /privacy/.
+- D11 **Guide byline** (Guide.astro `.guide-dates`): OPERATOR_ON → 「글: {officer} · <a href="/about/">소개</a> · 처음 쓴 날 … · 고친 날 …」; off → 「글: 문서딱 · 처음 쓴 날 … · 고친 날 …」 (no link). jsonld.ts guide `author`: OPERATOR_ON → `{ '@type': 'Person', name, url: <absolute /about/> }`, else Organization; publisher stays Organization.
+- D12 **noindex + sitemap:** /licenses/ and /embed/ pass Base `noindex` (drops canonical); sitemap drops `/embed/` and `/licenses/`; /embed/id-photo/ unchanged (already noindex). Sitemap adds `/about/` and `/contact/` when OPERATOR_ON (lastmod = an ADS1020 date constant). llms.txt: remove the /embed/ line only if a test ties llms.txt to the sitemap; otherwise leave it (log which).
+- D13 **/en/ stays indexed** (EN brief); sitemap hreflang x-default → the Korean URL on both twins. Flip the en-check rule and its unit test (the 「x-default to Korean」 case becomes the passing one). Reason: Korean is the primary audience; EN pages carry no ads; noindexing 6 working pages buys nothing for the review.
+- D14 **CLAUDE.md**: text below; the orchestrator applies it at the deploy gate. Bob does not edit CLAUDE.md.
 
 ## Flow
-
 ```
-file picked (main thread)
-  │ header sniff (%PDF-) ── fail ─► not-pdf
-  │ inspect.ts (pdf.js): pageCount, encrypted
-  │   user  ─► password prompt ─► inspect(bytes, pw) ── wrong ─► "비밀번호가 맞지 않습니다."
-  │   owner ─► notice "보안 설정(편집 제한)이 해제된 사본이 만들어집니다"
-  │   pdf.js throws (truncated) ─► corrupt
-  │ limits (bytes, pages, level) ─► soft: inline confirm │ hard: block
-  ▼
-level = 고화질 | 권장 | 강력                                  level = 이미지로 변환
-  worker: compressPdf()                                         main: pdf.js renders page i (150 dpi) ─► RGBA
-   1 normalize  qpdf --decrypt [--password] --object-streams=disable   worker: MozJPEG q70 (1-channel if gray)
-       fail ─► cantoo load(throwOnInvalidObject:false) + save             ─► append page (pdf-lib) ─► ack
-               ─► qpdf again ── fail ─► corrupt                          loop i; run token checked between pages
-       pages ≠ inspect.pageCount ─► corrupt (never partial)              save(objstm)
-   2 pdf-lib pass: strip /PieceInfo /Thumb, dedupe streams, hasSignature        │
-       candidates = images passing the cheap checks                             │
-       0 candidates ─► skip placement parsing                                   │
-       else placements (q/Q/cm/Do, Form XObjects) ─► per image:                 │
-         decode ─► Lanczos3 to target ppi (if > trigger) ─► MozJPEG             │
-         ─► SSIM gate (retry q+10 once) ─► replace only if ≥ 10 % smaller       │
-   3 optimize   qpdf --object-streams=generate --compress-streams=y             │
-                --recompress-flate --compression-level=9 (6 if input > 30 MB)   │
-                --remove-unreferenced-resources=yes                             │
-   4 verify     cantoo reload; page count == expected ── fail ─► corrupt        │
-  ▼                                                                             ▼
-out ≥ 0.99 × in ? ── yes ─► kept (no download; say why)  ◄──────────────────────┘
-  │ no
-main: pdf.js opens out: pages == expected; normal levels also: text of first, middle, last page == original
-  │   fail ─► discard output, error "verify"
-  ▼
-done: before → after, −N %, page-1 preview (원본 | 결과), signature warning, 내려받기
+build env ─┬─ PUBLIC_ADSENSE_ON unset ─> no tags, no dist/ads-cfg.js, _headers as today, privacy 「지금은 광고가 없어요」
+           └─ ON=1 (+CONTACT_EMAIL +PRIVACY_OFFICER, else build fails)
+                 ├─ content page (/, /guide/**, /about/, /contact/):
+                 │     head: … GA tag → /ads-cfg.js (pause=1, NPA=1) → async adsbygoogle.js?client=…
+                 │     _headers: ! CSP → content CSP (https: scheme)
+                 ├─ every other page: no tag; '/*' CSP unchanged
+                 └─ /privacy/: section 4 = 애드센스 (id="ads")
+affOn(env) = AFF_ENABLED(false) && env==='1' ─> affBlock null everywhere ─> 0 Coupang links, 0 disclosure lines
+OPERATOR_ON ─┬─ yes: /about/, /contact/, footer 소개·문의, byline 「글: <officer> · 소개」, sitemap +2
+             └─ no : none of it; byline 「글: 문서딱」
 ```
 
-## Build Order
-
-### 0. Preparatory refactors (behaviour-neutral; all Step 1 tests stay green before anything new is added)
-1. Move the shared UI helpers out of `src/tools/pdf-merge/`:
-   - `formatMB`, `formatPages`, `baseName` and the filename sanitizer → `src/lib/ui/format.ts`. `mergedFileName` stays in the merge tool and calls the shared sanitizer.
-   - `MB`, `detectDevice`, `Device` → `src/lib/ui/device.ts`.
-   - Update imports. No logic changes.
-2. Extract the pdf.js helpers from `scripts/regress/merge.mjs` (`openPdf`, `pageText`, rendering) into `scripts/regress/lib.mjs`. `regress:merge` output must be identical before and after; paste both tables.
-3. Richard's two non-blocking items from the Step 1 round-2 review:
-   - **Font-rename guard.** In `scripts/font-rename.mjs`, add `readAllNames(sfnt)`, which returns **every** name record as `{platformID, encodingID, languageID, nameID, value}`. `gen-ui-font.mjs` fails the build in either of these cases:
-     - any record's value contains "Pretendard" (case-insensitive)
-     - the raw `name` table bytes contain "Pretendard" as ASCII or as UTF-16BE
-
-     Keep `readNames` for the existing log line. Add a unit test `tests/unit/font-rename.test.ts`. Build a minimal sfnt whose `name` table has two records for the same nameID: a Windows 3/1/0x409 record that is clean, and a Mac 1/0/0 record that contains "Pretendard". The guard must reject it. A clean table must pass.
-   - **`unknown` mapping test.** Export `withFileIndex` from `src/lib/pdf/mergePlus.ts`, marked `/** @internal exported for tests */`. (`onProgress` is called outside the per-file try at line 435, so it is not a usable seam.) Unit tests:
-     - a `TypeError` becomes a `PdfError` with code `unknown` and the given `fileIndex`, and `errorCode()` of it is `unknown`
-     - a `PdfCorruptError` keeps code `corrupt` and gains the `fileIndex`
-     - a `RangeError('Array buffer allocation failed')` is returned unchanged (the OOM path)
-
-### 1. Dependencies (exact pins; log each one in BUILD-LOG with its license before use)
-- **Runtime:**
-  - `@neslinesli93/qpdf-wasm@0.3.0`: wrapper ISC; qpdf 12.2.0 Apache-2.0; bundled libjpeg-turbo (IJG/BSD-3/zlib) and zlib
-  - `@jsquash/jpeg@1.6.0`: Apache-2.0; MozJPEG IJG/BSD-3/zlib
-  - `@jsquash/resize@2.1.1`: Apache-2.0; codecs MIT/Apache-2.0
-  - Record every transitive dependency and its license.
-- No `mupdf`, no Ghostscript, and nothing GPL, AGPL, LGPL or MPL. `check:licenses` must stay green.
-- **License texts missing from the npm package.** `@neslinesli93/qpdf-wasm` ships no LICENSE file. Commit these texts under `licenses/third-party/`:
-  - `qpdf-12.2.0/LICENSE.txt`, plus `NOTICE` if upstream has one, from the qpdf v12.2.0 tag
-  - `libjpeg-turbo/LICENSE.md`, for the version bundled by that qpdf build
-  - `zlib/LICENSE`
-  - `qpdf-wasm/LICENSE` (ISC) from the wrapper repo. If the repo has none, use the standard ISC text with the copyright line from its package.json author, and say so in REVIEW-REQUEST.
-
-  Record the source URL of each file in `licenses/third-party/SOURCES.md`. Extend `licenses.manifest.json` with a `localFiles` entry type (paths relative to the repo root), and teach `gen-licenses.mjs` to embed it. The build fails if a listed file is missing.
-- Also list in the manifest:
-  - `@jsquash/jpeg`: `LICENSE` and `codec/LICENSE.codec.md`
-  - `@jsquash/resize`: `LICENSE` and `lib/resize/LICENSE.codec.md`, plus `lib/hqx/…` and `lib/magic-kernel/…` if their wasm ends up in `dist/`
-
-### 2. WASM loading (lazy, self-hosted, versioned)
-- **qpdf glue.** `copy-vendor.mjs` does the following:
-  - copies `dist/qpdf.wasm` to `public/vendor/qpdf/12.2.0-w0.3.0/`
-  - writes `qpdf.mjs` in the same directory, containing the original `qpdf.js` text followed by a newline and `export default Module;` (the UMD tail does nothing when `module` and `define` are undefined)
-
-  The worker loads it with `await import(/* @vite-ignore */ QPDF_MJS_URL)`. Do not let Vite bundle the Emscripten glue.
-- **qpdf.wasm bytes.** The worker fetches them **once** (`fetch(QPDF_WASM_URL)` → `ArrayBuffer`) and passes them as `wasmBinary` to every factory call. Each qpdf call still gets a **fresh module instance**, so its heap is released between stages as in the spike.
-- **jsquash.**
-  - Import the wasm files with `?url`: `@jsquash/jpeg/codec/enc/mozjpeg_enc.wasm?url`, `…/dec/mozjpeg_dec.wasm?url`, and the resize wasm.
-  - Initialise them explicitly: `init(await WebAssembly.compileStreaming(fetch(url)))` for jpeg, and `initResize(url)` for resize.
-- All wasm fetches live in one file, `src/lib/pdf/compress/wasm-browser.ts`. Add it to the network-guard allowlist with a comment.
-- Nothing from qpdf, jsquash or pdf-lib may be requested before a file is picked. The e2e test asserts this from the request log.
-- `serve.mjs` must serve `.wasm` as `application/wasm` and `.mjs` as `text/javascript`. Verify this, and add it if missing.
-- **Flag:** if the Emscripten glue needs anything the CSP blocks, such as `eval` or `new Function` (none found in 0.3.0), report it. Do not loosen the CSP.
-
-### 3. Engine — `src/lib/pdf/compress/` (framework-free; runs in Node and in a worker)
-Port `spikes/pdf/harness/lib.mjs` lines 118–400 into typed modules. Use the same algorithm and constants unless this section says otherwise.
-
-| File | Content |
-|---|---|
-| `levels.ts` | `LEVELS`: `high` {trigger 260, target 200, q 85, gate 0.96}, `recommended` {190, 150, 75, 0.92}, `strong` {130, 110, 55, 0.85}. All three use `minBytes 6144`, `minPixels 96×96`, `minGain 0.10`. `RASTER = {dpi 150, q 70, maxLongPx 3000}`. `KEEP_ORIGINAL_RATIO = 0.99`. `FLATE6_ABOVE = 30 MB`. |
-| `deps.ts` | `interface CompressDeps` with `qpdf(args, input)` returning `{code, out, logs}` (out is null on failure), `jpegEncode(img, opts)`, `jpegDecode(bytes)` and `resize(img, w, h)`. The browser implementation lives in the worker. The Node implementation lives in `tests/helpers/compress-deps.ts` and reads the wasm from `node_modules` via `createRequire`. `ImageData` in Node comes from a ~10-line polyfill in `tests/helpers/image-data.ts`, loaded by `vitest.config.ts` `setupFiles` and by the regress script. It is never shipped. |
-| `contentOps.ts` | The tokenizer. Two additions: token-to-string conversion is capped at 256 bytes (no `String.fromCharCode` spread over a huge array), and parsing stops hard after 200,000,000 bytes of content per page. |
-| `placements.ts` | `imagePlacements(doc)`, exactly as in the spike: depth ≤ 8, the maximum displayed size per image ref, and a count of parse failures. |
-| `images.ts` | `decodeImage`, `colorInfo`, `unpredictPng`, `isGray`, `uniqueColors`, and the recompress loop. The skip rules are exactly those in spike §3.1: SMask targets, `/ImageMask`, `/Decode`, colour-key `/Mask`, CMYK/Indexed/Separation/DeviceN/Lab, CCITT/JBIG2/JPX and any other filter, Flate with bpc ≠ 8, TIFF predictor, Flate line-art (< 2048 colours), images < 96×96, and images < 6 KB. The report counts skips per reason (`jpx`, `ccitt`, `jbig2`, `cmyk`, …). |
-| `ssim.ts` | The gate metric: luma SSIM over 8×8 windows with stride 4 (spike `compareCanvases`). **Change:** for images wider than 1200 px, downsample both images with a pure-JS 2×2 box average instead of OffscreenCanvas smoothing. The gate is then identical in every browser and in Node. |
-| `dedupe.ts` | `dedupeStreams`, as in the spike. |
-| `signature.ts` | `hasSignature(doc)` returns true if any of these holds: an indirect dict has `/Type /Sig`; a dict has `/FT /Sig` with a `/V`; a dict has a `/ByteRange` key; or the catalog has `/Perms`. |
-| `engine.ts` | `compressPdf(bytes, {level, password, expectedPages, onProgress}, deps)` resolving to `{bytes, keptOriginal, report}`, implementing the pipeline in the Flow above. |
-| `raster.ts` | `class RasterAssembler` with `addPage(rgba, w, h, ptW, ptH)` and `finish()` returning the PDF bytes. It encodes with MozJPEG q70 (1-channel when `isGray`), embeds with pdf-lib `embedJpg`, sizes each page from the pdf.js viewport at scale 1 (rotation already applied), and saves with `{useObjectStreams:true}`. |
-| `report.ts` | `CompressReport`: level, inBytes, outBytes, keptOriginal, keptReason (`no-gain` or `raster-larger`), pages, imagesSeen, imagesReplaced, skipped (count per reason), minImageSsim, repairedBy (`pdf-lib` or absent), signed, ownerRestrictionRemoved, and ms per phase (normalize, images, optimize, verify). It contains no file names, no passwords and no qpdf logs. |
-
-**Engine rules**
-- **Normalize.**
-  - Pass `--password=<pw>` only when the user gave one.
-  - qpdf exit code 0 or 3 counts as success.
-  - On failure, run the pdf-lib repair and then qpdf again (spike lines 329–337).
-  - qpdf log lines are never returned or posted. They are only mapped to codes: a line matching "invalid password" (case-insensitive) → `wrong-password`; anything else → `corrupt`.
-- **Page count.** After step 1, and again after a repair, the page count must equal `expectedPages` (from the pdf.js inspect). A mismatch throws `PdfCorruptError`. **Never return partial output.**
-- **Skip placement parsing** when no image passes the cheap checks (subtype, size, bytes, SMask target, filter, colour space). This was the spike's measured hotspot, 17–25 s on text-heavy bundles.
-- **Flate level.** Use 6 instead of 9 when the input is over 30 MB.
-- **Metadata** stays unchanged (`updateMetadata:false`). Do not set Producer.
-- **Kept original.** When the output length is at least 0.99 × the input length, the result is `keptOriginal` and the returned bytes are the input itself.
-- **Progress.** `onProgress({phase, done, total})` with phase `normalize`, `images`, `optimize` or `verify`. The `images` phase reports once per candidate image.
-- **Errors.** Reuse `src/lib/pdf/errors.ts` and add `verify` to `PdfErrorCode` (used by the main-thread check). OOM detection works as in merge.
-
-### 4. Worker — `src/lib/pdf/compress.worker.ts` (module worker)
-- **Input messages:**
-  - `compress` with `{bytes, level, password?, expectedPages}`. `bytes` is transferred; the controller keeps its own copy for re-runs.
-  - For raster: `raster-begin` with `{pageCount}`, then one `raster-page` with `{rgba, width, height, ptW, ptH}` per page (buffer transferred), then `raster-end` with `{inBytes}`.
-- **Output messages:**
-  - `progress` with `{phase, done, total}`
-  - `done` with `{bytes, keptOriginal, report}`, `bytes` transferred
-  - `error` with `{code}`
-  - `raster-ack` with `{page}`. This is back-pressure: the controller renders page i+1 only after the ack for page i, so at most two pages are in memory.
-- `password` is used only for the qpdf call. It is never echoed back or logged.
-- Cancel is `worker.terminate()` from the controller, which frees all WASM memory. Each run gets a new worker.
-
-### 5. Tool page `/pdf-compress/`
-Files:
-- `src/pages/pdf-compress/index.astro`
-- `src/tools/pdf-compress/controller.ts`
-- `src/tools/pdf-compress/limits.ts`
-- `src/tools/pdf-compress/check.ts`: the main-thread result checker, pure, over a small pdf.js-like interface
-- `src/lib/pdf/raster-render.ts`: main-thread pdf.js page → RGBA, reusing the pdf.js options from `inspect.ts`
-
-#### 5.1 Server-rendered content
-- H1: "PDF 용량 줄이기".
-- Lead: "스캔하거나 사진이 들어간 PDF의 용량을 줄입니다. 글자는 그대로 두고 이미지만 줄이며, 파일은 서버로 전송되지 않습니다."
-- Title follows the §5 pattern.
-- Description: 80–120 characters, containing "PDF 용량 줄이기". Base it on: "파일 업로드 없이 브라우저에서 PDF 용량 줄이기. 스캔·사진이 든 PDF를 선명하게 유지하면서 줄이고, 글자는 선택·검색 가능한 그대로 둡니다. 회원가입 없이 무료."
-- 사용 방법, 3 steps: 파일 선택 → 단계 고르기 → 내려받기.
-- 안전한 이유, the AdSlots (empty for now), JSON-LD, and 관련 도구 (5.5).
-- FAQ, 6 questions:
-  - 얼마나 줄어드나요: scan and photo PDFs shrink 85–96 % on 권장, and text-heavy documents 4–25 %. These are the spike ranges; state them as "시험한 파일 기준".
-  - 글자가 흐려지나요: no. Text is not converted, except with 이미지로 변환.
-  - 비밀번호 PDF.
-  - 용량 제한: the numbers from 5.4.
-  - 전자서명·발급 문서: the signature warning.
-  - 휴대폰에서도 되나요: name no specific browsers.
-
-#### 5.2 States
-The states are empty → ready → working → done, kept or error. One `aria-live="polite"` region announces state changes.
-
-**empty**
-- A labelled file input (`accept="application/pdf,.pdf"`), styled as the button "PDF 파일 선택".
-- A drop area with the text "또는 여기에 파일을 끌어다 놓으세요". Only this area accepts drops.
-- One file at a time. Picking another file replaces the current one.
-- "파일은 이 기기 밖으로 전송되지 않습니다." with a /privacy/ link, next to the picker.
-
-**ready**
-- A file card: name, `N쪽`, size, and a page-1 thumbnail in a fixed 160×226 box.
-- A password field when the file is `user`-encrypted. Copy and behaviour are the same as in merge: the password is held in memory only and cleared on reset.
-- The owner notice when the file is `owner`-restricted.
-- A level fieldset with the legend "압축 단계" and radios, **권장 checked**. Each radio's description is linked with `aria-describedby`:
-  - 고화질 (적게 줄이기): "이미지를 200 ppi까지만 낮춥니다. 원본과 거의 구분되지 않아 인쇄할 문서에 알맞습니다."
-  - 권장: "이미지를 150 ppi로 맞춥니다. 화면과 일반 인쇄에서 선명하게 읽혀 제출용 서류에 알맞습니다."
-  - 강력: "이미지를 110 ppi로 낮추고 더 압축합니다. 화면에서는 읽을 수 있지만 확대하면 흐려질 수 있습니다."
-  - A common line under the three: "세 단계 모두 글자와 선은 그대로 두고 이미지만 줄입니다."
-- Below the fieldset, a separate `details` element "더 줄여야 하나요?". It contains the 4th radio, **이미지로 변환**, and a warning box (`role="note"`): "모든 쪽을 150 dpi 이미지로 바꿉니다. 글자를 선택하거나 검색할 수 없게 되고, 입력 칸·링크·책갈피가 사라집니다. 글자 위주 문서는 오히려 커질 수 있으며, 그때는 원본을 그대로 둡니다."
-- The button "PDF 용량 줄이기", disabled until the file is unlocked.
-
-**working**
-- A phase text and a `progress` element:
-  - "구조 정리 중…"
-  - "이미지 줄이는 중… (3/12)"
-  - "마무리 중…"
-  - "결과 확인 중…"
-  - raster: "쪽을 이미지로 바꾸는 중… (4/20)"
-- "취소" terminates the worker and bumps the run token. It returns to **ready** with the file, password and level kept.
-
-**done**
-- A headline "12.4 MB → 1.3 MB" and "89 % 줄었습니다", plus `N쪽`. The percent is floor(100 × (1 − out/in)), always between 1 and 100.
-- A page-1 preview side by side, labelled "원본" and "결과":
-  - stacked below 480 px width
-  - each in a fixed-aspect box sized from page 1's aspect ratio, so there is no CLS
-  - rendered by pdf.js at 240 CSS px × min(DPR, 2)
-- If `report.signed`, a warning box: "이 파일에는 전자서명이 들어 있습니다. 용량을 줄인 파일에서는 서명이 더 이상 유효하지 않습니다. 발급받은 증명서처럼 서명이 필요한 문서는 원본을 제출하세요."
-- If the input was password-protected: "줄인 파일에는 비밀번호가 걸려 있지 않습니다."
-- 내려받기 is an `a download` link pointing at a blob URL.
-  - Filename: `{base}_압축.pdf`, or `{base}_이미지변환.pdf` for raster.
-  - Use the shared sanitizer, and limit it to 80 characters.
-- "다른 단계로 다시 줄이기" returns to **ready** with the file kept. "처음부터" resets the tool.
-- Revoke blob URLs on reset, on a re-run and on `pagehide`.
-- A link: "여러 파일을 하나로 묶으려면 PDF 합치기" → `/pdf-merge/`.
-
-**kept** (no download is offered)
-- Normal levels: "이미 최적화된 파일입니다. 줄일 수 있는 이미지가 없어 원본을 그대로 둡니다."
-  - When `skipped.jpx > 0`, add: "이 파일의 이미지는 JPEG2000 형식이라 아직 줄이지 못합니다."
-  - When `skipped.ccitt + skipped.jbig2 > 0`, add: "흑백 스캔 이미지는 이미 작게 저장되어 있습니다."
-  - If the level was 고화질 or 권장 and `imagesSeen > imagesReplaced`, show the suggestion button "강력으로 다시 줄이기".
-- Raster: "이미지로 바꾸면 오히려 커져서 원본을 그대로 둡니다. 이 파일에는 이 방법이 맞지 않습니다."
-
-**Main-thread result check** (before showing done)
-- Open the output with pdf.js. Its page count must equal the input's.
-- For the three normal levels, `pageText` (whitespace-stripped, as in the harness) of the first, middle and last page must also equal the original's.
-- Any failure discards the output and shows error `verify`: "결과 파일을 검증하지 못해 원본을 그대로 둡니다. 다른 단계로 다시 시도해 주세요."
-
-**Errors** (two sentences each, per docs/COPY.md)
-- not-pdf, corrupt, unknown and verify.
-- oom: "기기 메모리가 부족합니다. 더 작은 파일로 시도하거나 PC에서 이용해 주세요."
-- wrong-password is shown inline.
-- Reuse the merge copy wherever the meaning is the same.
-
-#### 5.3 Performance
-- Initial page JS is the controller only, ≤ 30 KB gzip.
-- pdf.js is imported when the first file is picked.
-- The worker (pdf-lib and the jsquash glue) and all wasm load only when "PDF 용량 줄이기" is pressed.
-- Raster rendering:
-  - one page at a time, with `maxLongPx 3000`
-  - the canvas is zeroed after `getImageData`
-  - back-pressure through `raster-ack`
-  - the run token is checked between pages
-
-#### 5.4 Limits
-Constants live in `src/tools/pdf-compress/limits.ts`. Basis: spike §3.4 (40.7 MB → +709 MB peak; 74 MB → +1.5 GB).
-
-| Device | Soft limit (inline confirm "계속 줄이기" / "취소") | Hard limit (block) |
-|---|---|---|
-| Desktop | > 40 MB or > 1,000쪽 | > 100 MB |
-| Mobile | > 20 MB or > 300쪽 | > 50 MB |
-| Raster, desktop | > 200쪽 | > 500쪽 |
-| Raster, mobile | > 30쪽 | > 100쪽 |
-
-- Every message states the number and the reason, for example: "휴대폰에서는 50 MB까지 줄일 수 있습니다. 기기 메모리가 부족해 브라우저가 멈출 수 있기 때문입니다."
-- Byte limits are checked when the file is picked. Page limits are checked after inspect, and again when the level changes.
-
-#### 5.5 Site wiring
-- `src/data/tools.ts`: set `pdf-compress` to `status:'live'` and fill in its description, faq and keywords. The sitemap picks it up through `LIVE_TOOLS`.
-- The home card becomes a link with "사용하기". This should follow automatically from the status; verify it.
-- New `src/components/RelatedTools.astro` lists the other `live` tools (name, summary, link). Place it after the FAQ on both tool pages, above the footer AdSlot.
-- In the merge page's done state, add "합친 파일의 용량이 크다면 PDF 용량 줄이기에서 줄일 수 있습니다." linking to `/pdf-compress/`.
-- The UI font subset is regenerated from `src/` at build. Confirm that the new characters are covered: no fallback glyphs in the screenshot.
-- `docs/COPY.md`: add "ppi" and "dpi" as allowed terms, with the rule "쓸 때는 설명과 함께".
-
-### 6. Bundle budget
-Enforced in `scripts/check-dist.mjs`, measured as gzip -9 sizes.
-
-| Asset | Budget |
-|---|---|
-| Each page's initial JS (unchanged gate 8) | ≤ 30 KB |
-| `compress.worker*.js` | ≤ 330 KB |
-| `vendor/qpdf/*/qpdf.wasm` | ≤ 480 KB |
-| MozJPEG enc + dec wasm | ≤ 140 KB |
-| resize wasm | ≤ 30 KB |
-
-A breach fails the build with the file name and size. Paste the actual table into REVIEW-REQUEST.
+## Build Order (separate commits; refactor before behavior)
+- A. Coupang off: `AFF_ENABLED` + `affOn`; privacy D7. check-dist + out-links-check: while AFF_ENABLED is false (read from affiliate.ts source, like AFF_COPY today), every dist text file (html, js, json, xml, txt) has 0 `link.coupang.com`, 0 AFF_COPY.top, 0 AFF_COPY.ad, 0 AFF_COPY.heading, 0 COUPANG_DISCLOSURE, **whatever PUBLIC_AFF_COUPANG says**; while true, today's env rules. embed-check / en-check Coupang rules stay. Keep the old affiliate unit coverage by calling the pure `affBlock(kind, tool, true)`; add affOn('1') === false.
+- B. `scripts/lib/adsense.mjs` (pure): `adsenseConfig(env)` → `{ on, client }` + validation + operator-gate errors; `CONTENT_ROUTES`, `isContentPath(path)`, `CONTENT_CSP`, `withContentCsp(headers)` (throws without a `/*` CSP), `ADS_CFG_SOURCE`. `src/data/adsense.ts` mirror (ADS_ON, ADS_CLIENT, isContentPath) from `import.meta.env`; equality unit test; unit: committed client === the pub in public/ads.txt.
+- C. Base.astro head tags (D3) gated `ADS_ON && isContentPath(path)`; postbuild writes dist/ads-cfg.js (ON only); gen-headers D5 + the `/ads-cfg.js` cache rule.
+- D. Privacy D6 + legal.ts dates.
+- E. Operator gate, /about/, /contact/, footer, byline, JSON-LD author (D8–D11); src/data/about.ts milestones with commit hashes.
+- F. noindex + sitemap (D12), hreflang (D13).
+- G. check-dist (new rules; never weaken an old one):
+  - ON: every content page has exactly one adsbygoogle tag with the configured client and `crossorigin="anonymous"`, preceded by exactly one `/ads-cfg.js` tag; no other HTML file contains `adsbygoogle`, `googlesyndication` or `/ads-cfg.js` (tool pages, 404s, offline, privacy, terms, licenses, /en/*, /embed/* by name); dist/ads-cfg.js === ADS_CFG_SOURCE; `_headers` has detach + CONTENT_CSP once per content pattern and the `/*` CSP still has no `https:` scheme source; /privacy/ has `id="ads"`; contact + officer set.
+  - OFF: none of those strings in any dist text file; no dist/ads-cfg.js; `_headers` has no `fenced-frame-src`.
+  - Always: /licenses/ and /embed/ HTML carry the robots noindex meta and are absent from sitemap.xml; public/ads.txt line format valid; OPERATOR_ON iff about/index.html and contact/index.html exist iff both in sitemap iff footer links on every Korean page; ON implies OPERATOR_ON.
+  - bgcloud: `EXCEPTION_PAGES` gains `about/index.html` only when OPERATOR_ON (cloud on: /about/ must carry the exception; cloud off: must not). LOCAL_SCOPE_RE unchanged. Assert /about/ never contains ADDR_SEND.
+- H. Tests: the cloud build gets `PUBLIC_ADSENSE_ON=1` + `PUBLIC_ADSENSE_CLIENT=ca-pub-0000000000000000` (the default build stays OFF). New `tests/e2e/ads.cloud.spec.ts`. The no-upload fixture gets an `ads` option (pattern of `ga`): route the adsbygoogle.js URL to a stub that records `window.adsbygoogle.pauseAdRequests` / `requestNonPersonalizedAds`; allow only that bodiless GET and only on content URLs; every other spec keeps zero off-site requests.
+- I. Docs: `docs/OPS-RUNBOOK.md` new §11 「애드센스 재신청 (대표만)」 = the owner checklist below; `scripts/ops/monetize.mjs` ticks match it; `docs/REVENUE-MODEL.md` status (Coupang off 2026-10-20; AdSense review stage). OPS-RUNBOOK §10 gets: 「2026-10-20부터 코드에서 꺼 둠(AFF_ENABLED). 환경 변수만으로는 다시 켜지지 않아요.」
+- J. BUILD-LOG + `handoff/REVIEW-REQUEST-ADS1020.md` with line ranges, probes, citations, Lighthouse numbers.
+- Flag: never raise a budget or lower a threshold. New footer/about/contact text must pass the UI-font gates (rephrase, or use the system-font prose path earlier sprints used; log any glyph decision).
+- Flag: Korean pages only; 「Docttak」 never appears on them.
 
 ## Failure modes
-
-| Path | Realistic failure | Handling (test) | User sees |
+| Path | Realistic failure | Handling | User sees |
 |---|---|---|---|
-| qpdf normalize | Broken xref (qpdf-wasm has no reconstruction) | pdf-lib repair → qpdf retry (unit + regress `edge_damaged_badxref`) | Normal result |
-| qpdf normalize | Truncated file | pdf.js inspect fails first; engine page-count check as backstop (unit) | Corrupt message |
-| Repair | pdf-lib "recovers" a truncated file with fewer pages | Page count ≠ expected → corrupt (unit: engine called directly with the intact file's `expectedPages`) | Corrupt message |
-| Decrypt | Wrong password reaches the worker | pdf.js check first; qpdf "invalid password" → wrong-password (unit) | Inline message |
-| Image pass | A recompressed image looks bad | SSIM gate, one retry, else the original image is kept (regress page SSIM) | Nothing; the image is kept |
-| Image pass | Exotic image (JPX, CMYK, 16-bit, Indexed) | Skipped by rule and counted (unit per rule) | Kept message if there is no gain |
-| Image pass | Content-stream parser meets garbage | Per-page try; fallback to the largest page, which is conservative (unit, junk stream) | Normal result |
-| Image pass | Stack overflow from a giant token | 256-byte cap (unit) | – |
-| Optimize | Output larger, or no gain | keptOriginal (unit) | Kept message, no download |
-| Output | Text or page damage nobody predicted | Main-thread pdf.js check of pages and 3 pages' text → `verify` (unit on `check.ts` with crafted mismatches) | Verify message, no download |
-| Signed PDF | The signature is invalidated | Detected; warning in the done state (unit with a crafted /Sig fixture; e2e) | Warning box |
-| Memory | Tab OOM on a large file | Limits, oom mapping; a worker crash (`onerror`) → unknown | Message, file kept |
-| Cancel | Late worker message after cancel | Run token + terminate (e2e) | Ready state |
-| Raster | A text PDF gets bigger | keptOriginal with reason `raster-larger` (unit + regress + e2e) | Kept message |
-| Raster | Huge page (A0 poster) | `maxLongPx 3000` (unit on the scale function) | Normal result |
-| WASM load | Wrong MIME type or a 404 on Cloudflare | Emscripten falls back to an ArrayBuffer; any failure → unknown; the live smoke test checks MIME types | Unknown message |
+| Coupang | Production env PUBLIC_AFF_COUPANG=1 still set | AFF_ENABLED wins; check-dist asserts 0 in a build with the env set | No links |
+| Coupang | A disclosure string left in a JS chunk | dist-wide text scan | Build fails |
+| Tag | Tag leaks onto a tool/404/embed/en page | check-dist named-page rule + e2e on /pdf-merge/, /id-photo/ result, /404, /embed/id-photo/, /en/ | Build fails |
+| Tag | Review crawler misses the code | Static async tag in head, Google snippet verbatim | n/a |
+| Ads | Auto ads turned on in console after approval: personalized/anchor ads on content pages | pauseAdRequests=1 + NPA=1 (cited) + owner checklist | No ads until the serve sprint |
+| CSP | Two CSP headers on a content route: tag blocked | detach + unit + curl probe | Caught by probe before ship |
+| CSP | /guide/* misses /guide/, or the / rule matches everything | doc citation + curl probe + serve.mjs model test | Caught by probe |
+| CSP | GA/analytics extension rewrites the content line | withContentCsp runs after them; unit with GA+CF+ADS | CI red |
+| Perf | adsbygoogle.js hurts home/guide Lighthouse | ON-build LH (median of 5) of / and one guide pasted; / over threshold: drop / (pre-locked) | No regression shipped |
+| Gate | ON without contact/officer | build fails naming the variable | Failed deploy log |
+| Operator | Default build ships /about/ without a name | OPERATOR_ON gate + check-dist iff rule | Build fails |
+| Privacy | ON without the section, or the section without ON | check-dist id="ads" iff ON | Build fails |
+| Claims | /about/ unqualified "files never leave" in a cloud build | EXCEPTION_PAGES + existing unqualifiedClaims scan | Build fails |
+| SEO | /embed/ or /licenses/ still indexable or in sitemap | check-dist noindex + absence | Build fails |
+| hreflang | x-default still EN | en-check rule flipped + unit | Build fails |
+No silent and untested path remains.
 
-No row is "no test + no handling + silent".
-
-## Tests
-
-### Fixtures
-They live in `tests/fixtures/`, whose total must stay ≤ 3 MB. Add each one to SOURCES.md.
-
-**Generated by `tests/fixtures/build.mjs`, outputs committed.** The script runs at dev time and uses `@napi-rs/canvas`, plus our own engine where stated.
-- `gen_scan_a6.pdf`, ≤ 800 KB.
-  - Render `kr_law_form.pdf` page 1 at 150 dpi and place it on an **A6** page, which gives an effective 300 ppi scan.
-  - Apply the spike's MFP recipe (`spikes/pdf/harness/gen.cjs`): paper tone rgb(246,244,238), 0.6 px blur, 0.35° skew, seeded noise ±9 using the spike LCG with seed 12345, colour JPEG q92.
-- `gen_photo_resume.pdf`, ≤ 700 KB: `kr_law_form.pdf` page 1 (real Korean text) plus a seeded, smooth colour "photo", 1800×2400 JPEG q92, drawn at 3×4 cm.
-- `gen_already_small.pdf`: our 권장 output of `kr_law_form.pdf`. A unit test asserts it still comes back `keptOriginal`, so the fixture cannot go stale silently.
-
-**Generated at test time, never committed:**
-- `encrypted_userpw_1234` (the existing helper)
-- an owner-restricted copy of kr_law_form (qpdf `--encrypt` with an empty user password, owner password `owner`, 256-bit)
-- `damaged_badxref`, `truncated` and `not_a_pdf`
-- `signed_fake`: kr_law_form plus an AcroForm `/FT /Sig` field whose `/V` has `/ByteRange` and `/Contents`
-- `jpx_only`: a page with one `/JPXDecode` image stream of arbitrary bytes
-- `cmyk_jpeg`
-- `junk_content`: page content with an unbalanced `q`, garbage tokens and a 1 MB token
-- `big_21mb`: a valid PDF padded with a large unused stream, used only for the mobile soft-limit e2e test
-
-### Unit (`tests/unit/compress*.test.ts`, Node)
-- **Levels on `gen_scan_a6`:**
-  - reduction: 고화질 ≥ 40 %, 권장 ≥ 70 %, 강력 ≥ 80 %
-  - sizes are monotonic: 강력 ≤ 권장 ≤ 고화질
-  - `report.minImageSsim` ≥ the level's gate
-  - page count unchanged
-- **`gen_photo_resume` on 권장:** reduction ≥ 80 %, and the pdf.js text of every page is identical to the original's.
-- **`kr_law_form` and `irs_fw9`:** every level keeps the page count and the per-page text identical. `irs_fw9` also keeps its field count.
-- **`gen_already_small`:** `keptOriginal`, and the returned bytes are the input.
-- **Encrypted:**
-  - no password → password-required
-  - `1234` → text equals kr_law_form
-  - wrong password → wrong-password
-  - owner-restricted → succeeds, with `ownerRestrictionRemoved`
-- **Damaged:**
-  - `damaged_badxref` → succeeds with `repairedBy: pdf-lib`
-  - `truncated` → corrupt (call the engine directly with `expectedPages` from the intact file)
-  - `not_a_pdf` → not-pdf
-- **Skip rules:**
-  - `jpx_only` → `skipped.jpx = 1`, kept
-  - `cmyk_jpeg` → `skipped.cmyk`
-  - SMask, ImageMask, `/Decode` and line-art Flate are each covered by a small generated image
-- **Performance paths:**
-  - placement parsing is skipped when there are no candidates (spy on `imagePlacements`)
-  - `junk_content` → no throw, and the fallback placement is used
-  - Flate level 6 is chosen above 30 MB (a unit test on the argument builder, not a 30 MB file)
-- **Signature:** `hasSignature` is true on `signed_fake` and false on kr_law_form.
-- **SSIM:**
-  - identical images → 1
-  - the box-downsample path is used above 1200 px
-  - a known pair gives the expected value (± 1e-6), against a small checked-in vector
-- **Raster:**
-  - `RasterAssembler` with 2 synthetic pages (one gray, one colour) → 2 pages with the correct sizes, and the gray page is encoded 1-channel
-  - the raster scale function caps the long side at 3000 px
-- **Checker (`check.ts`):** passes on equal text; fails on a page-count mismatch and on a text mismatch.
-- **Limits and formatting:** every row of 5.4, and the percent/format helpers (floor, range 1–100, "12.4 MB → 1.3 MB").
-- **qpdf log mapping:** "invalid password" → wrong-password; anything else → corrupt; log text never appears in a thrown message.
-- **Step 0 tests:** the font-rename guard and `withFileIndex`.
-- **Network guard:** the allowlist names exactly the wasm loader file.
-
-### E2E (`tests/e2e/pdf-compress.spec.ts`)
-Runs in all 5 projects. Every test uses the no-upload helper.
-- **Lazy load:** after the page loads, and after a file is picked, there is no request for qpdf, MozJPEG, resize or the compress worker. They appear only after the button is pressed.
-- **Happy path, 권장 on `gen_scan_a6`:**
-  - the before/after sizes and "% 줄었습니다" are shown
-  - both previews render
-  - parse the download in Node: same page count, and at least 70 % smaller
-- **Level switch:** run 강력, then "다른 단계로 다시 줄이기" with 고화질. The 강력 result is smaller.
-- **Kept:** `gen_already_small` → the kept message, and no download link.
-- **Password:** a wrong password, then the right one. The done state shows "비밀번호가 걸려 있지 않습니다".
-- **Owner-restricted:** the notice is shown.
-- **Bad inputs:** the not-pdf and truncated messages appear.
-- **Signed:** the warning is shown for `signed_fake`. Copy it into the e2e runtime dir, as with the encrypted fixture.
-- **Raster:**
-  - open "더 줄여야 하나요?" and pick 이미지로 변환; the warning is visible
-  - on `gen_scan_a6` it completes, with a matching page count
-  - on `kr_law_form` it ends with the kept (raster-larger) message
-- **Cancel:** delay the compress worker script with `context.route`, as the merge test does. Cancel; the tool returns to ready with the file and level kept. Then run it to completion.
-- **Mobile soft limit** (the 2 mobile projects): `big_21mb` shows the confirm panel. "취소" keeps the file; "계속 줄이기" starts the run (cancel it right away).
-- **Keyboard:** a keyboard-only happy path on the desktop projects.
-- **axe:** `/pdf-compress/` in the empty state, the ready state (with the details open) and the done state; also `/` and `/pdf-merge/` again.
-- **SEO:**
-  - the sitemap lists exactly `/`, `/pdf-merge/`, `/pdf-compress/`, `/privacy/` and `/licenses/`
-  - one H1, the canonical, and parseable JSON-LD
-  - the home card links to `/pdf-compress/`
-  - the merge done state links to it
-  - RelatedTools is present on both tool pages
-
-### Regression harness — `npm run regress:compress`
-The script is `scripts/regress/compress.mjs`. It runs in Node, locally.
-- **Inputs:** it runs the real engine (with the Node deps) on the committed fixtures, always, and on every PDF in `CORPUS_DIR` (default `spikes/pdf/corpus`). If the corpus is absent, it skips it with a notice. Password: `edge_encrypted_userpw_1234.pdf` → `1234`.
-- **Metrics** are those of spike `bench_compress.cjs`, ported exactly:
-  - pdf.js render at **110 dpi, long side ≤ 1800 px**
-  - luma SSIM, 8×8 windows, stride 4 (spike `compareCanvases`, not the merge harness metric)
-  - up to 7 sampled pages (spike `sample`)
-  - text equality on all pages when the file has ≤ 60 pages, otherwise on the sample
-  - size %, ms, and images replaced/seen
-- **Baseline:** `scripts/regress/compress-baseline.json` holds the spike numbers per file × level, taken from `spikes/pdf/work/compress_results.json`. Commit only file names and numbers.
-- **Pass rules for the normal levels:**
-  - text equal on 100 % of checked pages, and page count equal
-  - reduction ≥ the spike figure − 3 points. A file where the spike was < 1 % may come back `keptOriginal`.
-  - SSIMmin ≥ the spike figure − 0.005
-  - these named floors (권장 unless stated):
-
-    | File | Reduction | SSIMmin |
-    |---|---|---|
-    | synth_scan_mfp_gongmun (스캔 공문) | ≥ 93 % | ≥ 0.94 |
-    | synth_scan_phone_cv | ≥ 82 % | ≥ 0.96 |
-    | synth_resume_kr_photo | ≥ 93 % | ≥ 0.99 |
-    | scan_keti_bizreg_bank | ≥ 7 % | ≥ 0.99 |
-    | kr_kpmg_outlook (40 MB, encrypted) | ≥ 18 % | ≥ 0.96, text 51/51 |
-    | kr_gongmun_ice (583쪽) | ≥ 10 % | – |
-    | synth_scan_mfp_gongmun 고화질 / 강력 | ≥ 84 % / ≥ 95 % | ≥ 0.95 / ≥ 0.92 |
-    | edge_damaged_badxref | ≥ 9 % | – |
-    | edge_damaged_truncated | error `corrupt` | – |
-    | scan_book_sangsomun (JPX), scan_donga_1949 (CCITT) | kept, or ≤ 2 % | – |
-- **Raster:** kr_kpmg_outlook ≥ 71 % at SSIMmin ≥ 0.93. Every text-first file (spike raster < 0 %) comes back `keptOriginal`.
-- **Timing:** report ms. Flag any file that takes more than 2 × the spike time in REVIEW-REQUEST; this is not a failure.
-- **Output:** a table in `regress-out/compress.md`. Paste it into REVIEW-REQUEST.
-- If Node rendering (`@napi-rs/canvas`) shifts SSIM systematically compared with the spike's Chromium numbers, report both under Blocked. **Do not lower a threshold.**
-- `scan_keti_bizreg_bank.pdf` stays in the local corpus only and is never committed, because it shows an institution's bank account.
-
-## Flags (do not guess; write under "Blocked")
-- A committed-fixture or regress threshold is missed. Report the numbers; Arch sets the value.
-- The source of the qpdf-wasm wrapper's license text (see 1).
-- `@jsquash/*` cannot initialise in a module worker on Firefox or WebKit. Report it with the stack trace. Do not switch to the canvas encoder silently; the spike measured it at +37–62 % larger.
-- pdf.js cannot render a page for raster in some browser. Report it. Do not move pdf.js into the worker in this step.
-- No new product behaviour beyond this brief, such as a target-size mode or multi-file batches.
+## Test map
+- affOn('1') false; affBlock with affOn('1') null for every TOOL_AFF/GUIDE_AFF key [GAP→unit]; pure affBlock(kind, tool, true) cases [TESTED, adapted].
+- Coupang-zero rule with PUBLIC_AFF_COUPANG=1 [GAP→unit on out-links-check + one build run].
+- adsense.mjs: config/validation/operator gate; isContentPath table (true: /, /guide/, /guide/x/, /guide/photo-sizes/, /about/, /contact/; false: /pdf-merge/, /privacy/, /licenses/, /embed/, /embed/id-photo/, /en/, /404.html, /offline/); CONTENT_CSP; withContentCsp; TS/MJS equality; client === ads.txt [GAP→unit].
+- gen-headers: OFF byte-identical to main; ON with GA+CF [GAP→unit].
+- check-dist ON/OFF/always rules [GAP→unit on lib functions + both builds in CI].
+- e2e ads.cloud.spec (5 cloud projects): content pages request the stub once, pause=1 and NPA=1 set before it runs, 0 securitypolicyviolation events, no ad iframe; /pdf-merge/, /id-photo/ result, /404, /embed/id-photo/, /en/, /privacy/ request nothing off-site [GAP→e2e].
+- e2e /about/ + /contact/ (cloud build): headings, officer name, mailto, footer links on a tool page, guide byline link, axe clean [GAP→e2e]; default build: no about/contact file, no footer link [GAP→check-dist].
+- Byline both forms; JSON-LD author Person iff operator [GAP→unit].
+- Sitemap: no /embed/, /licenses/; about/contact iff operator; x-default = ko [GAP→unit].
+- Regression: all gates (check, unit, check-dist both builds, licenses, e2e 5 projects + cloud + axe, Lighthouse CI unchanged thresholds, qa:visual, regress --fixtures-only); GA cloud, usage, embed, en specs [TESTED].
+- Manual: ON-build Lighthouse / + one guide; preview curl probes (D5) [GAP→REVIEW-REQUEST].
 
 ## Out of Scope (→ BUILD-LOG Known Gaps)
-- A "목표 용량" mode (for example "10 MB 이하로"). Demand is probably high; the owner decides whether it becomes a later step.
-- Several files per run.
-- JPX recompression for 강력 (decode through pdf.js openjpeg).
-- Converting B/W scans to CCITT G4 or JBIG2.
-- Keeping PDF/A conformance (object streams break PDF/A-1).
-- Warning about signatures *before* processing, which needs a pre-flight pass.
-- Password re-protection of the output.
-- A self-built qpdf-wasm with xref recovery and WORKERFS.
-- Handing a merged file straight to the compressor across pages.
+- Ad units/slots, serve stage, ad notice line, CLS reserves, COOP same-origin-allow-popups check for ad clicks (serve sprint).
+- P1: guide consolidation/expansion, thin-page pruning, Coupang return on long guides.
+- google-adsense-account meta tag, CMP/Funding Choices, Kakao AdFit.
+- English /about/ or /contact/.
 
 ## Acceptance
-- Every §3 quality gate is green, including Lighthouse on `/pdf-compress/` and the bundle budgets in 6.
-- Unit, e2e (5 projects, no-upload on every test) and `regress:compress` meet the thresholds above. `regress:merge` is unchanged.
-- `check:licenses` is green. `/licenses/` shows:
-  - qpdf (Apache-2.0) with libjpeg-turbo and zlib
-  - the ISC wrapper
-  - `@jsquash/jpeg` with MozJPEG
-  - `@jsquash/resize` with its codecs
-- `dist/` contains `/pdf-compress/`. The sitemap lists it, and the home card and the merge page link to it.
-- The font-rename guard checks every name record, and the `unknown` mapping has a unit test.
-- Richard's Gate 11 manual run includes one real scan PDF and one text PDF in real Chrome, Firefox and Edge.
+- Default build: check-dist OK; 0 Coupang strings with and without PUBLIC_AFF_COUPANG=1; no ad strings; `_headers` identical to main's; no /about/, /contact/.
+- Production-like build (CONTACT_EMAIL, PRIVACY_OFFICER, GA, CF, ADDR_EN, AFF_COUPANG=1, ADSENSE_ON=1, test client): check-dist OK; tag on exactly the content pages; /privacy/#ads; /about/, /contact/, footer links, bylines; sitemap without /embed/ and /licenses/, x-default = ko.
+- All gates green, thresholds unchanged; LH numbers, curl probes and Google doc citations pasted. Richard "clear".
 
-## Deploy gate (Step 2)
-1. Richard writes "Step 2 is clear".
-2. Arch commits locally (`[Step 2] PDF 용량 줄이기 …`) and updates BUILD-LOG and the checkpoint.
-3. A push to `main` publishes to Cloudflare Pages. The orchestrator pushes under the owner's standing instruction, then runs the live smoke test on https://doc-tools-kr.pages.dev:
-   - `/pdf-compress/` returns 200 with the CSP header, `/sitemap.xml` lists it, and the home card links to it
-   - `qpdf.wasm` and the MozJPEG wasm are served as `application/wasm`, and `qpdf.mjs` as JavaScript
-   - compressing `gen_scan_a6.pdf` on 권장 in real Chrome gives a result at least 70 % smaller with the preview visible, and no non-GET or cross-origin request
-   - a text PDF (kr_law_form) gives a result or the kept message, never a larger file
-4. If the smoke test fails, the orchestrator reverts the Step 2 commit and pushes. Log it and reopen the step.
+## Owner checklist (대표만; becomes OPS-RUNBOOK §11)
+1. Cloudflare Pages → Production 변수 `PUBLIC_ADSENSE_ON` = `1` (`PUBLIC_ADSENSE_CLIENT`는 넣지 않아도 됨; 연락처·보호책임자는 이미 있음) → 재배포. 확인: 첫 화면과 안내 글의 페이지 소스에 adsbygoogle 코드가 있고, /pdf-merge/에는 없음. (The orchestrator may do this through the owner's logged-in Chrome if the owner allows; otherwise the owner.)
+2. 애드센스 콘솔 → 광고 → 사이트별 → docttak.com: 자동 광고 끄기 (앵커·전면(비네트) 포함).
+3. 검토 요청은 11월 중순 이후 한 번만, P1(안내 글 정리·보강)이 배포된 뒤에. 거절 뒤 반복해서 누르지 않기.
+4. 승인 전에는 광고가 나오지 않아요 (코드가 광고 요청을 멈춰 둠). 광고 단위는 승인 뒤 다음 스프린트에서.
+5. `PUBLIC_AFF_COUPANG`는 지워도, 그대로 둬도 돼요 (코드에서 꺼져 있음).
+
+## CLAUDE.md edits (orchestrator applies at the deploy gate)
+- Privacy/runtime bullet, after the Google Analytics sentence (ends "…stubbed."), insert: "Google AdSense (`PUBLIC_ADSENSE_ON=1`, scripts/lib/adsense.mjs; owner-approved 2026-10-12, code requested 2026-10-20): Google's async adsbygoogle.js tag (client ca-pub-6478963235198426) plus the same-origin /ads-cfg.js (non-personalized only; ad requests paused until ad units exist) only on content pages (home, /guide/*, /about/, /contact/), each served with its own scheme-source CSP (`! Content-Security-Policy` detach); tool and result pages, 404, offline, privacy/terms/licenses, /en/* and /embed/* never load it and keep script-src/connect-src 'self'; auto, anchor and vignette ads stay off in the AdSense console; the build fails with it on and no contact email or privacy officer. Coupang Partners links are off in code (`AFF_ENABLED = false`, src/data/affiliate.ts, 2026-10-20); check-dist asserts 0 Coupang links and disclosure lines in dist."
+- No-contact bullet: replace "the 배경 지우기 exception is named only on /privacy/, /terms/ and /remove-background/" with "the 배경 지우기 exception is named only on /privacy/, /terms/, /remove-background/ and /about/". Append: "Exception (ADS1020): with `PUBLIC_CONTACT_EMAIL` and `PUBLIC_PRIVACY_OFFICER` both set, /about/ names the operator, /contact/ gives the email, the footer links both and guide bylines name the operator; without both, none of it is built."

@@ -2,9 +2,11 @@
 import Base from '../../layouts/Base.astro';
 import { CONTACT_EMAIL, PRIVACY_OFFICER, SITE } from '../../data/site';
 import { josa } from '../../lib/ui/josa';
-import { PRIVACY_ADDR, PRIVACY_ANALYTICS, PRIVACY_CHAIN, PRIVACY_CLOUD, PRIVACY_EMBED, PRIVACY_GA, PRIVACY_OUT, PRIVACY_OUT_ID_PHOTO, PRIVACY_REVISED, PRIVACY_USAGE, PRIVACY_UTM, PRIVACY_V1 } from '../../data/legal';
+import { PRIVACY_ADDR, PRIVACY_ADS, PRIVACY_AFF_OFF, PRIVACY_ANALYTICS, PRIVACY_CHAIN, PRIVACY_CLOUD, PRIVACY_EMBED, PRIVACY_GA, PRIVACY_OUT, PRIVACY_OUT_ID_PHOTO, PRIVACY_REVISED, PRIVACY_USAGE, PRIVACY_UTM, PRIVACY_V1 } from '../../data/legal';
 import { ANALYTICS_ON } from '../../data/analytics';
 import { GA_ON } from '../../data/ga';
+import { ADS_ON } from '../../data/adsense';
+import { AFF_ENABLED } from '../../data/affiliate';
 import { USAGE_ON } from '../../lib/ui/usage';
 import { downloadBytes } from '../../lib/bgremove/assets';
 import { aboutMB } from '../../tools/remove-background/copy';
@@ -20,14 +22,17 @@ import { aboutMB } from '../../tools/remove-background/copy';
 // cookies, what is collected, the transfer to Google LLC in the USA, how to refuse); section 1 then names the cookies.
 // 영문주소 변환기 (ADDREN1016 decision 14): with PUBLIC_ADDR_EN on, its own section right after the 배경 지우기 one (or as
 // section 3), what is sent, to whom and how to refuse; section 1 points to it, and the policy names the officer too.
+// Google AdSense (ADS1020 D6): with PUBLIC_ADSENSE_ON=1 the 광고 section (id="ads") says where the tag is, that no ad is
+// shown during the review and only non-personalized ads later, Google's cookies and the transfer to Google LLC; the build
+// has the officer then (scripts/lib/adsense.mjs adsenseGate). Off, the section keeps 「지금은 광고가 없어요」.
 const cloud = __BG_CLOUD__;
 const addr = __ADDR_EN__;
-const officer = cloud || addr;
+const officer = cloud || addr || ADS_ON;
 // Review ADDREN1016 should-fix 2: with anything sent (배경 지우기 사진, 영문주소 주소) or Google Analytics on, the page
 // never says 「받는 개인정보가 없어요」 / 「개인정보를 받지 않아요」; it says what is not taken (이름·연락처). check-dist checks.
 const sends = cloud || addr;
 // Round 3 (optional item): Google Analytics alone also collects visit data, so it gets the same accurate descriptions.
-const collects = sends || GA_ON;
+const collects = sends || GA_ON || ADS_ON;
 const desc = collects
   ? `${SITE.name} 개인정보 처리방침입니다. 회원가입이 없고 이름·연락처를 받지 않아요. 보내는 것과 다루는 방법을 알려 드려요.`
   : `${SITE.name} 개인정보 처리방침입니다. 회원가입이 없고 개인정보를 받지 않아요. 고른 파일을 어떻게 다루는지 알려 드려요.`;
@@ -45,6 +50,8 @@ const JUSO_PRIVACY = 'https://www.juso.go.kr/Privacy';
 /** Google's privacy contact form (linked from policies.google.com/privacy; checked live 2026-10-08). */
 const GOOGLE_PRIVACY_FORM = 'https://support.google.com/policies/contact/general_privacy_form?hl=ko';
 const GA_OPTOUT = 'https://tools.google.com/dlpage/gaoptout?hl=ko';
+/** How Google uses cookies in advertising (policies.google.com/technologies/ads, fetched 2026-10-20; ADS1020 D6). */
+const GOOGLE_ADS_POLICY = 'https://policies.google.com/technologies/ads?hl=ko';
 ---
 <Base
   title={`개인정보 처리방침 | ${SITE.name}`}
@@ -56,8 +63,8 @@ const GA_OPTOUT = 'https://tools.google.com/dlpage/gaoptout?hl=ko';
       <h1>개인정보 처리방침</h1>
       <p class="meta-line">시행일: {PRIVACY_REVISED}</p>
 
-      <h2>{GA_ON || sends ? '1. 이름·연락처는 받지 않아요' : '1. 받는 개인정보가 없어요'}</h2>
-      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. {GA_ON ? `방문 분석을 위해 Google 애널리틱스 쿠키를 써요(${gaSection}항).` : ANALYTICS_ON || USAGE_ON ? '쿠키도 쓰지 않아요.' : '쿠키와 방문 분석 도구도 쓰지 않아요.'}{addr && ` 영문주소 변환기에서 찾는 주소는 ${addrSection}항을 보세요.`}</p>
+      <h2>{GA_ON || sends || ADS_ON ? '1. 이름·연락처는 받지 않아요' : '1. 받는 개인정보가 없어요'}</h2>
+      <p>{josa(SITE.name, '은/는')} 회원가입이 없고, 이름·연락처 같은 개인정보를 받지 않아요. {GA_ON ? `방문 분석을 위해 Google 애널리틱스 쿠키를 써요(${gaSection}항).` : ADS_ON ? '' : ANALYTICS_ON || USAGE_ON ? '쿠키도 쓰지 않아요.' : '쿠키와 방문 분석 도구도 쓰지 않아요.'}{ADS_ON && ` 첫 화면과 안내 글 등에는 Google 애드센스 쿠키가 쓰일 수 있어요(${n(4)}항).`}{addr && ` 영문주소 변환기에서 찾는 주소는 ${addrSection}항을 보세요.`}</p>
 
       <h2>2. 고른 파일은 내 폰·컴퓨터 안에서 처리해요</h2>
       <p>고른 파일과 그 내용은 내 폰·컴퓨터 안에서만 처리돼요{cloud && ' (사진 배경 지우기는 제외: 3항)'}. 운영자나 다른 곳으로 보내지 않고, 저장하지도 않아요. PDF 비밀번호도 처리하는 동안에만 쓰고 저장하거나 보내지 않아요. 창을 닫으면 모두 사라져요. 이어서 하기를 누르면 파일이 내 폰·컴퓨터 안에 잠시 저장되고, 다음 도구가 열리면 바로 지워져요. 다음 도구가 열리지 않았다면, 10분이 지난 뒤 이어서 하기를 쓰는 도구를 다시 열 때 지워져요.</p>
@@ -121,7 +128,7 @@ const GA_OPTOUT = 'https://tools.google.com/dlpage/gaoptout?hl=ko';
           <ul>
             <li><strong>목적:</strong> 어떤 페이지가 많이 읽히고 어디서 들어오는지 알아 사이트를 고치는 데 써요.</li>
             <li><strong>쿠키(자동 수집 장치):</strong> <code>_ga</code>, <code>_ga_&lt;번호&gt;</code>. 다시 온 방문인지 구분하는 임의의 번호예요. 최대 13개월 보관돼요.</li>
-            <li><strong>모으는 정보:</strong> 연 페이지 주소, 들어온 곳, 쿠키의 임의 번호, 기기·브라우저 종류, 화면 크기, 언어, 대략적인 지역(IP로 추정하며 IP 주소 자체는 Google 애널리틱스에 저장되지 않아요). 고른 파일의 이름과 내용은 담기지 않아요.</li>
+            <li><strong>모으는 정보:</strong> 연 페이지 주소, 들어온 곳, 쿠키의 임의 번호, 기기와 앱의 종류, 화면 크기, 언어, 대략적인 지역(IP로 추정하며 IP 주소 자체는 Google 애널리틱스에 저장되지 않아요). 고른 파일의 이름과 내용은 담기지 않아요.</li>
           </ul>
           <p><strong>국외 이전</strong> (개인정보 보호법 제28조의8)</p>
           <ul>
@@ -133,18 +140,43 @@ const GA_OPTOUT = 'https://tools.google.com/dlpage/gaoptout?hl=ko';
             <li>보유·이용 기간: Google 애널리틱스에 2개월 보관 후 삭제 (쿠키는 최대 13개월)</li>
           </ul>
           <p>Google 신호와 광고 개인화는 꺼 두었고, 광고에 쓰지 않아요.</p>
-          <p><strong>거부 방법:</strong> 브라우저 설정에서 쿠키를 막거나 <a href={GA_OPTOUT} rel="noopener">Google 애널리틱스 차단 부가 기능</a>을 쓰면 돼요. 막아도 모든 도구를 그대로 쓸 수 있어요.</p>
+          <p><strong>거부 방법:</strong> 쓰는 앱 설정에서 쿠키를 막거나 <a href={GA_OPTOUT} rel="noopener">Google 애널리틱스 차단 부가 기능</a>을 쓰면 돼요. 막아도 모든 도구를 그대로 쓸 수 있어요.</p>
         </>
       )}
 
-      <h2>{n(4)}. 광고</h2>
-      <p>지금은 광고가 없어요. 광고(Google AdSense 등)를 싣게 되면, 그 전에 이 방침을 고치고 필요한 동의 절차를 먼저 마련할게요.</p>
+      {ADS_ON ? (
+        <>
+          <h2 id="ads">{n(4)}. 광고</h2>
+          <ul>
+            <li><strong>어디에:</strong> 첫 화면·안내 글·소개·문의 페이지에만 Google 애드센스 코드가 있어요. 도구 화면과 결과 화면에는 없어요.</li>
+            <li><strong>지금 상태:</strong> 광고 심사 중이라 광고를 보여 주지 않아요. 보여 줄 때도 맞춤 광고가 아닌 광고만 보여요.</li>
+            <li><strong>쿠키(자동 수집 장치):</strong> Google은 맞춤 광고가 아닌 광고에도 같은 광고가 너무 자주 나오지 않게 하거나 광고 부정 사용을 막는 데 쿠키를 쓸 수 있다고 밝히고 있어요.</li>
+          </ul>
+          <p><strong>국외 이전</strong> (개인정보 보호법 제28조의8)</p>
+          <ul>
+            <li>받는 자: Google LLC, 연락처 <a href={GOOGLE_PRIVACY_FORM} rel="noopener">Google 개인정보 문의 양식</a></li>
+            <li>이전 국가: 미국</li>
+            <li>이전 일시·방법: 위 페이지를 열 때마다 인터넷으로 전송</li>
+            <li>이전 항목: IP 주소, 쿠키, 본 페이지 주소, 기기 정보</li>
+            <li>이용 목적: 광고 표시와 광고 부정 사용 방지</li>
+            <li>보유·이용 기간: Google 정책에 따름 (<a href={GOOGLE_ADS_POLICY} rel="noopener">Google 광고 쿠키 안내</a>)</li>
+          </ul>
+          <p>{josa(SITE.name, '은/는')} 그 정보를 받지 않아요.</p>
+          <p><strong>거부 방법:</strong> 쓰는 앱 설정에서 쿠키를 막거나 광고 차단 기능을 쓰면 돼요. 막아도 모든 도구를 그대로 쓸 수 있어요.</p>
+          <p><strong>14세 미만:</strong> 맞춤 광고를 쓰지 않아요.</p>
+        </>
+      ) : (
+        <>
+          <h2>{n(4)}. 광고</h2>
+          <p>지금은 광고가 없어요. 광고(Google AdSense 등)를 싣게 되면, 그 전에 이 방침을 고치고 필요한 동의 절차를 먼저 마련할게요.</p>
+        </>
+      )}
 
       {USAGE_ON && (
         <>
           <h2 id="usage">{n(5) - 1}. 익명 사용 통계</h2>
           <p>어떤 도구가 많이 쓰이고 어디서 막히는지 알기 위해, 도구를 쓸 때 일어난 일만 이 사이트로 보내 합계로만 봐요.</p>
-          <p>보내는 것: 도구 이름, 한 일(파일 고르기, 처리 시작, 성공, 실패와 오류 종류, 내려받기), 이어서 하기(보낸 도구·받을 도구 이름), 도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만), 고른 설정(목표 크기 구간, 증명사진 규격, 압축 단계처럼 정해진 값), 안내 글에서 넘어왔는지, 다른 누리집에 넣은 도구에서 쓴 것인지, 기기 종류(휴대폰, 태블릿, PC), 실패했을 때 쓰는 앱 종류와 버전, 사이트 버전.</p>
+          <p>보내는 것: 도구 이름, 한 일(파일 고르기, 처리 시작, 성공, 실패와 오류 종류, 내려받기), 이어서 하기(보낸 도구·받을 도구 이름), {AFF_ENABLED ? '도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)' : '증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)'}, 고른 설정(목표 크기 구간, 증명사진 규격, 압축 단계처럼 정해진 값), 안내 글에서 넘어왔는지, 다른 누리집에 넣은 도구에서 쓴 것인지, 기기 종류(휴대폰, 태블릿, PC), 실패했을 때 쓰는 앱 종류와 버전, 사이트 버전.</p>
           <p>어느 링크로 들어왔는지: 블로그 등 링크 주소에 붙은 표시 중 정해진 이름(예: 네이버 블로그, 티스토리, 문서딱 앱)과 글 이름. 정해진 형식이 아니면 '기타'로만 셉니다. 이 표시는 이 창을 닫으면 지워지는 저장 공간에 최대 3시간 기억해, 같은 창에서 이어서 쓴 도구에도 함께 셉니다.</p>
           <p>보내지 않는 것: 파일 이름, 크기, 내용, IP 주소, 쿠키, 나를 알아볼 수 있는 값. 기록은 Cloudflare의 통계 저장소에 3개월 동안 남은 뒤 지워져요.</p>
         </>
@@ -159,6 +191,8 @@ const GA_OPTOUT = 'https://tools.google.com/dlpage/gaoptout?hl=ko';
 
       <h2>{n(5) + (officer ? 1 : 0)}. 변경 이력</h2>
       <ul>
+        {ADS_ON && <li>{PRIVACY_ADS}: Google 애드센스 광고 코드(첫 화면·안내 글·소개·문의)와 국외 이전 내용을 더함</li>}
+        {USAGE_ON && !AFF_ENABLED && <li>{PRIVACY_AFF_OFF}: 상품 링크를 없애고 익명 사용 통계의 상품 링크 누름 항목을 지움</li>}
         {addr && <li>{PRIVACY_ADDR}: 영문주소 변환기에서 주소를 보내는 경우({addrSection}항){!cloud && '와 개인정보 보호책임자'}를 더함</li>}
         {USAGE_ON && <li>{PRIVACY_UTM}: 익명 사용 통계에 어느 링크로 들어왔는지(정해진 링크 표시)를 더함</li>}
         {USAGE_ON && <li>{PRIVACY_EMBED}: 익명 사용 통계에 다른 누리집에 넣은 도구에서 쓴 것인지를 더함</li>}

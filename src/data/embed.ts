@@ -3,9 +3,6 @@
 // inside our frame is not a link on the host page.
 import { SITE } from './site';
 
-/** The sitemap lastmod of /embed/ (YYYY-MM-DD). */
-export const EMBED_UPDATED = '2026-10-13';
-
 /** The frame height in CSS pixels; the widget scrolls inside below it (no host script resizes it). */
 export const EMBED_HEIGHT = 820;
 

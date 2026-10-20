@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
 import { ADDR_EN_PATH, addrEnOn, privacyGate as addrEnGate } from './scripts/lib/addren.mjs';
+import { adsenseGate } from './scripts/lib/adsense.mjs';
 import { autoframeOn } from './scripts/lib/autoframe.mjs';
 import { bgCloudOn, privacyGate } from './scripts/lib/bgcloud.mjs';
 import { BG_PATH, bgRemoveOn } from './scripts/lib/bgremove.mjs';
@@ -32,7 +33,8 @@ const bgRemove = bgRemoveOn(env.PUBLIC_BG_REMOVE);
 const bgCloud = bgCloudOn(env);
 // ADDREN1016 (scripts/lib/addren.mjs): 영문주소 변환기 sends the typed address to /api/addr-en. Same privacy gate.
 const addrEn = addrEnOn(env);
-const gate = [...privacyGate(env), ...addrEnGate(env)];
+// ADS1020 (scripts/lib/adsense.mjs): the AdSense tag needs the contact and the privacy officer too; an invalid client fails here.
+const gate = [...privacyGate(env), ...addrEnGate(env), ...adsenseGate(env)];
 if (gate.length) throw new Error(gate.join('; '));
 /** @type {import('astro').AstroIntegration} */
 const bgRemoveRoute = {

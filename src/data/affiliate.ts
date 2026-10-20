@@ -101,9 +101,16 @@ export const TOOL_LEAD: Partial<Record<UsageTool, AffLead>> = {
 };
 export const GUIDE_LEAD: Partial<Record<UsageTool, AffLead>> = { ...TOOL_LEAD, 'id-photo': 'photo-guide' };
 
-/** PUBLIC_AFF_COUPANG: on only for "1" (after trimming). */
+/**
+ * ADS1020 D1 (AdSense re-review, 2026-10-20): the Coupang links are off in code. While false no page shows a block, whatever
+ * PUBLIC_AFF_COUPANG says (production keeps it set); check-dist reads this line and then asserts that no dist text file
+ * carries a Coupang link or a disclosure line. Turning them back on = this constant plus a new brief.
+ */
+export const AFF_ENABLED = false;
+
+/** PUBLIC_AFF_COUPANG: on only for "1" (after trimming), and only while AFF_ENABLED is true. */
 export function affOn(value: string | undefined): boolean {
-  return typeof value === 'string' && value.trim() === '1';
+  return AFF_ENABLED && typeof value === 'string' && value.trim() === '1';
 }
 
 export interface AffBlock {

@@ -3455,3 +3455,45 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Owner: 「바로 올려」 (2026-10-17) — client guide published directly, no Arch/Richard round. Asked for by the Cited improvement loop (query 「pdf 합치기 무료」, task #1121).
 - New src/content/guides/pdf-merge-free.md: Mac Finder 「빠른 동작 > PDF 생성」 and 미리보기 sidebar merge (Apple ko-kr support, 5 quotes, retrieved 2026-10-17), 윈도·휴대폰 → /pdf-merge/ with toolFacts 50개·500/150 MB, one don't (쪽마다 캡처해서 묶지 않기). pdf-merge.md PC line links to it (orphan rule).
 - Checks: check:quotes --exact 0 failures, npm run check 0 errors, npm test 1998/1998, build + check-dist OK. Playwright e2e not run (content-only change).
+
+## ADS1020 — 애드센스 재신청 P0 (brief written 2026-10-20, Arch)
+- Trigger: AdSense rejected docttak.com 2026-10-20 05:40 KST, 「가치가 별로 없는 콘텐츠」. Owner P0 list pasted; P1 (content consolidation/expansion) is a later sprint. Brief: handoff/ARCHITECT-BRIEF-ADS1020.md (= ARCHITECT-BRIEF.md). REV4 was never built; ADS1020 supersedes it where they differ.
+- Locked: (D1) Coupang off by code constant `AFF_ENABLED = false` (affOn = constant && env), data kept; check-dist asserts 0 Coupang links/disclosure lines regardless of PUBLIC_AFF_COUPANG. (D2) client ca-pub-6478963235198426 committed (already public in ads.txt); PUBLIC_ADSENSE_ON=1 turns the tag on; ON requires contact + officer. (D3) review stage: Google's async tag verbatim + same-origin /ads-cfg.js setting pauseAdRequests=1 and requestNonPersonalizedAds=1 (doc citation required; drop pause if undocumented); no ad units. (D4) content routes only: /, /guide/**, /about/, /contact/ (home = Arch call; pre-locked fallback: drop / if its Lighthouse breaks a threshold). (D5) REV4 scheme-source CSP with `!` detach on those routes only; tool/result/404/offline/legal/en/embed keep 'self'; 404 under /guide/<missing> gets the content CSP (accepted). (D6/D7) privacy section 4 becomes the AdSense section when ON; usage sentence drops 상품 링크 while Coupang is off; dates 2026-10-20 re-confirmed at gate. (D8) OPERATOR_ON = contact && officer → /about/, /contact/, footer 소개·문의; default build has none. (D9/D10) about/contact copy rules: operator name only, no team/biography/사업자; history generated from guide dates + git-proven milestones; reply 「보통 3일 안에」 (Arch call). (D11) guide byline 「글: <officer> · 소개」, JSON-LD author Person when operator on. (D12) /licenses/ and /embed/ noindex + out of sitemap. (D13) /en/ stays indexed; x-default → Korean. (D14) CLAUDE.md text in the brief, applied by the orchestrator.
+- Known Gaps (out of scope): ad units/serve stage, notice line, CLS reserves, COOP popups check; P1 content work; Coupang return on long guides; adsense meta tag; CMP; English about/contact.
+
+## ADS1020 build (Bob, 2026-10-20) — DONE_WITH_CONCERNS
+- Built A-I of the brief on main (uncommitted). Details, line ranges, numbers and citations: handoff/REVIEW-REQUEST-ADS1020.md.
+- Decisions:
+  - Glyph gate: /about/ and /contact/ render in the system font (`.site-info` + `SYSTEM_FONT_PATHS`). In the privacy AdSense section, three new glyphs were rephrased away: 「광고 부정 사용 방지」 (not 「부정 클릭」), 「Google 광고 쿠키 안내」, history 「…항목을 지움」. The preload tripwire is 92.1-92.2 KB of 92.66 KB.
+  - The officer section of /privacy/ also shows when ADS is on.
+  - gen-headers is now a pure `siteHeaders()`, so check-dist can check the final `_headers`. Off is byte-identical to main.
+  - smoke-assets accepts `CONTENT_CSP` on content pages.
+  - no-analytics blocks Google ad hosts in our automated live runs.
+  - /about/ and /contact/ are not precached.
+  - llms.txt keeps /embed/ (no test ties it to the sitemap).
+  - lighthouserc swaps /embed/ (now noindex) for /about/.
+  - The 5 Coupang e2e tests skip while `AFF_ENABLED` is false, and a new test asserts 0 links with `PUBLIC_AFF_COUPANG=1`.
+  - The cloud specs ignore WebKit's 「Unrecognized … 'fenced-frame-src'」 console notice; it is not a violation.
+- Gates: check 0 errors; unit 2028/2028; check-dist OK on default, cloud, production-like, checks-like and e2e builds (default `_headers` identical to main); licenses OK; smoke:assets OK on the production-like build. e2e: chromium + cloud-chromium full suite, the other 4 projects + 4 cloud projects on the affected specs, green except the 2 pre-existing HEIC tests. Full lhci (37 URLs × 5): all assertions pass.
+- Escalated: on the AdSense-on build, `resource-summary:script:size` is 229.6 KB on content pages (Google's adsbygoogle.js + show_ads_impl). Perf, LCP, CLS, a11y, BP and SEO all pass. I did not apply the "drop /" fallback because the guides breach the same way.
+- Pending: preview curl probes of `_headers` (exact `/` rule and one CSP per page) after a preview deploy with `PUBLIC_ADSENSE_ON=1`. PRIVACY_ADS / PRIVACY_AFF_OFF dates to re-confirm at the gate.
+- Known Gaps (new):
+  - Hub pages keep the old dates line and Organization author (the brief named Guide.astro).
+  - Pre-existing e2e failures: id-photo/photo-compress 「fake.heic」 tests expect a HEIC string that left src in REQ1015.
+  - tsconfig `exclude` misses ad-hoc `dist-*` folders: a stray one makes astro check run out of memory.
+
+## ADS1020 round 2 (Bob, 2026-10-20) — Richard's 2 Must + 4 Should
+- **Decision (orchestrator), resolves the escalation:**
+  - The `resource-summary:script:size` budget (30 KB) is unchanged and is enforced by Lighthouse CI on the ads-off build. That is what production ships until the owner sets `PUBLIC_ADSENSE_ON`.
+  - The ads-on build is held to perf, LCP, CLS, a11y, BP and SEO. All passed: perf 0.99, LCP 1538-1671 ms, CLS 0, a11y/BP/SEO 1.
+  - The overage is all Google script (adsbygoogle.js 57 KB + show_ads_impl 169 KB). This follows the GA gtag.js precedent.
+  - `/` stays in CONTENT_ROUTES, since the breach is the same on every content route. The "drop /" fallback is not applied.
+  - OPS-RUNBOOK §11 has a one-line note for whoever flips the flag.
+- **Must 1:** /privacy/ no longer says 「브라우저」.
+  - AdSense refusal line: 「쓰는 앱 설정에서 쿠키를 막거나…」.
+  - The same fix for the two lines in the GA section: 「기기와 앱의 종류」 and 「쓰는 앱 설정에서…」.
+- **Should:**
+  - The plain-language scan moved to scripts/lib/plain-words.mjs. check-dist now runs it on every page of every build (GA, AdSense and cloud /privacy/ sections included); the unit test uses the same lib.
+  - Hub.astro gets the byline and the Person author.
+  - Footer: with OPERATOR_ON, the 「문의」 link to /contact/ replaces the 「문의: email」 line (a business number stays). Otherwise the old email line stays.
+  - The e2e `isAdsRequest` also requires the page origin to be our own site.

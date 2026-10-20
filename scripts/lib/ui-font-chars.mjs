@@ -48,6 +48,11 @@ export const CORE_PATHS = [
 ];
 /** The English catalogs, components and pages (paths relative to src/): in neither the core nor the late set. */
 export const EN_DIRS = ['i18n/', 'pages/en/'];
+/**
+ * ADS1020 D9-D10: /about/ and /contact/ render their text in the system font (.site-info in src/styles/app.css), like the
+ * guide prose, so their pages and the /about/ milestone data are in neither set (paths relative to src/).
+ */
+export const SYSTEM_FONT_PATHS = ['pages/about/', 'pages/contact/', 'data/about.ts'];
 /** Punctuation used in generated UI strings (progress, separators, quotes). */
 const FORCED = '…·—–‘’“”©';
 
@@ -76,6 +81,7 @@ export function uiCharSets(src) {
         const rel = relative(src, p).split(sep).join('/');
         // EN1 (brief EN decision 4): English text renders in the system font (html[lang="en"]), so neither set needs it.
         if (EN_DIRS.some((d) => rel.startsWith(d))) continue;
+        if (SYSTEM_FONT_PATHS.some((d) => rel.startsWith(d))) continue;
         const t = readFileSync(p, 'utf8');
         const late = LATE_DIRS.includes(rel.split('/')[0]) && !CORE_PATHS.includes(rel);
         (late ? lateTexts : coreTexts).push(e.name.endsWith('.json') ? t : stripComments(t));

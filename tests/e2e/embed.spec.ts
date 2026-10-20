@@ -171,12 +171,14 @@ test('axe: the widget (alone and in the frame) and the /embed/ page have no seri
 });
 
 test.describe('/embed/ info page', () => {
-  const site = async (page: Page): Promise<string> => new URL((await page.locator('link[rel="canonical"]').getAttribute('href'))!).origin;
+  // ADS1020 D12: the page is noindex (no canonical); og:url still names the site.
+  const site = async (page: Page): Promise<string> => new URL((await page.locator('meta[property="og:url"]').getAttribute('content'))!).origin;
 
-  test('the snippet is exact, indexable; 미리 보기 열기 makes the frame, which shows the widget', async ({ page }) => {
+  test('the snippet is exact, noindex (ADS1020 D12); 미리 보기 열기 makes the frame, which shows the widget', async ({ page }) => {
     await gotoReady(page, '/embed/');
     await expect(page.locator('h1')).toHaveText('내 누리집에 증명사진 도구 넣기 (무료)');
-    expect(await page.locator('meta[name="robots"]').count()).toBe(0);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
     await expect(page.locator('#embed-code')).toHaveText(embedSnippet(await site(page)));
     // The preview frame exists only after 미리 보기 열기 (no frame requests before LCP); without JS the link opens the widget.
     await expect(page.locator('iframe')).toHaveCount(0);
