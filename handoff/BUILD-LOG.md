@@ -3561,3 +3561,8 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   - Production-like build + check-dist OK: 2,527 files, precache 431.1/450 KB.
   - check:quotes --exact on the guide: 7/7 verbatim.
   - e2e chromium: growth + power-of-attorney 24/24.
+
+## FORM1020 — deploy decision on D12 (2026-10-20, orchestrator)
+- Owner: 「계속진행해」. D12 (`npm run forms:hancom`) could not finish: run 1 was reaped by Claude Code under low memory; run 2 (foreground) timed out because nobody answered 한글 2018's 「접근 허용」 window.
+- Decision: ship with FORM_HWP = true instead of the PDF-only fallback. Reasons: the same engine's HWP opened in real 한글 2018 twice today (Arch spike; Bob's run before the final layout tweak: 1 page, all text); the only change since is label column width and value alignment; the rhwp re-open verification passes on every build; FORM_HWP is a one-line kill switch. A PDF-only ship would need title/description/FAQ/guide copy changes and another review round.
+- Open (owner, at the PC): run `npm run forms:hancom` and click 「접근 허용」 4 times, or register 한글's FilePathCheckerModule. On any FAIL: set FORM_HWP = false and fix the copy (title, description, summary, FAQ, guide lines 112/130).
