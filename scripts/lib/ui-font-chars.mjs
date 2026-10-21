@@ -30,7 +30,9 @@ export function stripComments(s) {
     // FORM1020: a form's document text (src/lib/form/spec.ts keys doc, docLabel, docSection) is drawn only in the
     // document's own faces (the HWP, the PDF and their preview), never in the UI font.
     .replace(/\b(?:doc|docLabel|docSection):\s*'(?:[^'\\\n]|\\.)*'/g, '')
-    .replace(/\bCOUPANG_DISCLOSURE\s*=\s*'(?:[^'\\\n]|\\.)*'/g, '');
+    .replace(/\bCOUPANG_DISCLOSURE\s*=\s*'(?:[^'\\\n]|\\.)*'/g, '')
+    // CONTENT1021: the fact-check unit pattern (src/data/guide-facts.ts) lists syllables that are never shown.
+    .replace(/\bconst UNIT\s*=\s*String\.raw`[^`]*`/g, '');
 }
 
 /** Late scope: controllers and libs, whose text appears only after interaction. */
