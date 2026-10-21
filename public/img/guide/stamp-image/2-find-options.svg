@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 258" width="720" height="258" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">찾을 것 설정의 자동, 빨간 도장, 검정·파란 서명이 각각 남기는 것</title>
+<rect x="0.5" y="0.5" width="719" height="257" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">「찾을 것」에 따라 남는 것</text>
+<rect x="30" y="64" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">자동</text>
+<line x1="236" y1="82" x2="256" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,82 252,86 252,78" fill="#5b6663"/>
+<rect x="266" y="64" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="87" font-size="14" fill="#1c2321">도장인지 서명인지 알아서 찾아요</text>
+<rect x="30" y="110" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="133" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">빨간 도장</text>
+<line x1="236" y1="128" x2="256" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,128 252,132 252,124" fill="#5b6663"/>
+<rect x="266" y="110" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="133" font-size="14" fill="#1c2321">빨간 도장만 남기고 검은 글자는 지워요</text>
+<rect x="30" y="156" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="179" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">검정·파란 서명</text>
+<line x1="236" y1="174" x2="256" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,174 252,178 252,170" fill="#5b6663"/>
+<rect x="266" y="156" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="179" font-size="14" fill="#1c2321">서명만 남기고 빨간 도장이나 줄은 지워요</text>
+<text x="360" y="236" font-size="14" fill="#5b6663" text-anchor="middle">도장과 글자가 겹쳐 있다면 빨간 도장을 골라 보세요</text>
+</svg>

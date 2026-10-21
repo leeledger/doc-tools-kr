@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">한글 프로그램 판에 따라 HWPX 파일을 여는 데 차이가 있다는 비교 그림</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">내 한글로 HWPX가 열릴까요</text>
+<rect x="30" y="64" width="320" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#0f766e" font-weight="bold">한글2010 SE+ 부터</text>
+<line x1="46" y1="108" x2="334" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· HWPX를 열 수 있어요</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· 최신 업데이트를 받으면</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· 더 잘 맞아요</text>
+<rect x="370" y="64" width="320" height="128" rx="10" fill="#fdf3e7" stroke="#b45309" stroke-width="2"/>
+<text x="388" y="96" font-size="16" fill="#b45309" font-weight="bold">그보다 앞선 판</text>
+<line x1="386" y1="108" x2="674" y2="108" stroke="#b45309" stroke-opacity="0.4"/>
+<text x="388" y="134" font-size="14" fill="#1c2321">· HWPX를 열지 못할 수 있어요</text>
+<text x="388" y="158" font-size="14" fill="#1c2321">· HWP로 받거나 바꿔서 열어요</text>
+<text x="388" y="182" font-size="14" fill="#1c2321">· 설치 없이 보기도 돼요</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">한컴 지원센터 안내: 하위 호환성 대응은 2014VP부터</text>
+</svg>

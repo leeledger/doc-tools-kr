@@ -517,8 +517,9 @@ describe('REQ1014-C: deep links, passport guides, 10/10 bodies', () => {
     for (const slug of ['hwp-to-pdf', 'yearend-tax-pdf', 'ecfs-pdf-limit', 'pdf-merge', 'hwp-on-phone']) {
       expect(new Set(bodyLinks(slug)).size, slug).toBeGreaterThanOrEqual(4);
       expect(quotes(slug).some((q) => q.retrieved === '2026-10-14' && q.via !== 'browser'), slug).toBe(true);
-      // CONTENT1021 D1: the merge survivor pdf-merge moved `updated` to its build day; the others stay as they were.
-      expect(bySlug(slug).parsed.updated, slug).toBe(slug === 'pdf-merge' ? '2026-10-21' : '2026-10-14');
+      // CONTENT1021: pdf-merge moved `updated` to its build day in Step A (D1 merge survivor), the other four in Step B2
+      // (expanded to the 2,500-character bar), so all five now carry 2026-10-21.
+      expect(bySlug(slug).parsed.updated, slug).toBe('2026-10-21');
     }
   });
 

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 304" width="720" height="304" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">카카오톡에서 사진과 동영상을 묶어 보낼 때 말풍선이 나뉘는 방식</title>
+<rect x="0.5" y="0.5" width="719" height="303" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">묶어 보내면 말풍선은 이렇게</text>
+<rect x="30" y="64" width="220" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="140" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">사진 여러 장</text>
+<line x1="256" y1="82" x2="276" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="280,82 272,86 272,78" fill="#5b6663"/>
+<rect x="286" y="64" width="404" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="300" y="87" font-size="14" fill="#1c2321">하나의 말풍선으로 가요</text>
+<rect x="30" y="110" width="220" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="140" y="133" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">동영상</text>
+<line x1="256" y1="128" x2="276" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="280,128 272,132 272,124" fill="#5b6663"/>
+<rect x="286" y="110" width="404" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="300" y="133" font-size="14" fill="#1c2321">별개의 말풍선으로 가요</text>
+<rect x="30" y="156" width="220" height="36" rx="8" fill="#fdf3e7" stroke="#b45309"/>
+<text x="140" y="179" font-size="14" fill="#b45309" text-anchor="middle" font-weight="bold">20MB 이상 사진</text>
+<line x1="256" y1="174" x2="276" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="280,174 272,178 272,170" fill="#5b6663"/>
+<rect x="286" y="156" width="404" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="300" y="179" font-size="14" fill="#1c2321">파일 말풍선으로 따로 가요</text>
+<rect x="30" y="202" width="220" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="140" y="225" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">많이 고르면</text>
+<line x1="256" y1="220" x2="276" y2="220" stroke="#5b6663" stroke-width="2"/>
+<polygon points="280,220 272,224 272,216" fill="#5b6663"/>
+<rect x="286" y="202" width="404" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="300" y="225" font-size="14" fill="#1c2321">30장씩 묶어서 보내져요</text>
+<text x="360" y="282" font-size="14" fill="#5b6663" text-anchor="middle">카카오 고객센터 안내를 그림으로 옮겼어요</text>
+</svg>

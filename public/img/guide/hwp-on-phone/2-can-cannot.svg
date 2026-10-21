@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">휴대폰의 HWP·HWPX 파일 보기에서 할 수 있는 일과 할 수 없는 일</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">휴대폰에서 되는 것, 안 되는 것</text>
+<rect x="30" y="64" width="320" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#0f766e" font-weight="bold">할 수 있어요</text>
+<line x1="46" y1="108" x2="334" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· 쪽 넘겨 보기·크게 보기</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· 단어 찾기·글자 복사</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· PDF로 내려받기</text>
+<rect x="370" y="64" width="320" height="128" rx="10" fill="#fdecec" stroke="#b91c1c" stroke-width="2"/>
+<text x="388" y="96" font-size="16" fill="#b91c1c" font-weight="bold">할 수 없어요</text>
+<line x1="386" y1="108" x2="674" y2="108" stroke="#b91c1c" stroke-opacity="0.4"/>
+<text x="388" y="134" font-size="14" fill="#1c2321">· 내용 고치기·새로 쓰기</text>
+<text x="388" y="158" font-size="14" fill="#1c2321">· 비밀번호 걸린 문서 열기</text>
+<text x="388" y="182" font-size="14" fill="#1c2321">· 배포용 문서 열기</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">고쳐서 보내야 한다면 한글 프로그램이 있는 PC가 필요해요</text>
+</svg>

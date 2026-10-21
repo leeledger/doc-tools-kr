@@ -1,0 +1,5 @@
+URL: https://support.apple.com/ko-kr/guide/iphone/iphc9cd7266c/ios
+Fetched: 2026-10-21 (curl, HTML; CONTENT1021 Step B2; checked with pageTextExact)
+Verbatim lines:
+파일 앱에서 인터넷 또는 메일 앱으로 다운로드한 문서, 이미지 및 기타 파일을 찾고 확인할 수 있습니다.
+다운로드 폴더를 탭하여 다운로드한 파일을 확인하십시오.

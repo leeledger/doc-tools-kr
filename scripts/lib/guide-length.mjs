@@ -16,10 +16,6 @@ export const TOOL_MIN_CHARS = 2000;
  * A page that passes may never be added (check-dist fails on a pending page that passes).
  */
 export const LENGTH_PENDING = new Set([
-  // Step B2: PDF / HWP / 서류 / 사진 보내기 / 서명 guides.
-  'pdf-compress', 'pdf-password', 'pdf-split', 'pdf-sign', 'pdf-to-jpg', 'jpg-to-pdf', 'email-attachment-limit', 'ecfs-pdf-limit',
-  'yearend-tax-pdf', 'gov24-pdf-save', 'kosaf-docs', 'univ-docs-upload', 'hwp-on-phone', 'hwp-to-pdf', 'hwpx-to-hwp',
-  'open-hwp-without-hangul', 'what-is-hwpx', 'heic-to-jpg', 'kakao-photo', 'remove-background', 'stamp-image', 'e-signature-law',
   // Step C: every Korean tool page.
   '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/pdf-edit/',
   '/photo-compress/', '/image-to-jpg/', '/id-photo/', '/id-copy/', '/english-name/', '/stamp-maker/', '/stamp-signature/',

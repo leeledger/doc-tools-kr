@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 258" width="720" height="258" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">암호를 건 PDF와 비밀번호를 서로 다른 길로 보내는 예</title>
+<rect x="0.5" y="0.5" width="719" height="257" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">파일과 비밀번호는 다른 길로</text>
+<rect x="30" y="64" width="250" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="155" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">암호를 건 PDF</text>
+<line x1="286" y1="82" x2="306" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="310,82 302,86 302,78" fill="#5b6663"/>
+<rect x="316" y="64" width="374" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="330" y="87" font-size="14" fill="#1c2321">메일에 붙여 보내요</text>
+<rect x="30" y="110" width="250" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="155" y="133" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">비밀번호</text>
+<line x1="286" y1="128" x2="306" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="310,128 302,132 302,124" fill="#5b6663"/>
+<rect x="316" y="110" width="374" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="330" y="133" font-size="14" fill="#1c2321">문자나 전화로 따로 알려요</text>
+<rect x="30" y="156" width="250" height="36" rx="8" fill="#fdecec" stroke="#b91c1c"/>
+<text x="155" y="179" font-size="14" fill="#b91c1c" text-anchor="middle" font-weight="bold">같은 메일에 함께</text>
+<line x1="286" y1="174" x2="306" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="310,174 302,178 302,170" fill="#5b6663"/>
+<rect x="316" y="156" width="374" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="330" y="179" font-size="14" fill="#1c2321">암호를 건 의미가 줄어요</text>
+<text x="360" y="236" font-size="14" fill="#5b6663" text-anchor="middle">메일을 잘못 보내도 비밀번호까지 함께 새지 않아요</text>
+</svg>

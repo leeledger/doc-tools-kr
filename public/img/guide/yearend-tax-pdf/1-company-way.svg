@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 242" width="720" height="242" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">연말정산 간소화 자료를 회사에 내기까지의 순서</title>
+<rect x="0.5" y="0.5" width="719" height="241" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">간소화 자료를 내는 순서</text>
+<rect x="30" y="64" width="144" height="114" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<circle cx="102" cy="96" r="16" fill="#0f766e"/>
+<text x="102" y="102" font-size="16" fill="#ffffff" text-anchor="middle" font-weight="bold">1</text>
+<text x="102" y="140" font-size="15" fill="#1c2321" text-anchor="middle">회사 안내</text>
+<text x="102" y="162" font-size="15" fill="#1c2321" text-anchor="middle">확인하기</text>
+<line x1="176" y1="121" x2="198" y2="121" stroke="#0f766e" stroke-width="2"/>
+<polygon points="200,121 192,125.5 192,116.5" fill="#0f766e"/>
+<rect x="202" y="64" width="144" height="114" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<circle cx="274" cy="96" r="16" fill="#0f766e"/>
+<text x="274" y="102" font-size="16" fill="#ffffff" text-anchor="middle" font-weight="bold">2</text>
+<text x="274" y="140" font-size="15" fill="#1c2321" text-anchor="middle">간소화 자료</text>
+<text x="274" y="162" font-size="15" fill="#1c2321" text-anchor="middle">조회하기</text>
+<line x1="348" y1="121" x2="370" y2="121" stroke="#0f766e" stroke-width="2"/>
+<polygon points="372,121 364,125.5 364,116.5" fill="#0f766e"/>
+<rect x="374" y="64" width="144" height="114" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<circle cx="446" cy="96" r="16" fill="#0f766e"/>
+<text x="446" y="102" font-size="16" fill="#ffffff" text-anchor="middle" font-weight="bold">3</text>
+<text x="446" y="140" font-size="15" fill="#1c2321" text-anchor="middle">출력·PDF·</text>
+<text x="446" y="162" font-size="15" fill="#1c2321" text-anchor="middle">간편제출 중 하나</text>
+<line x1="520" y1="121" x2="542" y2="121" stroke="#0f766e" stroke-width="2"/>
+<polygon points="544,121 536,125.5 536,116.5" fill="#0f766e"/>
+<rect x="546" y="64" width="144" height="114" rx="10" fill="#0f766e" stroke="#0f766e" stroke-width="2"/>
+<circle cx="618" cy="96" r="16" fill="#ffffff"/>
+<text x="618" y="102" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">4</text>
+<text x="618" y="140" font-size="15" fill="#ffffff" text-anchor="middle">빠진 공제 서류</text>
+<text x="618" y="162" font-size="15" fill="#ffffff" text-anchor="middle">함께 내기</text>
+<text x="360" y="218" font-size="14" fill="#5b6663" text-anchor="middle">내는 방식은 회사가 정해요. 회사 안내를 먼저 보세요</text>
+</svg>

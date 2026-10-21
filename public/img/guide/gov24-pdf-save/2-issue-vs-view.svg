@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">정부24 서류를 낼 수 있는 방법과 열람용으로만 쓸 수 있는 방법의 구분</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">낼 수 있는 것과 참고용</text>
+<rect x="30" y="64" width="320" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#0f766e" font-weight="bold">기관에 낼 수 있어요</text>
+<line x1="46" y1="108" x2="334" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· 전자증명서 보내기</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· 온라인발급(본인출력) 종이</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· 1회 열람용 보내기 링크</text>
+<rect x="370" y="64" width="320" height="128" rx="10" fill="#fdecec" stroke="#b91c1c" stroke-width="2"/>
+<text x="388" y="96" font-size="16" fill="#b91c1c" font-weight="bold">참고용이에요</text>
+<line x1="386" y1="108" x2="674" y2="108" stroke="#b91c1c" stroke-opacity="0.4"/>
+<text x="388" y="134" font-size="14" fill="#1c2321">· 내려받은 열람용 증명서</text>
+<text x="388" y="158" font-size="14" fill="#1c2321">· 전자문서지갑 화면 캡처</text>
+<text x="388" y="182" font-size="14" fill="#1c2321">· PDF 프린터로 저장 (안 돼요)</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">정부24 자주 묻는 질문의 안내를 나눠 정리했어요</text>
+</svg>

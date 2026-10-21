@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">한글 프로그램 없이 HWP 파일을 여는 세 가지 방법 비교</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">한글 없이 여는 세 가지 길</text>
+<rect x="30" y="64" width="206" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#0f766e" font-weight="bold">파일 보기 (문서딱)</text>
+<line x1="46" y1="108" x2="220" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· 설치하지 않아요</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· PC·맥·휴대폰 모두</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· 보기·찾기·PDF로 받기</text>
+<rect x="256" y="64" width="206" height="128" rx="10" fill="#fdf3e7" stroke="#b45309" stroke-width="2"/>
+<text x="274" y="96" font-size="16" fill="#b45309" font-weight="bold">한컴 통합 뷰어</text>
+<line x1="272" y1="108" x2="446" y2="108" stroke="#b45309" stroke-opacity="0.4"/>
+<text x="274" y="134" font-size="14" fill="#1c2321">· PC에 설치해요</text>
+<text x="274" y="158" font-size="14" fill="#1c2321">· Windows 11 이상</text>
+<text x="274" y="182" font-size="14" fill="#1c2321">· 워드·엑셀 문서도 열어요</text>
+<rect x="482" y="64" width="206" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="500" y="96" font-size="16" fill="#0f766e" font-weight="bold">PDF로 받기</text>
+<line x1="498" y1="108" x2="672" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="500" y="134" font-size="14" fill="#1c2321">· 보낸 사람에게 부탁</text>
+<text x="500" y="158" font-size="14" fill="#1c2321">· 어디서나 열려요</text>
+<text x="500" y="182" font-size="14" fill="#1c2321">· 고칠 수는 없어요</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">설치할 수 없는 PC라면 왼쪽, 자주 연다면 가운데가 편해요</text>
+</svg>

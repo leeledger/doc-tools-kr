@@ -27,6 +27,8 @@ describe('CONTENT1021 D4: bars and the tool metric', () => {
   it('LENGTH_PENDING (Steps A–C scaffolding) holds no Step A pilot and no page that already passed', () => {
     for (const s of ['photo-sizes', 'photo-kb', 'passport-reissue-photo', 'passport-photo', 'pdf-merge', 'power-of-attorney', 'passport-english-name']) expect(LENGTH_PENDING.has(s), s).toBe(false);
     for (const s of ['id-photo-size', 'id-photo-kb', 'passport-photo-error', 'pdf-merge-free']) expect(LENGTH_PENDING.has(s), s).toBe(false);
+    // After Steps B1 and B2 every guide and hub is expanded: only Step C's tool paths remain.
+    expect([...LENGTH_PENDING].filter((p) => !p.startsWith('/'))).toEqual([]);
   });
 
   const tool = [

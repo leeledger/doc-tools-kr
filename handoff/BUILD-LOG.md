@@ -3636,3 +3636,29 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Logged for Arch (Step D): guide-facts Unit lacks 년/시, so year/time numbers bypass unsourcedFacts. Hub ECFS browser quotes to be re-read in a browser before Step D.
 - Chars now: kuksiwon 2,542 · driver-license 2,579 · admission 2,630 · history 2,560 · youth-card 2,522 · id-card-photo 2,548 · hanja 2,508 · qnet 2,541 · police 2,541 (others unchanged).
 - Gates: check 0/0; vitest 2,085/2,085; prod-like build + check-dist OK (UI fonts preloaded 92.1/92.66 KB, precache 431.1/450 KB); check:quotes --exact 497 verbatim. Status: DONE.
+
+### CONTENT1021 Step B1 — deploy + live smoke (2026-10-21, orchestrator)
+- 2cc2fc3 (Richard clear after round 2): CI success, post-deploy success. Live: gosi-photo, upload-limits, driver-license-photo each serve 2 own images; smoke:assets OK 2,525 URLs.
+
+## CONTENT1021 Step B2 (Bob, 2026-10-21) — 22 PDF/HWP/서류/사진 보내기/서명 guides to the full bar
+- Status: DONE. Not committed. Review request: handoff/REVIEW-REQUEST-CONTENT1021-B2.md.
+- **Pages (guideBodyChars, before → after):** pdf-compress 419 → 2,575 · pdf-password 348 → 2,564 · pdf-split 1,174 → 2,569 · pdf-sign 1,154 → 2,538 · pdf-to-jpg 1,005 → 2,557 · jpg-to-pdf 1,148 → 2,541 · email-attachment-limit 274 → 2,570 · ecfs-pdf-limit 923 → 2,545 · yearend-tax-pdf 938 → 2,551 · gov24-pdf-save 456 → 2,554 · kosaf-docs 529 → 2,552 · univ-docs-upload 537 → 2,543 · hwp-on-phone 878 → 2,525 · hwp-to-pdf 1,052 → 2,535 · hwpx-to-hwp 1,005 → 2,520 · open-hwp-without-hangul 358 → 2,543 · what-is-hwpx 481 → 2,567 · heic-to-jpg 563 → 2,518 · kakao-photo 529 → 2,548 · remove-background ~800 → 2,527 (PUBLIC_BG_REMOVE=1 build) · stamp-image 720 → 2,570 · e-signature-law 745 → 2,528. LENGTH_PENDING now holds only Step C tool paths (unit-asserted).
+- **Content (D6):** tool behaviour described only after reading the tool's own strings/code (save modes, range semantics after edits, 선명도 levels, 용지/여백 options, 찾을 것 options, HWPX re-open check, filenames); issuer content quoted: 정부24 FAQ (print-button causes incl. 공유프린터, ezPDFReader reinstall, 전자증명서 MyGOV path, QR send, link-not-file, 열람용), 한국장학재단 FAQ (필수서류 완료, 기타서류, 2차 기간, 명의 mistakes, 다자녀 서류), 유웨이 FAQ (그림판 확장자, A4 재저장, 우편 봉투 표지, 도착확인 지연, 자기소개서 붙여넣기), 한컴테크/한컴 FAQ (HWPX package folders, 2010 SE+/2014VP, 새 설치 기본값 HWPX), Microsoft (확장명 표시, 확장명 변경≠변환), Apple (고효율성, 파일 앱 다운로드), 카카오 (말풍선 rules, PC send, 톡클라우드 1GB, 원본 만료), 전자서명법 제1·2·6·19조 + 2020 부칙 (공인인증서). 79 new quotes, all retrieved 2026-10-21, each with an excerpt under handoff/sources/content1021/.
+- **One page per tip (B1 lesson):** HWP error list → open-hwp-without-hangul only; extension display/rename → what-is-hwpx only; mail limits → email-attachment-limit; sign-image reuse/security → pdf-sign; scan-photo tips stay on id-card-copy. Repeats found while writing were cut and replaced by links.
+- **Decision — flagged figures:** check-dist forbids any `remove-background` path in a flag-off dist, and D5.3 needs /img/guide/<own slug>/. The two remove-background SVGs are committed under src/assets/flagged/img/guide/remove-background/; gen-brand (prebuild/predev) copies them to public/img/guide/remove-background/ (gitignored) only with PUBLIC_BG_REMOVE on, else deletes the folder. Unit tests cover copy/remove and read the flagged folder for the SVG rules.
+- **Images:** 44 SVGs (2 per page; ≤4.8 KB each), same template as A/B1. One checker false positive met: 「…1, 7」 next to 「세 번째」 in adjacent SVG text read as "7 세"; SVG reworded to 「셋째」.
+- **Test changes (no threshold):** guides-schema REQ1014-C `updated` now exact 2026-10-21 for all five (four expanded here); guide-length asserts no guide slug left pending; guide-check reads flagged figures.
+- **Gates:** check 0/0; vitest 94 files 2,087/2,087; prod-like build + check-dist OK (UI fonts 92.1/92.66 KB, precache 431.1/450 KB, 20 WARNINGs = Step C only); PUBLIC_BG_REMOVE=1 build + check-dist OK; check:quotes --exact 574 verbatim; check:licenses OK; chromium e2e hubs/growth/site/polish/hwp-to-pdf/hwp-viewer 232 passed, 8 skipped.
+- **Known Gaps:** qa:visual dark/light not run for B2 pages (same SVG template as cleared steps). 세 lookahead still allows "N 세 번째" across text nodes (Step D / Arch). Thinnest margins: heic-to-jpg 2,518, hwpx-to-hwp 2,520. No escalations: every official page needed could be read with curl.
+
+## CONTENT1021 Step B2 round 2 (Bob, 2026-10-21) — Richard's Should Fix 1, 2, 4, 5
+- kakao-photo: the PC file-type quote is re-read and dated 2026-10-21, with an excerpt line added (helps_html/1073209414).
+- kosaf-docs: three internal repeats cut and replaced by KOSAF-sourced content: 기타서류 example cases, and 가구원 checked by 등본 too (계부·계모, 미혼모). 4 quotes, excerpt kosaf-docs-2.txt. 2,665 chars.
+- yearend-tax-pdf: the 「새로 저장된 파일…」 warning is kept once. New NTS-sourced section on 예상세액 계산, 맞벌이 절세안내 (제공동의) and 홈택스 전부 처리 companies. 5 quotes, excerpt yearend-tax-pdf-1.txt. 2,802 chars.
+- guide-check.test imgDir: flagged slugs always read the committed flagged source folder.
+- Item 3 (generic tips across siblings: file naming, deleting leftover copies) is deferred to Step D, each tip to get one owner page.
+- Gates:
+  - check 0/0; vitest 2,087/2,087.
+  - Production build + check-dist OK; BG build + check-dist OK (remove-background 2,526).
+  - check:quotes --exact 585 verbatim.
+- Status: DONE. Not committed.

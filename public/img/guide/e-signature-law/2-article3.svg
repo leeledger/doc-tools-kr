@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">전자서명법 제3조 1항과 2항이 각각 정하는 것의 비교</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">제3조 ①과 ②는 이렇게 달라요</text>
+<rect x="30" y="64" width="320" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#0f766e" font-weight="bold">제3조 ①</text>
+<line x1="46" y1="108" x2="334" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· 전자적 형태라는 이유만으로</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· 서명의 효력을 부인하지 않아요</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· 모든 전자서명에 해당해요</text>
+<rect x="370" y="64" width="320" height="128" rx="10" fill="#fdf3e7" stroke="#b45309" stroke-width="2"/>
+<text x="388" y="96" font-size="16" fill="#b45309" font-weight="bold">제3조 ②</text>
+<line x1="386" y1="108" x2="674" y2="108" stroke="#b45309" stroke-opacity="0.4"/>
+<text x="388" y="134" font-size="14" fill="#1c2321">· 법령이나 당사자 간 약정으로</text>
+<text x="388" y="158" font-size="14" fill="#1c2321">· 전자서명을 서명 방식으로 고르면</text>
+<text x="388" y="182" font-size="14" fill="#1c2321">· 서명으로서의 효력을 가져요</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">어떤 그림이 전자서명에 해당하는지는 이 그림이 판단하지 않아요</text>
+</svg>

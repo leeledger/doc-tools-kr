@@ -1,0 +1,9 @@
+Fetched: 2026-10-21 (curl, HTML; CONTENT1021 Step B2 round 2; checked with pageTextExact)
+URL: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EA%B4%80%EA%B3%84%EB%8B%A8%EC%A0%88
+미혼 학생의 가구원은 가족관계증명서뿐만 아니라 주민등록표등본 등 공적서류 상 가족관계로도 확인합니다.
+URL: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EA%B4%80%EA%B3%84%EB%8B%A8%EC%A0%88
+가족관계증명서 또는 주민등록표등본 등 공적 서류에서 확인되는 (계)부·(계)모의 가구원 동의가 필요합니다.
+URL: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EA%B0%80%EC%A1%B1%EA%B4%80%EA%B3%84%EC%A6%9D%EB%AA%85%EC%84%9C
+어머니가 미혼모인 경우 관련 공적자료로서 확인되면 어머니만 동의대상입니다.
+URL: https://www.kosaf.go.kr/ko/faq.do?searchType=s&searchStr=%EC%84%9C%EB%A5%98%EC%A0%9C%EC%B6%9C
+ex. (부)재외국민·외국인,(모)실종 등 / (부)재외국민·외국인,(모)재외국민·외국인 / (부)이혼후관계단절,(모)이혼후관계단절 등

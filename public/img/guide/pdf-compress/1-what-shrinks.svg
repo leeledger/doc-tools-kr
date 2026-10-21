@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">스캔·사진 PDF와 글자 위주 PDF에서 줄어드는 정도 비교</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">무엇이 줄어드나요</text>
+<rect x="30" y="64" width="320" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#0f766e" font-weight="bold">스캔·사진이 든 PDF</text>
+<line x1="46" y1="108" x2="334" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· 쪽마다 큰 그림이 들어 있어요</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· 그림을 다시 저장해 줄여요</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· 크게 줄어드는 편이에요</text>
+<rect x="370" y="64" width="320" height="128" rx="10" fill="#fdf3e7" stroke="#b45309" stroke-width="2"/>
+<text x="388" y="96" font-size="16" fill="#b45309" font-weight="bold">글자 위주 PDF</text>
+<line x1="386" y1="108" x2="674" y2="108" stroke="#b45309" stroke-opacity="0.4"/>
+<text x="388" y="134" font-size="14" fill="#1c2321">· 글자와 선은 원래 가벼워요</text>
+<text x="388" y="158" font-size="14" fill="#1c2321">· 줄일 그림이 적어요</text>
+<text x="388" y="182" font-size="14" fill="#1c2321">· 거의 그대로일 수 있어요</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">글자와 선은 어느 단계에서도 그대로 남아요</text>
+</svg>

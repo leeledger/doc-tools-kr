@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">회사에 낼 때 그대로 둘 파일과 묶어도 되는 파일의 구분</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">그대로 낼 파일, 묶어도 되는 파일</text>
+<rect x="30" y="64" width="320" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#0f766e" font-weight="bold">그대로 내요</text>
+<line x1="46" y1="108" x2="334" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· 내려받은 간소화 PDF</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· 회사 프로그램에 넣는 파일</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· 고치거나 합치지 않아요</text>
+<rect x="370" y="64" width="320" height="128" rx="10" fill="#fdf3e7" stroke="#b45309" stroke-width="2"/>
+<text x="388" y="96" font-size="16" fill="#b45309" font-weight="bold">묶어도 돼요</text>
+<line x1="386" y1="108" x2="674" y2="108" stroke="#b45309" stroke-opacity="0.4"/>
+<text x="388" y="134" font-size="14" fill="#1c2321">· 간소화에 없는 공제 서류</text>
+<text x="388" y="158" font-size="14" fill="#1c2321">· 영수증·계약서 사진</text>
+<text x="388" y="182" font-size="14" fill="#1c2321">· 회사가 한 파일을 원할 때</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">어느 쪽인지 헷갈리면 회사 담당자에게 물어보세요</text>
+</svg>

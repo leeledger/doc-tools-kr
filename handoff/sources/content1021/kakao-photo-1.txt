@@ -1,0 +1,17 @@
+Fetched: 2026-10-21 (curl, HTML; CONTENT1021 Step B2; checked with pageTextExact)
+URL: https://cs.kakao.com/helps_html/1073209424
+카카오톡 채팅방에 사진/ 동영상/ 음성메시지/ 파일/ 연락처/ 지도/ 음악 등을 보낼 수 있습니다.
+파일 1회 전송 시: 최대 전송량 300MB
+※ 26.7.0 이상 버전에서 톡클라우드 구독 시 최대 1GB까지 멀티미디어 파일을 전송할 수 있습니다.
+URL: https://cs.kakao.com/helps_html/1073210382
+사진 묶어보내기를 통해 사진 및 동영상을 전송하시면 여러 장의 사진은 하나의 말풍선으로 전송되며 동영상은 별개의 말풍선으로 전송됩니다.
+URL: https://cs.kakao.com/helps_html/1073209414
+대화 입력창 하단 파일 전송 아이콘을 눌러 전송할 이미지 파일 선택
+채팅창으로 전송할 이미지 파일을 드래그 앤 드롭(Drag&Drop)
+URL: https://cs.kakao.com/helps_html/1073206342
+톡클라우드 가입 이전 수발신한 사진 중 화질 저하 현상이 발생하는 사진은, 톡클라우드 가입 이전 다운로드를 받지 않아 원본이 만료된 후 썸네일만 남아있어 썸네일이 톡클라우드에 보관된 케이스입니다.
+URL: https://cs.kakao.com/helps_html/1073209424
+동영상 1회 전송 시: 최대 전송량 300MB
+URL: https://cs.kakao.com/helps_html/1073209414
+■ 전송 가능한 이미지 파일 확장자
+• jpg, jpeg, gif, bmp, png, tif, tiff, tga, psd, ai

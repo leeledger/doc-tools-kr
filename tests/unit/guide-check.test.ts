@@ -1,6 +1,7 @@
 // CONTENT1021 D5 (check-dist rules, pure functions) and the repository side of D1, D3, D9: merged guides gone behind
 // 301s, guide images safe and backed by their guide's sources.
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { describe, expect, it } from 'vitest';
@@ -24,9 +25,14 @@ import { JARGON } from '../../scripts/lib/plain-words.mjs';
 import { publishedGuideSchema } from '../../src/data/guide-schema';
 import { hubSchema } from '../../src/data/hub-schema';
 import { HUB_SLUGS, hubRows } from '../../src/data/hubs';
+import { FLAGGED_GUIDE_IMAGES, FLAGGED_GUIDE_IMAGE_DIR, syncFlaggedGuideImages } from '../../scripts/gen-brand.mjs';
 
 const ROOT = join(__dirname, '..', '..');
 const IMG = join(ROOT, 'public', 'img', 'guide');
+// Figures of a guide behind a release flag live here and are copied to IMG only when the flag is on (gen-brand).
+const FLAGGED_IMG = join(ROOT, 'src', 'assets', 'flagged', 'img', 'guide');
+/** The folder of a guide's figures: the committed flagged source for a flagged slug (never a stale public copy), else public/img/guide/<slug>. */
+const imgDir = (d: string) => (d in FLAGGED_GUIDE_IMAGES ? join(FLAGGED_IMG, d) : join(IMG, d));
 
 /** A minimal valid SVG of the given size. */
 const svg = (w: number, h: number, extra = '') =>
@@ -187,16 +193,16 @@ describe('D9 guide images in the repository', () => {
   const guides = readdirSync(join(ROOT, 'src', 'content', 'guides')).map((f) => read('guides', f)).filter((g) => g.data.draft !== true);
   const parsed = guides.map((g) => ({ ...g, parsed: publishedGuideSchema.parse(g.data) }));
   const hubs = HUB_SLUGS.map((s) => read('hubs', `${s}.md`)).map((h) => ({ ...h, parsed: hubSchema.parse(h.data) }));
-  const dirs = existsSync(IMG) ? readdirSync(IMG) : [];
+  const dirs = [...new Set([...(existsSync(IMG) ? readdirSync(IMG) : []), ...(existsSync(FLAGGED_IMG) ? readdirSync(FLAGGED_IMG) : [])])];
 
   it('every image folder belongs to a guide or hub; names are <n>-<name>.svg|webp; every SVG is safe and ≤ 30 KB', () => {
     const slugs = new Set([...guides.map((g) => g.slug), ...hubs.map((h) => h.slug)]);
     for (const d of dirs) {
       expect(slugs.has(d), d).toBe(true);
-      for (const f of readdirSync(join(IMG, d))) {
+      for (const f of readdirSync(imgDir(d))) {
         expect(f, `${d}/${f}`).toMatch(/^\d+-[a-z0-9-]+\.(svg|webp)$/);
         if (!f.endsWith('.svg')) continue;
-        const text = readFileSync(join(IMG, d, f), 'utf8');
+        const text = readFileSync(join(imgDir(d), f), 'utf8');
         expect(svgProblems(text), `${d}/${f}`).toEqual([]);
         expect(Buffer.byteLength(text), `${d}/${f}`).toBeLessThanOrEqual(SVG_MAX);
       }
@@ -206,8 +212,8 @@ describe('D9 guide images in the repository', () => {
   it('plain language (docs/COPY.md): no jargon word in the text of any guide SVG', () => {
     let n = 0;
     for (const d of dirs) {
-      for (const f of readdirSync(join(IMG, d)).filter((x) => x.endsWith('.svg'))) {
-        const text = svgText(readFileSync(join(IMG, d, f), 'utf8'));
+      for (const f of readdirSync(imgDir(d)).filter((x) => x.endsWith('.svg'))) {
+        const text = svgText(readFileSync(join(imgDir(d), f), 'utf8'));
         expect(text.match(JARGON) ?? [], `${d}/${f}`).toEqual([]);
         n++;
       }
@@ -222,8 +228,8 @@ describe('D9 guide images in the repository', () => {
     for (const d of dirs) {
       const g = parsed.find((x) => x.slug === d);
       const h = hubs.find((x) => x.slug === d);
-      for (const f of readdirSync(join(IMG, d)).filter((x) => x.endsWith('.svg'))) {
-        const text = svgText(readFileSync(join(IMG, d, f), 'utf8'));
+      for (const f of readdirSync(imgDir(d)).filter((x) => x.endsWith('.svg'))) {
+        const text = svgText(readFileSync(join(imgDir(d), f), 'utf8'));
         if (g) expect(unsourcedFacts(g.parsed, text), `${d}/${f}`).toEqual([]);
         else if (h) {
           const rows = new Set(h.parsed.tables.flatMap((t) => hubRows(hubGuides, t.kind)).flatMap((r) => r.facts));
@@ -243,9 +249,31 @@ describe('D9 guide images in the repository', () => {
       const first = g.body.search(/^## /m);
       for (const m of g.body.matchAll(/<figure class="guide-fig"><img src="([^"]+)"/g)) {
         expect(m[1]!.startsWith(`/img/guide/${g.slug}/`), `${g.slug}: ${m[1]}`).toBe(true);
-        expect(existsSync(join(ROOT, 'public', m[1]!)), m[1]).toBe(true);
+        expect(existsSync(join(ROOT, 'public', m[1]!)) || existsSync(join(FLAGGED_IMG, m[1]!.replace('/img/guide/', ''))), m[1]).toBe(true);
         expect(m.index!, `${g.slug}: figure before the first H2`).toBeGreaterThan(first);
       }
+    }
+  });
+});
+
+describe('flagged guide figures (CONTENT1021 B2: remove-background ships only with PUBLIC_BG_REMOVE)', () => {
+  it('the committed source is the flagged folder, and the public copy is gitignored', () => {
+    expect(FLAGGED_GUIDE_IMAGE_DIR).toBe(FLAGGED_IMG);
+    for (const slug of Object.keys(FLAGGED_GUIDE_IMAGES)) {
+      expect(readdirSync(join(FLAGGED_IMG, slug)).filter((f) => f.endsWith('.svg')).length, slug).toBeGreaterThanOrEqual(2);
+      expect(readFileSync(join(ROOT, '.gitignore'), 'utf8')).toContain(`public/img/guide/${slug}/`);
+    }
+  });
+
+  it('copies the figures with the flag on and removes them with it off', () => {
+    const pub = mkdtempSync(join(tmpdir(), 'flagged-'));
+    try {
+      expect(syncFlaggedGuideImages(pub, { bgRemove: true })).toEqual(['remove-background']);
+      expect(readdirSync(join(pub, 'img', 'guide', 'remove-background')).sort()).toEqual(readdirSync(join(FLAGGED_IMG, 'remove-background')).sort());
+      expect(syncFlaggedGuideImages(pub, { bgRemove: false })).toEqual([]);
+      expect(existsSync(join(pub, 'img', 'guide', 'remove-background'))).toBe(false);
+    } finally {
+      rmSync(pub, { recursive: true, force: true });
     }
   });
 });

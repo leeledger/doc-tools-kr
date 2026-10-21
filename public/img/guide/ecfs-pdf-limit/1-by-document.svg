@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 304" width="720" height="304" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">전자소송에 내는 서류 종류별로 어떤 파일로 내는지 정리한 그림</title>
+<rect x="0.5" y="0.5" width="719" height="303" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">서류 종류마다 내는 파일</text>
+<rect x="30" y="64" width="210" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="135" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">직접 쓴 서면</text>
+<line x1="246" y1="82" x2="266" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="270,82 262,86 262,78" fill="#5b6663"/>
+<rect x="276" y="64" width="414" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="290" y="87" font-size="14" fill="#1c2321">한글·워드 원본 파일 그대로</text>
+<rect x="30" y="110" width="210" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="135" y="133" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">종이로만 있는 서류</text>
+<line x1="246" y1="128" x2="266" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="270,128 262,132 262,124" fill="#5b6663"/>
+<rect x="276" y="110" width="414" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="290" y="133" font-size="14" fill="#1c2321">스캔해서 PDF 한 파일로</text>
+<rect x="30" y="156" width="210" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="135" y="179" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">사진 파일로 된 스캔본</text>
+<line x1="246" y1="174" x2="266" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="270,174 262,178 262,170" fill="#5b6663"/>
+<rect x="276" y="156" width="414" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="290" y="179" font-size="14" fill="#1c2321">PDF로 바꾼 뒤 내기</text>
+<rect x="30" y="202" width="210" height="36" rx="8" fill="#fdf3e7" stroke="#b45309"/>
+<text x="135" y="225" font-size="14" fill="#b45309" text-anchor="middle" font-weight="bold">주장과 증거</text>
+<line x1="246" y1="220" x2="266" y2="220" stroke="#5b6663" stroke-width="2"/>
+<polygon points="270,220 262,224 262,216" fill="#5b6663"/>
+<rect x="276" y="202" width="414" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="290" y="225" font-size="14" fill="#1c2321">서로 다른 파일로 따로</text>
+<text x="360" y="282" font-size="14" fill="#5b6663" text-anchor="middle">대법원 전자소송포털 안내와 대법원규칙 제8조를 그림으로 옮겼어요</text>
+</svg>

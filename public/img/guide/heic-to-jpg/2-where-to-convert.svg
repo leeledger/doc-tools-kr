@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 304" width="720" height="304" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">HEIC 사진을 어디서 바꾸면 되는지 기기별로 정리한 그림</title>
+<rect x="0.5" y="0.5" width="719" height="303" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">어디서 바꾸면 될까요</text>
+<rect x="30" y="64" width="210" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="135" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">아이폰·맥 Safari</text>
+<line x1="246" y1="82" x2="266" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="270,82 262,86 262,78" fill="#5b6663"/>
+<rect x="276" y="64" width="414" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="290" y="87" font-size="14" fill="#1c2321">사진 JPG 변환에서 바로 바꿔요</text>
+<rect x="30" y="110" width="210" height="36" rx="8" fill="#fdf3e7" stroke="#b45309"/>
+<text x="135" y="133" font-size="14" fill="#b45309" text-anchor="middle" font-weight="bold">PC 크롬·엣지</text>
+<line x1="246" y1="128" x2="266" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="270,128 262,132 262,124" fill="#5b6663"/>
+<rect x="276" y="110" width="414" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="290" y="133" font-size="14" fill="#1c2321">HEIC가 안 열리면 아이폰에서 바꿔요</text>
+<rect x="30" y="156" width="210" height="36" rx="8" fill="#fdf3e7" stroke="#b45309"/>
+<text x="135" y="179" font-size="14" fill="#b45309" text-anchor="middle" font-weight="bold">메신저 안에서 연 화면</text>
+<line x1="246" y1="174" x2="266" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="270,174 262,178 262,170" fill="#5b6663"/>
+<rect x="276" y="156" width="414" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="290" y="179" font-size="14" fill="#1c2321">Safari·Chrome 같은 앱에서 다시 열어요</text>
+<rect x="30" y="202" width="210" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="135" y="225" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">앞으로 찍을 사진</text>
+<line x1="246" y1="220" x2="266" y2="220" stroke="#5b6663" stroke-width="2"/>
+<polygon points="270,220 262,224 262,216" fill="#5b6663"/>
+<rect x="276" y="202" width="414" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="290" y="225" font-size="14" fill="#1c2321">카메라 포맷을 높은 호환성으로</text>
+<text x="360" y="282" font-size="14" fill="#5b6663" text-anchor="middle">이미 찍은 사진은 설정을 바꿔도 HEIC 그대로예요</text>
+</svg>

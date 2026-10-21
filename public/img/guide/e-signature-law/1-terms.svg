@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 304" width="720" height="304" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">전자서명법 제2조의 용어를 쉬운 말로 짝지은 그림</title>
+<rect x="0.5" y="0.5" width="719" height="303" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">법의 낱말, 쉬운 말로</text>
+<rect x="30" y="64" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">전자문서</text>
+<line x1="236" y1="82" x2="256" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,82 252,86 252,78" fill="#5b6663"/>
+<rect x="266" y="64" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="87" font-size="14" fill="#1c2321">컴퓨터로 만들고 주고받거나 저장한 정보</text>
+<rect x="30" y="110" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="133" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">전자서명</text>
+<line x1="236" y1="128" x2="256" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,128 252,132 252,124" fill="#5b6663"/>
+<rect x="266" y="110" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="133" font-size="14" fill="#1c2321">누가 서명했는지와 서명한 사실을 나타내는 정보</text>
+<rect x="30" y="156" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="179" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">전자서명수단</text>
+<line x1="236" y1="174" x2="256" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,174 252,178 252,170" fill="#5b6663"/>
+<rect x="266" y="156" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="179" font-size="14" fill="#1c2321">전자서명을 하는 데 쓰는 전자적 수단</text>
+<rect x="30" y="202" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="225" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">인증서</text>
+<line x1="236" y1="220" x2="256" y2="220" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,220 252,224 252,216" fill="#5b6663"/>
+<rect x="266" y="202" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="225" font-size="14" fill="#1c2321">서명 정보가 그 사람의 것임을 확인·증명하는 정보</text>
+<text x="360" y="282" font-size="14" fill="#5b6663" text-anchor="middle">조문 원문은 본문에 그대로 옮겼어요</text>
+</svg>

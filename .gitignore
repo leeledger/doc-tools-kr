@@ -13,6 +13,8 @@ regress-out/
 # 품질 스파이크: 대용량 코퍼스·결과물은 저장소에 넣지 않는다
 spikes/
 public/brand/
+# Flagged guide figures: copied from src/assets/flagged/img/guide/ by gen-brand when the flag is on (CONTENT1021 B2).
+public/img/guide/remove-background/
 public/favicon.ico
 public/fonts/hwp/
 dist-noauto/

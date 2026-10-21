@@ -1,0 +1,4 @@
+URL: https://support.apple.com/ko-kr/116944
+Fetched: 2026-10-21 (curl, HTML; CONTENT1021 Step B2; checked with pageTextExact)
+Verbatim lines:
+공간이 절약되는 HEIF 및 HEVC 포맷을 사용하도록 돌아가려면 '고효율성'을 선택합니다.

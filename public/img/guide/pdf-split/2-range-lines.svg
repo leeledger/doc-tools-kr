@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 304" width="720" height="304" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">범위대로 나누기에서 줄마다 쓴 범위가 각각 PDF 한 개가 되는 예</title>
+<rect x="0.5" y="0.5" width="719" height="303" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">한 줄이 PDF 한 개</text>
+<rect x="30" y="64" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">첫째 줄: 1-3</text>
+<line x1="236" y1="82" x2="256" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,82 252,86 252,78" fill="#5b6663"/>
+<rect x="266" y="64" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="87" font-size="14" fill="#1c2321">첫째 PDF: 첫 쪽부터 셋째 쪽까지</text>
+<rect x="30" y="110" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="133" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">둘째 줄: 4-6</text>
+<line x1="236" y1="128" x2="256" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,128 252,132 252,124" fill="#5b6663"/>
+<rect x="266" y="110" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="133" font-size="14" fill="#1c2321">둘째 PDF: 넷째 쪽부터 여섯째 쪽까지</text>
+<rect x="30" y="156" width="200" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="179" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">셋째 줄: 1, 7</text>
+<line x1="236" y1="174" x2="256" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,174 252,178 252,170" fill="#5b6663"/>
+<rect x="266" y="156" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="179" font-size="14" fill="#1c2321">셋째 PDF: 첫 쪽과 일곱째 쪽</text>
+<rect x="30" y="202" width="200" height="36" rx="8" fill="#fdecec" stroke="#b91c1c"/>
+<text x="130" y="225" font-size="14" fill="#b91c1c" text-anchor="middle" font-weight="bold">넷째 줄: 5-3</text>
+<line x1="236" y1="220" x2="256" y2="220" stroke="#5b6663" stroke-width="2"/>
+<polygon points="260,220 252,224 252,216" fill="#5b6663"/>
+<rect x="266" y="202" width="424" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="280" y="225" font-size="14" fill="#1c2321">작은 번호부터 써 달라는 안내가 나와요</text>
+<text x="360" y="282" font-size="14" fill="#5b6663" text-anchor="middle">같은 쪽을 여러 줄에 써도 돼요</text>
+</svg>

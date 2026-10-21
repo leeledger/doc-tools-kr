@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 350" width="720" height="350" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">HWP 파일이 열리지 않을 때 나오는 안내별로 할 일을 짝지은 그림</title>
+<rect x="0.5" y="0.5" width="719" height="349" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">열리지 않을 때 안내별로 할 일</text>
+<rect x="30" y="64" width="230" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="145" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">비밀번호가 걸린 문서</text>
+<line x1="266" y1="82" x2="286" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="290,82 282,86 282,78" fill="#5b6663"/>
+<rect x="296" y="64" width="394" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="310" y="87" font-size="14" fill="#1c2321">한글에서 암호를 푼 파일을 받아요</text>
+<rect x="30" y="110" width="230" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="145" y="133" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">배포용 문서</text>
+<line x1="266" y1="128" x2="286" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="290,128 282,132 282,124" fill="#5b6663"/>
+<rect x="296" y="110" width="394" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="310" y="133" font-size="14" fill="#1c2321">일반 문서나 PDF를 부탁해요</text>
+<rect x="30" y="156" width="230" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="145" y="179" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">HWPML(.hml) 형식</text>
+<line x1="266" y1="174" x2="286" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="290,174 282,178 282,170" fill="#5b6663"/>
+<rect x="296" y="156" width="394" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="310" y="179" font-size="14" fill="#1c2321">HWP나 HWPX로 저장해 달라고 해요</text>
+<rect x="30" y="202" width="230" height="36" rx="8" fill="#fdf3e7" stroke="#b45309"/>
+<text x="145" y="225" font-size="14" fill="#b45309" text-anchor="middle" font-weight="bold">손상·덜 받은 파일</text>
+<line x1="266" y1="220" x2="286" y2="220" stroke="#5b6663" stroke-width="2"/>
+<polygon points="290,220 282,224 282,216" fill="#5b6663"/>
+<rect x="296" y="202" width="394" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="310" y="225" font-size="14" fill="#1c2321">파일을 다시 받아 골라요</text>
+<rect x="30" y="248" width="230" height="36" rx="8" fill="#fdf3e7" stroke="#b45309"/>
+<text x="145" y="271" font-size="14" fill="#b45309" text-anchor="middle" font-weight="bold">HWP·HWPX가 아님</text>
+<line x1="266" y1="266" x2="286" y2="266" stroke="#5b6663" stroke-width="2"/>
+<polygon points="290,266 282,270 282,262" fill="#5b6663"/>
+<rect x="296" y="248" width="394" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="310" y="271" font-size="14" fill="#1c2321">파일 끝이 .hwp·.hwpx인지 봐요</text>
+<text x="360" y="328" font-size="14" fill="#5b6663" text-anchor="middle">안내 문구를 보면 무엇을 해야 할지 알 수 있어요</text>
+</svg>

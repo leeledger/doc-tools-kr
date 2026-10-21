@@ -1,0 +1,6 @@
+URL: https://support.microsoft.com/ko-kr/windows/windows%EC%9D%98-%EC%9D%BC%EB%B0%98-%ED%8C%8C%EC%9D%BC-%EC%9D%B4%EB%A6%84-%ED%99%95%EC%9E%A5%EB%AA%85-da4a4430-8e76-89c5-59f7-1cdbbc75cb01
+Fetched: 2026-10-21 (curl, HTML; CONTENT1021 Step B2; checked with pageTextExact; the menu line reads 「파일 탐색기에서 <strong>보기</strong>&gt;<strong>파일 이름 확장명</strong><strong>표시</strong>&gt;를 선택합니다」 in the HTML)
+Verbatim lines:
+파일 이름 확장명을 변경할 수 있지만, 확장명을 변경해도 파일이 다른 형식으로 변환되거나, 파일 이름을 제외한 다른 사항은 변경되지 않습니다.
+파일 탐색기에서 파일을 볼 때 파일 이름 확장명이 표시되지 않으면 다음과 같이 하세요.
+파일 탐색기에서 보기>파일 이름 확장명표시>를 선택합니다.

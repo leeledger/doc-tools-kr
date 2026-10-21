@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">아이폰 HEIC 사진과 JPG 사진의 차이 비교</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">HEIC와 JPG, 무엇이 다를까요</text>
+<rect x="30" y="64" width="320" height="128" rx="10" fill="#fdf3e7" stroke="#b45309" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#b45309" font-weight="bold">HEIC</text>
+<line x1="46" y1="108" x2="334" y2="108" stroke="#b45309" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· 같은 화질에 저장 공간을 덜 써요</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· 카메라 포맷의 고효율성</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· 못 여는 PC·사이트가 있어요</text>
+<rect x="370" y="64" width="320" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="388" y="96" font-size="16" fill="#0f766e" font-weight="bold">JPG</text>
+<line x1="386" y1="108" x2="674" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="388" y="134" font-size="14" fill="#1c2321">· 저장 공간을 더 써요</text>
+<text x="388" y="158" font-size="14" fill="#1c2321">· 카메라 포맷의 높은 호환성</text>
+<text x="388" y="182" font-size="14" fill="#1c2321">· 제출용으로 무난해요</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">아이폰 카메라 설정의 포맷에서 어느 쪽으로 찍을지 고를 수 있어요</text>
+</svg>

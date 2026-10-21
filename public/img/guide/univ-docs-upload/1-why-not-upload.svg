@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 258" width="720" height="258" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">원서 서류 파일이 안 올라가는 세 가지 이유와 각각 고치는 법</title>
+<rect x="0.5" y="0.5" width="719" height="257" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">안 올라가는 이유와 고치는 법</text>
+<rect x="30" y="64" width="230" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="145" y="87" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">파일이 너무 커요</text>
+<line x1="266" y1="82" x2="286" y2="82" stroke="#5b6663" stroke-width="2"/>
+<polygon points="290,82 282,86 282,78" fill="#5b6663"/>
+<rect x="296" y="64" width="394" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="310" y="87" font-size="14" fill="#1c2321">PDF·사진 용량 줄이기로 줄여요</text>
+<rect x="30" y="110" width="230" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="145" y="133" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">받는 확장자가 아니에요</text>
+<line x1="266" y1="128" x2="286" y2="128" stroke="#5b6663" stroke-width="2"/>
+<polygon points="290,128 282,132 282,124" fill="#5b6663"/>
+<rect x="296" y="110" width="394" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="310" y="133" font-size="14" fill="#1c2321">받는 형식으로 다시 저장해요</text>
+<rect x="30" y="156" width="230" height="36" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="145" y="179" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">이름에 특수문자·띄어쓰기</text>
+<line x1="266" y1="174" x2="286" y2="174" stroke="#5b6663" stroke-width="2"/>
+<polygon points="290,174 282,178 282,170" fill="#5b6663"/>
+<rect x="296" y="156" width="394" height="36" rx="8" fill="#f7f9f8" stroke="#c9d1cf"/>
+<text x="310" y="179" font-size="14" fill="#1c2321">한글이나 영문으로만 이름을 바꿔요</text>
+<text x="360" y="236" font-size="14" fill="#5b6663" text-anchor="middle">유웨이 도움말이 꼽은 세 가지 이유예요</text>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 252" width="720" height="252" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">배경 지우기가 잘 되는 사진과 잘 안 되는 사진의 비교</title>
+<rect x="0.5" y="0.5" width="719" height="251" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="38" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">잘 되는 사진, 잘 안 되는 사진</text>
+<rect x="30" y="64" width="320" height="128" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="48" y="96" font-size="16" fill="#0f766e" font-weight="bold">잘 돼요</text>
+<line x1="46" y1="108" x2="334" y2="108" stroke="#0f766e" stroke-opacity="0.4"/>
+<text x="48" y="134" font-size="14" fill="#1c2321">· 상품 하나가 크게 나온 사진</text>
+<text x="48" y="158" font-size="14" fill="#1c2321">· 한 사람의 프로필 사진</text>
+<text x="48" y="182" font-size="14" fill="#1c2321">· 반려동물 한 마리 사진</text>
+<rect x="370" y="64" width="320" height="128" rx="10" fill="#fdf3e7" stroke="#b45309" stroke-width="2"/>
+<text x="388" y="96" font-size="16" fill="#b45309" font-weight="bold">잘 안 될 수 있어요</text>
+<line x1="386" y1="108" x2="674" y2="108" stroke="#b45309" stroke-opacity="0.4"/>
+<text x="388" y="134" font-size="14" fill="#1c2321">· 유리처럼 투명한 물건</text>
+<text x="388" y="158" font-size="14" fill="#1c2321">· 여러 사람이 함께 나온 사진</text>
+<text x="388" y="182" font-size="14" fill="#1c2321">· 배경이 복잡한 사진</text>
+<text x="360" y="230" font-size="14" fill="#5b6663" text-anchor="middle">하나가 크게, 배경은 단순하게 나온 사진일수록 깔끔해요</text>
+</svg>
