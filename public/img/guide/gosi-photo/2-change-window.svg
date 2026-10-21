@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" width="720" height="260" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">공무원 시험 원서 사진을 고칠 수 있는 기간</title>
+<rect x="0.5" y="0.5" width="719" height="259" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">원서 사진, 언제까지 고칠 수 있나</text>
+<rect x="70" y="106" width="230" height="24" rx="4" fill="#e6f2f0" stroke="#0f766e" stroke-width="1"/>
+<text x="185" y="123" font-size="13" fill="#1c2321" text-anchor="middle">사진 고칠 수 있어요</text>
+<rect x="300" y="106" width="340" height="24" rx="4" fill="#eef0ef" stroke="#9aa7a4" stroke-width="1"/>
+<text x="470" y="123" font-size="13" fill="#1c2321" text-anchor="middle">올린 사진이 그대로 쓰여요</text>
+<line x1="50" y1="140" x2="661" y2="140" stroke="#5b6663" stroke-width="2"/>
+<polygon points="670,140 661,144.5 661,135.5" fill="#5b6663"/>
+<circle cx="70" cy="140" r="6" fill="#0f766e"/>
+<text x="70" y="170" font-size="13" fill="#1c2321" text-anchor="middle">원서 접수</text>
+<circle cx="300" cy="140" r="6" fill="#b42318"/>
+<text x="300" y="170" font-size="13" fill="#b42318" text-anchor="middle" font-weight="bold">접수 취소기간 끝</text>
+<circle cx="470" cy="140" r="6" fill="#0f766e"/>
+<text x="470" y="170" font-size="13" fill="#1c2321" text-anchor="middle">필기시험</text>
+<circle cx="620" cy="140" r="6" fill="#0f766e"/>
+<text x="620" y="170" font-size="13" fill="#1c2321" text-anchor="middle">면접시험</text>
+<text x="360" y="226" font-size="14" fill="#5b6663" text-anchor="middle">필기시험 감독관도, 면접시험도 같은 사진으로 본인을 확인해요</text>
+</svg>

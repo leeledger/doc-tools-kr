@@ -1,0 +1,5 @@
+URL: https://www.historyexam.go.kr/pst/view.do?bbs=faq&pst_sno=1000015355
+Title: 한국사능력검정시험 자주하는 질문 — 원서접수(수험표) 사진 첨부와 변경
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+원서접수 페이지에서 사진첨부하기 버튼을 클릭하면 "사진 첨부하기" 창이 뜹니다. "사진 첨부하기" 창에서 찾아보기 버튼을 이용하여 사용중인 컴퓨터에 저장되어 있는 규정된 응시자의 사진을 선택한 후 하단의 확인 버튼을 누르면 선택된 사진이 첨부됩니다.

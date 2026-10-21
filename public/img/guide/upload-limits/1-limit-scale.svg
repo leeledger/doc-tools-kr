@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" width="720" height="380" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">제출처별 용량 한도를 작은 것부터 늘어놓은 그림</title>
+<rect x="0.5" y="0.5" width="719" height="379" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="32" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">용량 한도, 작은 것부터 큰 것까지</text>
+<text x="200" y="66" font-size="13" fill="#1c2321" text-anchor="end">TEPS 원서 사진</text>
+<rect x="212" y="54" width="24" height="16" rx="3" fill="#e6f2f0" stroke="#0f766e" stroke-width="1"/>
+<text x="246" y="67" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">50 KB</text>
+<text x="200" y="94" font-size="13" fill="#1c2321" text-anchor="end">한자시험 원서 사진</text>
+<rect x="212" y="82" width="56" height="16" rx="3" fill="#e6f2f0" stroke="#0f766e" stroke-width="1"/>
+<text x="278" y="95" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">100 KB</text>
+<text x="200" y="122" font-size="13" fill="#1c2321" text-anchor="end">Q-Net 원서 사진</text>
+<rect x="212" y="110" width="89" height="16" rx="3" fill="#e6f2f0" stroke="#0f766e" stroke-width="1"/>
+<text x="311" y="123" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">200 KB</text>
+<text x="200" y="150" font-size="13" fill="#1c2321" text-anchor="end">국가공무원 시험 사진</text>
+<rect x="212" y="138" width="115" height="16" rx="3" fill="#e6f2f0" stroke="#0f766e" stroke-width="1"/>
+<text x="337" y="151" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">350 KB</text>
+<text x="200" y="178" font-size="13" fill="#1c2321" text-anchor="end">여권 사진 파일</text>
+<rect x="212" y="166" width="132" height="16" rx="3" fill="#e6f2f0" stroke="#0f766e" stroke-width="1"/>
+<text x="354" y="179" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">500 KB</text>
+<text x="200" y="206" font-size="13" fill="#1c2321" text-anchor="end">JLPT 원서 사진</text>
+<rect x="212" y="194" width="164" height="16" rx="3" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1"/>
+<text x="386" y="207" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">1 MB</text>
+<text x="200" y="234" font-size="13" fill="#1c2321" text-anchor="end">잡코리아 이력서 사진</text>
+<rect x="212" y="222" width="240" height="16" rx="3" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1"/>
+<text x="462" y="235" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">5 MB</text>
+<text x="200" y="262" font-size="13" fill="#1c2321" text-anchor="end">사람인 이력서 사진</text>
+<rect x="212" y="250" width="272" height="16" rx="3" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1"/>
+<text x="494" y="263" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">10 MB</text>
+<text x="200" y="290" font-size="13" fill="#1c2321" text-anchor="end">전자소송 파일 하나</text>
+<rect x="212" y="278" width="305" height="16" rx="3" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1"/>
+<text x="527" y="291" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">20 MB</text>
+<text x="200" y="318" font-size="13" fill="#1c2321" text-anchor="end">지메일 첨부</text>
+<rect x="212" y="306" width="315" height="16" rx="3" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1"/>
+<text x="537" y="319" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">25 MB</text>
+<text x="200" y="346" font-size="13" fill="#1c2321" text-anchor="end">전자소송 동영상</text>
+<rect x="212" y="334" width="380" height="16" rx="3" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1"/>
+<text x="602" y="347" font-size="13" fill="#1c2321" text-anchor="start" font-weight="bold">100 MB</text>
+<text x="360" y="370" font-size="12" fill="#5b6663" text-anchor="middle">막대 길이는 크기 순서를 보기 쉽게 줄여 그렸어요</text>
+</svg>

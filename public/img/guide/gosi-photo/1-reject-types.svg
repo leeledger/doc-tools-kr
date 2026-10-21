@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" width="720" height="460" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">공무원 시험 원서에 쓸 수 없는 사진 여섯 가지</title>
+<rect x="0.5" y="0.5" width="719" height="459" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">공무원 시험 원서에 쓸 수 없는 사진</text>
+<rect x="30" y="64" width="200" height="150" rx="6" fill="#f6f8f7" stroke="#c9d1cf" stroke-width="1"/>
+<g><path d="M80.6 188.60000000000002 Q85.80000000000001 156.1 130 154.8 Q174.2 156.1 179.4 188.60000000000002 Z" fill="#5b6b5a" stroke="#9aa7a4"/><ellipse cx="130" cy="121" rx="21.32" ry="26" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<circle cx="214" cy="80" r="11" fill="#b42318"/><path d="M209.5 75.5 l9 9 M218.5 75.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="130" y="236" font-size="14" fill="#1c2321" text-anchor="middle">제복을 입은 사진</text>
+<rect x="255" y="64" width="200" height="150" rx="6" fill="#f6f8f7" stroke="#c9d1cf" stroke-width="1"/>
+<g transform="rotate(-90 325 159)"><path d="M279.4 197.4 Q284.2 167.4 325 166.2 Q365.8 167.4 370.6 197.4 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="325" cy="135" rx="19.68" ry="24" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<circle cx="439" cy="80" r="11" fill="#b42318"/><path d="M434.5 75.5 l9 9 M443.5 75.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="355" y="236" font-size="14" fill="#1c2321" text-anchor="middle">옆으로 누운 사진</text>
+<rect x="480" y="64" width="200" height="150" rx="6" fill="#f6f8f7" stroke="#c9d1cf" stroke-width="1"/>
+<g><path d="M562.9 140.4 Q564.7 129.15 580 128.7 Q595.3 129.15 597.1 140.4 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="580" cy="117" rx="7.38" ry="9" fill="#d8dedc" stroke="#9aa7a4"/></g><path d="M546 209 Q550 133 580 131 Q610 133 614 209 Z" fill="#d8dedc" stroke="#9aa7a4"/>
+<circle cx="664" cy="80" r="11" fill="#b42318"/><path d="M659.5 75.5 l9 9 M668.5 75.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="580" y="236" font-size="14" fill="#1c2321" text-anchor="middle">얼굴이 너무 작은 사진</text>
+<rect x="30" y="260" width="200" height="150" rx="6" fill="#f6f8f7" stroke="#c9d1cf" stroke-width="1"/>
+<g transform="translate(130 317) scale(0.62 1) translate(-130 -317)"><path d="M80.6 384.6 Q85.80000000000001 352.1 130 350.8 Q174.2 352.1 179.4 384.6 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="130" cy="317" rx="21.32" ry="26" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<circle cx="214" cy="276" r="11" fill="#b42318"/><path d="M209.5 271.5 l9 9 M218.5 271.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="130" y="432" font-size="14" fill="#1c2321" text-anchor="middle">몸을 옆으로 돌린 사진</text>
+<rect x="255" y="260" width="200" height="150" rx="6" fill="#f6f8f7" stroke="#c9d1cf" stroke-width="1"/>
+<rect x="285" y="293" width="140" height="88" rx="8" fill="#ffffff" stroke="#9aa7a4" stroke-width="1.5"/><g><path d="M292.3 356.8 Q294.9 340.55 317 339.9 Q339.1 340.55 341.7 356.8 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="317" cy="323" rx="10.66" ry="13" fill="#d8dedc" stroke="#9aa7a4"/></g><line x1="347" y1="317" x2="407" y2="317" stroke="#9aa7a4" stroke-width="4"/><line x1="347" y1="335" x2="395" y2="335" stroke="#9aa7a4" stroke-width="4"/>
+<circle cx="439" cy="276" r="11" fill="#b42318"/><path d="M434.5 271.5 l9 9 M443.5 271.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="355" y="432" font-size="14" fill="#1c2321" text-anchor="middle">신분증을 다시 찍은 사진</text>
+<rect x="480" y="260" width="200" height="150" rx="6" fill="#f6f8f7" stroke="#c9d1cf" stroke-width="1"/>
+<g transform="translate(580 321) scale(1.6 0.8) translate(-580 -321)"><path d="M534.4 383.4 Q539.2 353.4 580 352.2 Q620.8 353.4 625.6 383.4 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="580" cy="321" rx="19.68" ry="24" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<circle cx="664" cy="276" r="11" fill="#b42318"/><path d="M659.5 271.5 l9 9 M668.5 271.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="580" y="432" font-size="14" fill="#1c2321" text-anchor="middle">한쪽만 줄인 사진</text>
+</svg>

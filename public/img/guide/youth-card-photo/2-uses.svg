@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">청소년증의 세 가지 쓰임</title>
+<rect x="0.5" y="0.5" width="719" height="299" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">청소년증 한 장의 쓰임</text>
+<rect x="30" y="66" width="210" height="190" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="105" y="86" width="60" height="40" rx="4" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+<g><path d="M110.6 115.6 Q111.8 108.1 122 107.8 Q132.2 108.1 133.4 115.6 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="122" cy="100" rx="4.92" ry="6" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<line x1="132" y1="98" x2="156" y2="98" stroke="#9aa7a4" stroke-width="3"/>
+<line x1="132" y1="110" x2="150" y2="110" stroke="#9aa7a4" stroke-width="3"/>
+<text x="135" y="156" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">공적 신분증</text>
+<text x="135" y="196.9" font-size="14" fill="#1c2321" text-anchor="middle">수능·검정고시</text>
+<text x="135" y="215.1" font-size="14" fill="#1c2321" text-anchor="middle">운전면허시험·은행</text>
+<rect x="255" y="66" width="210" height="190" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="330" y="86" width="60" height="40" rx="4" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+<g><path d="M335.6 115.6 Q336.8 108.1 347 107.8 Q357.2 108.1 358.4 115.6 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="347" cy="100" rx="4.92" ry="6" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<line x1="357" y1="98" x2="381" y2="98" stroke="#9aa7a4" stroke-width="3"/>
+<line x1="357" y1="110" x2="375" y2="110" stroke="#9aa7a4" stroke-width="3"/>
+<text x="360" y="156" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">청소년 우대 증표</text>
+<text x="360" y="196.9" font-size="14" fill="#1c2321" text-anchor="middle">교통·문화·여가 시설</text>
+<text x="360" y="215.1" font-size="14" fill="#1c2321" text-anchor="middle">이용료 면제·할인</text>
+<rect x="480" y="66" width="210" height="190" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="555" y="86" width="60" height="40" rx="4" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+<g><path d="M560.6 115.6 Q561.8 108.1 572 107.8 Q582.2 108.1 583.4 115.6 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="572" cy="100" rx="4.92" ry="6" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<line x1="582" y1="98" x2="606" y2="98" stroke="#9aa7a4" stroke-width="3"/>
+<line x1="582" y1="110" x2="600" y2="110" stroke="#9aa7a4" stroke-width="3"/>
+<text x="585" y="156" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">교통카드</text>
+<text x="585" y="196.9" font-size="14" fill="#1c2321" text-anchor="middle">대중교통·편의점</text>
+<text x="585" y="215.1" font-size="14" fill="#1c2321" text-anchor="middle">선불 결제</text>
+<text x="360" y="282" font-size="13" fill="#5b6663" text-anchor="middle">9세 이상 18세 이하, 19세가 되기 바로 전날까지 써요</text>
+</svg>

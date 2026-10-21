@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" width="720" height="280" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">외국에서 운전할 때 함께 가지고 다닐 세 가지</title>
+<rect x="0.5" y="0.5" width="719" height="279" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">외국에서 운전할 때는 세 가지 함께</text>
+<rect x="50" y="76" width="160" height="110" rx="10" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="66" y="96" width="44" height="56" rx="2" fill="#ffffff" stroke="#9aa7a4" stroke-width="1.5"/>
+<g><path d="M69 142 Q71 129.5 88 129 Q105 129.5 107 142 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="88" cy="116" rx="8.2" ry="10" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<line x1="122" y1="108" x2="194" y2="108" stroke="#9aa7a4" stroke-width="4"/>
+<line x1="122" y1="126" x2="180" y2="126" stroke="#9aa7a4" stroke-width="4"/>
+<line x1="122" y1="144" x2="186" y2="144" stroke="#9aa7a4" stroke-width="4"/>
+<text x="130" y="212" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">국제운전면허증</text>
+<text x="245" y="138" font-size="28" fill="#5b6663" text-anchor="middle" font-weight="bold">+</text>
+<rect x="280" y="76" width="160" height="110" rx="10" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="296" y="96" width="44" height="56" rx="2" fill="#ffffff" stroke="#9aa7a4" stroke-width="1.5"/>
+<g><path d="M299 142 Q301 129.5 318 129 Q335 129.5 337 142 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="318" cy="116" rx="8.2" ry="10" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<line x1="352" y1="108" x2="424" y2="108" stroke="#9aa7a4" stroke-width="4"/>
+<line x1="352" y1="126" x2="410" y2="126" stroke="#9aa7a4" stroke-width="4"/>
+<line x1="352" y1="144" x2="416" y2="144" stroke="#9aa7a4" stroke-width="4"/>
+<text x="360" y="212" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">한국 운전면허증</text>
+<text x="475" y="138" font-size="28" fill="#5b6663" text-anchor="middle" font-weight="bold">+</text>
+<rect x="510" y="76" width="160" height="110" rx="10" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="526" y="96" width="44" height="56" rx="2" fill="#ffffff" stroke="#9aa7a4" stroke-width="1.5"/>
+<g><path d="M529 142 Q531 129.5 548 129 Q565 129.5 567 142 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="548" cy="116" rx="8.2" ry="10" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<line x1="582" y1="108" x2="654" y2="108" stroke="#9aa7a4" stroke-width="4"/>
+<line x1="582" y1="126" x2="640" y2="126" stroke="#9aa7a4" stroke-width="4"/>
+<line x1="582" y1="144" x2="646" y2="144" stroke="#9aa7a4" stroke-width="4"/>
+<text x="590" y="212" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">여권</text>
+<text x="360" y="256" font-size="14" fill="#b42318" text-anchor="middle">하나라도 빠지면 무면허 운전이 될 수 있어요</text>
+</svg>

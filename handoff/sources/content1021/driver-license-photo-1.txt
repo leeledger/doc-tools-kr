@@ -1,0 +1,9 @@
+URL: https://www.safedriving.or.kr/commonManage/selectCommonPhotoRulePop.do
+Title: 도로교통공단 안전운전 통합민원 — 허용되는 사진 규격
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+탈모, 상반신, 흰색 배경, 6개월 이내 촬영한 컬러 사진(사진인화용지에 인화된 사진만 허용), 복사 또는 포토샵 등으로 수정하지 않은 사진, 얼굴 방향은 정면을 응시하고 기울어지지 않은 사진, 색안경 착용 등 눈을 가리지 않은 사진.
+표정은 무펴정을 유지해야 하며 치아가 보이면 안됩니다.
+악세서리 착용으로 인한 과도한 얼굴가림이 없어야합니다., 인위적으로 합성된 사진 불가
+*가로 395~431, 세로 507~550 필셀 이내만 업로드 가능
+*제출사진이 사진규격에 부합하지 않는 경우 면허증 발급이 지연 및 반려될 수 있습니다.

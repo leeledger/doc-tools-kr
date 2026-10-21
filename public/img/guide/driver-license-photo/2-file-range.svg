@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">운전면허 사진 파일의 권장 크기와 올릴 수 있는 범위</title>
+<rect x="0.5" y="0.5" width="719" height="319" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">파일 크기, 이 범위 안이면 올라가요</text>
+<rect x="80" y="60" width="172" height="229" rx="0" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="88" y="75" width="158" height="211" rx="0" fill="#ffffff" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="3 3"/>
+<rect x="84" y="68" width="165" height="221" rx="0" fill="none" stroke="#8a5a00" stroke-width="2"/>
+<g><path d="M101.4 238.4 Q108.2 195.9 166 194.2 Q223.8 195.9 230.6 238.4 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="166" cy="150" rx="27.88" ry="34" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<rect x="300" y="90" width="18" height="18" rx="2" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+<text x="330" y="104" font-size="15" fill="#1c2321" text-anchor="start">바깥 틀: 가로 431 · 세로 550 픽셀까지</text>
+<rect x="300" y="146" width="18" height="18" rx="2" fill="#ffffff" stroke="#8a5a00" stroke-width="2"/>
+<text x="330" y="160" font-size="15" fill="#1c2321" text-anchor="start">권장: 413×531 픽셀</text>
+<rect x="300" y="202" width="18" height="18" rx="2" fill="#ffffff" stroke="#5b6663" stroke-width="2"/>
+<text x="330" y="216" font-size="15" fill="#1c2321" text-anchor="start">안쪽 점선: 가로 395 · 세로 507 픽셀 이상</text>
+<text x="470" y="280" font-size="14" fill="#5b6663" text-anchor="middle">파일은 500KB 이하 JPG</text>
+</svg>

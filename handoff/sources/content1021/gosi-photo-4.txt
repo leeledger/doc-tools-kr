@@ -1,0 +1,5 @@
+URL: https://gongmuwon.gosi.kr/rccom/ComBbRcrutTestSnthsGdFaqDtl.do?bbsId=FAQMSTR_000000000001&pstId=659
+Title: 국가공무원 채용시스템 FAQ — 접수증 및 응시표 출력은 언제부터 가능한가요?
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+접수증은 원서접수 취소 마감일 18시 부터, 응시표는 시험장소 공고일로부터 시험일이 속한 연도의 말까지 언제든지 출력하실 수 있어요.

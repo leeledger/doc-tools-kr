@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 290" width="720" height="290" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">한능검 원서 사진을 붙이는 두 가지 경로</title>
+<rect x="0.5" y="0.5" width="719" height="289" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">한능검 원서 사진 붙이기</text>
+<text x="40" y="82" font-size="15" fill="#0f766e" text-anchor="start" font-weight="bold">처음 접수할 때</text>
+<rect x="40" y="94" width="186.66666666666666" height="56" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="133.33333333333331" y="126.9" font-size="14" fill="#1c2321" text-anchor="middle">「사진첨부하기」</text>
+<line x1="230.66666666666666" y1="122" x2="253.66666666666663" y2="122" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="262.7,122 253.7,126.5 253.7,117.5" fill="#1c2321"/>
+<rect x="266.66666666666663" y="94" width="186.66666666666666" height="56" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="359.99999999999994" y="117.8" font-size="14" fill="#1c2321" text-anchor="middle">「찾아보기」로</text>
+<text x="359.99999999999994" y="136" font-size="14" fill="#1c2321" text-anchor="middle">사진 고르기</text>
+<line x1="457.33333333333326" y1="122" x2="480.33333333333326" y2="122" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="489.3,122 480.3,126.5 480.3,117.5" fill="#1c2321"/>
+<rect x="493.3333333333333" y="94" width="186.66666666666666" height="56" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="586.6666666666666" y="126.9" font-size="14" fill="#1c2321" text-anchor="middle">「확인」</text>
+<text x="40" y="192" font-size="15" fill="#8a5a00" text-anchor="start" font-weight="bold">접수한 뒤 바꿀 때 (시험 당일 10시까지)</text>
+<rect x="40" y="204" width="134.5" height="56" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="107.25" y="236.9" font-size="14" fill="#1c2321" text-anchor="middle">「원서접수확인」</text>
+<line x1="178.5" y1="232" x2="195.5" y2="232" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="204.5,232 195.5,236.5 195.5,227.5" fill="#1c2321"/>
+<rect x="208.5" y="204" width="134.5" height="56" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="275.75" y="236.9" font-size="14" fill="#1c2321" text-anchor="middle">「수정」</text>
+<line x1="347" y1="232" x2="364" y2="232" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="373,232 364,236.5 364,227.5" fill="#1c2321"/>
+<rect x="377" y="204" width="134.5" height="56" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="444.25" y="236.9" font-size="14" fill="#1c2321" text-anchor="middle">「사진첨부」</text>
+<line x1="515.5" y1="232" x2="532.5" y2="232" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="541.5,232 532.5,236.5 532.5,227.5" fill="#1c2321"/>
+<rect x="545.5" y="204" width="134.5" height="56" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="612.75" y="236.9" font-size="14" fill="#1c2321" text-anchor="middle">「다음단계」</text>
+</svg>

@@ -1,0 +1,5 @@
+URL: https://license.korcham.net/customer/guideDetail.do?no=192&pg=1&cd=10
+Title: 대한상공회의소 수험자가이드 — 부적격 사진유형
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+수영 복,장비를 착용한채 찍은 스쿠버 사진 … HADURI등의 화상캠으로 찍은 캠사진

@@ -1,0 +1,5 @@
+URL: https://www.hanja.re.kr/kccpt/exam/examPrecautions.do
+Title: 전국한자능력검정시험 — 응시 전 유의사항
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+주민등록증, 운전면허증, 여권, 국가기술자격증, 공무원증, 청소년증, 학생증 등으로 성명/사진/생년월일이 기재된 경우만 인정합니다.

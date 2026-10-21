@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">주민등록증 신규 발급과 재발급 비교</title>
+<rect x="0.5" y="0.5" width="719" height="319" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">신규 발급과 재발급</text>
+<rect x="30" y="64" width="320" height="226" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="190" y="92" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">신규 발급</text>
+<text x="54" y="126" font-size="14" fill="#1c2321" text-anchor="start">· 17세 이상, 처음 받을 때</text>
+<text x="54" y="156" font-size="14" fill="#1c2321" text-anchor="start">· 사진 1장</text>
+<text x="54" y="186" font-size="14" fill="#1c2321" text-anchor="start">· 수수료 없음</text>
+<text x="54" y="216" font-size="14" fill="#1c2321" text-anchor="start">· 본인이 직접 신청</text>
+<text x="54" y="246" font-size="14" fill="#1c2321" text-anchor="start">· 받기까지 14일</text>
+<rect x="370" y="64" width="320" height="226" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="530" y="92" font-size="16" fill="#8a5a00" text-anchor="middle" font-weight="bold">재발급</text>
+<text x="394" y="126" font-size="14" fill="#1c2321" text-anchor="start">· 잃어버렸거나 망가졌을 때</text>
+<text x="394" y="156" font-size="14" fill="#1c2321" text-anchor="start">· 사진 1장 + 쓰던 주민등록증</text>
+<text x="394" y="186" font-size="14" fill="#1c2321" text-anchor="start">· IC칩 없음 5,000원</text>
+<text x="394" y="216" font-size="14" fill="#1c2321" text-anchor="start">· IC칩 있음 10,000원</text>
+<text x="394" y="246" font-size="14" fill="#1c2321" text-anchor="start">· 받기까지 14일</text>
+</svg>

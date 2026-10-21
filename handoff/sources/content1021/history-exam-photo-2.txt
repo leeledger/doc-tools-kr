@@ -1,0 +1,6 @@
+URL: https://www.historyexam.go.kr/pst/view.do?bbs=faq&pst_sno=1000028410
+Title: 한국사능력검정시험 자주하는 질문 — 원서에 사진이 보이지 않을 때
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+만약 규격에 맞게 등록됐지만 사진이 안 보일때는 마이크로소프트 엣지(Microsoft Edge) 버전을 최신버전으로 업데이트 하거나 구글 크롬(Google Chrome) 등을 통해서 한국사능력검정시험 홈페이지에 접속해주세요.
+[원서접수확인] → [수정] → [사진첨부] → [다음단계] 클릭

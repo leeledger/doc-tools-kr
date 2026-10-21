@@ -1,0 +1,5 @@
+URL: https://www.kosaf.go.kr/ko/faq.do?searchType=a&searchStr=%EC%9A%A9%EB%9F%89
+Title: 한국장학재단 FAQ (가구원 동의서 제출 주의사항)
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+휴대폰 등의 사진 촬영 이미지는 유효하지 않습니다. 반드시 스캐너를 통해 TIF파일로 저장하여 업로드 해야 합니다.

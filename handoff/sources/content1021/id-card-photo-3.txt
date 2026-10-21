@@ -1,0 +1,5 @@
+URL: https://gongmuwon.gosi.kr/rccom/ComBbRcrutTestSnthsGdFaqDtl.do?bbsId=FAQMSTR_000000000001&pstId=585
+Title: 국가공무원 채용시스템 FAQ — 기한 만료된 여권으로 응시가 가능합니까?
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+따라서 가능하시다면 다른 신분증(주민등록증 발급신청 확인서도 가능)을 재발급 받으시는 것이 좋겠습니다.

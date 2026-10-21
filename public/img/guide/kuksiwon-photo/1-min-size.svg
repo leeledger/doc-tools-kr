@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">국시원 원서 사진 최소 크기와 더 작거나 큰 사진 비교</title>
+<rect x="0.5" y="0.5" width="719" height="319" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">국시원 사진은 「이상」이 기준이에요</text>
+<rect x="60" y="150" width="84" height="108" rx="6" fill="#f6f8f7" stroke="#b42318" stroke-width="1.5" stroke-dasharray="5 4"/>
+<g><path d="M75.4 226.4 Q78.2 208.9 102 208.2 Q125.8 208.9 128.6 226.4 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="102" cy="190" rx="11.479999999999999" ry="14" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<circle cx="144" cy="150" r="11" fill="#b42318"/><path d="M139.5 145.5 l9 9 M148.5 145.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="102" y="288" font-size="14" fill="#1c2321" text-anchor="middle">틀보다 작은 사진</text>
+<rect x="270" y="96" width="138" height="177" rx="6" fill="#f6f8f7" stroke="#0f766e" stroke-width="2"/>
+<g><path d="M289.6 227.60000000000002 Q294.8 195.1 339 193.8 Q383.2 195.1 388.4 227.60000000000002 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="339" cy="160" rx="21.32" ry="26" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<circle cx="408" cy="96" r="11" fill="#0f766e"/><path d="M403 96 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="339" y="296" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">최소 크기 276×354픽셀</text>
+<rect x="500" y="70" width="170" height="218" rx="6" fill="#f6f8f7" stroke="#0f766e" stroke-width="1.5"/>
+<g><path d="M524.2 233.2 Q530.6 193.2 585 191.6 Q639.4 193.2 645.8 233.2 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="585" cy="150" rx="26.24" ry="32" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<circle cx="670" cy="70" r="11" fill="#0f766e"/><path d="M665 70 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="585" y="308" font-size="14" fill="#1c2321" text-anchor="middle">더 큰 사진도 돼요</text>
+</svg>

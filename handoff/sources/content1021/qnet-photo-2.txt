@@ -1,0 +1,7 @@
+URL: https://www.q-net.or.kr/qnet/html/guideQnet/guide_04.html
+Title: Q-Net 길라잡이 — 원서접수
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+진단결과가 불가능으로 나온 경우에는 시험접수가 불가능한 것은 아님 (단, 응시자격 관련 증빙서류를 정해진 기한내에 제출하지 못하는 경우에는 자동 불합격 처리됩니다.)
+접수종목, 검정수수료, 시험장소, 시험일시 확인 2. 결제하기 버튼 클릭
+마이페이지 버튼을 클릭한 후 원서접수내역을 확인 2. 수험표출력 버튼 클릭

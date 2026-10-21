@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">큐넷 사진 여백과 얼굴 위치 비교</title>
+<rect x="0.5" y="0.5" width="719" height="299" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">여백과 얼굴 위치</text>
+<clipPath id="q1"><rect x="80" y="70" width="140" height="180"/></clipPath><rect x="80" y="70" width="140" height="180" rx="0" fill="#f6f8f7" stroke="#9aa7a4" stroke-width="1.5"/><g clip-path="url(#q1)"><g><path d="M93 218 Q99 180.5 150 179 Q201 180.5 207 218 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="150" cy="140" rx="24.599999999999998" ry="30" fill="#d8dedc" stroke="#9aa7a4"/></g></g>
+<circle cx="220" cy="70" r="11" fill="#0f766e"/><path d="M215 70 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="150" y="280" font-size="14" fill="#1c2321" text-anchor="middle">위·양옆 여백이 고르게</text>
+<clipPath id="q2"><rect x="290" y="70" width="140" height="180"/></clipPath><rect x="290" y="70" width="140" height="180" rx="0" fill="#f6f8f7" stroke="#9aa7a4" stroke-width="1.5"/><g clip-path="url(#q2)"><g><path d="M273 218 Q279 180.5 330 179 Q381 180.5 387 218 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="330" cy="140" rx="24.599999999999998" ry="30" fill="#d8dedc" stroke="#9aa7a4"/></g></g>
+<circle cx="430" cy="70" r="11" fill="#b42318"/><path d="M425.5 65.5 l9 9 M434.5 65.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="360" y="280" font-size="14" fill="#1c2321" text-anchor="middle">한쪽으로 치우침</text>
+<clipPath id="q3"><rect x="500" y="70" width="140" height="180"/></clipPath><rect x="500" y="70" width="140" height="180" rx="0" fill="#f6f8f7" stroke="#9aa7a4" stroke-width="1.5"/><g clip-path="url(#q3)"><g><path d="M459.8 300.8 Q471.4 228.3 570 225.4 Q668.6 228.3 680.2 300.8 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="570" cy="150" rx="47.559999999999995" ry="58" fill="#d8dedc" stroke="#9aa7a4"/></g></g>
+<circle cx="640" cy="70" r="11" fill="#b42318"/><path d="M635.5 65.5 l9 9 M644.5 65.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="570" y="280" font-size="14" fill="#1c2321" text-anchor="middle">여백 없이 꽉 참</text>
+</svg>

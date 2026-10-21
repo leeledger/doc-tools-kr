@@ -16,10 +16,6 @@ export const TOOL_MIN_CHARS = 2000;
  * A page that passes may never be added (check-dist fails on a pending page that passes).
  */
 export const LENGTH_PENDING = new Set([
-  // Step B1: photo / ID / exam guides and the upload-limits hub.
-  'baby-passport-photo', 'id-card-photo', 'driver-license-photo', 'youth-card-photo', 'intl-driving-license', 'id-card-copy',
-  'gosi-photo', 'police-exam-photo', 'kuksiwon-photo', 'qnet-photo', 'korcham-photo', 'history-exam-photo', 'hanja-exam-photo',
-  'jlpt-photo', 'teps-photo', 'admission-photo', 'resume-photo', 'upload-limits',
   // Step B2: PDF / HWP / 서류 / 사진 보내기 / 서명 guides.
   'pdf-compress', 'pdf-password', 'pdf-split', 'pdf-sign', 'pdf-to-jpg', 'jpg-to-pdf', 'email-attachment-limit', 'ecfs-pdf-limit',
   'yearend-tax-pdf', 'gov24-pdf-save', 'kosaf-docs', 'univ-docs-upload', 'hwp-on-phone', 'hwp-to-pdf', 'hwpx-to-hwp',

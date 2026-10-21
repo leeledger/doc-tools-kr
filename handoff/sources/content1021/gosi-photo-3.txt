@@ -1,0 +1,5 @@
+URL: https://gongmuwon.gosi.kr/rccom/ComBbRcrutTestSnthsGdFaqDtl.do?bbsId=FAQMSTR_000000000001&pstId=666
+Title: 국가공무원 채용시스템 FAQ — 원서접수시 따로 유의해야 할 사항들이 있을까요?
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+[국가공무원채용시스템]-[원서접수]-[응시원서 확인] 화면에서 결제여부가 ‘결제완료’라고 표기되어 있다면 응시원서가 제대로 접수된 것이니 안심하셔도 됩니다.

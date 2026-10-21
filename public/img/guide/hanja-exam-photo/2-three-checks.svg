@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" width="720" height="280" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">한자시험 사진 파일이 통과하는 세 가지 조건</title>
+<rect x="0.5" y="0.5" width="719" height="279" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">세 칸을 모두 맞춰야 올라가요</text>
+<rect x="40" y="70" width="190" height="120" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="135" y="106" font-size="15" fill="#0f766e" text-anchor="middle" font-weight="bold">크기</text>
+<text x="135" y="148" font-size="17" fill="#1c2321" text-anchor="middle" font-weight="bold">230×310픽셀</text>
+<circle cx="230" cy="70" r="11" fill="#0f766e"/><path d="M225 70 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<rect x="260" y="70" width="190" height="120" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="355" y="106" font-size="15" fill="#0f766e" text-anchor="middle" font-weight="bold">용량</text>
+<text x="355" y="148" font-size="17" fill="#1c2321" text-anchor="middle" font-weight="bold">100 KB 이하</text>
+<circle cx="450" cy="70" r="11" fill="#0f766e"/><path d="M445 70 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<rect x="480" y="70" width="190" height="120" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="575" y="106" font-size="15" fill="#0f766e" text-anchor="middle" font-weight="bold">형식</text>
+<text x="575" y="148" font-size="17" fill="#1c2321" text-anchor="middle" font-weight="bold">JPG 또는 PNG</text>
+<circle cx="670" cy="70" r="11" fill="#0f766e"/><path d="M665 70 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="360" y="232" font-size="15" fill="#b42318" text-anchor="middle">하나라도 어긋나면 「등록 오류」가 나요</text>
+<text x="360" y="260" font-size="13" fill="#5b6663" text-anchor="middle">6개월 이내에 찍은 반명함판, 모자 없이, 배경 없이</text>
+</svg>

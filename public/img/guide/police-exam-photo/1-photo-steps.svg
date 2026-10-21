@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 230" width="720" height="230" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">경찰 원서 사진 등록 순서 네 단계</title>
+<rect x="0.5" y="0.5" width="719" height="229" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">경찰 원서 사진 등록 순서</text>
+<rect x="30" y="80" width="142.5" height="80" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="44" y="98" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">1</text>
+<text x="101.25" y="119.8" font-size="14" fill="#1c2321" text-anchor="middle">사진 올리는</text>
+<text x="101.25" y="138" font-size="14" fill="#1c2321" text-anchor="middle">버튼 누르기</text>
+<line x1="176.5" y1="120" x2="189.5" y2="120" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="198.5,120 189.5,124.5 189.5,115.5" fill="#1c2321"/>
+<rect x="202.5" y="80" width="142.5" height="80" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="216.5" y="98" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">2</text>
+<text x="273.75" y="119.8" font-size="14" fill="#1c2321" text-anchor="middle">「사진 불러오기」로</text>
+<text x="273.75" y="138" font-size="14" fill="#1c2321" text-anchor="middle">사진 고르기</text>
+<line x1="349" y1="120" x2="362" y2="120" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="371,120 362,124.5 362,115.5" fill="#1c2321"/>
+<rect x="375" y="80" width="142.5" height="80" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="389" y="98" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">3</text>
+<text x="446.25" y="119.8" font-size="14" fill="#1c2321" text-anchor="middle">위쪽 메뉴로</text>
+<text x="446.25" y="138" font-size="14" fill="#1c2321" text-anchor="middle">3×4 cm 맞추기</text>
+<line x1="521.5" y1="120" x2="534.5" y2="120" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="543.5,120 534.5,124.5 534.5,115.5" fill="#1c2321"/>
+<rect x="547.5" y="80" width="142.5" height="80" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="561.5" y="98" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">4</text>
+<text x="618.75" y="128.9" font-size="14" fill="#1c2321" text-anchor="middle">등록하기</text>
+<text x="360" y="205" font-size="14" fill="#5b6663" text-anchor="middle">미리 3×4 cm 비율로 맞춘 파일을 불러오면 3단계가 짧아져요</text>
+</svg>

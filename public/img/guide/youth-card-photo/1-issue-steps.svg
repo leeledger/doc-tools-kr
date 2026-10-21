@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" width="720" height="250" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">청소년증 신청부터 받기까지 네 단계</title>
+<rect x="0.5" y="0.5" width="719" height="249" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">청소년증이 손에 들어오기까지</text>
+<rect x="30" y="80" width="142.5" height="84" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="44" y="98" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">1</text>
+<text x="101.25" y="121.8" font-size="14" fill="#1c2321" text-anchor="middle">신청</text>
+<text x="101.25" y="140" font-size="14" fill="#1c2321" text-anchor="middle">신청서·사진 1장</text>
+<line x1="176.5" y1="122" x2="189.5" y2="122" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="198.5,122 189.5,126.5 189.5,117.5" fill="#1c2321"/>
+<rect x="202.5" y="80" width="142.5" height="84" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="216.5" y="98" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">2</text>
+<text x="273.75" y="121.8" font-size="14" fill="#1c2321" text-anchor="middle">접수</text>
+<text x="273.75" y="140" font-size="14" fill="#1c2321" text-anchor="middle">가까운 주민센터</text>
+<line x1="349" y1="122" x2="362" y2="122" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="371,122 362,126.5 362,117.5" fill="#1c2321"/>
+<rect x="375" y="80" width="142.5" height="84" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="389" y="98" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">3</text>
+<text x="446.25" y="121.8" font-size="14" fill="#1c2321" text-anchor="middle">제작</text>
+<text x="446.25" y="140" font-size="14" fill="#1c2321" text-anchor="middle">한국조폐공사</text>
+<line x1="521.5" y1="122" x2="534.5" y2="122" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="543.5,122 534.5,126.5 534.5,117.5" fill="#1c2321"/>
+<rect x="547.5" y="80" width="142.5" height="84" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="561.5" y="98" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">4</text>
+<text x="618.75" y="121.8" font-size="14" fill="#1c2321" text-anchor="middle">받기</text>
+<text x="618.75" y="140" font-size="14" fill="#1c2321" text-anchor="middle">주민센터나 등기</text>
+<text x="360" y="222" font-size="14" fill="#5b6663" text-anchor="middle">발급은 무료, 등기로 받으면 우편 요금만 내요</text>
+</svg>

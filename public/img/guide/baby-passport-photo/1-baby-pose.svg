@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">흰 천 위에 눕힌 아기를 위에서 찍는 방법</title>
+<rect x="0.5" y="0.5" width="719" height="319" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">흰 천 위에 눕혀 위에서 찍기</text>
+<rect x="60" y="70" width="330" height="220" rx="10" fill="#ffffff" stroke="#9aa7a4" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="225" y="278" font-size="13" fill="#5b6663" text-anchor="middle">흰 천</text>
+<ellipse cx="225" cy="215" rx="70" ry="48" fill="#d8dedc" stroke="#9aa7a4"/>
+<ellipse cx="225" cy="140" rx="44" ry="48" fill="#d8dedc" stroke="#9aa7a4"/>
+<rect x="480" y="72" width="70" height="120" rx="12" fill="#ffffff" stroke="#1c2321" stroke-width="2"/>
+<circle cx="515" cy="92" r="6" fill="#1c2321"/>
+<line x1="470" y1="140" x2="309" y2="140" stroke="#0f766e" stroke-width="2"/>
+<polygon points="300,140 309,135.5 309,144.5" fill="#0f766e"/>
+<text x="515" y="212.9" font-size="14" fill="#1c2321" text-anchor="middle">휴대폰을 얼굴과</text>
+<text x="515" y="231.1" font-size="14" fill="#1c2321" text-anchor="middle">나란히 들고 위에서</text>
+<circle cx="430" cy="272" r="11" fill="#b42318"/><path d="M425.5 267.5 l9 9 M434.5 267.5 l-9 9" stroke="#ffffff" stroke-width="2.4"/>
+<text x="452" y="277" font-size="14" fill="#b42318" text-anchor="start">손·장난감이 보이면 다시 찍어요</text>
+</svg>

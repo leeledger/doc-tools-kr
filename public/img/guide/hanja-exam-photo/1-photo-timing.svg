@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">한자시험 사진을 접수 전과 접수 뒤에 바꿀 때의 차이</title>
+<rect x="0.5" y="0.5" width="719" height="299" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">사진을 언제 바꾸느냐에 따라</text>
+<rect x="30" y="66" width="200" height="80" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="130" y="96.3" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">접수 전에</text>
+<text x="130" y="115.8" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">사진 변경</text>
+<line x1="240" y1="106" x2="291" y2="106" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="300,106 291,110.5 291,101.5" fill="#1c2321"/>
+<rect x="310" y="66" width="380" height="80" rx="6" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+<text x="500" y="96.3" font-size="15" fill="#1c2321" text-anchor="middle">이번 시험 수험표·급수증에</text>
+<text x="500" y="115.8" font-size="15" fill="#1c2321" text-anchor="middle">새 사진이 들어가요</text>
+<circle cx="690" cy="66" r="11" fill="#0f766e"/><path d="M685 66 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<rect x="30" y="176" width="200" height="80" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="130" y="206.3" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">접수 뒤에</text>
+<text x="130" y="225.8" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">사진 변경</text>
+<line x1="240" y1="216" x2="291" y2="216" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="300,216 291,220.5 291,211.5" fill="#1c2321"/>
+<rect x="310" y="176" width="380" height="80" rx="6" fill="#ffffff" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="500" y="206.3" font-size="15" fill="#1c2321" text-anchor="middle">이번 시험은 예전 사진 그대로,</text>
+<text x="500" y="225.8" font-size="15" fill="#1c2321" text-anchor="middle">새 사진은 다음 접수부터</text>
+<text x="360" y="285" font-size="13" fill="#5b6663" text-anchor="middle">사진은 마이페이지 → 회원정보 관리 → 회원정보 수정에서 바꿔요</text>
+</svg>

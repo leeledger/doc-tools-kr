@@ -1,0 +1,10 @@
+URL: https://public.jinhakapply.com/PoliceV2/qna/FAQ.aspx?ReturnSite=SC&ServiceID=5&CategoryID=3&CurrentPage=1
+Title: 경찰청 인터넷 원서접수(진학어플라이 운영) — 자주 묻는 질문
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+응시원서(선택과목, 사진 등)는 시험공고문에 안내된 원서접수 기간 내에만 수정이 가능하며 이후에는 일체 수정이 불가능합니다.
+결제완료 후 응시지구(서울→부산)를 바꿀 경우에는 접수기간 내에 원서수정이 아닌 접수취소 후 재접수·결제하여야 합니다.
+필기시험 당일에는 접수확인증이 아닌 응시표를 출력·지참하여야 합니다.
+출력가능일은 해당 공고문에 안내되며 접수확인증이 아닌 응시번호가 기재된 응시표를 칼라 또는 흑백으로 출력하면 됩니다.
+원서접수시 응시지구란 18개 시도청 중 응시할 시도청을 말합니다.
+또한 최종합격 후 제주청에서 10년간 의무복무 하여야 하며 시도청간 전보가 제한됩니다.

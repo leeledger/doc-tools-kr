@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" width="720" height="340" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">한도를 넘은 파일 종류별로 쓰는 도구</title>
+<rect x="0.5" y="0.5" width="719" height="339" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="34" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">한도를 넘었다면, 파일 종류부터</text>
+<rect x="260" y="56" width="200" height="46" rx="6" fill="#ffffff" stroke="#1c2321" stroke-width="1.5"/>
+<text x="360" y="84" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">어떤 파일인가요?</text>
+<line x1="360" y1="104" x2="108.8848232505509" y2="144.56475932106486" stroke="#5b6663" stroke-width="1.5"/>
+<polygon points="100,146 108.2,140.1 109.6,149" fill="#5b6663"/>
+<rect x="22" y="150" width="156" height="44" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="100" y="177" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">PDF 서류</text>
+<line x1="100" y1="198" x2="100" y2="217" stroke="#5b6663" stroke-width="1.5"/>
+<polygon points="100,226 95.5,217 104.5,217" fill="#5b6663"/>
+<rect x="22" y="230" width="156" height="70" rx="6" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+<text x="100" y="260.9" font-size="14" fill="#1c2321" text-anchor="middle">PDF 용량 줄이기</text>
+<text x="100" y="279.1" font-size="14" fill="#1c2321" text-anchor="middle">안 되면 나누기</text>
+<line x1="360" y1="104" x2="281.1049647272812" y2="142.0872584075194" stroke="#5b6663" stroke-width="1.5"/>
+<polygon points="273,146 279.1,138 283.1,146.1" fill="#5b6663"/>
+<rect x="195" y="150" width="156" height="44" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="273" y="177" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">사진·스캔 이미지</text>
+<line x1="273" y1="198" x2="273" y2="217" stroke="#5b6663" stroke-width="1.5"/>
+<polygon points="273,226 268.5,217 277.5,217" fill="#5b6663"/>
+<rect x="195" y="230" width="156" height="70" rx="6" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+<text x="273" y="270" font-size="14" fill="#1c2321" text-anchor="middle">사진 용량 줄이기</text>
+<line x1="360" y1="104" x2="437.91289235612214" y2="142.05048231345498" stroke="#5b6663" stroke-width="1.5"/>
+<polygon points="446,146 435.9,146.1 439.9,138" fill="#5b6663"/>
+<rect x="368" y="150" width="156" height="44" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="446" y="177" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">원서·이력서 사진</text>
+<line x1="446" y1="198" x2="446" y2="217" stroke="#5b6663" stroke-width="1.5"/>
+<polygon points="446,226 441.5,217 450.5,217" fill="#5b6663"/>
+<rect x="368" y="230" width="156" height="70" rx="6" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+<text x="446" y="260.9" font-size="14" fill="#1c2321" text-anchor="middle">규격 맞추기</text>
+<text x="446" y="279.1" font-size="14" fill="#1c2321" text-anchor="middle">(크기와 용량 함께)</text>
+<line x1="360" y1="104" x2="610.1160507002718" y2="144.55935957301705" stroke="#5b6663" stroke-width="1.5"/>
+<polygon points="619,146 609.4,149 610.8,140.1" fill="#5b6663"/>
+<rect x="541" y="150" width="156" height="44" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="619" y="177" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">장학금 TIF 스캔</text>
+<line x1="619" y1="198" x2="619" y2="217" stroke="#5b6663" stroke-width="1.5"/>
+<polygon points="619,226 614.5,217 623.5,217" fill="#5b6663"/>
+<rect x="541" y="230" width="156" height="70" rx="6" fill="#ffffff" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="619" y="260.9" font-size="14" fill="#1c2321" text-anchor="middle">스캐너 설정에서</text>
+<text x="619" y="279.1" font-size="14" fill="#1c2321" text-anchor="middle">흑백 TIF로</text>
+</svg>

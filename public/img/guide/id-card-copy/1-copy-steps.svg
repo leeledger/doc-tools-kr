@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">신분증 사본 만드는 다섯 단계</title>
+<rect x="0.5" y="0.5" width="719" height="299" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">신분증 사본, 이렇게 만들어요</text>
+<rect x="30" y="84" width="114.4" height="96" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="44" y="102" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">1</text>
+<text x="87.2" y="132.1" font-size="13" fill="#1c2321" text-anchor="middle">밝은 곳에서</text>
+<text x="87.2" y="149" font-size="13" fill="#1c2321" text-anchor="middle">신분증 찍기</text>
+<line x1="148.4" y1="132" x2="153.4" y2="132" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="162.4,132 153.4,136.5 153.4,127.5" fill="#1c2321"/>
+<rect x="166.4" y="84" width="114.4" height="96" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="180.4" y="102" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">2</text>
+<text x="223.60000000000002" y="132.1" font-size="13" fill="#1c2321" text-anchor="middle">「돌리기」</text>
+<text x="223.60000000000002" y="149" font-size="13" fill="#1c2321" text-anchor="middle">「자르기」</text>
+<line x1="284.8" y1="132" x2="289.8" y2="132" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="298.8,132 289.8,136.5 289.8,127.5" fill="#1c2321"/>
+<rect x="302.8" y="84" width="114.4" height="96" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="316.8" y="102" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">3</text>
+<text x="360" y="132.1" font-size="13" fill="#1c2321" text-anchor="middle">「가릴 곳 추가」로</text>
+<text x="360" y="149" font-size="13" fill="#1c2321" text-anchor="middle">검은 상자</text>
+<line x1="421.20000000000005" y1="132" x2="426.20000000000005" y2="132" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="435.2,132 426.2,136.5 426.2,127.5" fill="#1c2321"/>
+<rect x="439.20000000000005" y="84" width="114.4" height="96" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="453.20000000000005" y="102" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">4</text>
+<text x="496.40000000000003" y="132.1" font-size="13" fill="#1c2321" text-anchor="middle">낼 곳 적어</text>
+<text x="496.40000000000003" y="149" font-size="13" fill="#1c2321" text-anchor="middle">용도 문구</text>
+<line x1="557.6" y1="132" x2="562.6" y2="132" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="571.6,132 562.6,136.5 562.6,127.5" fill="#1c2321"/>
+<rect x="575.6" y="84" width="114.4" height="96" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="589.6" y="102" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">5</text>
+<text x="632.8000000000001" y="132.1" font-size="13" fill="#1c2321" text-anchor="middle">JPG나 PDF로</text>
+<text x="632.8000000000001" y="149" font-size="13" fill="#1c2321" text-anchor="middle">저장</text>
+<text x="360" y="236" font-size="14" fill="#5b6663" text-anchor="middle">가린 부분은 사진 자체를 칠해 저장해서 다시 볼 수 없어요</text>
+<text x="360" y="266" font-size="14" fill="#5b6663" text-anchor="middle">앞뒤 두 면은 하나씩 만든 뒤 PDF 하나로 합쳐요</text>
+</svg>

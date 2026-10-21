@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">아기 첫 여권 신청 준비물</title>
+<rect x="0.5" y="0.5" width="719" height="319" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">아기 첫 여권, 창구에 가져갈 것</text>
+<circle cx="70" cy="82" r="11" fill="#0f766e"/><path d="M65 82 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="92" y="87" font-size="15" fill="#1c2321" text-anchor="start">여권발급신청서</text>
+<circle cx="70" cy="122" r="11" fill="#0f766e"/><path d="M65 122 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="92" y="127" font-size="15" fill="#1c2321" text-anchor="start">6개월 이내 여권용 사진 1장</text>
+<circle cx="70" cy="162" r="11" fill="#0f766e"/><path d="M65 162 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="92" y="167" font-size="15" fill="#1c2321" text-anchor="start">법정대리인 동의서 (부모가 가도 필수)</text>
+<circle cx="70" cy="202" r="11" fill="#0f766e"/><path d="M65 202 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="92" y="207" font-size="15" fill="#1c2321" text-anchor="start">인감증명서 (서명한 부모가 직접 가면 생략)</text>
+<circle cx="70" cy="242" r="11" fill="#0f766e"/><path d="M65 242 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="92" y="247" font-size="15" fill="#1c2321" text-anchor="start">가족관계 서류 (공동이용으로 확인되면 생략)</text>
+<rect x="60" y="278" width="600" height="30" rx="4" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="360" y="298" font-size="14" fill="#1c2321" text-anchor="middle">8세 미만 복수여권 58면 35,000원 · 26면 32,000원 (국내)</text>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">운전면허 적성검사와 갱신에 필요한 사진 장수</title>
+<rect x="0.5" y="0.5" width="719" height="299" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">사진은 몇 장 필요할까</text>
+<rect x="30" y="66" width="210" height="196" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="135" y="94.3" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">1종 적성검사</text>
+<text x="135" y="113.8" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">(70세 이상 2종 포함)</text>
+<rect x="94" y="144" width="36" height="46" rx="2" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/><g><path d="M96.8 182.8 Q98.4 172.8 112 172.4 Q125.6 172.8 127.2 182.8 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="112" cy="162" rx="6.56" ry="8" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<rect x="140" y="144" width="36" height="46" rx="2" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/><g><path d="M142.8 182.8 Q144.4 172.8 158 172.4 Q171.6 172.8 173.2 182.8 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="158" cy="162" rx="6.56" ry="8" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<text x="135" y="228" font-size="17" fill="#0f766e" text-anchor="middle" font-weight="bold">사진 2장</text>
+<rect x="255" y="66" width="210" height="196" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="360" y="104" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">2종 면허 갱신</text>
+<rect x="342" y="144" width="36" height="46" rx="2" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/><g><path d="M344.8 182.8 Q346.4 172.8 360 172.4 Q373.6 172.8 375.2 182.8 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="360" cy="162" rx="6.56" ry="8" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<text x="360" y="228" font-size="17" fill="#0f766e" text-anchor="middle" font-weight="bold">사진 1장</text>
+<rect x="480" y="66" width="210" height="196" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="585" y="94.3" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">진단서·건강검진 결과로</text>
+<text x="585" y="113.8" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">신체검사를 대신하면</text>
+<rect x="567" y="144" width="36" height="46" rx="2" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/><g><path d="M569.8 182.8 Q571.4 172.8 585 172.4 Q598.6 172.8 600.2 182.8 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="585" cy="162" rx="6.56" ry="8" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<text x="585" y="228" font-size="17" fill="#8a5a00" text-anchor="middle" font-weight="bold">사진 1장</text>
+<text x="360" y="286" font-size="13" fill="#5b6663" text-anchor="middle">모두 6개월 이내에 찍은 3.5×4.5 cm 여권용 컬러 사진이에요</text>
+</svg>

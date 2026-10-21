@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">사람인 권장 크기와 잡코리아 최대 크기 비교</title>
+<rect x="0.5" y="0.5" width="719" height="319" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">같은 눈금으로 본 두 사이트 크기</text>
+<rect x="130" y="60" width="150" height="210" rx="0" fill="#f6f8f7" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+<rect x="130" y="130" width="100" height="140" rx="0" fill="#e6f2f0" stroke="#0f766e" stroke-width="2"/>
+<g><path d="M138.2 237.2 Q142.6 209.7 180 208.6 Q217.4 209.7 221.8 237.2 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="180" cy="180" rx="18.04" ry="22" fill="#d8dedc" stroke="#9aa7a4"/></g>
+<text x="205" y="294" font-size="13" fill="#5b6663" text-anchor="middle">두 틀을 왼쪽 아래에 맞춰 겹친 모습</text>
+<rect x="380" y="92" width="300" height="70" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="530" y="118" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">사람인 100×140픽셀</text>
+<text x="530" y="144" font-size="14" fill="#1c2321" text-anchor="middle">권장값 · 커도 올라가요</text>
+<rect x="380" y="182" width="300" height="70" rx="6" fill="#fdf4e3" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="530" y="208" font-size="16" fill="#8a5a00" text-anchor="middle" font-weight="bold">잡코리아 150×210픽셀</text>
+<text x="530" y="234" font-size="14" fill="#1c2321" text-anchor="middle">최대값 · 넘으면 안 올라가요</text>
+</svg>

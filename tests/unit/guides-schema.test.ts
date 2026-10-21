@@ -51,7 +51,8 @@ describe('guides: schema (T4)', () => {
   });
 
   it('a print preset counts as an official source (TOOLS4 decision 6); an arithmetic one does not', () => {
-    const base = publishedGuideSchema.parse(published.find((g) => g.slug === 'driver-license-photo')!.data);
+    // The fixture's dates are pinned (CONTENT1021 B1 moved driver-license-photo's `updated` past `now`): only sources vary.
+    const base = { ...publishedGuideSchema.parse(published.find((g) => g.slug === 'driver-license-photo')!.data), updated: '2026-10-06' };
     const now = new Date('2026-10-06T12:00:00Z');
     expect(guideProblems({ ...base, spec: [], sources: [{ preset: 'id_card' }] }, now)).toEqual([]);
     expect(guideProblems({ ...base, spec: [], sources: [{ preset: 'half_card' }] }, now).join()).toContain('at least one source must link');

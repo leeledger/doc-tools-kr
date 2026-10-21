@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 350" width="720" height="350" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">주민등록증 사진 3.5×4.5 cm 상반신 틀</title>
+<rect x="0.5" y="0.5" width="719" height="349" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">주민등록증 사진 한 장</text>
+<rect x="120" y="66" width="175" height="225" rx="0" fill="#f6f8f7" stroke="#0f766e" stroke-width="2"/>
+<clipPath id="ic"><rect x="120" y="66" width="175" height="225"/></clipPath><g clip-path="url(#ic)"><g><path d="M131 254 Q139 204 207 202 Q275 204 283 254 Z" fill="#d8dedc" stroke="#9aa7a4"/><ellipse cx="207" cy="150" rx="32.8" ry="40" fill="#d8dedc" stroke="#9aa7a4"/></g></g>
+<line x1="120" y1="300" x2="295" y2="300" stroke="#0f766e" stroke-width="1.5"/>
+<text x="207" y="324" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">가로 3.5 cm</text>
+<text transform="rotate(-90 96 178)" x="96" y="178" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">세로 4.5 cm</text>
+<circle cx="380" cy="100" r="11" fill="#0f766e"/><path d="M375 100 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="402" y="105" font-size="16" fill="#1c2321" text-anchor="start">6개월 이내에 찍은 사진</text>
+<circle cx="380" cy="152" r="11" fill="#0f766e"/><path d="M375 152 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="402" y="157" font-size="16" fill="#1c2321" text-anchor="start">모자 등을 쓰지 않음</text>
+<circle cx="380" cy="204" r="11" fill="#0f766e"/><path d="M375 204 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="402" y="209" font-size="16" fill="#1c2321" text-anchor="start">가슴 위까지 상반신</text>
+<circle cx="380" cy="256" r="11" fill="#0f766e"/><path d="M375 256 l3.5 4 l6.5 -8" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+<text x="402" y="261" font-size="16" fill="#1c2321" text-anchor="start">인화한 사진 1장</text>
+</svg>

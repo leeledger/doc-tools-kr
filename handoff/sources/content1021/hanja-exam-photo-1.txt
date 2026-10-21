@@ -1,0 +1,6 @@
+URL: https://www.hanja.re.kr/kccpt/exam/applyInfo.do
+Title: 전국한자능력검정시험 — 응시정보 변경
+Fetched: 2026-10-21 (node fetch, page text; CONTENT1021 Step B1; check:quotes --exact)
+Verbatim lines:
+사진 변경 · 변경 기간 : 수시 · 변경 방법 : [마이페이지]-[회원정보 관리]-[회원정보 수정] 페이지에서 변경 · 유의사항 : 수험표와 급수증에는 접수 시 등록한 사진이 반영됩니다. 원서 접수가 완료된 이후에 변경한 사진은 해당 시험에는 반영되지 않습니다.
+접수 결제 이후 급수 및 고사장을 변경하려면 접수 취소 후 재접수하셔야 합니다.

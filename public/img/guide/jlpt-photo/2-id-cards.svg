@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">JLPT 시험장에서 인정하는 신분증과 인정하지 않는 신분증</title>
+<rect x="0.5" y="0.5" width="719" height="319" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">시험 날 신분증 (일반인·대학생)</text>
+<rect x="30" y="64" width="320" height="226" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="190" y="92" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">인정해요</text>
+<text x="54" y="126" font-size="14" fill="#1c2321" text-anchor="start">· 주민등록증</text>
+<text x="54" y="156" font-size="14" fill="#1c2321" text-anchor="start">· 운전면허증</text>
+<text x="54" y="186" font-size="14" fill="#1c2321" text-anchor="start">· 기간이 남은 여권</text>
+<text x="54" y="216" font-size="14" fill="#1c2321" text-anchor="start">· 공무원증·장애인복지카드</text>
+<text x="54" y="246" font-size="14" fill="#1c2321" text-anchor="start">· 법적 효력이 같은 모바일 신분증</text>
+<rect x="370" y="64" width="320" height="226" rx="6" fill="#fbeceb" stroke="#b42318" stroke-width="1.5"/>
+<text x="530" y="92" font-size="16" fill="#b42318" text-anchor="middle" font-weight="bold">인정하지 않아요</text>
+<text x="394" y="126" font-size="14" fill="#1c2321" text-anchor="start">· 대학(원) 학생증</text>
+<text x="394" y="156" font-size="14" fill="#1c2321" text-anchor="start">· 국제운전면허증</text>
+<text x="394" y="186" font-size="14" fill="#1c2321" text-anchor="start">· 유효기간이 지난 신분증</text>
+<text x="394" y="216" font-size="14" fill="#1c2321" text-anchor="start">· 신분증을 찍은 사진·복사본</text>
+<text x="394" y="246" font-size="14" fill="#1c2321" text-anchor="start">· 사진 없는 학생증</text>
+</svg>
