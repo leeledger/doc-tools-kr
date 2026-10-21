@@ -3700,3 +3700,10 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Should Fix 2: admission-photo:186 → link to gosi-photo. Decision: police-exam-photo 「집에서 찍는 경찰 원서 사진」 kept deliberately (tied to the 경찰 no-background/no-snapshot rule, different wording).
 - Should Fix 3 / pending: ECFS FAQ (https://ecfs.scourt.go.kr/psp/index.on?m=PSP623M01) — curl gets an empty WebSquare shell; the orchestrator's Chrome attempt could not drive the in-page search that opens the article. Manual browser re-read pending; upload-limits ECFS quotes keep retrieved 2026-10-02.
 - Gates: check 0/0; test 2,096 pass; BG + prod builds with check-dist pass (47/21, 46/20); guide-length min 2,505, tools min 2,069; check:quotes --exact 589 verbatim; precache 419.1/450 KB.
+
+### CONTENT1021 Steps C+D — deploy + live smoke (2026-10-21, orchestrator)
+- C and D shipped together via PR #12 (full e2e matrix + axe + LHCI green on the PR before merge). The orchestrator's push to main was blocked by the auto-mode classifier; the owner merged (`gh pr merge 12 --merge`, cf80e68).
+- First PR run: 3 e2e tests failed on all 5 projects (getByText('더 줄여야 하나요?') also matched the pdf-compress tool note quoting it); fixed by scoping to the summary (0ed79e9). Rerun green.
+- main cf80e68: CI success. Post-deploy run 1 failed on one transient font fetch (Pretendard-Bold.subset.26.woff, "fetch failed"; curl 200 right after, local smoke:assets OK 2,525 URLs); rerun of the failed job: success.
+- Live: /pdf-merge/, /char-count/, /pdf-compress/, /power-of-attorney/, /stamp-signature/ render the tool notes (「이럴 때 씁니다」); /power-of-attorney/ has one id="pa-task".
+- Open: ECFS FAQ quotes (upload-limits hub, ecfs-pdf-limit) still dated 2026-10-02 — needs a manual browser re-read (page opens articles only via in-page search). AdSense review request: owner, once, mid-November or later.
