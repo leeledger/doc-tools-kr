@@ -151,7 +151,7 @@ test('signed PDF: the result warns that the signature is no longer valid', async
 test('이미지로 변환: warning, a scan completes, a text PDF keeps the original', async ({ page }) => {
   await open(page);
   await pick(page, SCAN, 1);
-  await page.getByText('더 줄여야 하나요?').click();
+  await page.locator('summary', { hasText: '더 줄여야 하나요?' }).click();
   await chooseLevel(page, '이미지로 변환');
   await expect(page.locator('#cmp-desc-raster')).toBeVisible();
   await expect(page.locator('#cmp-desc-raster')).toContainText('글자를 선택하거나 검색할 수 없게 되고');
@@ -163,7 +163,7 @@ test('이미지로 변환: warning, a scan completes, a text PDF keeps the origi
   await page.getByRole('button', { name: '다른 파일 처리하기' }).click();
   await expect(tool(page)).toHaveAttribute('data-state', 'empty');
   await pick(page, LAW, 7);
-  await page.getByText('더 줄여야 하나요?').click();
+  await page.locator('summary', { hasText: '더 줄여야 하나요?' }).click();
   await chooseLevel(page, '이미지로 변환');
   await runAndWait(page, 'kept');
   await expect(page.locator('#cmp-kept')).toContainText('이미지로 바꾸면 오히려 커져서 원본을 그대로 둡니다.');

@@ -78,3 +78,15 @@ test('CONTENT1021 D9: guide figures load from the site itself, sized and lazy (a
     }
   }
 });
+
+test('CONTENT1021 D8: a tool page shows its notes between 알아 두면 좋아요 and the FAQ, in the system font', async ({ page }) => {
+  await gotoReady(page, '/pdf-merge/');
+  const notes = page.locator('section.tool-notes');
+  await expect(notes).toHaveCount(1);
+  await expect(notes.locator('h2').first()).toBeVisible();
+  const order = await page.evaluate(() => [...document.querySelectorAll('main > section')].map((s) => s.className));
+  expect(order.indexOf('tool-notes')).toBe(order.indexOf('why') + 1);
+  expect(order.indexOf('faq')).toBe(order.indexOf('tool-notes') + 1);
+  const font = await notes.locator('p, li').first().evaluate((el) => getComputedStyle(el).fontFamily);
+  expect(font).not.toContain('Anolim UI');
+});

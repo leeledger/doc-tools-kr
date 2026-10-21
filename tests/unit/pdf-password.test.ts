@@ -187,7 +187,14 @@ describe('precache (deploy-gate ruling: the 450 KB limit is never raised)', () =
     expect(NOT_PRECACHED('/hwp-viewer/')).toBe(true);
     // REV3 R3.0: /hwp-to-pdf/ left too (the same rhwp wasm, never precached), for the production build's affiliate links.
     expect(NOT_PRECACHED('/hwp-to-pdf/')).toBe(true);
-    for (const p of ['/', '/pdf-merge/', '/pdf-compress/', '/stamp-signature/']) expect(NOT_PRECACHED(p), p).toBe(false);
+    for (const p of ['/', '/pdf-merge/', '/pdf-compress/']) expect(NOT_PRECACHED(p), p).toBe(false);
+    // CONTENT1021 D10 (pre-locked): the tool notes pushed the precache over 450 KB; /stamp-signature/ left.
+    expect(NOT_PRECACHED('/stamp-signature/')).toBe(true);
+  });
+  it('CONTENT1021 D10: /stamp-signature/ is stored when visited (sw.ts RUNTIME_PAGES), so it still works offline after a visit', async () => {
+    const { RUNTIME_PAGES } = await import('../../src/sw/sw');
+    expect(RUNTIME_PAGES).toContain('/stamp-signature/');
+    expect(NOT_PRECACHED('/stamp-signature/')).toBe(true);
   });
 });
 

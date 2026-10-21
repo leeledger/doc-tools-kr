@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
+import ToolNotes from '../../components/ToolNotes.astro';
 import EngineError from '../../components/EngineError.astro';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
@@ -118,6 +119,9 @@ const EXPECT = '줄바꿈이나 표 모양이 조금 다를 수 있어요. 내�
       <p>{TRADEMARK_NOTICE}</p>
     </div>
   </section>
+
+  <ToolNotes slug={tool.slug} />
+
 
   <section class="faq" aria-labelledby="faq-title">
     <div class="wrap narrow">

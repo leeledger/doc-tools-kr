@@ -1,7 +1,8 @@
 // The AdSense P1 length metrics (FORM1020 round 2; CONTENT1021 D4): rendered div.guide-body prose for guides and hubs,
 // metric T for tool pages; no spaces, no URLs; the bars are never lowered.
 import { describe, expect, it } from 'vitest';
-import { GUIDE_MIN_CHARS, LENGTH_PENDING, TOOL_MIN_CHARS, cutElements, decodeEntities, guideBodyChars, guideBodyText, toolBodyChars, toolBodyText } from '../../scripts/lib/guide-length.mjs';
+import * as lengthLib from '../../scripts/lib/guide-length.mjs';
+import { GUIDE_MIN_CHARS, TOOL_MIN_CHARS, cutElements, decodeEntities, guideBodyChars, guideBodyText, toolBodyChars, toolBodyText } from '../../scripts/lib/guide-length.mjs';
 
 describe('guide length metric', () => {
   const page = '<h1>제목은 빼요</h1><div class="guide-answer-box"><p>답 상자</p></div><div class="guide-body"><h2>가 나</h2><p>다 <a href="/x/">라</a> https://www.law.go.kr/a?b=1 &amp; &#39;마&#39;</p><table><tr><td>바</td></tr></table></div><section class="guide-faq"><p>FAQ는 빼요</p></section>';
@@ -24,11 +25,8 @@ describe('CONTENT1021 D4: bars and the tool metric', () => {
     expect(TOOL_MIN_CHARS).toBe(2000);
   });
 
-  it('LENGTH_PENDING (Steps A–C scaffolding) holds no Step A pilot and no page that already passed', () => {
-    for (const s of ['photo-sizes', 'photo-kb', 'passport-reissue-photo', 'passport-photo', 'pdf-merge', 'power-of-attorney', 'passport-english-name']) expect(LENGTH_PENDING.has(s), s).toBe(false);
-    for (const s of ['id-photo-size', 'id-photo-kb', 'passport-photo-error', 'pdf-merge-free']) expect(LENGTH_PENDING.has(s), s).toBe(false);
-    // After Steps B1 and B2 every guide and hub is expanded: only Step C's tool paths remain.
-    expect([...LENGTH_PENDING].filter((p) => !p.startsWith('/'))).toEqual([]);
+  it('Step D: the Steps A–C scaffolding LENGTH_PENDING is gone, so no page is exempt from the bars', () => {
+    expect('LENGTH_PENDING' in lengthLib).toBe(false);
   });
 
   const tool = [

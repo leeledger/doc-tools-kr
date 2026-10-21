@@ -7,6 +7,7 @@
 import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
+import ToolNotes from '../../components/ToolNotes.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
@@ -71,6 +72,9 @@ const NOTATION = 'https://www.juso.go.kr/introduction/RoadAddress';
       </ul>
     </div>
   </section>
+
+  <ToolNotes slug={tool.slug} />
+
 
   <section class="faq" aria-labelledby="faq-title">
     <div class="wrap narrow">

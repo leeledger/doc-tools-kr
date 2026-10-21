@@ -142,7 +142,7 @@ export const BG_REMOVE_TOOL: Tool = {
   // Short on purpose: the icon is in every page's menu, and C2 may not grow the precache (Arch ruling 3).
   icon: '<circle cx="12" cy="9" r="4"/><path d="M4 21a8 7 0 0 1 16 0" stroke-dasharray="2 2"/>',
   status: 'live',
-  updated: '2026-10-02',
+  updated: '2026-10-21',
   faq: [
     {
       q: '누끼 따기는 어떻게 하나요?',
@@ -197,7 +197,7 @@ export const ADDR_EN_TOOL: Tool = {
   summary: '주소를 찾아 영문 도로명주소로 바꾸고, 해외 직구 주소 칸에 나눠 넣을 값을 알려 드립니다.',
   icon: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   status: 'live',
-  updated: '2026-10-16',
+  updated: '2026-10-21',
   faq: [
     {
       q: '어떤 주소로 바꿔 주나요?',
@@ -231,7 +231,7 @@ export const TOOLS: Tool[] = [
     summary: '여러 PDF를 한 파일로 묶고, 파일 순서를 원하는 대로 바꾸세요.',
     icon: '<path d="M7 3h7l4 4v11H7z"/><path d="M4 6v15h11"/>',
     status: 'live',
-    updated: '2026-09-30',
+    updated: '2026-10-21',
     faq: [
       {
         q: '파일 크기나 개수에 제한이 있나요?',
@@ -266,7 +266,7 @@ export const TOOLS: Tool[] = [
     summary: '제출 용량 제한에 맞게 PDF를 줄입니다. 글자는 선택·검색 가능한 상태로 유지합니다.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 14l3 3 3-3M12 10v7"/>',
     status: 'live',
-    updated: '2026-10-14',
+    updated: '2026-10-21',
     faq: [
       {
         q: '얼마나 줄어드나요?',
@@ -321,7 +321,7 @@ export const TOOLS: Tool[] = [
     summary: '사진 여러 장을 원하는 순서로 PDF 파일 하나로 묶습니다. A4 용지에 맞출 수도 있습니다.',
     icon: '<rect x="3" y="4" width="11" height="9" rx="1.5"/><path d="M3 11l3-3 3 3 2-2 3 3"/><path d="M10 13v8h11V9h-4"/>',
     status: 'live',
-    updated: '2026-10-06',
+    updated: '2026-10-21',
     faq: [
       {
         q: '사진 여러 장을 PDF 하나로 묶을 수 있나요?',
@@ -362,7 +362,7 @@ export const TOOLS: Tool[] = [
     summary: 'PDF의 쪽마다 JPG 사진으로 저장합니다. 여러 쪽은 ZIP 파일 하나로 받습니다.',
     icon: '<path d="M4 3h8l4 4v6"/><path d="M12 3v4h4"/><rect x="9" y="12" width="12" height="9" rx="1.5"/><path d="M9 19l3-3 3 3 2-2 4 4"/>',
     status: 'live',
-    updated: '2026-10-06',
+    updated: '2026-10-21',
     faq: [
       {
         q: 'PDF를 JPG로 바꾸면 쪽마다 사진이 되나요?',
@@ -403,7 +403,7 @@ export const TOOLS: Tool[] = [
     summary: '비밀번호를 아는 PDF의 암호를 풀고, 내 PDF에는 열 때 필요한 비밀번호를 겁니다.',
     icon: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/>',
     status: 'live',
-    updated: '2026-10-06',
+    updated: '2026-10-21',
     faq: [
       {
         q: 'PDF 비밀번호를 잊어버렸어요. 풀 수 있나요?',
@@ -443,7 +443,7 @@ export const TOOLS: Tool[] = [
     summary: 'PDF를 여러 파일로 나누고, 필요 없는 쪽은 빼고, 쪽을 돌리거나 순서를 바꿉니다.',
     icon: '<path d="M6 12V3h8l4 4v5"/><path d="M3 15h3M10.5 15h3M18 15h3"/><path d="M6 18v3h12v-3"/>',
     status: 'live',
-    updated: '2026-10-08',
+    updated: '2026-10-21',
     faq: [
       {
         q: 'PDF를 여러 파일로 나누기도 되나요?',
@@ -482,7 +482,7 @@ export const TOOLS: Tool[] = [
     summary: 'PDF의 원하는 쪽, 원하는 자리에 서명이나 도장 그림을 넣습니다.',
     icon: '<path d="M14 3H6v18h12V7l-4-4z"/><path d="M14 3v4h4"/><path d="M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-.5 1.5-1 2.5.5"/>',
     status: 'live',
-    updated: '2026-10-16',
+    updated: '2026-10-21',
     faq: [
       {
         q: '인증서로 하는 전자서명과 같은가요?',
@@ -527,7 +527,7 @@ export const TOOLS: Tool[] = [
     summary: 'PDF 빈칸에 글자와 날짜를 넣고, 흰 상자로 필요 없는 곳을 가립니다.',
     icon: '<path d="M14 3H6v18h12V7l-4-4z"/><path d="M14 3v4h4"/><path d="M9 11h6M12 11v7"/>',
     status: 'live',
-    updated: '2026-10-15',
+    updated: '2026-10-21',
     faq: [
       {
         q: '원래 있는 글자를 고칠 수 있나요?',
@@ -567,7 +567,7 @@ export const TOOLS: Tool[] = [
     summary: '원하는 KB에 맞춰 사진을 줄이면서 화질은 최대한 지킵니다.',
     icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/>',
     status: 'live',
-    updated: '2026-09-30',
+    updated: '2026-10-21',
     faq: [
       {
         q: '원하는 KB 이하로 정확히 맞출 수 있나요?',
@@ -608,7 +608,7 @@ export const TOOLS: Tool[] = [
     summary: 'PNG·WebP·AVIF와 아이폰 사진(HEIC)을 JPG로 바꿉니다. HEIC는 기기에 따라 열리지 않을 수 있습니다. 여러 장을 한 번에 바꿀 수 있습니다.',
     icon: '<rect x="3" y="4" width="12" height="10" rx="1.5"/><path d="M3 11l3-3 3 3"/><path d="M14 18h7M18 15l3 3-3 3"/>',
     status: 'live',
-    updated: '2026-10-14',
+    updated: '2026-10-21',
     faq: [
       {
         q: '아이폰 사진(HEIC)이 안 열려요.',
@@ -653,7 +653,7 @@ export const TOOLS: Tool[] = [
     summary: '여권·시험·이력서 제출 규격에 맞게 사진을 자르고 크기와 용량을 맞춥니다. 보정은 하지 않습니다.',
     icon: '<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c1-2.5 2.6-3.5 4.5-3.5s3.5 1 4.5 3.5"/>',
     status: 'live',
-    updated: '2026-10-06',
+    updated: '2026-10-21',
     faq: [
       {
         q: '여권사진 규격이 어떻게 되나요?',
@@ -699,7 +699,7 @@ export const TOOLS: Tool[] = [
     summary: '신분증 사진의 주민번호·주소를 가리고 용도 문구를 넣어 사본으로 저장합니다.',
     icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M13 10h5M13 14h5M6 16h5"/>',
     status: 'live',
-    updated: '2026-10-15',
+    updated: '2026-10-21',
     faq: [
       {
         q: '신분증 사본은 어디서 발급받나요?',
@@ -742,7 +742,7 @@ export const TOOLS: Tool[] = [
     summary: '한글 이름을 쓰면 국어의 로마자 표기법에 맞는 여권 영문 이름과 많이 쓰는 성씨 표기를 보여 드립니다.',
     icon: '<path d="M3 18l4-12 4 12M4.5 14h5M13 7h4v8M20 5v14M20 12h2"/>',
     status: 'live',
-    updated: '2026-10-16',
+    updated: '2026-10-21',
     faq: [
       {
         q: '여권 영문 이름은 어떻게 정하나요?',
@@ -787,7 +787,7 @@ export const TOOLS: Tool[] = [
     summary: '이름이나 회사 이름을 쓰면 여러 모양의 도장 이미지를 한 번에 만들어 투명 PNG로 저장합니다.',
     icon: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6"/><path d="M12 9v6"/>',
     status: 'live',
-    updated: '2026-10-16',
+    updated: '2026-10-21',
     faq: [
       {
         q: '도장 이미지는 어떻게 만드나요?',
@@ -833,7 +833,7 @@ export const TOOLS: Tool[] = [
     summary: '도장·서명 사진의 배경을 지워 투명한 PNG 파일로 저장합니다. 서명은 직접 그려도 됩니다.',
     icon: '<rect x="4" y="15" width="16" height="5" rx="1"/><path d="M9 15v-3.5a3 3 0 1 1 6 0V15"/><path d="M7 23h10"/>',
     status: 'live',
-    updated: '2026-10-16',
+    updated: '2026-10-21',
     faq: [
       {
         q: '전자서명 이미지는 어떻게 만드나요?',
@@ -869,7 +869,7 @@ export const TOOLS: Tool[] = [
     summary: '위임하는 사람과 대리인, 위임할 일을 쓰면 위임장을 한글(HWP)과 PDF 파일로 받을 수 있습니다. 빈 양식도 받을 수 있습니다.',
     icon: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 11h7M9 15h7M9 19h4"/>',
     status: 'live',
-    updated: '2026-10-20',
+    updated: '2026-10-21',
     faq: [
       {
         q: '위임장은 어떻게 쓰나요?',
@@ -911,7 +911,7 @@ export const TOOLS: Tool[] = [
     summary: '한글 프로그램 없이 HWP·HWPX 문서를 열어 보고 PDF로 내려받으세요.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 15h6M9 18h4"/>',
     status: 'live',
-    updated: '2026-10-01',
+    updated: '2026-10-21',
     faq: [
       {
         q: '한글 프로그램 없이 되나요?',
@@ -958,7 +958,7 @@ export const TOOLS: Tool[] = [
     summary: '한글 프로그램 없이 HWP·HWPX 문서를 열어 쪽을 넘겨 보고, 글자를 찾아 보세요.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M8 15s1.6-2.6 4-2.6 4 2.6 4 2.6-1.6 2.6-4 2.6S8 15 8 15z"/><circle cx="12" cy="15" r="1"/>',
     status: 'live',
-    updated: '2026-10-01',
+    updated: '2026-10-21',
     faq: [
       {
         q: '휴대폰에서도 열 수 있나요?',
@@ -1005,7 +1005,7 @@ export const TOOLS: Tool[] = [
     summary: '한글 프로그램 없이 HWPX 파일을 HWP 파일로 바꿔 내려받으세요.',
     icon: '<path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6l-2-2M15 17H9l2 2"/>',
     status: 'live',
-    updated: '2026-10-10',
+    updated: '2026-10-21',
     faq: [
       {
         q: '한글 프로그램 없이 되나요?',
@@ -1045,7 +1045,7 @@ export const TOOLS: Tool[] = [
     summary: '붙여 넣은 글의 글자 수를 공백 포함·제외와 바이트로 셉니다.',
     icon: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h5"/>',
     status: 'live',
-    updated: '2026-10-15',
+    updated: '2026-10-21',
     faq: [
       {
         q: '공백 포함과 공백 제외는 무엇이 다른가요?',

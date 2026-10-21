@@ -125,6 +125,11 @@ describe('en-check (d): id parity with the Korean twin', () => {
   it('passes: same ids minus the allowlist', () => {
     expect(idParityProblems(pages(['a', 'b', 'merge-next'], ['a', 'b']), allow)).toEqual([]);
   });
+  it('passes: the ids of the Korean tool notes (CONTENT1021 D8) are not asked of the English page', () => {
+    const ko = tool(['a', 'merge-next']).replace('</body>', '<section class="tool-notes" aria-labelledby="이럴-때"><h2 id="이럴-때">이럴 때</h2></section></body>');
+    const withNotes = new Map(EN_TOOL_PAGES.flatMap((p) => [[p.replace('en/', ''), ko] as [string, string], [p, tool(['a'])] as [string, string]]));
+    expect(idParityProblems(withNotes, allow)).toEqual([]);
+  });
   it('fails: a missing id, an extra id, a stale allowlist entry, a missing page', () => {
     expect(idParityProblems(pages(['a', 'b', 'merge-next'], ['a']), allow)[0]).toBe('en/pdf-merge/index.html: ids of the Korean twin missing: b');
     expect(idParityProblems(pages(['a', 'merge-next'], ['a', 'z']), allow)[0]).toBe('en/pdf-merge/index.html: ids the Korean twin does not have: z');

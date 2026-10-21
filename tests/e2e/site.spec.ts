@@ -27,7 +27,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   await gotoReady(page, '/pdf-compress/');
   await page.setInputFiles('#cmp-input', fixturePath('gen_scan_a6.pdf'));
   await expect(page.locator('#cmp-info')).toContainText('1쪽');
-  await page.getByText('더 줄여야 하나요?').click();
+  await page.locator('summary', { hasText: '더 줄여야 하나요?' }).click();
   await expect(page.locator('#cmp-desc-raster')).toBeVisible();
   const serious = async () =>
     (await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()).violations
@@ -301,7 +301,7 @@ test.describe('mobile layout', () => {
     await gotoReady(page, '/pdf-compress/');
     await page.setInputFiles('#cmp-input', runtimePath('encrypted_userpw_1234'));
     await expect(page.locator('#cmp-pw-input')).toBeVisible();
-    await page.getByText('더 줄여야 하나요?').click();
+    await page.locator('summary', { hasText: '더 줄여야 하나요?' }).click();
     const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
     expect(sw).toBeLessThanOrEqual(cw);
     const small = await page

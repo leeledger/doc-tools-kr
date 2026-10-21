@@ -1,10 +1,10 @@
 // Prints the AdSense P1 length metrics (scripts/lib/guide-length.mjs) of a build. Reads dist/ only.
 //   node scripts/guide-length.mjs [slug ...]   guides and hubs (every dist/guide/<slug>/ without slugs), bar GUIDE_MIN_CHARS
 //   node scripts/guide-length.mjs --tools       the Korean tool pages (a root page with section.tool), bar TOOL_MIN_CHARS
-// A page under its bar prints FAIL (PENDING while it is in LENGTH_PENDING); the exit code stays 0 (check-dist gates).
+// A page under its bar prints FAIL; the exit code stays 0 (check-dist gates).
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { GUIDE_MIN_CHARS, LENGTH_PENDING, TOOL_MIN_CHARS, guideBodyChars, toolBodyChars } from './lib/guide-length.mjs';
+import { GUIDE_MIN_CHARS, TOOL_MIN_CHARS, guideBodyChars, toolBodyChars } from './lib/guide-length.mjs';
 
 const dist = join(import.meta.dirname, '..', 'dist');
 const args = process.argv.slice(2);
@@ -13,8 +13,7 @@ const dirs = (d) => readdirSync(d, { withFileTypes: true }).filter((e) => e.isDi
 
 const line = (key, n, bar) => {
   if (n === null) return `${key}\t(not built)`;
-  const verdict = n >= bar ? 'ok' : LENGTH_PENDING.has(key) ? 'PENDING' : 'FAIL';
-  return `${key}\t${n}\t${verdict}`;
+  return `${key}\t${n}\t${n >= bar ? 'ok' : 'FAIL'}`;
 };
 
 if (tools) {

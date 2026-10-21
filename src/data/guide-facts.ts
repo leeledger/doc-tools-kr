@@ -7,9 +7,15 @@ import { TOOL_FACTS, isToolFactRef } from './tool-facts';
 
 /** '원' (fees) and '세' (ages) are the specs most likely to be invented (CONTENT1021 D7): a guide may show one only from a quote.
  * Not when the syllable starts another word (가로 600 세로 800, 200 원본, 3세대); a particle after it (17세부터, 400원이고) still counts.
+ * 세 as the native "three", set apart from the number and followed by 번째/가지 or a whole counter word ("7 세 번째",
+ * two SVG text nodes; "2 세 가지", "3 세 번"), is no age; "만 65 세 장애인", "만 18 세 번호" still are.
  * 'M' is a court's spelling of megabytes ("총용량은 100M 이하", 전자소송, G2 A3). It stays its own unit so that copy
- * written "100M" is backed only by a quote that writes "100M" (never by an unrelated "100 MB" line). */
-export type Unit = 'KB' | 'MB' | 'M' | '픽셀' | 'cm' | 'mm' | '개월' | '원' | '세';
+ * written "100M" is backed only by a quote that writes "100M" (never by an unrelated "100 MB" line).
+ * Years and times (CONTENT1021 Step D): 년 (2026년, 10년 주기), 시간, 분 and the clock: 9시, 10:20 (unit '시각').
+ * An agency's own spellings back the same facts: a dotted date "2011.12.9." states "2011 년", "09:00" states "9 시".
+ * 시 and 분 count only before a particle or a non-Hangul character (9시부터, 30분 안에), never as the start of
+ * another word (3분의 1, 1분기, 2시험). */
+export type Unit = 'KB' | 'MB' | 'M' | '픽셀' | 'cm' | 'mm' | '개월' | '원' | '세' | '년' | '시간' | '시' | '분' | '시각';
 
 export type GuideSource = { preset: string } | { url: string; title: string; quote: string; retrieved: string; via?: 'browser' };
 
@@ -97,7 +103,11 @@ export function specProblems(g: FactInput & { spec?: readonly SpecRow[] }): stri
 
 const NUM = String.raw`\d[\d,]*(?:\.\d+)?`;
 // "pixel" and "px" appear only inside official quotes (never rendered); they count as 픽셀.
-const UNIT = String.raw`(?:KB|MB|kb|픽셀|pixel|px|cm|mm|개월|원(?!본|래|칙|서|형|문|인|주|점|리|장|화|격|활|룸|고|산|천|단|가|어|수|소|자|색|하)|세(?!로|대|트|금|계|상|기|탁|련|율|월|척|제|부(?!터))|M(?![A-Za-z\d]))(?![A-Za-z])`;
+const UNIT = String.raw`(?:KB|MB|kb|픽셀|pixel|px|cm|mm|개월|원(?!본|래|칙|서|형|문|인|주|점|리|장|화|격|활|룸|고|산|천|단|가|어|수|소|자|색|하)|세(?!로|대|트|금|계|상|기|탁|련|율|월|척|제|부(?!터))(?!(?<=\s세)\s+(?:(?:번째|가지)(?=$|[^가-힣]|로|는|가|의|를|만|도|에|이|와|씩)|(?:번|개|장|명|곳|쪽|줄|칸|권)(?=$|[^가-힣]|째)))|년|시간|시(?=$|[^가-힣]|부터|에|엔|까지|반|쯤|께|이|입|예|경|정각|전|후|와|나|는|를|라|면|로|가|의|도|마다|만)|분(?=$|[^가-힣]|부터|에|엔|까지|쯤|이|입|예|경|안|간|동안|만|짜리|뒤|후|전|가량|정도|을|은|는|도|으로|로|가|마다|씩|넘|내|과|와|라)|M(?![A-Za-z\d]))(?![A-Za-z])`;
+// A clock time "10:20" / "09:00" (the hour 0–24, two-digit minutes), read as "10:20 시각"; on the hour also as "9 시".
+const CLOCK = /(?<![\d:.])([01]?\d|2[0-4]):([0-5]\d)(?![\d:])/g;
+// A dotted date as agencies and laws write it ("2011.12.9.", "2020. 6. 9."), read as its year: "2011 년".
+const DOTTED_DATE = /(?<![\d.])((?:19|20)\d{2})\.\s?(?:1[0-2]|0?[1-9])\.\s?(?:3[01]|[12]\d|0?[1-9])\.?(?!\d)/g;
 const SEP = String.raw`\s*(?:×|x|X|\*|~|–|-)\s*`;
 const CHAIN = new RegExp(String.raw`(?<![\d.,])${NUM}(?:\s*${UNIT})?(?:${SEP}${NUM}(?:\s*${UNIT})?)*`, 'g');
 const PART = new RegExp(String.raw`(${NUM})(?:\s*(${UNIT}))?`, 'g');
@@ -125,10 +135,15 @@ export const unitSpellings = (text: string): string =>
 /**
  * Every "number unit" in `text` as "413 픽셀", "3.5 cm", "500 KB". In a chain such as "3.5cm x 4.5cm",
  * "413×531픽셀" or "3.2~3.6cm", a number without its own unit takes the chain's last unit. Numbers without any
- * unit (dates, counts, 쪽, 장, 개) are not facts this check covers.
+ * unit (dates written 2026-09-30 or 2011. 12. 30., counts, 쪽, 장, 개) are not facts this check covers.
  */
 export function numberUnits(text: string): string[] {
   const out: string[] = [];
+  for (const m of text.matchAll(CLOCK)) {
+    out.push(`${Number(m[1])}:${m[2]} 시각`);
+    if (m[2] === '00') out.push(key(m[1]!, '시'));
+  }
+  for (const m of text.matchAll(DOTTED_DATE)) out.push(key(m[1]!, '년'));
   for (const chain of unitSpellings(text).match(CHAIN) ?? []) {
     const parts = [...chain.matchAll(PART)].map((m) => ({ n: m[1]!, u: m[2] }));
     const last = [...parts].reverse().find((p) => p.u)?.u;

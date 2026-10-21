@@ -839,7 +839,8 @@ describe('release flag and build wiring (PUBLIC_BG_REMOVE)', () => {
     expect(r('/vendor/onnxruntime-web/1.30.0/ort.webgpu.min.mjs')).toBe('default');
     expect(r('/vendor/pdfjs/6.3.289/pdf.worker.min.mjs')).toBe('runtime');
     expect(NOT_PRECACHED('/remove-background/')).toBe(true);
-    expect(NOT_PRECACHED('/stamp-signature/')).toBe(false);
+    // CONTENT1021 D10: /stamp-signature/ left the precache too (the tool notes; gen-sw.mjs).
+    expect(NOT_PRECACHED('/stamp-signature/')).toBe(true);
     // C2 round 2 (Arch): pages useless offline leave the precache (stored when visited instead).
     for (const p of ['/terms/', '/privacy/', '/licenses/']) expect(NOT_PRECACHED(p), p).toBe(true);
     for (const p of ['/', '/offline/', '/id-photo/']) expect(NOT_PRECACHED(p), p).toBe(false);

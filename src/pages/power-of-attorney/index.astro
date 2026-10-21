@@ -7,6 +7,7 @@
 import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
+import ToolNotes from '../../components/ToolNotes.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
 import EngineError from '../../components/EngineError.astro';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
@@ -47,7 +48,7 @@ const task = field('task');
       <div id="pa-tool" class="pa" data-state="empty">
         <form class="pa-form" id="pa-form" novalidate autocomplete="off">
           {groups.map((g) => (
-            <fieldset class="pa-group" id={`pa-${g.id}`}>
+            <fieldset class="pa-group" id={`pa-group-${g.id}`}>
               <legend>{g.legend}</legend>
               {g.fields.map((f) => (
                 <div class="pa-field">
@@ -138,6 +139,9 @@ const task = field('task');
       </ul>
     </div>
   </section>
+
+  <ToolNotes slug={tool.slug} />
+
 
   <section class="faq" aria-labelledby="faq-title">
     <div class="wrap narrow">

@@ -30,9 +30,10 @@ export const BYPASS = ['/sw.js', '/deploy-manifest.json'];
  * 450 KB precache), stored when visited instead, so a page once opened is still there offline. The tool pages' scripts
  * (/_astro/) and engines (/vendor/ qpdf, pdf.js, rhwp) are runtime-cached on first use, so a returning visitor can work
  * offline (REV3: /hwp-to-pdf/ too, like /hwp-viewer/, whose rhwp wasm was never precached either). /remove-background/
- * is not here: it needs the network for its model or cloud path anyway.
+ * is not here: it needs the network for its model or cloud path anyway. CONTENT1021 D10: /stamp-signature/ (the tool notes
+ * pushed the precache over 450 KB).
  */
-export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', ...(typeof __RUNTIME_EXTRA__ === 'undefined' ? [] : __RUNTIME_EXTRA__)];
+export const RUNTIME_PAGES = ['/licenses/', '/terms/', '/privacy/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/stamp-signature/', ...(typeof __RUNTIME_EXTRA__ === 'undefined' ? [] : __RUNTIME_EXTRA__)];
 /** 배경 지우기 (Sprint C, C2): the model and the runtime go straight to the network (src/lib/bgremove/assets.ts caches them). */
 export const NETWORK_PREFIXES = ['/vendor/birefnet-lite-512/', '/vendor/onnxruntime-web/'];
 export const NAV_TIMEOUT_MS = 3000;

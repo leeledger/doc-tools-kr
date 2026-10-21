@@ -329,6 +329,30 @@ describe('G2 A1: topics, spec rows, hubs', () => {
     expect(unsourcedFacts({ sources: [q] }, '수수료는 400원이고 17세부터 대신 갈 수 있어요.')).toEqual([]);
   });
 
+  it('CONTENT1021 Step D: years and times are facts (년, 시간, 시, 분, 10:20); the native 「세」 before a counter is no age', () => {
+    expect(numberUnits('갱신 주기는 10년, 2026년부터, 1~3년')).toEqual(['10 년', '2026 년', '1 년', '3 년']);
+    expect(numberUnits('24시간 안에, 9시부터 18시까지, 30분 안에, 10분이면')).toEqual(['24 시간', '9 시', '18 시', '30 분', '10 분']);
+    expect(numberUnits('10:10~10:20 답안지 배부')).toEqual(['10:10 시각', '10:20 시각']);
+    // On the hour, the clock also states the hour; an agency's dotted date states its year.
+    expect(numberUnits('접수시작일 09:00 ~ 접수마감일 18:00')).toEqual(['9:00 시각', '9 시', '18:00 시각', '18 시']);
+    expect(numberUnits('2011.12.9. 이후, <법률 제17354호, 2020. 6. 9.>')).toEqual(['2011 년', '2020 년']);
+    // Syllables that start another word are no unit: fractions, quarters, exams, ISO dates, version numbers.
+    expect(numberUnits('3분의 1, 1분기, 2시험장, 2026-09-30, 버전 1.2.3')).toEqual([]);
+    // 「세」 set apart before a counter is the native "three" (two SVG text nodes "7" and "세 번째"); attached it is an age.
+    expect(numberUnits('7 세 번째 칸, 2 세 가지')).toEqual([]);
+    expect(numberUnits('만 17 세 이상, 18세 번호')).toEqual(['17 세', '18 세']);
+    // Only the whole counter word: a word that merely starts like one is no counter (장애인, 번호), so the age is read.
+    expect(numberUnits('만 65 세 장애인, 만 18 세 번호')).toEqual(['65 세', '18 세']);
+    expect(numberUnits('7 세 번째로, 2 세 가지만, 3 세 번 눌러요, 4 세 장')).toEqual([]);
+    const law = { url: 'https://www.law.go.kr/', title: '법', quote: '1종 운전면허 2011.12.9. 이후 면허취득자·적성검사자는 10년 주기·1년 기간', retrieved: '2026-10-21' };
+    expect(unsourcedFacts({ sources: [] }, '2011년 12월 9일 이후 주기는 10년이에요.')).toEqual(['2011 년', '10 년']);
+    expect(unsourcedFacts({ sources: [law] }, '2011년 12월 9일 이후 주기는 10년이에요.')).toEqual([]);
+    expect(unsourcedFacts({ sources: [law] }, '마감은 18시예요. 3시경, 5분입니다')).toEqual(['18 시', '3 시', '5 분']);
+    // Any common particle after 시/분 is read (not only a few).
+    expect(numberUnits('18시로 바뀌어요, 19시가 넘으면, 9시의 접수, 12시엔, 6시마다, 5분만 기다려요, 7분가량, 8분로')).toEqual(['18 시', '19 시', '9 시', '12 시', '6 시', '5 분', '7 분', '8 분']);
+    expect(unsourcedFacts({ sources: [law] }, '18시로 바뀌어요')).toEqual(['18 시']);
+  });
+
   it('the new HWP tool facts are read from LIMITS', () => {
     expect(TOOL_FACTS['hwp.pdfMb.desktop'].value).toBe(HWP_LIMITS.desktop.capBytes / MB_DEC);
     expect(TOOL_FACTS['hwp.pdfPages.desktop'].value).toBe(HWP_LIMITS.desktop.capPages);
