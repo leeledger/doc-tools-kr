@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 640" width="600" height="640" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">가로 3.5 cm 세로 4.5 cm 여권사진 틀과 정수리부터 턱까지 3.2–3.6 cm 머리 길이</title>
+<rect x="0.5" y="0.5" width="599" height="639" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="300" y="34" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">여권사진 틀과 머리 길이</text>
+<rect x="110" y="70" width="350" height="450" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+<path d="M120 520 Q130 482 285 476 Q440 482 450 520 Z" fill="#d8dedc"/>
+<ellipse cx="285" cy="292" rx="118" ry="170" fill="#d8dedc" stroke="#9aa7a4"/>
+<line x1="285" y1="122" x2="510" y2="122" stroke="#5b6663" stroke-dasharray="4 3"/>
+<line x1="285" y1="462" x2="510" y2="462" stroke="#5b6663" stroke-dasharray="4 3"/>
+<line x1="500" y1="292" x2="500" y2="124" stroke="#1c2321" stroke-width="2"/>
+<polygon points="500,124 504.3,133.0 495.7,133.0" fill="#1c2321"/>
+<line x1="500" y1="292" x2="500" y2="460" stroke="#1c2321" stroke-width="2"/>
+<polygon points="500,460 495.7,451.0 504.3,451.0" fill="#1c2321"/>
+<text x="516" y="284" font-size="14" fill="#1c2321" text-anchor="start">정수리–턱</text>
+<text x="516" y="306" font-size="14" fill="#1c2321" text-anchor="start" font-weight="bold">3.2–3.6 cm</text>
+<line x1="110" y1="542" x2="460" y2="542" stroke="#0f766e"/>
+<text x="285" y="566" font-size="15" fill="#0f766e" text-anchor="middle" font-weight="bold">가로 3.5 cm</text>
+<text x="94" y="295" font-size="15" fill="#0f766e" text-anchor="middle" font-weight="bold" transform="rotate(-90 94 295)">세로 4.5 cm</text>
+<text x="285" y="108" font-size="13" fill="#5b6663" text-anchor="middle">머리카락은 빼고 재요</text>
+</svg>

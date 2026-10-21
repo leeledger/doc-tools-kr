@@ -22,6 +22,7 @@ export const TYPES = {
   '.xml': 'application/xml; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
   '.png': 'image/png',
+  '.webp': 'image/webp',
   '.ico': 'image/x-icon',
   '.svg': 'image/svg+xml',
   '.woff2': 'font/woff2',

@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=history', label: '한국사 시험 사진 규격에 맞추기' }
-related: [id-photo-size, qnet-photo, gosi-photo, hanja-exam-photo]
+related: [qnet-photo, gosi-photo, hanja-exam-photo, korcham-photo]
 sources:
   - preset: history
   - url: https://www.historyexam.go.kr/pst/view.do?bbs=faq&pst_sno=1000015355
@@ -70,3 +70,5 @@ og: { title: '한국사 시험 사진', line: 'GIF·JPG · 권장 120×160픽셀
 3. 저장하면 120×160픽셀 JPG 파일이 만들어져요.
 
 얼굴이나 배경은 고치지 않아요. 본인을 분명히 알아볼 수 있는 표준 증명사진을 쓰세요. 수험표 사진으로 본인인지 알아볼 수 없으면 시험을 볼 수 없어요.
+
+한능검 말고 다른 시험의 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에서 볼 수 있어요.

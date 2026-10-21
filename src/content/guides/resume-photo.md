@@ -10,7 +10,7 @@ category: 사진
 topic: 취업·이력서
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=saramin', label: '사람인 이력서 사진 맞추기' }
-related: [id-photo-size, id-photo-kb, passport-photo]
+related: [photo-kb, passport-photo, admission-photo]
 sources:
   - preset: saramin
   - preset: jobkorea
@@ -52,3 +52,5 @@ season: { peak: '3월, 9월', refresh: ['2027-01-20', '2027-07-20'] }
 얼굴이나 배경은 고치지 않아요.
 
 자기소개서 글자 수는 [글자수 세기](/char-count/)에서 공백 포함·제외와 바이트로 바로 셀 수 있어요.
+
+공무원·자격시험 원서 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에 함께 모았어요.

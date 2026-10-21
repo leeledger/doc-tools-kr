@@ -2,6 +2,7 @@
 // so the copy stays in Markdown (system font; gen-ui-font does not scan .md). The table rows come from
 // src/data/hubs.ts. src/content.config.ts uses this for the `hubs` collection.
 import { z } from 'astro/zod';
+import { presetSource, urlSource } from './guide-schema';
 
 const len = (min: number, max: number) =>
   z.string().refine((s) => [...s].length >= min && [...s].length <= max, `${min}–${max} characters`);
@@ -34,6 +35,8 @@ export const hubSchema = z
       .min(1)
       .max(2),
     related: z.array(z.string()).min(2).max(4),
+    /** The hub's own sources (CONTENT1021 D3; same shapes as a guide's): with the table rows' facts, what its copy may state. */
+    sources: z.array(z.union([presetSource, urlSource])).default([]),
     faq: z.array(z.object({ q: len(4, 80), a: len(10, 400) }).strict()).min(3).max(6),
     og: z.object({ title: len(2, 14), line: len(4, 34) }).strict(),
   })

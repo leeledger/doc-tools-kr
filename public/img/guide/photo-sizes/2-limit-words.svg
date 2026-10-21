@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" width="720" height="260" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">이하와 미만의 차이: 이하는 한도 값을 포함하고 미만은 포함하지 않아요</title>
+<rect x="0.5" y="0.5" width="719" height="259" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">용량 한도 읽는 법</text>
+<line x1="50" y1="100" x2="400" y2="100" stroke="#5b6663" stroke-width="2"/>
+<rect x="50" y="92" width="290" height="16" rx="8" fill="#e6f3f1" stroke="#e6f3f1"/>
+<circle cx="340" cy="100" r="9" fill="#0f766e"/>
+<text x="340" y="80" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">500KB 이하</text>
+<text x="430" y="107" font-size="22" fill="#0f766e" text-anchor="start" font-weight="bold">이하</text>
+<text x="490" y="106" font-size="14" fill="#5b6663" text-anchor="start">딱 한도인 파일도 돼요</text>
+<line x1="50" y1="190" x2="400" y2="190" stroke="#5b6663" stroke-width="2"/>
+<rect x="50" y="182" width="290" height="16" rx="8" fill="#e6f3f1" stroke="#e6f3f1"/>
+<circle cx="340" cy="190" r="9" fill="#ffffff" stroke="#b42318" stroke-width="3"/>
+<text x="340" y="170" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">350KB 미만</text>
+<text x="430" y="197" font-size="22" fill="#b42318" text-anchor="start" font-weight="bold">미만</text>
+<text x="490" y="196" font-size="14" fill="#5b6663" text-anchor="start">딱 한도인 파일은 안 돼요</text>
+</svg>

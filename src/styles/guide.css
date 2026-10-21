@@ -15,6 +15,11 @@
 .guide-body th, .guide-body td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
 .guide-body a { color: var(--brand); }
 .guide-body li + li { margin-top: 6px; }
+/* CONTENT1021 D9: guide figures (own SVG diagrams, own tool screenshots). Lazy, sized by width/height (no CLS); the
+   SVGs carry their own opaque light background and border, so they read the same in dark mode. */
+.guide-fig { margin: 20px 0; }
+.guide-fig img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.guide-fig figcaption { margin-top: 8px; font-size: 14px; color: var(--muted); }
 /* Hubs (G2 A1): the table scrolls sideways on a phone instead of squeezing its columns. */
 .hub-table h2 { font-size: 21px; margin: 32px 0 10px; }
 .hub-scroll { overflow-x: auto; }

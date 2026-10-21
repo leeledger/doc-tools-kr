@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" width="720" height="380" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">여권 재발급 사진 파일의 가로·세로 픽셀 범위와 권장 크기</title>
+<rect x="0.5" y="0.5" width="719" height="379" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="34" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">여권 재발급 사진 파일이 올라가는 크기</text>
+<rect x="70" y="70" width="252" height="215" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<circle cx="196" cy="190" r="7" fill="#0f766e"/>
+<text x="196" y="218" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">권장 413×531 픽셀</text>
+<text x="196" y="311" font-size="15" fill="#1c2321" text-anchor="middle">가로 395–431 픽셀</text>
+<text x="338" y="182" font-size="15" fill="#1c2321" text-anchor="start">세로 507–550 픽셀</text>
+<rect x="500" y="110" width="190" height="96" rx="8" fill="#f6f7f6" stroke="#c9d1cf"/>
+<text x="595" y="140" font-size="15" fill="#1c2321" text-anchor="middle">JPG 파일</text>
+<text x="595" y="166" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">500 KB 이하</text>
+<text x="595" y="192" font-size="14" fill="#5b6663" text-anchor="middle">6개월 이내에 찍은 사진</text>
+<text x="40" y="350" font-size="14" fill="#5b6663" text-anchor="start">가로나 세로가 상자 밖으로 나가면 정부24에서 올라가지 않아요</text>
+</svg>

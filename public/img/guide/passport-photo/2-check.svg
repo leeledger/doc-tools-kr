@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" width="720" height="360" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">여권사진에서 되는 경우와 안 되는 경우 네 가지</title>
+<rect x="0.5" y="0.5" width="719" height="359" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="32" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">이렇게 찍으면 돼요, 이러면 다시 찍어요</text>
+<rect x="17" y="52" width="156" height="220" rx="6" fill="#f7f8f8" stroke="#0f766e" stroke-width="2"/>
+<ellipse cx="95" cy="109.3" rx="27.2" ry="34.0" fill="#d8dedc"/>
+<path d="M31.0 214.0 Q32.6 154.0 95.0 151.6 Q157.4 154.0 159.0 214.0 Z" fill="#d8dedc"/>
+<circle cx="95" cy="300" r="16" fill="none" stroke="#0f766e" stroke-width="4"/>
+<text x="95" y="342" font-size="14" fill="#1c2321" text-anchor="middle">정면, 무표정</text>
+<rect x="197" y="52" width="156" height="220" rx="6" fill="#f7f8f8" stroke="#b42318" stroke-width="2"/>
+<ellipse cx="275" cy="109.3" rx="27.2" ry="34.0" fill="#d8dedc"/>
+<path d="M211.0 214.0 Q212.6 154.0 275.0 151.6 Q337.4 154.0 339.0 214.0 Z" fill="#d8dedc"/>
+<path d="M245 92 Q275 70 305 92 L305 116 Q275 106 245 116 Z" fill="#6b5a4e"/>
+<line x1="262" y1="287" x2="288" y2="313" stroke="#b42318" stroke-width="4"/><line x1="288" y1="287" x2="262" y2="313" stroke="#b42318" stroke-width="4"/>
+<text x="275" y="342" font-size="14" fill="#1c2321" text-anchor="middle">앞머리로 눈썹 가림</text>
+<rect x="377" y="52" width="156" height="220" rx="6" fill="#f7f8f8" stroke="#b42318" stroke-width="2"/>
+<ellipse cx="455" cy="109.3" rx="27.2" ry="34.0" fill="#d8dedc"/>
+<path d="M391.0 214.0 Q392.6 154.0 455.0 151.6 Q517.4 154.0 519.0 214.0 Z" fill="#d8dedc"/>
+<rect x="429" y="110" width="22" height="13" rx="4" fill="#3b4a6b" stroke="#3b4a6b"/>
+<rect x="459" y="110" width="22" height="13" rx="4" fill="#3b4a6b" stroke="#3b4a6b"/>
+<line x1="451" y1="116" x2="459" y2="116" stroke="#3b4a6b" stroke-width="2"/>
+<line x1="442" y1="287" x2="468" y2="313" stroke="#b42318" stroke-width="4"/><line x1="468" y1="287" x2="442" y2="313" stroke="#b42318" stroke-width="4"/>
+<text x="455" y="342" font-size="14" fill="#1c2321" text-anchor="middle">색이 든 안경</text>
+<rect x="557" y="52" width="156" height="220" rx="6" fill="#f7f8f8" stroke="#b42318" stroke-width="2"/>
+<ellipse cx="635" cy="109.3" rx="27.2" ry="34.0" fill="#d8dedc"/>
+<path d="M571.0 214.0 Q572.6 154.0 635.0 151.6 Q697.4 154.0 699.0 214.0 Z" fill="#d8dedc"/>
+<path d="M635 78 A27 34 0 0 1 635 146 Z" fill="#8e9a97"/>
+<line x1="622" y1="287" x2="648" y2="313" stroke="#b42318" stroke-width="4"/><line x1="648" y1="287" x2="622" y2="313" stroke="#b42318" stroke-width="4"/>
+<text x="635" y="342" font-size="14" fill="#1c2321" text-anchor="middle">얼굴에 그림자</text>
+</svg>

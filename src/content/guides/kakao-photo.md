@@ -10,7 +10,7 @@ category: 사진
 topic: 사진 보내기
 tools: [photo-compress]
 cta: { href: '/photo-compress/?target=2500', label: '카톡 120장 묶음에 맞게 사진 줄이기' }
-related: [photo-kb, email-attachment-limit, id-photo-kb, heic-to-jpg]
+related: [photo-kb, email-attachment-limit, heic-to-jpg]
 sources:
   - url: https://cs.kakao.com/helps_html/1073209424
     title: 카카오 고객센터 — 첨부/ 전송할 수 있는 멀티미디어는 무엇인가요?

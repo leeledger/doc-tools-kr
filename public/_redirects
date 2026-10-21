@@ -7,3 +7,12 @@
 /guides /guide/ 301
 /passport/ /guide/passport-photo/ 301
 /passport /guide/passport-photo/ 301
+# CONTENT1021 D1: merged guides (the old page is deleted; its content lives in the survivor).
+/guide/id-photo-size/ /guide/photo-sizes/ 301
+/guide/id-photo-size /guide/photo-sizes/ 301
+/guide/id-photo-kb/ /guide/photo-kb/ 301
+/guide/id-photo-kb /guide/photo-kb/ 301
+/guide/passport-photo-error/ /guide/passport-reissue-photo/ 301
+/guide/passport-photo-error /guide/passport-reissue-photo/ 301
+/guide/pdf-merge-free/ /guide/pdf-merge/ 301
+/guide/pdf-merge-free /guide/pdf-merge/ 301

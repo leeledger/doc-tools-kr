@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" width="720" height="420" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">정부24 여권 사진 오류 코드를 파일, 사진, 접수 문제로 나눈 그림</title>
+<rect x="0.5" y="0.5" width="719" height="419" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="34" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">정부24 여권 사진 오류, 어디를 고칠까</text>
+<rect x="25" y="60" width="210" height="44" rx="8" fill="#0f766e" stroke="#0f766e"/>
+<text x="130" y="88" font-size="17" fill="#ffffff" text-anchor="middle" font-weight="bold">파일 문제</text>
+<rect x="25" y="120" width="210" height="46" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="148" font-size="15" fill="#1c2321" text-anchor="middle">706 속성검사 실패</text>
+<rect x="25" y="178" width="210" height="46" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="130" y="206" font-size="15" fill="#1c2321" text-anchor="middle">707 규격 준수여부</text>
+<line x1="130" y1="240" x2="130" y2="282" stroke="#0f766e" stroke-width="2"/>
+<polygon points="130,282 125.7,273.0 134.3,273.0" fill="#0f766e"/>
+<text x="130" y="312" font-size="14" fill="#1c2321" text-anchor="middle">JPG로 다시 저장</text>
+<text x="130" y="336" font-size="14" fill="#1c2321" text-anchor="middle">크기 다시 맞추기</text>
+<rect x="255" y="60" width="210" height="44" rx="8" fill="#b42318" stroke="#b42318"/>
+<text x="360" y="88" font-size="17" fill="#ffffff" text-anchor="middle" font-weight="bold">사진 문제</text>
+<rect x="255" y="120" width="210" height="46" rx="8" fill="#fdecea" stroke="#b42318"/>
+<text x="360" y="148" font-size="15" fill="#1c2321" text-anchor="middle">701 사진품질 검사</text>
+<rect x="255" y="178" width="210" height="46" rx="8" fill="#fdecea" stroke="#b42318"/>
+<text x="360" y="206" font-size="15" fill="#1c2321" text-anchor="middle">704 6개월 초과</text>
+<line x1="360" y1="240" x2="360" y2="282" stroke="#b42318" stroke-width="2"/>
+<polygon points="360,282 355.7,273.0 364.3,273.0" fill="#b42318"/>
+<text x="360" y="312" font-size="14" fill="#1c2321" text-anchor="middle">사진을 새로 찍기</text>
+<rect x="485" y="60" width="210" height="44" rx="8" fill="#7a5b00" stroke="#7a5b00"/>
+<text x="590" y="88" font-size="17" fill="#ffffff" text-anchor="middle" font-weight="bold">접수 문제</text>
+<rect x="485" y="120" width="210" height="46" rx="8" fill="#fff6dd" stroke="#7a5b00"/>
+<text x="590" y="148" font-size="15" fill="#1c2321" text-anchor="middle">679 유효하지 않은 사진</text>
+<line x1="590" y1="240" x2="590" y2="282" stroke="#7a5b00" stroke-width="2"/>
+<polygon points="590,282 585.7,273.0 594.3,273.0" fill="#7a5b00"/>
+<text x="590" y="312" font-size="14" fill="#1c2321" text-anchor="middle">다른 PC나 휴대폰으로</text>
+<text x="590" y="336" font-size="14" fill="#1c2321" text-anchor="middle">다시 접수</text>
+<text x="360" y="400" font-size="14" fill="#5b6663" text-anchor="middle">코드가 나오면 화면에 함께 나온 이유도 확인하세요</text>
+</svg>

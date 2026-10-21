@@ -5,9 +5,11 @@
 import { getPreset, type IdPreset } from './id-photo-presets';
 import { TOOL_FACTS, isToolFactRef } from './tool-facts';
 
-/** 'M' is a court's spelling of megabytes ("총용량은 100M 이하", 전자소송, G2 A3). It stays its own unit so that copy
+/** '원' (fees) and '세' (ages) are the specs most likely to be invented (CONTENT1021 D7): a guide may show one only from a quote.
+ * Not when the syllable starts another word (가로 600 세로 800, 200 원본, 3세대); a particle after it (17세부터, 400원이고) still counts.
+ * 'M' is a court's spelling of megabytes ("총용량은 100M 이하", 전자소송, G2 A3). It stays its own unit so that copy
  * written "100M" is backed only by a quote that writes "100M" (never by an unrelated "100 MB" line). */
-export type Unit = 'KB' | 'MB' | 'M' | '픽셀' | 'cm' | 'mm' | '개월';
+export type Unit = 'KB' | 'MB' | 'M' | '픽셀' | 'cm' | 'mm' | '개월' | '원' | '세';
 
 export type GuideSource = { preset: string } | { url: string; title: string; quote: string; retrieved: string; via?: 'browser' };
 
@@ -95,7 +97,7 @@ export function specProblems(g: FactInput & { spec?: readonly SpecRow[] }): stri
 
 const NUM = String.raw`\d[\d,]*(?:\.\d+)?`;
 // "pixel" and "px" appear only inside official quotes (never rendered); they count as 픽셀.
-const UNIT = String.raw`(?:KB|MB|kb|픽셀|pixel|px|cm|mm|개월|M(?![A-Za-z\d]))(?![A-Za-z])`;
+const UNIT = String.raw`(?:KB|MB|kb|픽셀|pixel|px|cm|mm|개월|원(?!본|래|칙|서|형|문|인|주|점|리|장|화|격|활|룸|고|산|천|단|가|어|수|소|자|색|하)|세(?!로|대|트|금|계|상|기|탁|련|율|월|척|제|부(?!터))|M(?![A-Za-z\d]))(?![A-Za-z])`;
 const SEP = String.raw`\s*(?:×|x|X|\*|~|–|-)\s*`;
 const CHAIN = new RegExp(String.raw`(?<![\d.,])${NUM}(?:\s*${UNIT})?(?:${SEP}${NUM}(?:\s*${UNIT})?)*`, 'g');
 const PART = new RegExp(String.raw`(${NUM})(?:\s*(${UNIT}))?`, 'g');

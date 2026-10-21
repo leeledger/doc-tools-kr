@@ -298,7 +298,8 @@ describe('G2 A1: topics, spec rows, hubs', () => {
   it('hubs: the copy passes the fact check against the tables; every spec guide has a row; slugs never clash with a guide', () => {
     for (const h of hubFiles) {
       const rows = h.data.tables.flatMap((t) => hubRows(hubGuides, t.kind).filter((r) => !t.limitOnly || r.limit));
-      const allowed = new Set(rows.flatMap((r) => r.facts));
+      // CONTENT1021 D3: the table rows' facts plus the hub's own sources.
+      const allowed = new Set([...rows.flatMap((r) => r.facts), ...allowedFacts({ sources: h.data.sources })]);
       const copy = [h.data.title, h.data.description, h.data.answer, h.body, ...h.data.faq.flatMap((f) => [f.q, f.a])].join('\n');
       expect(numberUnits(copy).filter((f) => !allowed.has(f)), h.slug).toEqual([]);
       const linked = new Set(rows.map((r) => r.guide.slug));
@@ -306,6 +307,25 @@ describe('G2 A1: topics, spec rows, hubs', () => {
       for (const r of h.data.related) expect(published.some((g) => g.slug === r), r).toBe(true);
       expect(guides.some((g) => g.slug === h.slug)).toBe(false);
     }
+  });
+
+  it('CONTENT1021 D3: a hub may list its own sources (default none); a number only they back passes, any other fails', () => {
+    const photo = hubFiles.find((h) => h.slug === 'photo-sizes')!;
+    expect(hubSchema.parse({ ...photo.data, sources: undefined }).sources).toEqual([]);
+    expect(hubSchema.safeParse({ ...photo.data, sources: [{ url: 'http://x.kr/', title: '가나', quote: '가나', retrieved: '2026-10-21' }] }).success).toBe(false);
+    expect(photo.data.sources).toContainEqual({ preset: 'half_card' });
+    expect(unsourcedFacts({ sources: photo.data.sources }, '반명함판 354×472픽셀, 3×4 cm')).toEqual([]);
+    expect(unsourcedFacts({ sources: [] }, '반명함판 354×472픽셀')).toEqual(['354 픽셀', '472 픽셀']);
+  });
+
+  it('CONTENT1021 D7: fees (원) and ages (세) are facts: unsourced fails, a quote backs them', () => {
+    expect(numberUnits('수수료 1,000원, 만 17세 이상')).toEqual(['1000 원', '17 세']);
+    // A syllable that starts another word is no unit; a particle after the unit still is.
+    expect(numberUnits('가로 600 세로 800, 200 원본, 3세대')).toEqual([]);
+    expect(numberUnits('17세부터, 400원이고, 18세 미만')).toEqual(['17 세', '400 원', '18 세']);
+    const q = { url: 'https://example.go.kr/', title: '기관', quote: '대리인(17세 이상인 사람에 한한다) 수수료 400원', retrieved: '2026-10-21' };
+    expect(unsourcedFacts({ sources: [] }, '수수료는 400원이고 17세부터 대신 갈 수 있어요.')).toEqual(['400 원', '17 세']);
+    expect(unsourcedFacts({ sources: [q] }, '수수료는 400원이고 17세부터 대신 갈 수 있어요.')).toEqual([]);
   });
 
   it('the new HWP tool facts are read from LIMITS', () => {
@@ -484,9 +504,11 @@ describe('REQ1014-C: deep links, passport guides, 10/10 bodies', () => {
       expect(g.parsed.cta.href, slug).toBe('/id-photo/?preset=passport_online');
     }
     expect(bySlug('passport-photo').parsed.related).toContain('baby-passport-photo');
-    expect(bySlug('passport-photo-error').parsed.related).toContain('passport-reissue-photo');
-    expect(bodyLinks('passport-photo-error')).toContain('/guide/passport-reissue-photo/');
-    // intl-driving-license keeps its required inbound link after passport-photo-error drops it.
+    // CONTENT1021 D1: the error-code guide merged into passport-reissue-photo; the photo guides link the survivor.
+    expect(bySlug('passport-photo').parsed.related).toContain('passport-reissue-photo');
+    expect(bodyLinks('passport-photo')).toContain('/guide/passport-reissue-photo/');
+    expect(bySlug('passport-reissue-photo').body).toContain('## 정부24 여권 사진 오류 코드별 해결');
+    // intl-driving-license keeps its required inbound link.
     expect(bySlug('driver-license-photo').parsed.related).toContain('intl-driving-license');
   });
 
@@ -494,7 +516,8 @@ describe('REQ1014-C: deep links, passport guides, 10/10 bodies', () => {
     for (const slug of ['hwp-to-pdf', 'yearend-tax-pdf', 'ecfs-pdf-limit', 'pdf-merge', 'hwp-on-phone']) {
       expect(new Set(bodyLinks(slug)).size, slug).toBeGreaterThanOrEqual(4);
       expect(quotes(slug).some((q) => q.retrieved === '2026-10-14' && q.via !== 'browser'), slug).toBe(true);
-      expect(bySlug(slug).parsed.updated, slug).toBe('2026-10-14');
+      // CONTENT1021 D1: the merge survivor pdf-merge moved `updated` to its build day; the others stay as they were.
+      expect(bySlug(slug).parsed.updated, slug).toBe(slug === 'pdf-merge' ? '2026-10-21' : '2026-10-14');
     }
   });
 

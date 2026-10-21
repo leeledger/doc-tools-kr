@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" width="720" height="260" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">PDF 합치기 네 단계: 파일 고르기, 순서 정하기, 합치기, 내려받기</title>
+<rect x="0.5" y="0.5" width="719" height="259" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">PDF 합치기 순서</text>
+<rect x="30" y="70" width="140" height="120" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<circle cx="100" cy="108" r="18" fill="#0f766e"/>
+<text x="100" y="114" font-size="17" fill="#ffffff" text-anchor="middle" font-weight="bold">1</text>
+<text x="100" y="160" font-size="16" fill="#1c2321" text-anchor="middle" font-weight="bold">파일 고르기</text>
+<line x1="172" y1="130" x2="200" y2="130" stroke="#0f766e" stroke-width="2"/>
+<polygon points="200,130 191.0,134.3 191.0,125.7" fill="#0f766e"/>
+<rect x="202" y="70" width="140" height="120" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<circle cx="272" cy="108" r="18" fill="#0f766e"/>
+<text x="272" y="114" font-size="17" fill="#ffffff" text-anchor="middle" font-weight="bold">2</text>
+<text x="272" y="160" font-size="16" fill="#1c2321" text-anchor="middle" font-weight="bold">순서 정하기</text>
+<line x1="344" y1="130" x2="372" y2="130" stroke="#0f766e" stroke-width="2"/>
+<polygon points="372,130 363.0,134.3 363.0,125.7" fill="#0f766e"/>
+<rect x="374" y="70" width="140" height="120" rx="10" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<circle cx="444" cy="108" r="18" fill="#0f766e"/>
+<text x="444" y="114" font-size="17" fill="#ffffff" text-anchor="middle" font-weight="bold">3</text>
+<text x="444" y="160" font-size="16" fill="#1c2321" text-anchor="middle" font-weight="bold">합치기</text>
+<line x1="516" y1="130" x2="544" y2="130" stroke="#0f766e" stroke-width="2"/>
+<polygon points="544,130 535.0,134.3 535.0,125.7" fill="#0f766e"/>
+<rect x="546" y="70" width="140" height="120" rx="10" fill="#0f766e" stroke="#0f766e" stroke-width="2"/>
+<circle cx="616" cy="108" r="18" fill="#ffffff"/>
+<text x="616" y="114" font-size="17" fill="#0f766e" text-anchor="middle" font-weight="bold">4</text>
+<text x="616" y="160" font-size="16" fill="#ffffff" text-anchor="middle" font-weight="bold">내려받기</text>
+<text x="360" y="232" font-size="14" fill="#5b6663" text-anchor="middle">목록에서 파일을 끌어 순서를 바꿀 수 있어요</text>
+</svg>

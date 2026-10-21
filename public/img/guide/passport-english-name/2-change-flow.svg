@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">여권 영문 이름 변경 흐름: 정해진 사유가 없으면 그대로, 있으면 접수 기관에서 신청</title>
+<rect x="0.5" y="0.5" width="719" height="399" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">여권 영문 이름을 바꾸고 싶을 때</text>
+<rect x="230" y="60" width="260" height="50" rx="10" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="360" y="91" font-size="15" fill="#1c2321" text-anchor="middle">바꾸고 싶은 영문 이름이 있어요</text>
+<line x1="360" y1="112" x2="360" y2="146" stroke="#5b6663" stroke-width="2"/>
+<polygon points="360,146 355.7,137.0 364.3,137.0" fill="#5b6663"/>
+<polygon points="360,150 520,200 360,250 200,200" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+<text x="360" y="196" font-size="14" fill="#1c2321" text-anchor="middle">여권법 시행령이 정한</text>
+<text x="360" y="216" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">사유에 해당하나요?</text>
+<line x1="200" y1="200" x2="140" y2="200" stroke="#5b6663" stroke-width="2"/>
+<polygon points="140,200 149.0,195.7 149.0,204.3" fill="#5b6663"/>
+<text x="170" y="190" font-size="13" fill="#5b6663" text-anchor="middle">아니요</text>
+<rect x="20" y="230" width="220" height="80" rx="10" fill="#f7f8f8" stroke="#c9d1cf"/>
+<text x="130" y="262" font-size="14" fill="#1c2321" text-anchor="middle">이전 여권과 같은</text>
+<text x="130" y="286" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">영문 이름을 써요</text>
+<line x1="520" y1="200" x2="580" y2="200" stroke="#5b6663" stroke-width="2"/>
+<polygon points="580,200 571.0,204.3 571.0,195.7" fill="#5b6663"/>
+<text x="550" y="190" font-size="13" fill="#5b6663" text-anchor="middle">네</text>
+<rect x="480" y="230" width="220" height="80" rx="10" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="590" y="262" font-size="14" fill="#1c2321" text-anchor="middle">접수 기관에 직접 가서</text>
+<text x="590" y="286" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">신청해요 (온라인 불가)</text>
+<text x="360" y="360" font-size="14" fill="#5b6663" text-anchor="middle">처음 여권을 만들 때 정한 영문 이름이 오래 따라가요</text>
+</svg>

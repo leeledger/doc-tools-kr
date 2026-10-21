@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=jlpt', label: 'JLPT 원서 사진으로 맞추기' }
-related: [teps-photo, passport-photo, id-photo-kb]
+related: [teps-photo, passport-photo, photo-kb]
 sources:
   - url: https://www.jlpt.or.kr/html/information_01.html
     title: JLPT 일본어능력시험 — 시험 실시 안내

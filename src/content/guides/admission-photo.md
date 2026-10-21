@@ -10,7 +10,7 @@ category: 사진
 topic: 입시·장학
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=half_card', label: '반명함판 사진 크기로 맞추기' }
-related: [univ-docs-upload, kosaf-docs, id-photo-size]
+related: [univ-docs-upload, kosaf-docs, resume-photo]
 sources:
   - url: https://apply.jinhakapply.com/Customer/Faq?categoryid=7
     title: 진학어플라이 고객센터 FAQ — 원서작성
@@ -85,3 +85,5 @@ og: { title: '대입 원서 사진', line: '3개월 이내 반명함판(3×4) ·
 ## 학교 규정을 먼저 확인하세요
 
 진학사는 따로 사진 규정을 둔 학교도 있다고 안내해요. 지원하는 학교의 모집요강에 사진 규정이 있으면 그 규정을 따르세요.
+
+원서 말고 이력서·자격시험 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에서 보세요.

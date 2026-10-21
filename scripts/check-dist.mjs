@@ -24,6 +24,9 @@ import { AFF_TEXT_RE, affEnabled, coupangOffProblems, coupangProblems, disclosur
 import { EMBED_PAGE_RE, embedHeaderProblems, embedPageProblems } from './lib/embed-check.mjs';
 import { EN_PAGE_RE, enProblems } from './lib/en-check.mjs';
 import { buildServiceWorker, precacheList } from './gen-sw.mjs';
+import { GUIDE_MIN_CHARS, LENGTH_PENDING, TOOL_MIN_CHARS, guideBodyChars, toolBodyChars } from './lib/guide-length.mjs';
+import { MERGED_GUIDES, duplicateImages, figureProblems, guideBody, lengthProblems, oldPathHits, sharedBlocks, svgProblems } from './lib/guide-check.mjs';
+import { readGuides } from './ops/lib/guides.mjs';
 
 const dist = distDir();
 const KB = 1024;
@@ -799,6 +802,48 @@ for (const p of ['guide/heic-to-jpg/index.html', 'llms.txt']) {
   for (const o of over) errors.push(`near-duplicate guides: ${o.a} ~ ${o.b} Jaccard ${o.j.toFixed(3)} ≥ ${DUP_LIMIT}`);
   // Phase-0 §2: the guide ad placeholders render nothing while ads are off.
   for (const [p, html] of pageHtml) if (/^guide\//.test(p) && html.includes('ad-slot')) errors.push(`${p}: an ad slot is rendered while ads are off`);
+}
+{
+  // CONTENT1021 D5 (AdSense P1). The expected pages come from the content, so a layout change cannot skip one silently.
+  // 1: every visible guide and hub has div.guide-body and ≥ GUIDE_MIN_CHARS; 2: every Korean tool page ≥ TOOL_MIN_CHARS;
+  // 3: ≥ 2 own figures per guide/hub, image bytes unique site-wide. LENGTH_PENDING (Steps A–C only) turns 1–3 into
+  // warnings for the pages not yet expanded. 4: SVG safety; 5: no shared ≥ 60-character block; 6: merged paths gone.
+  const root = join(import.meta.dirname, '..');
+  const hubSlugs = readdirSync(join(root, 'src', 'content', 'hubs')).filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, ''));
+  const visible = readGuides(root).filter((g) => !g.draft && (!g.requires || bgOn)).map((g) => g.slug);
+  const guideSlugs = [...visible, ...hubSlugs];
+  const guidePage = (slug) => pageHtml.get(`guide/${slug}/index.html`);
+  const g = lengthProblems(guideSlugs.map((slug) => {
+    const html = guidePage(slug);
+    return { key: slug, chars: html && html.includes('<div class="guide-body">') ? guideBodyChars(html) : null };
+  }), GUIDE_MIN_CHARS, 'guide');
+  const toolSlugs = [...readFileSync(join(root, 'src', 'data', 'tools.ts'), 'utf8').matchAll(/^\s*slug: '([a-z0-9-]+)',$/gm)].map((m) => m[1])
+    .filter((s) => (s !== 'remove-background' || bgOn) && (s !== 'english-address' || addrEn));
+  const t = lengthProblems(toolSlugs.map((s) => {
+    const html = pageHtml.get(`${s}/index.html`);
+    return { key: `/${s}/`, chars: html && html.includes('<section class="tool"') ? toolBodyChars(html) : null };
+  }), TOOL_MIN_CHARS, 'tool');
+  errors.push(...g.errors, ...t.errors);
+  warnings.push(...g.warnings, ...t.warnings);
+  const known = new Set([...guideSlugs, ...readGuides(root).map((x) => x.slug), ...toolSlugs.map((s) => `/${s}/`), '/remove-background/', '/english-address/']);
+  for (const k of LENGTH_PENDING) if (!known.has(k)) errors.push(`LENGTH_PENDING names "${k}", which is no guide, hub or tool page`);
+  const images = [];
+  const readDist = (p) => (files.some((f) => f.path === p) ? read(p) : null);
+  for (const slug of guideSlugs) {
+    const html = guidePage(slug);
+    if (!html) continue;
+    const r = figureProblems(html, slug, readDist);
+    for (const i of r.images) images.push({ ...i, page: slug });
+    for (const p of r.problems) (LENGTH_PENDING.has(slug) ? warnings : errors).push(`guide ${slug}: ${p}`);
+  }
+  errors.push(...duplicateImages(images));
+  for (const f of match(/^img\/guide\/.+\.svg$/)) for (const p of svgProblems(read(f).toString('utf8'))) errors.push(`${f}: ${p}`);
+  for (const f of match(/^img\/guide\//)) if (!/^img\/guide\/[a-z0-9-]+\/\d+-[a-z0-9-]+\.(svg|webp)$/.test(f)) errors.push(`${f}: not img/guide/<slug>/<n>-<name>.svg|webp`);
+  errors.push(...sharedBlocks(guideSlugs.filter((s) => guidePage(s)).map((s) => [s, guideBody(guidePage(s))])));
+  errors.push(...oldPathHits(match(/\.(html|xml|txt|json|webmanifest|m?js|css|svg)$|^_headers$|^_redirects$/).map((f) => [f, read(f).toString('utf8')])));
+  for (const old of Object.keys(MERGED_GUIDES)) if (files.some((f) => `/${f.path}`.startsWith(old) || f.path === `og${old.slice(0, -1)}.png`)) errors.push(`${old}: a merged guide still has a dist file`);
+  const pend = [...LENGTH_PENDING];
+  console.log(`  guide length: ${guideSlugs.length} guides+hubs, tools ${toolSlugs.length}; LENGTH_PENDING ${pend.filter((k) => !k.startsWith('/')).length} guides, ${pend.filter((k) => k.startsWith('/')).length} tools`);
 }
 {
   // The 404 suggestion script: the 404 page's JS minus the shared site script, ≤ 1 KB gzip.

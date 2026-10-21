@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=qnet', label: '큐넷 사진 규격에 맞추기' }
-related: [id-photo-kb, id-photo-size, gosi-photo]
+related: [photo-kb, gosi-photo, korcham-photo]
 sources:
   - preset: qnet
   - url: https://www.q-net.or.kr/qnet/html/guideQnet/guide_02.html
@@ -68,3 +68,5 @@ Q-Net은 이런 사진은 등록할 수 없다고 안내해요.
 1. [여권·증명사진 규격 맞추기](/id-photo/?preset=qnet)를 열면 제출처가 「Q-Net 자격시험 원서」로 골라져 있어요.
 2. 사진을 고르고 안내선에 얼굴을 가운데로 맞춰 좌우와 위에 여백을 남겨요.
 3. 저장하면 200 KB 이하 JPG 파일이 만들어져요.
+
+다른 시험의 사진 규격은 [증명사진 규격 모음](/guide/photo-sizes/) 표에서 찾아보세요.

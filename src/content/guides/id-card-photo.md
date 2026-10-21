@@ -10,7 +10,7 @@ category: 사진
 topic: 여권·신분증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=id_card', label: '사진 규격 맞추기' }
-related: [passport-photo, driver-license-photo, id-photo-size, youth-card-photo]
+related: [passport-photo, driver-license-photo, youth-card-photo, id-card-copy]
 sources:
   - url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000013
     title: 정부24 — 주민등록증 신규 발급신청
@@ -72,3 +72,5 @@ og: { title: '주민등록증 사진', line: '3.5×4.5 cm · 6개월 이내 상�
 [여권·증명사진 규격 맞추기](/id-photo/?preset=id_card)에서 「주민등록증 (인화용 3.5×4.5 cm)」을 고르면 3.5×4.5 cm로 인화할 수 있는 사진 파일로 맞춰요. 정부24 안내는 종이 사진 크기(3.5×4.5 cm)만 정하고 파일의 픽셀 크기나 용량은 적지 않았어요. 그래서 이 파일은 인화해서 내는 용도예요.
 
 얼굴이나 배경은 고치지 않아요. 저장한 파일을 사진관이나 인화 앱에 맡겨 3.5×4.5 cm로 인화하세요.
+
+여권·운전면허 같은 다른 신분증 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에 있어요.

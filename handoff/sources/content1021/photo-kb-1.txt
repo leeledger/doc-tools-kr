@@ -1,0 +1,6 @@
+URL: https://support.apple.com/ko-kr/guide/iphone/iph0edb9c18f/ios
+Fetched: 2026-10-21 (curl/urllib, HTML text; CONTENT1021 Step A)
+Verbatim lines:
+메타데이터를 보려는 사진 또는 비디오를 탭한 다음, 위로 쓸어올리거나 을 탭하십시오.
+렌즈, 셔터 속도, 파일 크기 등 카메라 메타데이터
+사진 또는 비디오를 찍은 장소(링크를 탭하여 지도 앱에서 위치 확인, 조정을 탭하여 위치 편집, ‘위치 추가’를 탭하여 위치 입력)

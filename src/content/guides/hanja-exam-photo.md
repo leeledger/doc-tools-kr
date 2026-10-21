@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=hanja', label: '한자시험 원서 사진으로 맞추기' }
-related: [history-exam-photo, id-photo-kb, id-photo-size]
+related: [history-exam-photo, photo-kb, jlpt-photo]
 sources:
   - url: https://www.hanja.re.kr/kccpt/guide/faq.do?id=91
     title: 한국어문회 자주 묻는 질문 — 사진 파일이 올라가지 않아요
@@ -76,3 +76,5 @@ og: { title: '한자시험 원서 사진', line: '230×310픽셀 · 100 KB 이�
 3. 저장하면 230×310픽셀, 100 KB 이하의 JPG 파일이 만들어져요.
 
 얼굴이나 배경은 고치지 않아요. 배경 없이 찍은 반명함판 원본을 고르세요. 이미 크기가 맞는 사진이라면 [사진 용량 줄이기](/photo-compress/?target=100)로 용량만 100 KB 아래로 줄일 수도 있어요.
+
+다른 검정시험의 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/) 한 표에 있어요.

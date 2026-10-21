@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=police', label: '경찰 원서 사진 3×4 cm로 맞추기' }
-related: [gosi-photo, id-photo-size, admission-photo]
+related: [gosi-photo, kuksiwon-photo, admission-photo]
 sources:
   - url: https://public.jinhakapply.com/PoliceV2/useinfo/useinfo02_2.aspx
     title: 경찰청 인터넷 원서접수(진학어플라이 운영) — 사진등록안내
@@ -60,3 +60,5 @@ og: { title: '경찰 증명사진', line: '최근 1년 이내 · 3×4 cm 상반�
 [여권·증명사진 규격 맞추기](/id-photo/?preset=police)를 열면 제출처가 「경찰공무원 채용 원서」로 골라져 있어요. 사진을 고르고 안내선에 얼굴을 맞추면 3×4 cm 비율로 잘린 354×472픽셀 JPG 파일이 만들어져요.
 
 3×4 cm는 사진등록안내에 나온 크기이고, 354×472픽셀은 그 크기를 해상도 300으로 계산한 값이에요. 경찰청이 정한 픽셀 크기는 아니에요. 배경과 얼굴은 고치지 않으니, 배경 없이 찍은 사진을 고르세요.
+
+다른 공무원 시험과 크기를 견주려면 [증명사진 규격 모음](/guide/photo-sizes/)을 보세요.

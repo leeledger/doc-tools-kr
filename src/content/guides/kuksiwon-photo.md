@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=kuksiwon', label: '국시원 원서 사진 규격에 맞추기' }
-related: [gosi-photo, id-photo-size, passport-photo]
+related: [gosi-photo, police-exam-photo, passport-photo]
 sources:
   - preset: kuksiwon
   - url: https://www.kuksiwon.or.kr/faq/brd/m_52/view.do?seq=60
@@ -72,3 +72,5 @@ og: { title: '국시원 원서 사진', line: '276×354픽셀 이상 · JPG·PNG
 3. 저장하면 276×354픽셀 JPG 파일이 만들어져요. 최소 크기에 딱 맞춘 파일이에요.
 
 가지고 있는 사진 가운데 가장 선명한 원본을 고르세요.
+
+국가시험 말고 다른 곳의 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에 있어요.

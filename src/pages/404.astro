@@ -5,7 +5,7 @@ import { SITE } from '../data/site';
 import { guidePath, guidesBySlug, publishedGuides } from '../data/guides';
 
 // "많이 찾는 안내" (Growth G.3): five guides.
-const popular = await guidesBySlug(['passport-photo', 'pdf-compress', 'pdf-merge', 'photo-kb', 'id-photo-size'], '404');
+const popular = await guidesBySlug(['passport-photo', 'pdf-compress', 'pdf-merge', 'photo-kb', 'passport-reissue-photo'], '404');
 // The suggestion map: only live tools and published guides.
 const live = new Set(LIVE_TOOLS.map((t) => `/${t.slug}/`));
 const guides = await publishedGuides();

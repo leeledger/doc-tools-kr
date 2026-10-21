@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=gosi', label: '공무원 시험 사진 규격에 맞추기' }
-related: [id-photo-size, id-photo-kb, passport-photo]
+related: [police-exam-photo, photo-kb, passport-photo]
 sources:
   - preset: gosi
 spec:
@@ -46,3 +46,5 @@ season: { peak: 1–2월 원서 접수, refresh: ['2026-12-15'] }
 3. 저장하면 137×177픽셀, 350 KB 미만 JPG 파일이 만들어져요.
 
 얼굴이나 배경은 고치지 않아요. 원서 접수 전에 채용시스템의 안내를 한 번 더 확인해 주세요.
+
+경찰·국가시험 같은 다른 원서 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에 모았어요.

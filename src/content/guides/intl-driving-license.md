@@ -10,7 +10,7 @@ category: 사진
 topic: 여권·신분증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=passport_online', label: '여권용 사진 규격 맞추기' }
-related: [driver-license-photo, passport-photo, passport-photo-error]
+related: [driver-license-photo, passport-photo, passport-reissue-photo]
 sources:
   - url: https://www.safedriving.or.kr/diGuide/selectDiGuide10.do?menuCd=MN-PO-1215
     title: 도로교통공단 안전운전 통합민원 — 국제운전면허증

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" width="720" height="330" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">종이 사진 3.5×4.5 cm와 제출처별 파일 픽셀 크기 비교</title>
+<rect x="0.5" y="0.5" width="719" height="329" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">종이 사진 한 장, 제출처마다 다른 파일 크기</text>
+<rect x="300" y="60" width="120" height="154" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<ellipse cx="360" cy="109.5" rx="18.7" ry="23.4" fill="#b9c6c3"/>
+<path d="M316.0 181.5 Q317.1 140.2 360.0 138.6 Q402.9 140.2 404.0 181.5 Z" fill="#b9c6c3"/>
+<text x="360" y="236" font-size="15" fill="#1c2321" text-anchor="middle">종이 사진 3.5×4.5 cm</text>
+<line x1="296" y1="140" x2="180" y2="140" stroke="#5b6663" stroke-width="2"/>
+<polygon points="180,140 189.0,135.7 189.0,144.3" fill="#5b6663"/>
+<line x1="424" y1="140" x2="540" y2="140" stroke="#5b6663" stroke-width="2"/>
+<polygon points="540,140 531.0,144.3 531.0,135.7" fill="#5b6663"/>
+<rect x="60" y="100" width="110" height="142" fill="#ffffff" stroke="#5b6663" stroke-dasharray="4 3"/>
+<text x="115" y="176" font-size="15" fill="#5b6663" text-anchor="middle">파일</text>
+<text x="115" y="268" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">국가공무원 시험</text>
+<text x="115" y="292" font-size="15" fill="#0f766e" text-anchor="middle">137×177 픽셀</text>
+<rect x="550" y="70" width="140" height="180" fill="#ffffff" stroke="#5b6663" stroke-dasharray="4 3"/>
+<text x="620" y="166" font-size="15" fill="#5b6663" text-anchor="middle">파일</text>
+<text x="620" y="276" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">여권 온라인 신청</text>
+<text x="620" y="300" font-size="15" fill="#0f766e" text-anchor="middle">413×531 픽셀</text>
+</svg>

@@ -11,7 +11,7 @@ topic: 사진 보내기
 requires: bg-remove
 tools: [remove-background]
 cta: { href: '/remove-background/', label: '사진 배경 지우기' }
-related: [stamp-image, id-photo-size, photo-kb]
+related: [stamp-image, passport-photo, photo-kb]
 sources:
   - url: https://support.apple.com/ko-kr/guide/iphone/iphfe4809658/ios
     title: iPhone 사용 설명서 — iPhone의 사진 또는 비디오 배경에서 대상체 분리하기
@@ -72,5 +72,5 @@ Apple iPhone 사용 설명서 안내대로 하면 앱을 따로 받지 않고도
 
 ## 다른 방법이 나을 때
 
-- **여권·증명사진을 낼 때**: 외교부 여권 안내는 배경이 흰색이 아니거나, 배경색을 사진 편집 프로그램으로 제거해 사진이 변형된 경우를 제출할 수 없는 사진파일로 정하고 있어요. 흰 배경에서 찍은 사진을 [여권·증명사진 규격 맞추기](/id-photo/)로 규격에 맞추세요. 기관별 크기는 [증명사진 사이즈 규격 정리](/guide/id-photo-size/)에 있어요.
+- **여권·증명사진을 낼 때**: 외교부 여권 안내는 배경이 흰색이 아니거나, 배경색을 사진 편집 프로그램으로 제거해 사진이 변형된 경우를 제출할 수 없는 사진파일로 정하고 있어요. 흰 배경에서 찍은 사진을 [여권·증명사진 규격 맞추기](/id-photo/)로 규격에 맞추세요. 기관별 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에 있어요.
 - **도장이나 서명을 그림으로 만들 때**: 종이에 찍은 도장·서명은 [전자서명·도장 이미지 만들기](/stamp-signature/)가 더 잘 맞아요. 만드는 법은 [도장·서명 이미지 만들기 안내](/guide/stamp-image/)에 있어요.

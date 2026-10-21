@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">맥 Finder에서 파일을 고르고 빠른 동작의 PDF 생성으로 PDF 하나를 만드는 순서</title>
+<rect x="0.5" y="0.5" width="719" height="299" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">맥 Finder로 PDF 하나 만들기</text>
+<path d="M40 80 h40 l14 14 v62 h-54 Z" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+<text x="67" y="128" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">PDF</text>
+<text x="67" y="178" font-size="13" fill="#1c2321" text-anchor="middle">첫째</text>
+<path d="M110 80 h40 l14 14 v62 h-54 Z" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+<text x="137" y="128" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">PDF</text>
+<text x="137" y="178" font-size="13" fill="#1c2321" text-anchor="middle">둘째</text>
+<path d="M180 80 h40 l14 14 v62 h-54 Z" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+<text x="207" y="128" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">PDF</text>
+<text x="207" y="178" font-size="13" fill="#1c2321" text-anchor="middle">셋째</text>
+<text x="135" y="206" font-size="14" fill="#5b6663" text-anchor="middle">고른 순서 = 쪽 순서</text>
+<line x1="260" y1="120" x2="300" y2="120" stroke="#0f766e" stroke-width="2"/>
+<polygon points="300,120 291.0,124.3 291.0,115.7" fill="#0f766e"/>
+<rect x="310" y="70" width="190" height="130" rx="8" fill="#f7f8f8" stroke="#c9d1cf"/>
+<text x="405" y="98" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">Control-클릭</text>
+<rect x="324" y="114" width="162" height="30" rx="4" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="405" y="134" font-size="14" fill="#1c2321" text-anchor="middle">빠른 동작</text>
+<rect x="324" y="152" width="162" height="30" rx="4" fill="#0f766e" stroke="#0f766e"/>
+<text x="405" y="172" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">PDF 생성</text>
+<line x1="510" y1="135" x2="550" y2="135" stroke="#0f766e" stroke-width="2"/>
+<polygon points="550,135 541.0,139.3 541.0,130.7" fill="#0f766e"/>
+<path d="M570 80 h70 l18 18 v92 h-88 Z" fill="#e6f3f1" stroke="#0f766e" stroke-width="2"/>
+<text x="614" y="140" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">PDF 한 개</text>
+<text x="360" y="262" font-size="14" fill="#5b6663" text-anchor="middle">미리보기로 열면 사이드바의 썸네일을 끌어 순서를 바꿀 수 있어요</text>
+</svg>

@@ -2,7 +2,8 @@
 // A hub page (G2 A1): /guide/photo-sizes/ and /guide/upload-limits/. H1, the answer, the tables built from the
 // guides' spec rows (src/data/hubs.ts), the intro body, the FAQ, then related guides and every source behind a
 // row. No ad inside or above the tables (Phase-0 §2): guide-end only, after the FAQ. The fact check: every number
-// with a unit in the hub's own copy must be one the tables show; otherwise the build fails.
+// with a unit in the hub's own copy must be one the tables show or one its own sources back (CONTENT1021 D3);
+// otherwise the build fails.
 import { render } from 'astro:content';
 import Base from './Base.astro';
 import '../styles/guide.css';
@@ -10,7 +11,7 @@ import AdSlot from '../components/AdSlot.astro';
 import Share from '../components/Share.astro';
 import { OPERATOR_ON, PRIVACY_OFFICER, SITE } from '../data/site';
 import { guideJsonLd, guideOgUrl } from '../data/jsonld';
-import { numberUnits, resolveSources } from '../data/guide-facts';
+import { resolveSources, unsourcedFacts } from '../data/guide-facts';
 import { guidePath, guidesBySlug, hubBySlug, publishedGuides } from '../data/guides';
 import { HUB_KIND, hubRows, type HubSlug } from '../data/hubs';
 
@@ -24,11 +25,12 @@ const guides = await publishedGuides();
 const tables = h.tables.map((t) => ({ ...t, rows: hubRows(guides, t.kind).filter((r) => !t.limitOnly || r.limit) }));
 const linked = guides.filter((g) => g.data.spec.some((r) => r.kind === HUB_KIND[slug]));
 const rowGuides = [...new Set(tables.flatMap((t) => t.rows.map((r) => r.guide.slug)))];
-const sources = resolveSources(guides.filter((g) => rowGuides.includes(g.id)).flatMap((g) => g.data.sources));
-const allowed = new Set(tables.flatMap((t) => t.rows.flatMap((r) => r.facts)));
+const sources = resolveSources([...h.sources, ...guides.filter((g) => rowGuides.includes(g.id)).flatMap((g) => g.data.sources)]);
+// CONTENT1021 D3: what the copy may state = the tables' facts plus the hub's own sources.
+const rowFacts = new Set(tables.flatMap((t) => t.rows.flatMap((r) => r.facts)));
 const copy = [h.title, h.description, h.ogDescription, h.answer, h.og.title, h.og.line, hub.body ?? '', ...h.faq.flatMap((f) => [f.q, f.a])].join('\n');
-const unsourced = [...new Set(numberUnits(copy).filter((f) => !allowed.has(f)))];
-if (unsourced.length) throw new Error(`hub "${slug}": numbers not in its tables: ${unsourced.join(', ')}`);
+const unsourced = unsourcedFacts({ sources: h.sources }, copy).filter((f) => !rowFacts.has(f));
+if (unsourced.length) throw new Error(`hub "${slug}": numbers without a source or table row: ${unsourced.join(', ')}`);
 for (const g of linked) if (!rowGuides.includes(g.id)) throw new Error(`hub "${slug}": guide "${g.id}" has a spec row but no table row`);
 const related = await guidesBySlug(h.related, slug);
 const { Content } = await render(hub);

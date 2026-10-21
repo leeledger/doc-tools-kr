@@ -61,3 +61,20 @@ test('360 px: the hub table scrolls inside its box and the page never scrolls si
   const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(over).toBeLessThanOrEqual(0);
 });
+
+test('CONTENT1021 D9: guide figures load from the site itself, sized and lazy (an SVG guide, a hub and a screenshot guide)', async ({ page }) => {
+  for (const path of ['/guide/passport-photo/', '/guide/photo-sizes/', '/guide/photo-kb/']) {
+    await gotoReady(page, path);
+    const figs = page.locator('.guide-body figure.guide-fig');
+    await expect(figs, path).toHaveCount(2);
+    for (const img of await figs.locator('img').all()) {
+      await img.scrollIntoViewIfNeeded();
+      await expect(img).toHaveAttribute('loading', 'lazy');
+      await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), { message: `${path} ${await img.getAttribute('src')}` }).toBe(true);
+      // The rendered box keeps the width/height ratio (no layout shift, no stretch).
+      const r = await img.evaluate((el: HTMLImageElement) => ({ w: el.clientWidth, h: el.clientHeight, aw: Number(el.getAttribute('width')), ah: Number(el.getAttribute('height')) }));
+      expect(Math.abs(r.w / r.h - r.aw / r.ah), path).toBeLessThan(0.02);
+      expect(new URL((await img.getAttribute('src'))!, page.url()).origin).toBe(new URL(page.url()).origin);
+    }
+  }
+});

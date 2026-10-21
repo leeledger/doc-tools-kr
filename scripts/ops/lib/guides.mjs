@@ -22,7 +22,7 @@ export function unquote(v) {
 
 /**
  * @typedef {{ url?: string, title?: string, quote?: string, retrieved?: string, preset?: string, via?: string }} Source
- * @typedef {{ title: string, query: string, draft: boolean, sources: Source[] }} Frontmatter
+ * @typedef {{ title: string, query: string, draft: boolean, requires?: string, sources: Source[] }} Frontmatter
  */
 
 /**
@@ -47,6 +47,7 @@ export function parseFrontmatter(md) {
       if (top[1] === 'title') out.title = unquote(top[2]);
       else if (top[1] === 'query') out.query = unquote(top[2]);
       else if (top[1] === 'draft') out.draft = unquote(top[2]) === 'true';
+      else if (top[1] === 'requires') out.requires = unquote(top[2]);
       continue;
     }
     if (!inSources) continue;
@@ -68,6 +69,23 @@ export function parseFrontmatter(md) {
  */
 export function readGuides(root = ROOT) {
   const dir = join(root, 'src', 'content', 'guides');
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.md'))
+    .sort()
+    .map((f) => {
+      const fm = parseFrontmatter(readFileSync(join(dir, f), 'utf8'));
+      const slug = f.replace(/\.md$/, '');
+      return { slug, path: `/guide/${slug}/`, title: '', query: '', draft: false, sources: [], ...fm };
+    });
+}
+
+/**
+ * Every hub (src/content/hubs/*.md, CONTENT1021 D3: hubs quote their own sources): the same shape as readGuides, so the
+ * source watch checks hub quotes like guide quotes.
+ * @returns {({ slug: string, path: string } & Frontmatter)[]}
+ */
+export function readHubs(root = ROOT) {
+  const dir = join(root, 'src', 'content', 'hubs');
   return readdirSync(dir)
     .filter((f) => f.endsWith('.md'))
     .sort()

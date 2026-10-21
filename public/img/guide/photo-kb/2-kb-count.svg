@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">1,000바이트 단위와 1,024바이트 단위로 센 용량 비교</title>
+<rect x="0.5" y="0.5" width="719" height="299" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">같은 파일, 두 가지로 센 KB</text>
+<line x1="560" y1="60" x2="560" y2="230" stroke="#b42318" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="560" y="252" font-size="15" fill="#b42318" text-anchor="middle" font-weight="bold">한도 200 KB</text>
+<text x="40" y="104" font-size="15" fill="#1c2321" text-anchor="start">1,000바이트로 셀 때</text>
+<rect x="220" y="86" width="320" height="26" rx="4" fill="#0f766e" stroke="#0f766e"/>
+<text x="380" y="104" font-size="14" fill="#ffffff" text-anchor="middle">문서딱이 맞춘 결과</text>
+<text x="40" y="174" font-size="15" fill="#1c2321" text-anchor="start">1,024바이트로 셀 때</text>
+<rect x="220" y="156" width="300" height="26" rx="4" fill="#5eada4" stroke="#5eada4"/>
+<text x="370" y="174" font-size="14" fill="#ffffff" text-anchor="middle">같은 파일, 숫자가 더 작게 나와요</text>
+<text x="360" y="286" font-size="14" fill="#5b6663" text-anchor="middle">어느 쪽으로 세어도 한도 선을 넘지 않아요</text>
+</svg>

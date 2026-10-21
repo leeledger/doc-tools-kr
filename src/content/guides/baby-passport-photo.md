@@ -10,7 +10,7 @@ category: 사진
 topic: 여권·신분증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=passport_online', label: '여권사진 규격 맞추기' }
-related: [passport-photo, passport-photo-error, id-photo-size]
+related: [passport-photo, passport-reissue-photo, id-card-photo]
 sources:
   - url: https://www.passport.go.kr/home/kor/contents.do?menuPos=32
     title: 외교부 여권안내 — 여권사진 규격
@@ -109,4 +109,6 @@ og: { title: '아기 여권사진', line: '어른과 같은 규격 · 36개월 �
 
 [여권·증명사진 규격 맞추기](/id-photo/?preset=passport_online)는 찍어 둔 사진을 여권 비율로 자르고, 413×531픽셀, 500 KB 이하 JPG 파일로 저장해요. 안내선에 아기 정수리와 턱을 맞추면 머리 길이도 확인할 수 있어요.
 
-문서딱은 사진을 고치지 않아요. 사진에 보호자 손이 보이거나 배경이 하얗지 않다면 지워 주지 않으니, 새로 찍으세요. 일반적인 귀·눈썹·옷 기준은 [여권사진 규격](/guide/passport-photo/)에서, 정부24 오류 코드는 [여권 사진 오류 코드](/guide/passport-photo-error/)에서 볼 수 있어요.
+문서딱은 사진을 고치지 않아요. 사진에 보호자 손이 보이거나 배경이 하얗지 않다면 지워 주지 않으니, 새로 찍으세요. 일반적인 귀·눈썹·옷 기준은 [여권사진 규격](/guide/passport-photo/)에서, 정부24 오류 코드별 해결은 [여권 재발급 사진 안내](/guide/passport-reissue-photo/)에서 볼 수 있어요.
+
+어른 여권과 다른 신분증 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에 정리했어요.

@@ -10,7 +10,7 @@ category: 사진
 topic: 여권·신분증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=id_card', label: '3.5×4.5 cm 사진 맞추기' }
-related: [id-card-photo, passport-photo, id-photo-size]
+related: [id-card-photo, passport-photo, driver-license-photo]
 sources:
   - url: https://www.mogef.go.kr/sp/yth/sp_yth_f005.do
     title: 성평등가족부 정책정보 — 청소년증 발급
@@ -76,3 +76,5 @@ og: { title: '청소년증 사진', line: '3.5×4.5 cm 1장 · 주민센터 무�
 ## 3.5×4.5 cm 사진 파일 만들기
 
 [여권·증명사진 규격 맞추기](/id-photo/?preset=id_card)를 열면 제출처가 「주민등록증 (인화용 3.5×4.5 cm)」으로 골라져 있어요. 청소년증 사진과 크기가 같아요. 안내선에 얼굴을 맞추고 저장한 파일을 사진관이나 인화 앱에서 3.5×4.5 cm로 인화하세요. 얼굴이나 배경은 고치지 않아요.
+
+다른 신분증과 시험 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에서 견줘 볼 수 있어요.

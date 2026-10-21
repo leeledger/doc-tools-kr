@@ -10,7 +10,7 @@ category: 사진
 topic: 여권·신분증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=driver_license', label: '사진 규격 맞추기' }
-related: [passport-photo, id-photo-size, intl-driving-license]
+related: [passport-photo, id-card-photo, intl-driving-license]
 sources:
   - url: https://www.safedriving.or.kr/diGuide/selectDiGuide01.do?menuCd=MN-PO-1211
     title: 도로교통공단 안전운전 통합민원 — 정기적성검사/면허갱신
@@ -71,3 +71,5 @@ og: { title: '운전면허 사진 규격', line: '3.5×4.5 cm 여권용 컬러 �
 ## 2026년에 바뀐 갱신 기간
 
 2026년 1월 1일부터 적성검사·갱신 기간이 생일 앞뒤 6개월 이내로 바뀌었어요. 면허증에 적힌 기간과 다를 수 있으니 안전운전 통합민원 마이페이지에서 확인하세요.
+
+주민등록증·여권 사진 크기와 견주려면 [증명사진 규격 모음](/guide/photo-sizes/)을 보세요.

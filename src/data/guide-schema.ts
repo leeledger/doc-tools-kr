@@ -37,8 +37,8 @@ const pageTitle = z
   .refine((s) => [...s].length >= 4, 'at least 4 characters')
   .refine((s) => [...s].length + SUFFIX_LEN <= 40, 'title with suffix over 40');
 
-const presetSource = z.object({ preset: z.string() }).strict();
-const urlSource = z
+export const presetSource = z.object({ preset: z.string() }).strict();
+export const urlSource = z
   .object({
     url: z.string().regex(/^https:\/\/[^\s]+$/, 'https URL'),
     title: len(2, 80),

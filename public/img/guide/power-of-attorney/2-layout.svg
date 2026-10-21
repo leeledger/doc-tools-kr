@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" width="600" height="760" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">위임장 한 장의 칸 배치: 위임인, 대리인, 위임 내용, 날짜와 서명, 받는 곳</title>
+<rect x="0.5" y="0.5" width="599" height="759" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<rect x="70" y="40" width="460" height="680" fill="#ffffff" stroke="#5b6663" stroke-width="1.5"/>
+<text x="300" y="96" font-size="26" fill="#1c2321" text-anchor="middle" font-weight="bold">위 임 장</text>
+<rect x="100" y="130" width="400" height="96" rx="6" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="120" y="162" font-size="17" fill="#0f766e" text-anchor="start" font-weight="bold">위임인</text>
+<text x="120" y="194" font-size="14" fill="#1c2321" text-anchor="start">맡기는 사람: 성명, 생년월일, 주소, 연락처</text>
+<rect x="100" y="250" width="400" height="96" rx="6" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="120" y="282" font-size="17" fill="#0f766e" text-anchor="start" font-weight="bold">대리인</text>
+<text x="120" y="314" font-size="14" fill="#1c2321" text-anchor="start">대신 가는 사람: 성명, 생년월일, 주소, 관계</text>
+<rect x="100" y="370" width="400" height="96" rx="6" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="120" y="402" font-size="17" fill="#0f766e" text-anchor="start" font-weight="bold">위임 내용</text>
+<text x="120" y="434" font-size="14" fill="#1c2321" text-anchor="start">서류를 낼 곳과 맡기는 일, 한 줄에 하나씩</text>
+<text x="300" y="520" font-size="15" fill="#1c2321" text-anchor="middle">위 사람에게 위 일을 맡깁니다.</text>
+<rect x="100" y="550" width="400" height="80" rx="6" fill="#fff6dd" stroke="#b7791f"/>
+<text x="120" y="580" font-size="17" fill="#7a5b00" text-anchor="start" font-weight="bold">날짜·서명</text>
+<text x="120" y="610" font-size="14" fill="#1c2321" text-anchor="start">쓴 날짜, 위임인 성명 옆에 서명 또는 도장</text>
+<text x="300" y="680" font-size="17" fill="#1c2321" text-anchor="middle" font-weight="bold">○○ 귀중</text>
+</svg>

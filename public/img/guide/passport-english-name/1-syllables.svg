@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" width="720" height="340" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">홍길동을 음절마다 HONG GIL DONG으로 옮기고 세 가지 모양으로 적은 예</title>
+<rect x="0.5" y="0.5" width="719" height="339" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">한글 이름을 음절마다 로마자로</text>
+<rect x="150" y="60" width="110" height="56" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="205" y="96" font-size="24" fill="#1c2321" text-anchor="middle" font-weight="bold">홍</text>
+<line x1="205" y1="118" x2="205" y2="146" stroke="#0f766e" stroke-width="2"/>
+<polygon points="205,146 200.7,137.0 209.3,137.0" fill="#0f766e"/>
+<rect x="150" y="150" width="110" height="44" rx="8" fill="#ffffff" stroke="#0f766e"/>
+<text x="205" y="179" font-size="18" fill="#0f766e" text-anchor="middle" font-weight="bold">HONG</text>
+<rect x="300" y="60" width="110" height="56" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="355" y="96" font-size="24" fill="#1c2321" text-anchor="middle" font-weight="bold">길</text>
+<line x1="355" y1="118" x2="355" y2="146" stroke="#0f766e" stroke-width="2"/>
+<polygon points="355,146 350.7,137.0 359.3,137.0" fill="#0f766e"/>
+<rect x="300" y="150" width="110" height="44" rx="8" fill="#ffffff" stroke="#0f766e"/>
+<text x="355" y="179" font-size="18" fill="#0f766e" text-anchor="middle" font-weight="bold">GIL</text>
+<rect x="450" y="60" width="110" height="56" rx="8" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="505" y="96" font-size="24" fill="#1c2321" text-anchor="middle" font-weight="bold">동</text>
+<line x1="505" y1="118" x2="505" y2="146" stroke="#0f766e" stroke-width="2"/>
+<polygon points="505,146 500.7,137.0 509.3,137.0" fill="#0f766e"/>
+<rect x="450" y="150" width="110" height="44" rx="8" fill="#ffffff" stroke="#0f766e"/>
+<text x="505" y="179" font-size="18" fill="#0f766e" text-anchor="middle" font-weight="bold">DONG</text>
+<text x="205" y="52" font-size="13" fill="#5b6663" text-anchor="middle">성</text>
+<text x="430" y="52" font-size="13" fill="#5b6663" text-anchor="middle">이름</text>
+<rect x="40" y="228" width="205" height="84" rx="8" fill="#f7f8f8" stroke="#c9d1cf"/>
+<text x="142" y="256" font-size="14" fill="#5b6663" text-anchor="middle">붙여 쓰기 (원칙)</text>
+<text x="142" y="290" font-size="17" fill="#0f766e" text-anchor="middle" font-weight="bold">HONG GILDONG</text>
+<rect x="265" y="228" width="205" height="84" rx="8" fill="#f7f8f8" stroke="#c9d1cf"/>
+<text x="367" y="256" font-size="14" fill="#5b6663" text-anchor="middle">붙임표</text>
+<text x="367" y="290" font-size="17" fill="#1c2321" text-anchor="middle" font-weight="bold">HONG GIL-DONG</text>
+<rect x="490" y="228" width="205" height="84" rx="8" fill="#f7f8f8" stroke="#c9d1cf"/>
+<text x="592" y="256" font-size="14" fill="#5b6663" text-anchor="middle">빈칸</text>
+<text x="592" y="290" font-size="17" fill="#1c2321" text-anchor="middle" font-weight="bold">HONG GIL DONG</text>
+</svg>

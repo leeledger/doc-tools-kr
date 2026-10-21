@@ -13,7 +13,7 @@ tables:
   - kind: photo
     caption: 원서·이력서 사진 파일
     limitOnly: true
-related: [email-attachment-limit, kosaf-docs, univ-docs-upload, id-photo-kb]
+related: [email-attachment-limit, kosaf-docs, univ-docs-upload, photo-kb]
 faq:
   - q: 대학 원서 서류 용량은 왜 표에 없나요?
     a: 원서접수 사이트 안내에 한 가지 값이 없어서예요. 진학사는 제출서류를 대학 모집요강이나 입학처에서 확인하라고 안내해요. 서류가 안 올라갈 때 확인할 점은 대학 원서 서류 안내에 정리해 두었어요.

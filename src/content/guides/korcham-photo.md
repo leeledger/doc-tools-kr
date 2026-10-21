@@ -10,7 +10,7 @@ category: 사진
 topic: 시험·자격증
 tools: [id-photo]
 cta: { href: '/id-photo/?preset=korcham', label: '상공회의소 시험 사진 규격에 맞추기' }
-related: [qnet-photo, id-photo-size, resume-photo]
+related: [qnet-photo, history-exam-photo, resume-photo]
 sources:
   - preset: korcham
   - url: https://license.korcham.net/ex/examInfo1.do
@@ -95,3 +95,5 @@ og: { title: '상공회의소 시험 사진', line: '400×500픽셀 · 1:1.25 �
 3. 저장하면 400×500픽셀 JPG 파일이 만들어져요. 400 대 500은 안내한 1 대 1.25 비율과 같아요.
 
 얼굴이나 배경은 고치지 않아요. 한 번 등록한 사진은 다음 접수에도 계속 쓰이니, 처음에 잘 맞춰 두면 편해요.
+
+상공회의소 시험 외 원서의 사진 크기는 [증명사진 규격 모음](/guide/photo-sizes/)에서 확인하세요.
