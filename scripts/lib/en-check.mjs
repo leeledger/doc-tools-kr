@@ -1,6 +1,7 @@
 // EN1 (brief EN decision 12, build order 5): the check-dist rules for the English pages (dist/en/...). Pure functions;
 // tests/unit/en-check.test.ts feeds them fixtures, scripts/check-dist.mjs feeds them the build.
 import { GA_LOADER } from './ga.mjs';
+import { cutElements } from './guide-length.mjs';
 import { headMeta } from './meta-length.mjs';
 
 /** An English page (dist-relative path). */
@@ -107,7 +108,8 @@ export function idParityProblems(pages, koOnly = KO_ONLY_IDS) {
     }
     const allowed = new Set(koOnly[enPath] ?? []);
     const enIds = ids(en);
-    const koIds = ids(ko);
+    // CONTENT1021 D8: the Korean tool notes (Markdown headings with their own ids) have no English counterpart.
+    const koIds = ids(cutElements(ko, 'section', (t) => /\bclass="tool-notes"/.test(t)));
     const missing = [...koIds].filter((i) => !enIds.has(i) && !allowed.has(i));
     const extra = [...enIds].filter((i) => !koIds.has(i));
     const stale = [...allowed].filter((i) => !koIds.has(i) || enIds.has(i));

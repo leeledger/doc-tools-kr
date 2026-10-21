@@ -1,0 +1,25 @@
+---
+// CONTENT1021 D8: a Korean tool page's notes (src/content/tool-notes/<slug>.md), between section.why and section.faq. The
+// text renders in the system font (.tool-notes in src/styles/app.css), so the preloaded UI font never carries it. The
+// build fails when the note is missing, names a wrong tool fact or shows a number with a unit nothing backs.
+import { getEntry, render } from 'astro:content';
+import { toolNoteProblems } from '../data/tool-notes';
+
+interface Props {
+  slug: string;
+}
+
+const { slug } = Astro.props;
+const note = await getEntry('toolNotes', slug);
+if (!note) throw new Error(`tool page /${slug}/: no src/content/tool-notes/${slug}.md (CONTENT1021 D8)`);
+const problems = toolNoteProblems(slug, note.data, note.body ?? '');
+if (problems.length) throw new Error(`tool note ${slug}: ${problems.join('; ')}`);
+const { Content, headings } = await render(note);
+const first = headings.find((h) => h.depth === 2);
+if (!first) throw new Error(`tool note ${slug}: no H2 (the section is labelled by its first H2)`);
+---
+<section class="tool-notes" aria-labelledby={first.slug}>
+  <div class="wrap narrow">
+    <Content />
+  </div>
+</section>

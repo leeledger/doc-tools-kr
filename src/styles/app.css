@@ -96,6 +96,12 @@ button.menu-toggle[aria-expanded="true"]::after { transform: translateY(2px) rot
 }
 .steps span { color: var(--muted); }
 .faq { border-top: 1px solid var(--line); }
+/* CONTENT1021 D8: the tool notes (src/components/ToolNotes.astro), between the why and FAQ blocks; system font (below). */
+.tool-notes { padding: 48px 0 24px; border-top: 1px solid var(--line); }
+.tool-notes h2 { font-size: 21px; margin: 32px 0 10px; }
+.tool-notes h2:first-child { margin-top: 0; }
+.tool-notes a { color: var(--brand); }
+.tool-notes li + li { margin-top: 6px; }
 
 .prose { padding: 56px 0 72px; }
 .prose h1 { font-size: clamp(28px, 4vw, 38px); letter-spacing: -0.02em; line-height: 1.3; margin: 0 0 12px; font-weight: 800; }
@@ -481,9 +487,10 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
    Korean font (their text is not in the UI font subset; BUILD-LOG Growth G). Every system-font rule lives here,
    in the stylesheet that also declares the UI font: in a page-only stylesheet there is a moment (that sheet still
    loading, style already computed) when guide text resolves to the UI font and fetches its late face (LCP CI
-   follow-up). check-dist only honours exemptions from this stylesheet. ADS1020: the /about/ and /contact/ text (.site-info). */
+   follow-up). check-dist only honours exemptions from this stylesheet. ADS1020: the /about/ and /contact/ text (.site-info).
+   CONTENT1021 D8: the tool notes (.tool-notes). */
 .guide-page, .guide-index .guide-topics, .guide-index section h2,
-.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides, .en-guides, .out-links, .site-info { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides, .en-guides, .out-links, .site-info, .tool-notes { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
 /* EN1 (brief EN decision 3): English pages use the system font, so they never fetch the UI font. html[lang="en"], never
    :lang(en): the "English" link on Korean pages carries lang="en" and keeps the UI font. */
 html[lang="en"] body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }

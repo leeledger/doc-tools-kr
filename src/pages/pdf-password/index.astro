@@ -5,6 +5,7 @@ import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
+import ToolNotes from '../../components/ToolNotes.astro';
 import EngineError from '../../components/EngineError.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
@@ -140,6 +141,9 @@ const EYE = '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle
       </ul>
     </div>
   </section>
+
+  <ToolNotes slug={tool.slug} />
+
 
   <section class="faq" aria-labelledby="faq-title">
     <div class="wrap narrow">

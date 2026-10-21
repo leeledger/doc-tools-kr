@@ -25,6 +25,7 @@ import { HUB_KIND, HUB_SLUGS } from '../../src/data/hubs';
 import { DUP_LIMIT, articleText, duplicatePairs, jaccard, shingles } from '../../scripts/lib/shingles.mjs';
 import { CLAIM_FILE_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, claimText, unqualifiedClaims } from '../../scripts/lib/bgcloud.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from '../../scripts/lib/fontcover.mjs';
+import { toolNotes } from '../../scripts/lib/guide-check.mjs';
 import { CORE_PATHS, stripComments, uiCharSets } from '../../scripts/lib/ui-font-chars.mjs';
 import { ID_PHOTO_PAGE, coupangProblems, disclosureStrings, placement, sponsoredProblems } from '../../scripts/lib/out-links-check.mjs';
 import { GUIDE_OUT, TOOL_OUT } from '../../scripts/lib/usage.mjs';
@@ -522,7 +523,11 @@ describe('UI font coverage helpers (scripts/lib/fontcover.mjs)', () => {
     const topic = h2Texts(guide).find((t) => /[가-힣]/.test(t))!;
     expect(visibleText(guide, exempt)).not.toContain(topic);
     const tool = readFileSync(join(DIST, 'pdf-compress', 'index.html'), 'utf8');
-    for (const t of h2Texts(tool)) expect(visibleText(tool, exempt)).toContain(t);
+    // CONTENT1021 D8: the tool notes render in the system font (.tool-notes), every other tool-page H2 in the UI font.
+    const noteH2 = h2Texts(toolNotes(tool));
+    expect(noteH2.length).toBeGreaterThan(0);
+    for (const t of h2Texts(tool).filter((x) => !noteH2.includes(x))) expect(visibleText(tool, exempt)).toContain(t);
+    for (const t of noteH2) expect(visibleText(tool, exempt)).not.toContain(t);
   });
 
   it('uncovered lists each missing character once and ignores whitespace', () => {
@@ -917,6 +922,8 @@ describe('built output', () => {
     expect(urls).not.toContain('/stamp-maker/');
     // ROMANIZE1016 (D7): not precached, like every new tool page.
     expect(urls).not.toContain('/english-name/');
+    // CONTENT1021 D10: the tool notes pushed the precache over 450 KB; /stamp-signature/ leaves (stored when visited).
+    expect(urls).not.toContain('/stamp-signature/');
     for (const tool of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/']) expect(urls).toContain(tool);
     // Round 2: the lazily imported /id-photo/ controller is precached too (offline first use).
     expect(urls.some((u: string) => /^\/_astro\/controller\.[\w-]+\.js$/.test(u))).toBe(true);

@@ -1,7 +1,7 @@
 // The content gates of CONTENT1021 D5 (check-dist wires them; tests/unit/guide-check.test.ts feeds fixtures). Pure
 // functions: no file system access except through the `readFile` callback the caller passes.
 //   D5.1/D5.2 length (bars and metrics: ./guide-length.mjs) · D5.3 own figures · D5.4 SVG safety
-//   D5.5 no shared ≥60-code-point block across pages · D5.6 merged (301) guide paths gone from dist.
+//   D5.5 no shared ≥60-code-point block across pages (guides and hubs; tool notes, D8) · D5.6 merged (301) guide paths gone from dist.
 import { createHash } from 'node:crypto';
 import { LENGTH_PENDING, countChars, proseText } from './guide-length.mjs';
 
@@ -64,6 +64,11 @@ export function guideBody(html) {
   if (i < 0) return '';
   const end = html.indexOf('<section class="guide-faq"', i);
   return html.slice(i, end > i ? end : undefined);
+}
+
+/** D8: the inner HTML of a built tool page's section.tool-notes ('' when none). */
+export function toolNotes(html) {
+  return elements(html, 'section').find((e) => /\bclass="tool-notes"/.test(e.open))?.inner ?? '';
 }
 
 /** Intrinsic size of an SVG (viewBox, else width/height), PNG or WebP file; null when unreadable. */

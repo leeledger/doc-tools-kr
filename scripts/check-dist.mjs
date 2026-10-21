@@ -25,7 +25,7 @@ import { EMBED_PAGE_RE, embedHeaderProblems, embedPageProblems } from './lib/emb
 import { EN_PAGE_RE, enProblems } from './lib/en-check.mjs';
 import { buildServiceWorker, precacheList } from './gen-sw.mjs';
 import { GUIDE_MIN_CHARS, LENGTH_PENDING, TOOL_MIN_CHARS, guideBodyChars, toolBodyChars } from './lib/guide-length.mjs';
-import { MERGED_GUIDES, duplicateImages, figureProblems, guideBody, lengthProblems, oldPathHits, sharedBlocks, svgProblems } from './lib/guide-check.mjs';
+import { MERGED_GUIDES, duplicateImages, figureProblems, guideBody, lengthProblems, oldPathHits, sharedBlocks, svgProblems, toolNotes } from './lib/guide-check.mjs';
 import { readGuides } from './ops/lib/guides.mjs';
 
 const dist = distDir();
@@ -840,6 +840,10 @@ for (const p of ['guide/heic-to-jpg/index.html', 'llms.txt']) {
   for (const f of match(/^img\/guide\/.+\.svg$/)) for (const p of svgProblems(read(f).toString('utf8'))) errors.push(`${f}: ${p}`);
   for (const f of match(/^img\/guide\//)) if (!/^img\/guide\/[a-z0-9-]+\/\d+-[a-z0-9-]+\.(svg|webp)$/.test(f)) errors.push(`${f}: not img/guide/<slug>/<n>-<name>.svg|webp`);
   errors.push(...sharedBlocks(guideSlugs.filter((s) => guidePage(s)).map((s) => [s, guideBody(guidePage(s))])));
+  // D8: every built Korean tool page carries its notes, and no ≥ 60-character block is shared between two tools' notes.
+  const notes = toolSlugs.filter((s) => pageHtml.has(`${s}/index.html`)).map((s) => [`/${s}/`, toolNotes(pageHtml.get(`${s}/index.html`))]);
+  for (const [k, n] of notes) if (!n) errors.push(`tool ${k}: no section.tool-notes (src/content/tool-notes/, CONTENT1021 D8)`);
+  errors.push(...sharedBlocks(notes));
   errors.push(...oldPathHits(match(/\.(html|xml|txt|json|webmanifest|m?js|css|svg)$|^_headers$|^_redirects$/).map((f) => [f, read(f).toString('utf8')])));
   for (const old of Object.keys(MERGED_GUIDES)) if (files.some((f) => `/${f.path}`.startsWith(old) || f.path === `og${old.slice(0, -1)}.png`)) errors.push(`${old}: a merged guide still has a dist file`);
   const pend = [...LENGTH_PENDING];

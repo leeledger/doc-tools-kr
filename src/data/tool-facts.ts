@@ -15,7 +15,9 @@ import { LIMITS as IMG_JPG_LIMITS } from '../tools/image-to-jpg/limits';
 import { LIMITS as PDF_SPLIT_LIMITS } from '../tools/pdf-split/limits';
 import { LIMITS as PDF_SIGN_LIMITS } from '../tools/pdf-sign/limits';
 import { LIMITS as ID_COPY_LIMITS } from '../tools/id-copy/limits';
-import { LIMITS as PDF_EDIT_LIMITS } from '../tools/pdf-edit/limits';
+import { LIMITS as PDF_EDIT_LIMITS, MAX_ITEMS as PDF_EDIT_MAX_ITEMS } from '../tools/pdf-edit/limits';
+import { GOAL_MAX, GOAL_MIN } from '../tools/char-count/count';
+import { TARGET_MB_BYTES } from '../lib/pdf/compress/levels';
 import { LIMITS as PHOTO_LIMITS } from '../tools/photo-compress/limits';
 import { KB_BYTES, RANGES } from '../tools/photo-compress/options';
 import { POWER_OF_ATTORNEY } from './forms/power-of-attorney';
@@ -40,6 +42,8 @@ export const TOOL_FACTS = {
   'photo-compress.maxFileMb.mobile': { value: PHOTO_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
   'pdf-compress.targetMb.min': { value: TARGET_MB.min, unit: 'MB' },
   'pdf-compress.targetMb.max': { value: TARGET_MB.max, unit: 'MB' },
+  // CONTENT1021 C round 2: the bytes one target MB counts (the tool note says so).
+  'pdf-compress.targetMbBytes': { value: TARGET_MB_BYTES },
   'pdf-compress.levels': { value: levelNames },
   'pdf-compress.maxMb.desktop': { value: COMPRESS_LIMITS.desktop.hardBytes / MB, unit: 'MB' },
   'pdf-compress.maxMb.mobile': { value: COMPRESS_LIMITS.mobile.hardBytes / MB, unit: 'MB' },
@@ -78,6 +82,10 @@ export const TOOL_FACTS = {
   'power-of-attorney.taskMaxLength': { value: POWER_OF_ATTORNEY.fields.find((f) => f.id === 'task')?.maxLength ?? 0 },
   'pdf-edit.maxFileMb.desktop': { value: PDF_EDIT_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
   'pdf-edit.maxFileMb.mobile': { value: PDF_EDIT_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
+  'pdf-edit.maxItems': { value: PDF_EDIT_MAX_ITEMS },
+  // TOOLS1015 C1: the 글자수 세기 goal range.
+  'char-count.goalMin': { value: GOAL_MIN },
+  'char-count.goalMax': { value: GOAL_MAX },
   // HWP (1 MB = 1,000,000 bytes there): the largest file a device opens, the PDF caps on phones, the search span.
   'hwp.maxMb.desktop': { value: HWP_LIMITS.desktop.hardBytes / MB_DEC, unit: 'MB' },
   'hwp.maxMb.mobile': { value: HWP_LIMITS.mobile.hardBytes / MB_DEC, unit: 'MB' },
