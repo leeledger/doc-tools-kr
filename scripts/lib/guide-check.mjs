@@ -3,7 +3,7 @@
 //   D5.1/D5.2 length (bars and metrics: ./guide-length.mjs) · D5.3 own figures · D5.4 SVG safety
 //   D5.5 no shared ≥60-code-point block across pages (guides and hubs; tool notes, D8) · D5.6 merged (301) guide paths gone from dist.
 import { createHash } from 'node:crypto';
-import { LENGTH_PENDING, countChars, proseText } from './guide-length.mjs';
+import { countChars, proseText } from './guide-length.mjs';
 
 /** D1: the merged guides, old path → survivor (public/_redirects carries both spellings of each, 301). */
 export const MERGED_GUIDES = {
@@ -24,18 +24,17 @@ export const DUP_BLOCK_MIN = 60;
 export const ASPECT_TOL = 0.01;
 
 /**
- * D5.1/D5.2: the pages a rule expects, each `{ key, chars }` (`chars` null: no page or no counted body). Under the bar
- * is an error, or a warning for a key in `pending`; a pending key that passes is an error (take it off the list).
+ * D5.1/D5.2: the pages a rule expects, each `{ key, chars }` (`chars` null: no page or no counted body). A missing
+ * page or one under the bar is an error (no exemption list since CONTENT1021 Step D).
+ * @returns {string[]}
  */
-export function lengthProblems(pages, min, label, pending = LENGTH_PENDING) {
+export function lengthProblems(pages, min, label) {
   const errors = [];
-  const warnings = [];
   for (const { key, chars } of pages) {
     if (chars === null) errors.push(`${label} ${key}: not in dist or no counted body`);
-    else if (chars < min) (pending.has(key) ? warnings : errors).push(`${label} ${key}: ${chars} characters < ${min}${pending.has(key) ? ' (LENGTH_PENDING)' : ''}`);
-    else if (pending.has(key)) errors.push(`${label} ${key}: ${chars} ≥ ${min} but still in LENGTH_PENDING (remove it)`);
+    else if (chars < min) errors.push(`${label} ${key}: ${chars} characters < ${min}`);
   }
-  return { errors, warnings };
+  return errors;
 }
 
 /** Every `<tag …>…</tag>` element (balanced) of `html`: { open, inner, index }. */

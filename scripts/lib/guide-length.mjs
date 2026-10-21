@@ -10,16 +10,6 @@
 export const GUIDE_MIN_CHARS = 2500;
 export const TOOL_MIN_CHARS = 2000;
 
-/**
- * Scaffolding, Steps A–C of CONTENT1021 only (D5): guide/hub slugs and tool paths not yet expanded. check-dist reports
- * their length and figure rules as WARN instead of FAIL. Each step removes its pages; Step D deletes this constant.
- * A page that passes may never be added (check-dist fails on a pending page that passes).
- * @type {Set<string>}
- */
-export const LENGTH_PENDING = new Set([
-  // Empty since Step C (every guide, hub and Korean tool page passes); Step D deletes the constant.
-]);
-
 const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
 /** Decodes the entities Astro writes (named basics and numeric). */

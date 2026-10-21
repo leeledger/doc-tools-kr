@@ -3683,3 +3683,20 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - /power-of-attorney/: the fieldset ids are now `pa-group-<id>` (was `pa-<id>`, which duplicated `id="pa-task"` with the textarea); 「부탁할 일」 now labels the textarea. No CSS/JS/test used the group ids (grep).
 - Gates: check 0/0; vitest 95 files 2,095/2,095; default build + check-dist OK (precache 419.1/450, fonts 92.1/92.66), PUBLIC_BG_REMOVE=1 build + check-dist OK (422.8/450, remove-background 2,064); image-to-jpg 2,102; e2e power-of-attorney.spec.ts chromium 9/9. Full playwright not run locally (memory; orchestrator instruction) — CI must be green before deploy.
 - Status: DONE. Not committed.
+
+## CONTENT1021 Step D (Bob, 2026-10-21) — lock
+- Status: DONE. Not committed (branch content1021-c working tree). Review request: handoff/REVIEW-REQUEST-CONTENT1021-D.md.
+- LENGTH_PENDING deleted with every code path (guide-length lib + CLI, guide-check lengthProblems, check-dist); unit test asserts it is not exported; bars unchanged (2,500 / 2,000).
+- Number checker (src/data/guide-facts.ts): units 년, 시간, 시, 분, clock HH:MM; dotted agency dates state their year, HH:00 states the hour; 「N 세 번째」/「N 세 가지」 (spaced 세 + counter) no longer read as an age. Newly flagged: driver-license 2011/2026년, e-signature 2020/2022년, hanja 9/18시, passport-english-name 2024년 — all backed by existing quotes except 2022년 (new law.go.kr header quote, excerpt saved). Hubs, SVGs, tool notes: none.
+- Repeated small tips: one owner each (file naming → univ-docs-upload; leftover copies → id-card-copy; keep the 사진관 file + plain wall/eye level → gosi-photo, children → hanja-exam-photo; paper photo from above → korcham-photo); 15 other spots became short links. qnet-photo got 2 sourced sentences (Q-Net guide_06) to stay above the bar with margin.
+- ECFS re-read (upload-limits hub, 3 quotes 2026-10-02): https://ecfs.scourt.go.kr/psp/index.on?m=PSP623M01 → HTTP 200, 7,076 bytes, empty body + WebSquare bootloader; cannot be read without a browser. Dates unchanged, nothing invented; browser re-read pending (owner/orchestrator).
+- Gates: check 0/0; test 2,096 pass; BG build 47 ≥2500 / 21 tools ≥2000; prod build 46 ≥2500 / 20 tools ≥2000, precache 419.1/450 KB; guide-length min 2,505 (hwpx-to-hwp), --tools min 2,069 (/pdf-split/); check:quotes --exact 589 verbatim; licenses OK; e2e chromium hubs+site 109 pass (full suite + LHCI left to CI, host memory).
+- D12: AdSense review request is an owner item, once, after Step D is live and not before mid-November; console untouched.
+
+## CONTENT1021 Step D round 2 (Bob, 2026-10-21) — Richard's Must Fix + Should Fix
+- Status: DONE, not committed. Details: REVIEW-REQUEST-CONTENT1021-D.md "Round 2".
+- Must Fix: 세 exception narrowed to whole counter words (번째/가지 + word end or particle; 번/개/장/명/곳/쪽/줄/칸/권 + word end or 째); 「만 65 세 장애인」/「만 18 세 번호」 are read as ages again (unit fail cases).
+- Should Fix 1: 시/분 read before more particles (엔·로·가·의·도·마다·만 / 엔·로·가·만); no new flags.
+- Should Fix 2: admission-photo:186 → link to gosi-photo. Decision: police-exam-photo 「집에서 찍는 경찰 원서 사진」 kept deliberately (tied to the 경찰 no-background/no-snapshot rule, different wording).
+- Should Fix 3 / pending: ECFS FAQ (https://ecfs.scourt.go.kr/psp/index.on?m=PSP623M01) — curl gets an empty WebSquare shell; the orchestrator's Chrome attempt could not drive the in-page search that opens the article. Manual browser re-read pending; upload-limits ECFS quotes keep retrieved 2026-10-02.
+- Gates: check 0/0; test 2,096 pass; BG + prod builds with check-dist pass (47/21, 46/20); guide-length min 2,505, tools min 2,069; check:quotes --exact 589 verbatim; precache 419.1/450 KB.

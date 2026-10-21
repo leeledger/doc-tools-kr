@@ -43,9 +43,8 @@ const page = (body: string) => `<div class="guide-body"><h2>첫 제목</h2>${bod
 const files = (map: Record<string, Buffer>) => (p: string) => map[p] ?? null;
 
 describe('D5.1/D5.2 length rule', () => {
-  const pending = new Set(['b', '/t/']);
-  it('under the bar fails, or warns while pending; a missing page always fails; a pending page that passes fails', () => {
-    const r = lengthProblems(
+  it('under the bar fails and a missing page fails, with no exemption; at or over the bar passes', () => {
+    const errors = lengthProblems(
       [
         { key: 'a', chars: 2499 },
         { key: 'b', chars: 100 },
@@ -55,13 +54,8 @@ describe('D5.1/D5.2 length rule', () => {
       ],
       2500,
       'guide',
-      pending,
     );
-    expect(r.errors.join('\n')).toContain('guide a: 2499 characters < 2500');
-    expect(r.errors.join('\n')).toContain('guide c: not in dist');
-    expect(r.errors.join('\n')).toContain('/t/: 2600 ≥ 2500 but still in LENGTH_PENDING');
-    expect(r.errors.join('\n')).not.toContain('guide d');
-    expect(r.warnings).toEqual(['guide b: 100 characters < 2500 (LENGTH_PENDING)']);
+    expect(errors).toEqual(['guide a: 2499 characters < 2500', 'guide b: 100 characters < 2500', 'guide c: not in dist or no counted body']);
   });
 });
 
