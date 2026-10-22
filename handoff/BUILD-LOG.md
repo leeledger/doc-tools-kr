@@ -3707,3 +3707,91 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - main cf80e68: CI success. Post-deploy run 1 failed on one transient font fetch (Pretendard-Bold.subset.26.woff, "fetch failed"; curl 200 right after, local smoke:assets OK 2,525 URLs); rerun of the failed job: success.
 - Live: /pdf-merge/, /char-count/, /pdf-compress/, /power-of-attorney/, /stamp-signature/ render the tool notes (「이럴 때 씁니다」); /power-of-attorney/ has one id="pa-task".
 - Open: ECFS FAQ quotes (upload-limits hub, ecfs-pdf-limit) still dated 2026-10-02 — needs a manual browser re-read (page opens articles only via in-page search). AdSense review request: owner, once, mid-November or later.
+
+## LOAN1022 — 차용증 만들기 + 안내 글 「차용증 쓰는 법」 (brief written 2026-10-22, Arch) — status BRIEFED
+- Brief: handoff/ARCHITECT-BRIEF-LOAN1022.md (not copied to ARCHITECT-BRIEF.md: another sprint runs in parallel). Owner
+  task 2026-10-22; scout 2026-10-16 #3 (차용증 양식 21,430/mo, ad clicks 1,192/mo).
+- Arch probes (curl, 2026-10-22): law.go.kr lsInfoR.do needs efYd (without it: 「기본정보 조회 실패」); DRF lawSearch
+  with OC=test gives lsiSeq/efYd. 이자제한법 268667/20250722 제2조 ①③ read; 최고이자율 규정 230727/20210707 「최고이자율은
+  연 20퍼센트로 한다.」; 민법 284415/20260317 has 379·598·603.
+- Locked: general 금전 차용증 only, no 보증·공정증서·대부업 (L-D1); slugs /loan-note/ + /guide/loan-note/, files
+  차용증.hwp/.pdf, after power-of-attorney (L-D2); engine adds kinds amount/number, own amountHangul (일천·일백·일십,
+  no es-hangul), docText with docTemplate/docBlank/docZero (doc keys, out of UI glyphs), dates allowed in table rows,
+  fieldProblem blocks unparseable input with an inline error instead of silently dropping it, per-spec HWP kill switch
+  LOAN_HWP (L-D3); refactor POA into a generic form tool first, own commit, POA dist diff = asset hashes only (L-D4);
+  1-page layout 차용 내용 / 채권자 / 채무자 + two sign lines, all plain 10 pt after the first table (L-D5); amount
+  echo digits only, no live 20 % warning in v1 (L-D6); glyph budgets win, system-font fallback for labels if needed
+  (L-D7); privacy = FORM1020 D7 (L-D8); general-information line + quotes only, no tax computation (L-D9); chain
+  pdf-sign/pdf-edit/pdf-compress + static stamp-maker/id-copy/pdf-merge (L-D10); registration = FORM1020 D9 list
+  (L-D11); real-한글 COM run = owner O1, ship on rhwp reload gate (L-D12); tool note ≥2,000 (L-D13); guide ≥2,500 + 2
+  own figures (WebP tool shot + interest-cap SVG), draft if < 3 official quotes (L-D14).
+- Known Gaps (pre-logged): 보증인 칸, 분할 상환표, 이자·지연이자 계산, live 20 % warning, Hangul amount echo in UI,
+  due-before-loan date check, 공증 양식, 영수증 양식, DOCX/HWPX, /en/ twin, saved drafts, tax computation.
+- Escalations: none.
+
+## IDCAM1022 (design) — 증명사진 촬영 (Arch, 2026-10-22)
+- Owner request 2026-10-22: 증명사진 촬영 after 차용증, linked to 규격 맞추기 and 배경 지우기. Brief: handoff/ARCHITECT-BRIEF-IDCAM1022.md
+  (design only; build starts after LOAN1022 ships; rebase on it). Sources: handoff/sources/idcam1022/ (외교부 menuPos=32/12 re-read
+  2026-10-22, quotes verbatim; Google/Naver suggestions 2026-10-22).
+- Decision D1: new page /id-photo-camera/ 「증명사진 촬영」 (title target 「집에서 증명사진 찍기」) + 「카메라로 찍기」 link on /id-photo/; not a mode
+  inside /id-photo/ (separate search intent; camera Permissions-Policy only on the new route; no regression to the top tool).
+- Decision D2/D3: one pipeline — camera page only captures (pre-framed to the preset aspect, unmirrored) and hands off via the
+  이어서 하기 store to /id-photo/?preset=P, which becomes a receiver; crop/KB/save stay in /id-photo/.
+- Decision D4: overlay reuses /id-photo/ guide geometry (Step A refactor); official band only for passport_online/driver_license.
+- Decision D5–D7: camera on tap only; front default, mirrored preview, unmirrored save; timer 바로/3/10 s; 3-frame burst; tracks
+  stopped on hide; fallback input capture=user on missing API or any error; plain-Korean error copy; no UA sniffing.
+- Decision D6: live hints = background (checkBackground reuse), dark face zone (L* < 35), backlight (diff > 40) — our heuristics,
+  advisory only; phone level on Android only (no iOS motion prompt). No distance/tilt hint (needs MediaPipe; licence pending).
+- Decision D8: no pixel edits on the camera page. 「배경을 흰색으로 바꾸기」 only for saramin/jobkorea/half_card/custom, via a chain to
+  /remove-background/ (its own consent/cloud rule; arrival never auto-sends). /id-photo/ blocks save for passport_online and
+  driver_license when the photo came from remove-background (외교부 menuPos=32/12, 도로교통공단 quotes); warns for other presets.
+  Passport preset shows 외교부 「휴대폰 … 권장하지 않음」 and 「직접 촬영한 사진은 … 적합한 경우에만」 honestly + 사진 확인 link.
+- Decision D9/D10: no new POST/third party; _headers detach gives camera=(self) on /id-photo-camera/ only; usage slug
+  id-photo-camera; kill switch PUBLIC_ID_CAMERA (default on). Real-phone tests are post-launch owner items, not a gate.
+- Decision D11: budgets unchanged (initial JS 30 KB, precache 450 KB — page on runtime cache, preload fonts 92.66 KB — reword, never grow).
+- Steps: A refactor guides → B receiver + camera core → C live hints + burst → D background link → E guide /guide/self-id-photo/ →
+  F (candidate) 인화용 모아찍기 sheet.
+- Known Gaps (design): live face detection/distance hints (MediaPipe licence, owner O4); in-app camera support unknown (owner O2);
+  provenance lost after save-and-reopen (accepted); 모아찍기 sheet not briefed.
+- Owner-only: O1 iPhone Safari + Galaxy Chrome/삼성 인터넷 real-phone run; O2 KakaoTalk/Naver/Instagram in-app; O3 optional 외교부 사진 확인 trial.
+
+## LOAN1022 L0–L4 build (Bob, 2026-10-22) — DONE_WITH_CONCERNS
+- Branch `loan1022` (from main a6814bf), not pushed. Commits: c46bc36 L0 sources · a8d1f54 L1 refactor (own commit) ·
+  ed83722 L2 engine · 4753234 L3 spec · f4508a7 L4 page + registration. Review: handoff/REVIEW-REQUEST-LOAN1022-A.md.
+- **L0** handoff/sources/loan1022/ (curl 2026-10-22): 민법 379·598·600·603; 이자제한법 2조 ①–⑤ (268667/20250722);
+  최고이자율 규정 「연 20퍼센트」 (230727/20210707); 상증법 41조의4 (DRF → 276123/20260102); 민사집행법 56조 (DRF →
+  268837/20260201); 대한법률구조공단 전화상담 132. Not fetched: 국세청 가족 간 금전 대여 page (optional, guide only).
+- **L1** generic form tool (src/tools/form-tool, src/components/FormTool.astro); dist/power-of-attorney/index.html
+  before/after differs only in the page script hash (DGUTZFI- → D2S4P9VK). check-dist form block = loop FORM_TOOLS
+  (controller = the controller.*.js the page chunk imports dynamically).
+- **L2** amount/number kinds, amountHangul (일천·일백·일십), fieldProblem, docText; lint drops date-on-dateLine;
+  DOC_TEXT_PATHS keeps amount.ts's 한글 digits out of the UI faces (else 십/육/팔 late glyphs).
+- **L3** LOAN_NOTE spec; all-max and all-max lines 15–40 = 1 page in rhwp with maxLengths as briefed (no cut needed);
+  section labels break before 「(채권자)」/「(채무자)」. forms:hancom Node part PASS (8 files); 한글 COM = owner O1.
+- **L4** decisions: page labels 「얼마를 빌렸나요」「돌려줄 날」「돌려주는 방법」「연 이자」「쓴 날」, legend 「빌린 내용」
+  (돈/갚/액 not core); tooBig 「1조 원보다 적게 써 주세요.」 (액); 「연 이자」 not 「1년 이자」 (fact checker reads 1 년);
+  page L-D9 line names no organisation (률), the tool note names 대한법률구조공단 132 with its source; amount 「0」 →
+  「숫자로만 써 주세요.」 (brief rule literally); FormTool classes stay pa-* (POA HTML identical), ids prefixed; source-watch
+  now reads tool-note sources (readToolNotes) so check:quotes covers the note's 4 quotes.
+- Glyphs: core 615 / late 81 = main (0 new). Preload 92.1/92.66 KB; late-800 7.9/8 KB; BG build preload 92.2 (core 616
+  from flag-dependent src/generated/licenses.json, same at HEAD).
+- Gates: check 0/0; vitest 2,148/2,148; prod build + check-dist OK (2,617 files, precache 422.1/450 KB; loan-note initial
+  9.3/12.8, controller 7.8/8.4 KB; POA controller 7.0 → 7.6 KB); BG build + check-dist OK (precache 425.1); guide-length
+  --tools /loan-note/ 2,710; check:quotes --exact 593 verbatim; check:licenses OK; e2e chromium --workers=1: loan-note
+  8/8, power-of-attorney 9/9, site+polish 176 (after count/list updates), growth+hubs+chain 41/41, sw 5/5. 5-project
+  matrix, cloud usage spec and LHCI → CI on the PR (low memory).
+- Known Gaps (new): 국세청 family-loan page not saved (guide L5 links 국세청 without a quote or stays without);
+  amount-0 error wording. CLAUDE.md line 3 → orchestrator.
+- Escalations: none.
+
+## LOAN1022 A round 2 (Bob, 2026-10-22) — Richard's 2 Must + 4 Should — DONE
+- Must 1: tool note 379조 paragraph now leads 「이자를 받기로 했다면 비율도 함께 적어 두세요.」 then the verbatim quote; no
+  claim about an unwritten rate. Must 2: 「오랜 습관」 removed; the note says only 「자리마다 숫자를 붙여 씁니다」.
+- Should: line 49 → 「이자제한법은 이자의 최고한도를 정합니다.」 + the two quotes; FieldProblem `zero` (amount of zeros
+  only, never empty) with 「1원 이상 써 주세요.」 (0 new glyphs; the note words it without 「1원」, which the fact checker
+  reads as an unsourced 1 원) + unit (0/00/0원/full-width) + e2e (「0원」); tools.ts FAQ 「…찍으면 됩니다.」; LOAN_HWP
+  wiring test (static: vitest has no Astro compiler, so page → FormTool hwp gate → controller cfg.hwp are asserted in
+  source). Known Gap: no runtime test of the PDF-only path (flipping LOAN_HWP also needs the copy change, L-D12).
+- Gates: check 0/0; vitest 2,149/2,149; prod + BG builds with check-dist OK (core 615 / late 81 unchanged; preload
+  92.1 / 92.2 BG of 92.66; late-800 7.9/8; loan-note controller 7.8 (7.9 BG)/8.4 KB; precache 422.1 / 425.1); tool page
+  2,713; check:quotes --exact 593 verbatim; e2e chromium loan-note + power-of-attorney 17/17.

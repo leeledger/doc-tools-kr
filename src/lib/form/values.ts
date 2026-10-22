@@ -57,17 +57,19 @@ export function normalizeNumber(raw: string): string {
   return /^\d{1,3}(\.\d{1,2})?$/.test(s) ? String(Number(s)) : '';
 }
 
-export type FieldProblem = 'number' | 'tooBig';
+export type FieldProblem = 'number' | 'tooBig' | 'zero';
 
 /**
  * What is wrong with what the visitor typed in an amount or number field: something that is not a number (`number`),
- * or an amount of more than 12 digits (`tooBig`); null when it is fine or empty. Other kinds never have a problem.
+ * an amount of more than 12 digits (`tooBig`) or an amount of zeros only (`zero`: a number, but no amount; never
+ * taken as empty); null when it is fine or empty. Other kinds never have a problem.
  */
 export function fieldProblem(field: FormField, raw: string): FieldProblem | null {
   if (field.kind !== 'amount' && field.kind !== 'number') return null;
   if (!raw.trim() || normalizeField(field, raw)) return null;
   if (field.kind === 'amount') {
     const s = numeric(raw, '원');
+    if (/^0+$/.test(s)) return 'zero';
     if (/^\d+$/.test(s) && s.replace(/^0+/, '').length > AMOUNT_MAX_DIGITS) return 'tooBig';
   }
   return 'number';

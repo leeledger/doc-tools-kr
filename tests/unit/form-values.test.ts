@@ -77,7 +77,10 @@ describe('fieldProblem', () => {
     for (const ok of ['', '0', '4.5%']) expect(fieldProblem(rate, ok)).toBeNull();
   });
   it('typed but not a number: number; more than 12 digits: tooBig', () => {
-    for (const bad of ['1천만', '10만원정', 'abc', '1.5', '0']) expect(fieldProblem(amount, bad)).toBe('number');
+    for (const bad of ['1천만', '10만원정', 'abc', '1.5']) expect(fieldProblem(amount, bad)).toBe('number');
+    // An amount of zeros only is a number but no amount: its own line, never taken as empty.
+    for (const z of ['0', '00', '0원', ' 0 ', '０']) expect(fieldProblem(amount, z), z).toBe('zero');
+    expect(fieldProblem(rate, '0')).toBeNull();
     expect(fieldProblem(amount, '1,000,000,000,000')).toBe('tooBig');
     expect(fieldProblem(amount, '0001000000000000')).toBe('tooBig');
     for (const bad of ['연 5', '5.555', 'abc']) expect(fieldProblem(rate, bad)).toBe('number');

@@ -173,6 +173,11 @@ test('「1천만」 and 「5.555」: inline errors, focus on the first, no build
   await page.locator('#ln-make').click();
   await expect(page.locator('#ln-amount-error')).toHaveText('1조 원보다 적게 써 주세요.');
 
+  await fill(page, { amount: '0원' });
+  await page.locator('#ln-make').click();
+  await expect(page.locator('#ln-amount-error')).toHaveText('1원 이상 써 주세요.');
+  await expect(tool(page)).toHaveAttribute('data-state', 'empty');
+
   await fill(page, { amount: '１０,０００,０００원', rate: '0' });
   await expect(page.locator('#ln-amount-echo')).toHaveText('10,000,000원');
   await build(page);

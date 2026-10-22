@@ -27,4 +27,5 @@ export const LN_COPY: FormCopy = {
 export const LN_PROBLEMS: Readonly<Record<FieldProblem, string>> = {
   number: '숫자로만 써 주세요.',
   tooBig: '1조 원보다 적게 써 주세요.',
+  zero: '1원 이상 써 주세요.',
 };

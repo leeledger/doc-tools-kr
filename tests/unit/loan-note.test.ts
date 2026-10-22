@@ -158,6 +158,7 @@ describe('차용증 만들기: in-tool lines', () => {
     for (const s of all) expect(s).not.toMatch(/업로드|서버|브라우저|네트워크|메모리/);
     expect(LN_PROBLEMS.number).toBe('숫자로만 써 주세요.');
     expect(LN_PROBLEMS.tooBig).toBe('1조 원보다 적게 써 주세요.');
+    expect(LN_PROBLEMS.zero).toBe('1원 이상 써 주세요.');
     expect(LN_COPY.downloaded('차용증.hwp')).toBe('「차용증.hwp」를 내려받았어요. 「다운로드」 폴더를 확인하세요.');
   });
 });
@@ -169,5 +170,24 @@ describe('차용증 만들기: the tool note quotes are in the source watch (che
     expect(note?.path).toBe('/loan-note/');
     const urls = (note?.sources ?? []).map((s: { url?: string }) => s.url);
     for (const seq of ['lsiSeq=268667', 'lsiSeq=230727', 'lsiSeq=284415', 'klac.or.kr']) expect(urls.some((u: string | undefined) => u?.includes(seq)), seq).toBe(true);
+  });
+});
+
+describe('차용증 만들기: the HWP kill switch (L-D12 LOAN_HWP) is wired through', () => {
+  // A static check (vitest has no Astro compiler here): the page passes LOAN_HWP to FormTool, FormTool renders the HWP
+  // button only when hwp is true, and the controller reads cfg.hwp for the export and the PDF-only line.
+  it('page → FormTool hwp prop → button gate; controller → cfg.hwp', async () => {
+    const { readFileSync } = await import('node:fs');
+    const page = readFileSync('src/pages/loan-note/index.astro', 'utf8');
+    expect(page).toMatch(/<FormTool [^>]*hwp=\{LOAN_HWP\}/);
+    const widget = readFileSync('src/components/FormTool.astro', 'utf8');
+    expect(widget).toMatch(/\{hwp && <button [^>]*id=\{`\$\{p\}-hwp`\}/);
+    expect((widget.match(/-hwp`\}/g) ?? []).length).toBe(1);
+    const ctl = readFileSync('src/tools/loan-note/controller.ts', 'utf8');
+    expect(ctl).toContain('hwp: LOAN_HWP');
+    const generic = readFileSync('src/tools/form-tool/controller.ts', 'utf8');
+    expect(generic).toContain('hwp: FORM_HWP');
+    expect(generic).toMatch(/if \(FORM_HWP\) \{\s*phase = 'hwp';/);
+    expect(generic).toContain('FORM_HWP && hwpUrl ? COPY.ready : COPY.readyPdfOnly');
   });
 });
