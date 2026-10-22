@@ -3809,3 +3809,8 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   (precache 422.1 / 425.1 KB); check:quotes --exact 603 verbatim; e2e chromium hubs+growth+loan-note 31/31.
 - Known Gap (carried): 국세청 family-loan page not saved; the guide links nts.go.kr home without a quote.
 - Escalations: none.
+
+### LOAN1022 Deploy A — live smoke (2026-10-22, orchestrator)
+- PR #14 merged by the owner (d85eeb4) before its checks finished; main CI on d85eeb4: success (5-project e2e + checks/LHCI); post-deploy success.
+- Live: /loan-note/ 200 (title 「차용증 만들기 — 차용증 양식 무료, HWP·PDF 저장 | 문서딱」), /power-of-attorney/ 200. Headless run on the live page: amount 10000000 → 만들기 → ready; 차용증.hwp 14,336 B (OLE d0cf11e0), 차용증.pdf 30,665 B (%PDF). Off-site requests: only CF RUM beacon, GA page_view and the /api/usage beacon (allowed); no file data.
+- Owner-only O1 still open: real-한글 open of 위임장.hwp / 차용증.hwp (`npm run forms:hancom`, click 「접근 허용」).
