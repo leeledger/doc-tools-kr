@@ -3934,3 +3934,13 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   (PUBLIC_ID_CAMERA=0, AUTOFRAME, cloud), fake.spec, mobile-chrome/firefox/webkit, LHCI, qa:visual — CI on the PR.
 - Known Gaps (IDCAM1022): burst choice has unit coverage only (no e2e that the sharpest of 3 is kept: a synthetic blurred
   frame at a known moment is timing-bound); thresholds tuned on synthetic scenes only — real phones O1.
+
+## IDCAM1022 C fix (Bob, 2026-10-22) — Richard's 2 Should Fix — DONE
+- Review: handoff/REVIEW-FEEDBACK-IDCAM1022-C.md (0 Must Fix).
+- C1: 「카메라 바꾸기」 disabled at capture start (the next setPhase enables it again: live on a failed capture, review on
+  success) and the flip handler ignores taps while `capturing`; a mid-burst switch can no longer drop the shot silently.
+- C2: tests/unit/id-photo-camera-burst.test.ts — sharpestFrame with stub canvases and fake timers: keeps the sharpest of 3
+  and releases the others; alive() false mid-burst -> null, no further grab, held frame released; all grabs null -> null;
+  a failed middle grab is skipped.
+- Gates: `npm run check` 0/0; vitest id-photo-camera-burst + idphoto-live + id-photo-camera 35/35. No build/e2e re-run
+  locally (controller change is two lines; CI on the PR).

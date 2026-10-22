@@ -237,6 +237,8 @@ export function initCamera(): { start(): void } | null {
     if (capturing) return;
     capturing = true;
     shootBtn.disabled = true;
+    // A camera switch mid-burst would drop the shot; the next setPhase enables it again (review fix C1).
+    flipBtn.disabled = true;
     try {
       await captureOnce();
     } finally {
@@ -340,6 +342,7 @@ export function initCamera(): { start(): void } | null {
 
   shootBtn.addEventListener('click', shoot);
   flipBtn.addEventListener('click', () => {
+    if (capturing) return;
     facing = facing === 'user' ? 'environment' : 'user';
     stopTracks();
     setPhase('idle');
