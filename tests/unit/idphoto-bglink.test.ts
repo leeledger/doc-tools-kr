@@ -6,8 +6,7 @@ import { parse } from '../../src/lib/ui/deeplink';
 import { BG_FALLBACK, BG_PRESETS, bgOffered, bgPreset, bgUrl, idPhotoBack, parseBgLink } from '../../src/lib/idphoto/bglink';
 import { BG_FORBIDDEN, checklist } from '../../src/lib/idphoto/warnings';
 import { COPY as CAM_COPY } from '../../src/tools/id-photo-camera/copy';
-import { COPY, HELD_START, TO_ID_PHOTO } from '../../src/tools/remove-background/copy';
-import { BACK_FAILED } from '../../src/tools/remove-background/back';
+import { BACK_FAILED, COPY, HELD_START, TO_ID_PHOTO } from '../../src/tools/remove-background/copy';
 import { move, startsAtOnce, view, type Phase } from '../../src/tools/remove-background/model';
 import { JARGON } from '../../scripts/lib/plain-words.mjs';
 

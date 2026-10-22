@@ -60,6 +60,8 @@ export const COPY = {
 
 /** The consent button for a held photo with the engine ready (page markup; bg.css shows it by data-held). */
 export const HELD_START = '배경 지우기';
+/** The way back to /id-photo/ could not store the picture (entry.ts, back.ts). */
+export const BACK_FAILED = '사진을 넘기지 못했어요. 흰색 배경으로 내려받은 뒤 여권·증명사진 규격 맞추기에서 골라 주세요.';
 /** The result's way back to /id-photo/ (D8b, only when the address carries ?preset=); page markup only. */
 export const TO_ID_PHOTO = '이력서 사진 규격 맞추기';
 

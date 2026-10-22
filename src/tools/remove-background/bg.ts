@@ -606,10 +606,12 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
     // A held photo with the engine ready: the panel's 「받고 시작」 lines give way to its own (bg.css, data-held).
     consent.dataset.held = engineReady ? '1' : '';
     consentText.textContent = engineReady ? COPY.held : COPY.consent(downloadBytes(backend));
-    consentExtra.textContent = backend === 'webgpu' ? COPY.consentExtra(runtimeBytes('wasm')) : '';
-    consentExtra.hidden = backend !== 'webgpu';
+    // The download lines (WebGPU fallback, low device) only when something is downloaded (fix3).
+    const extra = !engineReady && backend === 'webgpu';
+    consentExtra.textContent = extra ? COPY.consentExtra(runtimeBytes('wasm')) : '';
+    consentExtra.hidden = !extra;
     const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-    lowDevice.hidden = !(typeof mem === 'number' && mem < LOW_DEVICE_MEMORY);
+    lowDevice.hidden = engineReady || !(typeof mem === 'number' && mem < LOW_DEVICE_MEMORY);
     setPhase('consent');
     say([consentText.textContent, consentExtra.textContent, lowDevice.hidden ? '' : COPY.lowDevice].filter(Boolean).join(' '));
     startBtn.focus();

@@ -4017,3 +4017,23 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   was killed (V8 out of memory) and not retried -> CI. e2e remove-background.cloud.spec on cloud-chromium, 1 worker:
   16/16 (incl. the hand-over waits at ready, retries, quota/device paths). Not run: remove-background.spec (needs a
   dist-bg rebuild; its held-with-cached-engine test now checks the CSS-switched label) and other browsers -> CI.
+
+## IDCAM1022 D fix3 — Richard's fix2 Must Fix + 2 Should Fix (Bob, 2026-10-23) — DONE
+- Review: handoff/REVIEW-FEEDBACK-IDCAM1022-D.md "fix2" section (committed here).
+- Must Fix: bg.ts onDevice — with a held photo and the engine ready, the WebGPU fallback line (#bg-consent-extra, text
+  and hidden) and the low-device line stay hidden and are not announced again (`!engineReady` guard restored).
+  e2e held-with-cached-engine test asserts both hidden.
+- Should Fix: entry.ts disables 「이력서 사진 규격 맞추기」 synchronously on the press (no double store); every failure
+  (controller or back chunk not loading, nothing stored) re-enables it and shows BACK_FAILED in #bg-error (role=alert).
+  BACK_FAILED moved to copy.ts (in the page chunk, so it shows even when ./back cannot load); back.ts is now only
+  goBack(picture, preset, failed).
+- check-dist: back*.js budget 0.7 -> 0.33 KB (measured 0.27 KB + 20 %, D11; the chunk shrank).
+- Sizes (one cloud build, exact ci.yml env): controller 14,769 B (14.4 KB) / 14,848 B (14.5 KB); back.js 267 B;
+  /remove-background/ initial 13.1 / 30; preloaded fonts 92.2 / 92.66; precache 438.2 / 450.
+- Known risk: the controller budget margin is ~79 B. The next brief that touches bg.ts must plan a chunk move (e.g.
+  the device-path consent/download code or the cloud retry loop into their lazy modules) up front, never a budget raise.
+- Gates: `npm run check` 0/0; vitest idphoto-bglink + bgcloud + network-guard 80/80; cloud build check-dist OK (the
+  0.33 KB back budget re-checked by running check-dist again on that dist: no budget error; that re-run also prints
+  _headers errors, which come from running it a second time after gen-headers has already written _headers, not from
+  this change); remove-background.cloud.spec cloud-chromium 1 worker 16/16. Not run: remove-background.spec (dist-bg not
+  rebuilt) -> CI.

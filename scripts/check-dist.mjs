@@ -532,11 +532,11 @@ if (!bgOn) {
     if (controller.some((f) => initial.has(f))) errors.push('the /remove-background/ controller (bg*.js) loads with the page');
     budget('remove-background controller (bg*.js, lazy)', [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f)), 14.5 * KB);
     // IDCAM1022 D8b (fix2): the result's way back to /id-photo/ is its own chunk, loaded on that press only; budget =
-    // measured 0.55 KB + 20 % (D11). Its handoff/usage imports are shared chunks, not counted here.
+    // measured 0.27 KB (fix3) + 20 % (D11). Its handoff/usage imports are shared chunks, not counted here.
     const back = match(/^_astro\/back\.[\w-]{8}\.js$/);
     if (back.length !== 1) errors.push(`remove-background: expected one back*.js chunk, found ${back.length}`);
     if (back.some((f) => initial.has(f))) errors.push('the /remove-background/ way back to /id-photo/ (back*.js) loads with the page');
-    budget('remove-background back link (back*.js, lazy)', back, 0.7 * KB);
+    budget('remove-background back link (back*.js, lazy)', back, 0.33 * KB);
     if (/rel="(preload|modulepreload|prefetch)"[^>]*(onnxruntime|birefnet)/.test(html)) errors.push('remove-background/index.html preloads the engine or the model');
   }
 }

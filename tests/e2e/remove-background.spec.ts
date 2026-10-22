@@ -358,6 +358,9 @@ test('a handed-over photo waits even with the engine ready (「배경 지우기�
   await expect(page.locator('#bg-consent-text')).toHaveText(COPY.held, { timeout: 30_000 });
   await expect(page.locator('#bg-consent').getByRole('button', { name: HELD_START, exact: true })).toBeVisible();
   await expect(page.getByText(COPY.consentKeep)).toBeHidden();
+  // No download lines with the engine ready (fix3): the WebGPU fallback and low-device lines stay hidden.
+  await expect(page.locator('#bg-consent-extra')).toBeHidden();
+  await expect(page.locator('#bg-low-device')).toBeHidden();
   await page.waitForTimeout(1500);
   await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'consent');
   await page.locator('#bg-start').click();

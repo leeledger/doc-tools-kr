@@ -12,7 +12,7 @@ import { withEngineRetry } from '../../lib/ui/engine-load';
 import { pendingHandoff, sweepIfDue } from '../../lib/ui/handoff-marker';
 import { parseBgLink } from '../../lib/idphoto/bglink';
 import { startUsage, track, trackOut } from '../../lib/ui/usage';
-import { COPY } from './copy';
+import { BACK_FAILED, COPY } from './copy';
 
 type Api = { open(file: File, opts?: { held?: boolean }): void; picture: import('./bg').Picture } | null;
 
@@ -70,10 +70,18 @@ if (root && drop) {
   const preset = link.preset;
   if (back && preset) {
     back.hidden = false;
+    // Disabled at once (a second press never stores twice); on any failure enabled again with BACK_FAILED.
+    const failed = (): void => {
+      back.disabled = false;
+      const box = document.getElementById('bg-error');
+      if (box) {
+        box.textContent = BACK_FAILED;
+        box.hidden = false;
+      }
+    };
     back.addEventListener('click', () => {
-      void Promise.all([load(), import('./back')])
-        .then(([api, m]) => api && m.goBack(back, api.picture, preset))
-        .catch(() => void showEngineError());
+      back.disabled = true;
+      void Promise.all([load(), import('./back')]).then(([api, m]) => (api ? m.goBack(api.picture, preset, failed) : failed()), failed);
     });
   }
   const notice = document.getElementById('bg-arrived');
