@@ -24,6 +24,8 @@ export interface FormField {
   /** multiline only. */
   maxLines?: number;
   placeholder?: string;
+  /** A line under the page's input (plain words; LOAN1022). */
+  hint?: string;
   /** Row height in table rows: rowHeight × rowLines (room to write by hand on the blank form). Default 1. */
   rowLines?: number;
   /** number only: the document text of a value, with `{v}` for it (「연 {v}%」). */
