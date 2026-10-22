@@ -37,6 +37,8 @@ const ENGLISH_NAME_INITIAL_KB = 22.2;
 /** /id-photo-camera/ (IDCAM1022 D11): initial JS at most 30 KB gzip; the camera controller (lazy) = measured + 20 % (5.1 KB at B, BUILD-LOG IDCAM1022 B). */
 const ID_CAMERA_INITIAL_KB = 30;
 const ID_CAMERA_LAZY_KB = 6.2;
+/** Its live hints + burst chunk (Step C; lazy, loaded when the camera starts) = measured + 20 % (2.1 KB at C, BUILD-LOG IDCAM1022 C). */
+const ID_CAMERA_HINTS_KB = 2.5;
 /** The UI font weights (Polish P.12; 700 retired in LCP round 2): one static instance each; no other weight may appear in the CSS. */
 const UI_WEIGHTS = new Set(['400', '800']);
 /** Copy that describes auto-framing; none of it may ship when PUBLIC_ID_PHOTO_AUTOFRAME is off. */
@@ -693,6 +695,12 @@ if (!addrEn) {
       if (!lazy.some((f) => read(f).includes('getUserMedia'))) errors.push('id-photo-camera controller: does not call getUserMedia');
       budget('id-photo-camera initial JS', initial, ID_CAMERA_INITIAL_KB * KB);
       budget('id-photo-camera controller (lazy)', lazy, ID_CAMERA_LAZY_KB * KB);
+      // Step C: the hints chunk loads from the controller, never with the page; it reads no camera itself.
+      const hints = [...new Set(lazy.flatMap(dynamicImports))].filter((f) => /\/hints\.[\w-]{8}\.js$/.test(f));
+      if (hints.length !== 1) errors.push(`id-photo-camera hints: ${hints.length} lazy hints chunk(s) from the controller, expected 1`);
+      const hintsJs = [...new Set(hints.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.includes(f) && !lazy.includes(f));
+      for (const f of hintsJs) if (read(f).includes('getUserMedia')) errors.push(`${f}: the camera API in the hints chunk`);
+      budget('id-photo-camera hints (lazy)', hintsJs, ID_CAMERA_HINTS_KB * KB);
     }
   }
 }

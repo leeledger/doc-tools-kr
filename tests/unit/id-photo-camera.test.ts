@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { PRESETS, getPreset, type IdPreset } from '../../src/data/id-photo-presets';
 import { BLACK_LUMA, isBlackFrame, isLowres, meanLuma, overlayRect, toBox, unmirrorRect } from '../../src/tools/id-photo-camera/capture';
 import { CAMERA_ERRORS, cameraErrorMessage, cameraFailCode } from '../../src/tools/id-photo-camera/errors';
-import { COPY } from '../../src/tools/id-photo-camera/copy';
+import { COPY, HINTS } from '../../src/tools/id-photo-camera/copy';
 import { idPhotoUrl } from '../../src/tools/id-photo-camera/send';
 import { constraints } from '../../src/tools/id-photo-camera/controller';
 import { manualFrame } from '../../src/lib/idphoto/frame';
@@ -130,7 +130,7 @@ describe('camera errors (D7)', () => {
   });
 
   it('every message is plain: no 브라우저/권한/업로드/서버 or other jargon', () => {
-    const texts = [...Object.values(CAMERA_ERRORS), ...Object.values(COPY).map((v) => (typeof v === 'function' ? (v as (a: number, b: number) => string)(413, 531) : v))];
+    const texts = [...Object.values(CAMERA_ERRORS), ...Object.values(HINTS), ...Object.values(COPY).map((v) => (typeof v === 'function' ? (v as (a: number, b: number) => string)(413, 531) : v))];
     for (const t of texts) {
       expect(t, t).not.toMatch(/브라우저|권한|업로드|서버/);
       expect(t.match(JARGON), t).toBeNull();

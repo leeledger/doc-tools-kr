@@ -77,6 +77,8 @@ const timers = [
             <canvas id="cam-overlay" aria-hidden="true"></canvas>
             <p class="cam-count" id="cam-count" aria-hidden="true" hidden></p>
           </div>
+          {/* D6 live hints (advice only; the controller fills it, one at a time). Its height is kept so 찍기 never moves. */}
+          <p class="cam-hint" id="cam-hint" aria-live="polite"></p>
           <fieldset class="cam-timer">
             <legend>타이머</legend>
             {timers.map((t) => (

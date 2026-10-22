@@ -3898,3 +3898,39 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Gates: `npm run check` 0/0. vitest, the default build and the camera e2e were stopped by the harness (system low on memory) before they reported; not re-run on my own per the harness note. Not committed until they pass.
 - Orchestrator: local vitest was killed for low machine memory; the B fixes are verified by CI on the PR instead (vitest, build + check-dist, e2e on 5 browsers). Owner merges only on green.
 - PR #17 CI: `checks` job cancelled at its 50-min timeout (the Lighthouse step itself finished green, 42 min on slow runners; firefox/mobile-safari e2e also ~49 min today). Raised the job timeout 50 → 65 min in ci.yml; no assertion or budget changed.
+
+## IDCAM1022 C — live hints + burst (D5 burst, D6) (Bob, 2026-10-22) — DONE
+- Branch `idcam1022-c` from main 792645b. Review: handoff/REVIEW-REQUEST-IDCAM1022-C.md.
+- Built: src/lib/idphoto/live.ts (pure: fitSize, ovalMeanL, analyseFrame = checkBackground reuse + face-oval L* dark/backlight,
+  rollDeg/isTilted from deviceorientation beta/gamma, pickHint, settle debounce, lumaOf, sharpness = variance of the
+  4-neighbour Laplacian); src/tools/id-photo-camera/hints.ts (lazy chunk: watchHints ≤160 px copy of the overlay rect,
+  4 Hz, skipped while hidden, stopped with the tracks; sharpestFrame = 3 frames 250 ms apart, ≤256 px luma copy, keeps at
+  most 2 full-size frames); controller wiring (#cam-hint under the view, reserved height so 찍기 never moves; burst at
+  the shutter; HINTS copy in copy.ts); tool-note section 「화면 아래에 안내가 나올 때」; check-dist hints-chunk rule.
+- Decisions (Bob):
+  - Hints + burst live in their own lazy chunk (hints.*.js), imported by the controller when the camera starts, so the
+    controller budget (6.2 KB) is not raised: controller 5.1 -> 5.5 KB. New budget for the hints chunk = measured 2.0-2.1 KB
+    (hints 1.5 + background.ts 0.55, gzip) + 20 % = 2.5 KB (check-dist ID_CAMERA_HINTS_KB; asserts exactly one hints chunk
+    from the controller and no camera API in it).
+  - Capture never waits for that chunk: not loaded yet (or failed) = one frame, as in Step B. A stop mid-burst (hide,
+    flip, leave) drops the burst silently (stopForHide already announced it).
+  - Sharpness lives in live.ts (lib, pure) rather than capture.ts (brief Step B line) — Step C names live.ts for analysers.
+  - Thresholds (OUR heuristics, never shown): DARK_L 35 and BACKLIGHT_DL 40 per brief D6; TILT_DEG 5° (roll away from the
+    nearest quarter turn, so landscape is level too; null when lying flat); face measured inside the guide oval at 0.8
+    size (hair/edge excluded); a hint shows/clears only after 2 analyses in a row. One hint at a time:
+    backlight > dark > background > level.
+  - Level: a passive deviceorientation listener only; events that arrive (Android) are used; nothing calls
+    requestPermission and nothing branches on the UA (iOS simply sends none -> no level hint).
+  - Copy: brief's 「흰 벽 앞에 서 주세요」 -> 「뒤가 흰색인 곳에 서 주세요」 (「벽」 is not in the UI font; same rewording as B).
+    Dark-face copy (brief gave none): 「얼굴이 너무 어두워요. 밝은 곳에서 찍거나 불을 켜 주세요.」. Level: 「휴대폰이 기울어져
+    있어요. 똑바로 세워 주세요.」. All four use core glyphs only: preloaded UI fonts 92.1 / 92.66 KB and late faces 7.5 / 7.9
+    of 8 KB unchanged. COPY.md updated.
+  - E2E scenes: canvas-stream synthetic scenes (white / dark / backlit + a dispatched DeviceOrientationEvent) instead of the
+    brief's committed y4m files — same path as Step B's synthetic camera, runs on chromium, mobile-chrome and firefox
+    without per-file launch flags or binary fixtures.
+- Gates: `npm run check` 0 errors / 0 warnings; vitest tests/unit/idphoto-live + id-photo-camera 31/31; ONE default
+  production build + check-dist OK (camera initial 13.9/30, controller 5.5/6.2, hints 2.0/2.5, precache 427.0/450); e2e
+  id-photo-camera.spec chromium 1 worker 11/11 (4 new hint tests). Not run locally (memory): full vitest, other builds
+  (PUBLIC_ID_CAMERA=0, AUTOFRAME, cloud), fake.spec, mobile-chrome/firefox/webkit, LHCI, qa:visual — CI on the PR.
+- Known Gaps (IDCAM1022): burst choice has unit coverage only (no e2e that the sharpest of 3 is kept: a synthetic blurred
+  frame at a known moment is timing-bound); thresholds tuned on synthetic scenes only — real phones O1.
