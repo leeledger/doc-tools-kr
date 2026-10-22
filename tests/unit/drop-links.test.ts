@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 // Sätteri is the Markdown engine Astro itself pins (astro -> @astrojs/markdown-satteri -> satteri); the test runs the
 // real hast pass the build runs with PUBLIC_ID_CAMERA off.
@@ -39,5 +41,17 @@ describe('drop-links (IDCAM1022 E)', () => {
     expect(out).toContain('/guide/self-id-photo/');
     expect(out).toContain('/id-photo-camera/?preset=saramin');
     expect(idCameraHiddenPaths(false)).toEqual(['/id-photo-camera/', '/guide/self-id-photo/']);
+  });
+});
+
+describe('the Markdown engine packages are declared at the versions astro pins (IDCAM1022 E fix)', () => {
+  const ROOT = join(import.meta.dirname, '..', '..');
+  const pkg = (p: string) => JSON.parse(readFileSync(join(ROOT, p, 'package.json'), 'utf8')) as { version?: string; dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+  const own = pkg('.').devDependencies ?? {};
+
+  it('@astrojs/markdown-satteri equals the exact version astro depends on, satteri the installed copy it uses', () => {
+    expect(own['@astrojs/markdown-satteri']).toBe(pkg('node_modules/astro').dependencies?.['@astrojs/markdown-satteri']);
+    expect(own['@astrojs/markdown-satteri']).toBe(pkg('node_modules/@astrojs/markdown-satteri').version);
+    expect(own.satteri).toBe(pkg('node_modules/satteri').version);
   });
 });

@@ -4096,3 +4096,16 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   guide-length: self-id-photo 2,716, the four linking guides 2,555–2,596, /id-photo-camera/ 2,677; precache 427.1 / 450 KB.
 - Not run locally (memory): PUBLIC_ID_CAMERA=0 build (the drop-links path and the new flag-off check-dist rule; unit
   test covers the plugin with the real engine) and the BG/cloud builds, Playwright, LHCI, qa:visual -> CI.
+- IDCAM1022 E review (handoff/REVIEW-FEEDBACK-IDCAM1022-E.md): clear, 0 Must Fix. Should Fix 1–4 done in "[IDCAM1022 E fix]":
+  (1) selfie paragraph no longer says a small face is simply enlarged: cropping can fix a distant shot, lining up with the
+  guide lines avoids it, and a very small face hits the 「사진 해상도가 낮아…」 block (warnings.ts lowres) -> step closer and
+  retake (matches figure 2's 「너무 작음」); (2) 이력서 row cut to 「사람인·잡코리아는 크기와 형식만 안내해요.」 (unsourced
+  absence claim dropped); (3) devDependencies declare @astrojs/markdown-satteri 0.4.2 and satteri 0.10.5 exactly (astro is
+  a devDependency too); `npm install --package-lock-only` changed only the two root devDependencies lines in the lock (no
+  version moves); drop-links.test asserts the declared version = astro's own dependency = installed, satteri = installed;
+  check:licenses OK (54 production packages, 0 exceptions); (4) handoff/sources/idcam1022/official-photo-rules-2026-10-22.txt
+  header corrected (popup text sits in an img alt the dump strips; quotes verified live 2026-10-22/23; driver guide dates
+  2026-10-21 / 2026-09-30). Informational drop-links note (p/li only, fail-loud elsewhere) kept as stated in the header.
+  Gates: npm run check 0/0; vitest drop-links + guides-schema + guide-check green, postbuild 77/77 on the new default build;
+  build + check-dist OK; guide-length self-id-photo 2,793; the guide's 15 quotes re-checked --exact: 0 changed.
+  Commit df857a2 was cherry-picked onto idcam1022-d by the coordinator; E rebased (53d89b5).
