@@ -3835,3 +3835,8 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Gates: check 0/0; vitest 2,155/2,155; default + AUTOFRAME=1 builds check-dist OK (fonts preload 92.1/92.66 unchanged, precache
   422.4/450); e2e id-photo.spec chromium + manual-chromium 71 passed / 15 skipped, 1 worker. qa:visual not run (low memory, not in CI).
 - Escalations: none.
+
+### IDCAM1022 Step A — review + deploy gate (2026-10-22)
+- Richard: clear, 0 Must Fix (handoff/REVIEW-FEEDBACK-IDCAM1022-A.md). Note for Step B: pass the on-screen crop rect size to guides() and offset by its origin, not the video frame size.
+- Decision: qa:visual is a live-site matrix (scripts/qa/visual.mjs: "the deploy gate runs it against the live site"), so it runs after merge against docttak.com/id-photo/, not before. Pixel identity is covered pre-merge by the bit-for-bit vitest.
+- PR to main; owner merges after green CI (no --auto: no required checks in this repo).
