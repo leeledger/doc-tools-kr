@@ -64,6 +64,19 @@ const SHOTS = [
       }
     },
   },
+  {
+    out: 'loan-note/1-form-shot.webp',
+    path: '/loan-note/',
+    top: '#ln-form',
+    async prepare(page) {
+      // Made-up example values (the e2e sample: 홍길동/김철수, an example amount), never a real person's data. Both dates
+      // are fixed so the shot does not change with the day it is taken (빌린 날 defaults to today).
+      const values = { amount: '10000000', loanDate: '2026-10-22', dueDate: '2027-10-21', rate: '5', interestDay: '매달 25일', repayHow: '김철수 명의 계좌로 이체', lenderName: '김철수', borrowerName: '홍길동' };
+      for (const [field, value] of Object.entries(values)) {
+        await page.locator(`[data-field="${field}"]`).fill(value);
+      }
+    },
+  },
 ];
 
 async function toWebp(context, png) {

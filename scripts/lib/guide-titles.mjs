@@ -23,6 +23,7 @@ export default {
   "korcham-photo": "컴활 원서 사진 규격 (대한상공회의소 자격시험)",
   "kosaf-docs": "국가장학금 서류 제출, 대상 확인과 내는 법",
   "kuksiwon-photo": "국시원 원서 사진 규격 (간호사 등 국가시험)",
+  "loan-note": "차용증 쓰는 법: 들어갈 내용, 이자, 가족끼리 빌릴 때",
   "open-hwp-without-hangul": "한글 없이 HWP 파일 여는 법",
   "passport-english-name": "여권 영문 이름 정하는 법",
   "passport-photo": "여권사진 규격과 사이즈, 귀·눈썹·옷 기준",

@@ -43,6 +43,7 @@
         "http://127.0.0.1:4173/guide/stamp-image/",
         "http://127.0.0.1:4173/guide/passport-english-name/",
         "http://127.0.0.1:4173/guide/power-of-attorney/",
+        "http://127.0.0.1:4173/guide/loan-note/",
         "http://127.0.0.1:4173/en/",
         "http://127.0.0.1:4173/en/pdf-merge/"
       ],

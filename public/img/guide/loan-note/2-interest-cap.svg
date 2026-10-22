@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">약속한 이자가 최고이자율 연 20퍼센트를 넘으면 넘는 부분만 무효라는 것을 막대 두 개로 나타낸 그림</title>
+<defs>
+<pattern id="h" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#fdecea"/><line x1="0" y1="0" x2="0" y2="10" stroke="#b42318" stroke-width="3"/></pattern>
+</defs>
+<rect x="0.5" y="0.5" width="639" height="399" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="32" y="48" font-size="20" fill="#1c2321" font-weight="bold">약속한 이자와 법이 정한 한도</text>
+<line x1="400" y1="78" x2="400" y2="300" stroke="#1c2321" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="400" y="72" font-size="15" fill="#1c2321" text-anchor="middle" font-weight="bold">최고이자율 연 20퍼센트</text>
+<text x="32" y="118" font-size="15" fill="#1c2321">한도 안에서 정한 이자</text>
+<rect x="32" y="130" width="300" height="44" rx="4" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="48" y="158" font-size="15" fill="#0f766e" font-weight="bold">한도 안</text>
+<text x="32" y="222" font-size="15" fill="#1c2321">한도보다 높게 정한 이자</text>
+<rect x="32" y="234" width="368" height="44" rx="4" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="48" y="262" font-size="15" fill="#0f766e" font-weight="bold">한도까지</text>
+<rect x="400" y="234" width="176" height="44" rx="4" fill="url(#h)" stroke="#b42318"/>
+<rect x="414" y="245" width="148" height="22" rx="3" fill="#ffffff"/>
+<text x="488" y="261" font-size="15" fill="#b42318" text-anchor="middle" font-weight="bold">넘는 부분: 무효</text>
+<text x="32" y="334" font-size="14" fill="#5b6663">이자제한법 제2조 제3항: 「최고이자율을 초과하는 부분은 무효로 한다」</text>
+<text x="32" y="360" font-size="14" fill="#5b6663">최고이자율에 관한 규정: 「최고이자율은 연 20퍼센트로 한다」</text>
+</svg>

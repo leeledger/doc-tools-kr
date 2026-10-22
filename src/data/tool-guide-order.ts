@@ -24,6 +24,8 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   'english-name': ['passport-english-name'],
   // FORM1020 F4: 위임장 만들기 pins its guide (slug power-of-attorney).
   'power-of-attorney': ['power-of-attorney'],
+  // LOAN1022 L5: 차용증 만들기 pins its guide (slug loan-note).
+  'loan-note': ['loan-note'],
   // Part B: shown only in builds with PUBLIC_BG_REMOVE on (the guide requires bg-remove; the tool page exists only then).
   'remove-background': ['remove-background'],
 };
