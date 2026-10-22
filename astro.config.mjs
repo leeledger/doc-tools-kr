@@ -9,6 +9,7 @@ import { adsenseGate } from './scripts/lib/adsense.mjs';
 import { autoframeOn } from './scripts/lib/autoframe.mjs';
 import { bgCloudOn, privacyGate } from './scripts/lib/bgcloud.mjs';
 import { BG_PATH, bgRemoveOn } from './scripts/lib/bgremove.mjs';
+import { ID_CAMERA_PATH, idCameraOn } from './scripts/lib/idcamera.mjs';
 import { rhwpNoDefaultWasm } from './scripts/lib/vite-rhwp.mjs';
 import { usageOn, usageSample } from './scripts/lib/usage.mjs';
 
@@ -33,6 +34,8 @@ const bgRemove = bgRemoveOn(env.PUBLIC_BG_REMOVE);
 const bgCloud = bgCloudOn(env);
 // ADDREN1016 (scripts/lib/addren.mjs): 영문주소 변환기 sends the typed address to /api/addr-en. Same privacy gate.
 const addrEn = addrEnOn(env);
+// IDCAM1022 D10 (scripts/lib/idcamera.mjs): 증명사진 촬영 /id-photo-camera/, default on; "0" builds no such route.
+const idCamera = idCameraOn(env);
 // ADS1020 (scripts/lib/adsense.mjs): the AdSense tag needs the contact and the privacy officer too; an invalid client fails here.
 const gate = [...privacyGate(env), ...addrEnGate(env), ...adsenseGate(env)];
 if (gate.length) throw new Error(gate.join('; '));
@@ -44,6 +47,8 @@ const bgRemoveRoute = {
       if (bgRemove) injectRoute({ pattern: BG_PATH, entrypoint: './src/tools/remove-background/page.astro' });
       // ADDREN1016: /english-address/ the same way (PUBLIC_ADDR_EN); a flag-off build has no such route.
       if (addrEn) injectRoute({ pattern: ADDR_EN_PATH, entrypoint: './src/tools/english-address/page.astro' });
+      // IDCAM1022: /id-photo-camera/ the same way (PUBLIC_ID_CAMERA, default on).
+      if (idCamera) injectRoute({ pattern: ID_CAMERA_PATH, entrypoint: './src/tools/id-photo-camera/page.astro' });
     },
   },
 };
@@ -101,6 +106,6 @@ export default defineConfig({
     resolve: { alias: [{ find: /^brotli\/decompress(\.js)?$/, replacement: fileURLToPath(new URL('./src/lib/hwp/pdf/brotli-stub.ts', import.meta.url)) }] },
     // rhwpNoDefaultWasm: one rhwp_bg.wasm in dist/ (Step 5; see scripts/lib/vite-rhwp.mjs).
     worker: { format: 'es', plugins: () => [rhwpNoDefaultWasm()] },
-    define: { __USAGE_STATS__: JSON.stringify(usageStats), __USAGE_SAMPLE__: JSON.stringify(usageRate), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe), __BG_REMOVE__: JSON.stringify(bgRemove), __BG_CLOUD__: JSON.stringify(bgCloud), __ADDR_EN__: JSON.stringify(addrEn) },
+    define: { __USAGE_STATS__: JSON.stringify(usageStats), __USAGE_SAMPLE__: JSON.stringify(usageRate), __ID_PHOTO_AUTOFRAME__: JSON.stringify(idPhotoAutoframe), __BG_REMOVE__: JSON.stringify(bgRemove), __BG_CLOUD__: JSON.stringify(bgCloud), __ADDR_EN__: JSON.stringify(addrEn), __ID_CAMERA__: JSON.stringify(idCamera) },
   },
 });

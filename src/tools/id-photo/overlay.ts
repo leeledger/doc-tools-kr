@@ -76,6 +76,14 @@ export function drawOverlay(canvas: HTMLCanvasElement, preset: IdPreset, st: Cro
   g.fill('evenodd');
   g.restore();
 
+  drawGuides(g, preset, W, H);
+}
+
+/**
+ * The guides of `preset` on a W×H area of the preset's aspect starting at the context's origin (the camera page
+ * translates to its overlay rectangle first; IDCAM1022 Step B). Line widths and label sizes follow W, as on /id-photo/.
+ */
+export function drawGuides(g: CanvasRenderingContext2D, preset: IdPreset, W: number, H: number): void {
   const line = Math.max(1, W / 300);
   const fontPx = Math.max(10, Math.round(W / 30));
   const gd = guides(preset, { w: W, h: H });

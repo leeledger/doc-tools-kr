@@ -81,6 +81,8 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'english-name': ['passport-english-name', 'passport-photo', 'passport-reissue-photo', 'intl-driving-license'],
   'power-of-attorney': ['id-card-copy', 'stamp-image', 'pdf-sign'],
   'loan-note': ['power-of-attorney', 'stamp-image', 'pdf-sign'],
+  // IDCAM1022: the photo guides of the presets people shoot for most (its own guide comes with Step E).
+  'id-photo-camera': ['passport-photo', 'resume-photo', 'id-card-photo'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */

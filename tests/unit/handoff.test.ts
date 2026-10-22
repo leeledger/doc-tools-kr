@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // 이어서 하기 (CHAIN X1): the handoff transport with an in-memory store and session (no IndexedDB in tests).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ARRIVED, HANDOFF_KEY, HANDOFF_TTL, SWEEP_FLAG, TAKE_FAILED, isBlobRefusal, isStale, pendingHandoff, receiveHandoff, recordBytes, sendTo, sweepDue, sweepLingering, takeHandoff, type HandoffRecord, type HandoffStore, type StoredRecord } from '../../src/lib/ui/handoff';
+import { ARRIVED, HANDOFF_KEY, HANDOFF_TTL, SWEEP_FLAG, TAKE_FAILED, isBlobRefusal, isStale, pendingHandoff, receiveHandoff, recordBytes, sendTo, sweepDue, sweepLingering, takeHandoff, takeHandoffFrom, type HandoffRecord, type HandoffStore, type StoredRecord } from '../../src/lib/ui/handoff';
 
 function memStore() {
   const recs = new Map<string, StoredRecord>();
@@ -195,6 +195,19 @@ describe('receiveHandoff', () => {
     expect(got.map((f) => f.name)).toEqual(['a.pdf']);
     expect(notice.hidden).toBe(false);
     expect(notice.textContent).toBe(`${ARRIVED} 도구 알림.`);
+  });
+
+  it('passes the sending tool to deliver (IDCAM1022 D8c); takeHandoffFrom returns it with the file', async () => {
+    const { root, notice } = page();
+    await sendTo('id-photo', 'id-photo-camera', new Blob(['jpg'], { type: 'image/jpeg' }), 'photo.jpg', 'image/jpeg', vi.fn(), deps);
+    const got: [string, string][] = [];
+    await receiveHandoff('id-photo', root, (f, from) => void got.push([f.name, from]), { notice }, deps);
+    expect(got).toEqual([['photo.jpg', 'id-photo-camera']]);
+    await sendTo('id-photo', 'remove-background', new Blob(['png'], { type: 'image/png' }), 'a.png', 'image/png', vi.fn(), deps);
+    const taken = await takeHandoffFrom('id-photo', deps);
+    expect(taken?.from).toBe('remove-background');
+    expect(taken?.file.type).toBe('image/png');
+    expect(await takeHandoffFrom('id-photo', deps)).toBeNull();
   });
 
   it('no notice when the tool reported an error or did not start', async () => {

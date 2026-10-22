@@ -1,0 +1,152 @@
+---
+// /id-photo-camera/ (IDCAM1022 D1-D11): 증명사진 촬영. Injected by astro.config.mjs only when PUBLIC_ID_CAMERA is on
+// (default). The page only takes the photo: the camera starts on the 「카메라 켜기」 tap (never on load), the live view
+// shows the chosen preset's guide (the same geometry as /id-photo/), and the still (the guide rectangle cut from the
+// frame, never mirrored) goes to /id-photo/?preset=<id> through the 이어서 하기 store. Nothing is sent anywhere. Without
+// the camera API, or when it fails, the native camera input (capture=user) takes the photo instead. Only this route
+// allows the camera (Permissions-Policy camera=(self), scripts/lib/idcamera.mjs). Every string on this page is in the
+// preloaded UI font (CORE_PATHS); the controller's messages stay late.
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import ToolNotes from '../../components/ToolNotes.astro';
+import QuickLinks from '../../components/QuickLinks.astro';
+import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
+import { getTool } from '../../data/tools';
+import { DEFAULT_PRESET, PASSPORT_CHECK_URL, PRESETS, PRESET_GROUPS, RETRIEVED } from '../../data/id-photo-presets';
+// Page-only styles, inlined (the /english-address/ pattern): no other page carries them.
+import camCss from './camera.css?inline';
+
+const tool = getTool('id-photo-camera');
+const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
+const first = PRESETS.find((p) => p.id === DEFAULT_PRESET) ?? PRESETS[0]!;
+const timers = [
+  { v: '0', label: '바로' },
+  { v: '3', label: '3초' },
+  { v: '10', label: '10초' },
+];
+---
+<Base title={tool.title} description={tool.description}>
+  <JsonLd slot="head" data={jsonLd} />
+  <style slot="head" is:inline set:html={camCss}></style>
+  <section class="tool-hero" aria-labelledby="tool-title">
+    <div class="wrap narrow">
+      <h1 id="tool-title">{tool.h1}</h1>
+      <p class="lead">휴대폰 카메라 화면에 제출처 규격의 안내선을 보여 드려요. 정수리와 턱을 선에 맞춰 찍으면, 여권·증명사진 규격 맞추기에서 바로 크기와 용량을 맞춰 저장할 수 있어요.</p>
+    </div>
+  </section>
+
+  <section class="tool" aria-label={`${tool.name} 도구`}>
+    <div class="wrap narrow">
+      <div id="cam-tool" class="cam" data-state="idle">
+        <div class="ph-field">
+          <label for="cam-preset">제출처</label>
+          <select id="cam-preset" class="select" aria-describedby="cam-source">
+            {PRESET_GROUPS.map((group) => {
+              const items = PRESETS.filter((p) => p.group === group);
+              return items.length ? (
+                <optgroup label={group}>
+                  {items.map((p) => <option value={p.id} selected={p.id === first.id}>{p.label}</option>)}
+                </optgroup>
+              ) : null;
+            })}
+          </select>
+          <p class="level-desc idp-source" id="cam-source">기준일 {RETRIEVED} · 출처: <a href={first.sourceUrls[0]} rel="noopener noreferrer" target="_blank">{first.source} (새 창)</a></p>
+        </div>
+        {/* D8(d): the passport preset says what 외교부 says about phone photos (menuPos=12, 32; read 2026-10-22). */}
+        <p class="notice cam-passport" id="cam-passport" hidden={first.id !== 'passport_online'}>
+          외교부는 휴대폰으로 찍은 사진을 권장하지 않아요. 직접 찍은 사진은 규격에 맞을 때만 쓸 수 있어요.
+          <a href={PASSPORT_CHECK_URL} rel="noopener noreferrer" target="_blank">외교부 온라인 여권 사진 검증 (새 창)</a>
+        </p>
+
+        <div class="cam-start" id="cam-start">
+          <button type="button" class="btn primary" id="cam-on">카메라 켜기</button>
+          <p class="level-desc">휴대폰을 세워 두고 조금 떨어져서 타이머로 찍으세요. 뒤가 흰색인 곳에 서고, 창문을 등지지 마세요.</p>
+        </div>
+
+        <p class="error-box" id="cam-error" role="alert" data-live="alert" hidden></p>
+
+        <div class="cam-fallback" id="cam-fallback" hidden>
+          <input id="cam-file" class="file-input" type="file" accept="image/*" capture="user">
+          <label class="btn primary" for="cam-file">휴대폰 카메라로 찍기</label>
+        </div>
+
+        <div class="cam-live" id="cam-live" hidden>
+          <div class="cam-stage" id="cam-stage">
+            <video id="cam-video" playsinline muted autoplay aria-label="카메라 화면"></video>
+            <canvas id="cam-overlay" aria-hidden="true"></canvas>
+            <p class="cam-count" id="cam-count" aria-hidden="true" hidden></p>
+          </div>
+          <fieldset class="cam-timer">
+            <legend>타이머</legend>
+            {timers.map((t) => (
+              <label class="check"><input type="radio" name="cam-timer" value={t.v} checked={t.v === '3'}><span>{t.label}</span></label>
+            ))}
+          </fieldset>
+          <div class="row">
+            <button type="button" class="btn primary" id="cam-shoot">찍기</button>
+            <button type="button" class="btn ghost" id="cam-flip">카메라 바꾸기</button>
+          </div>
+        </div>
+
+        <div class="cam-review" id="cam-review" hidden>
+          <img id="cam-still" alt="찍은 사진" decoding="async">
+          <p class="notice" id="cam-lowres" hidden></p>
+          <div class="row">
+            <button type="button" class="btn primary" id="cam-use">이 사진으로 규격 맞추기</button>
+            <button type="button" class="btn ghost" id="cam-retake">다시 찍기</button>
+          </div>
+          <p class="row" id="cam-save-row" hidden><a class="btn ghost" id="cam-save" download="photo.jpg">사진 저장</a></p>
+        </div>
+
+        <p class="visually-hidden" id="cam-status" aria-live="polite" data-live="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <QuickLinks slug={tool.slug} />
+
+  <section class="howto" aria-labelledby="howto-title">
+    <div class="wrap narrow">
+      <h2 id="howto-title">사용 방법</h2>
+      <ol class="steps">
+        <li><strong>제출처 고르고 카메라 켜기</strong><span>여권, 시험, 이력서 중 제출처를 고르고 「카메라 켜기」를 누릅니다. 처음 한 번은 카메라를 써도 되는지 묻습니다.</span></li>
+        <li><strong>안내선에 맞춰 찍기</strong><span>휴대폰을 세워 두고 화면의 선에 정수리와 턱을 맞춥니다. 타이머를 고르고 「찍기」를 누릅니다.</span></li>
+        <li><strong>규격에 맞춰 저장</strong><span>찍은 사진을 보고 「이 사진으로 규격 맞추기」를 누르면, 여권·증명사진 규격 맞추기에서 바로 크기와 용량을 맞춰 저장합니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-title">
+    <div class="wrap narrow">
+      <h2 id="why-title">알아 두면 좋아요</h2>
+      <ul class="points">
+        <li><strong>보정하지 않습니다</strong><span>안내선 안을 잘라 넘기기만 하고, 얼굴이나 배경은 고치지 않습니다.</span></li>
+        <li><strong>거울처럼 보여도 사진은 그대로</strong><span>얼굴 쪽 카메라 화면은 거울처럼 왼쪽과 오른쪽이 바뀌어 보이지만, 찍은 사진은 실제 방향 그대로입니다.</span></li>
+        <li><strong>가입하지 않습니다</strong><span>회원가입이 필요 없습니다.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <ToolNotes slug={tool.slug} />
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap narrow">
+      <h2 id="faq-title">자주 묻는 질문</h2>
+      {tool.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+          {f.links?.map((l) => (
+            <p><a href={l.href} {...(l.href.startsWith('http') ? { rel: 'noopener noreferrer', target: '_blank' } : {})}>{l.text}</a></p>
+          ))}
+        </details>
+      ))}
+    </div>
+  </section>
+  <RelatedTools current={tool.slug} only={['id-photo', 'photo-compress', 'image-to-jpg']} />
+</Base>
+
+<script>
+  import './entry';
+</script>

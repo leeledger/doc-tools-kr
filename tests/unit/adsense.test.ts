@@ -3,6 +3,7 @@
 // under the e2e server's Cloudflare model, gen-headers off == before, the check-dist rules, the guide author and the
 // Coupang-off rules.
 import { readFileSync } from 'node:fs';
+import { cameraHeaders } from '../../scripts/lib/idcamera.mjs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -159,9 +160,11 @@ describe('content CSP and _headers (D5)', () => {
   });
 
   it('gen-headers off: exactly what it wrote before ADS1020 (public/_headers + the domain block; GA and analytics as before)', () => {
-    expect(siteHeaders(HEADERS, { PUBLIC_SITE_URL: SITE }).headers).toBe(HEADERS + domainHeaders(SITE));
+    // IDCAM1022 D9: the default build adds the camera page's Permissions-Policy block (PUBLIC_ID_CAMERA, default on).
+    expect(siteHeaders(HEADERS, { PUBLIC_SITE_URL: SITE }).headers).toBe(HEADERS + cameraHeaders(true) + domainHeaders(SITE));
+    expect(siteHeaders(HEADERS, { PUBLIC_SITE_URL: SITE, PUBLIC_ID_CAMERA: '0' }).headers).toBe(HEADERS + domainHeaders(SITE));
     const ga = siteHeaders(HEADERS, { PUBLIC_SITE_URL: SITE, PUBLIC_GA_ID: 'G-TEST000000', PUBLIC_CF_ANALYTICS_TOKEN: '0123456789abcdef0123456789abcdef' }).headers;
-    expect(ga).toBe(`${withGaCsp(withAnalyticsCsp(HEADERS))}/ga.js\n  Cache-Control: no-cache\n${domainHeaders(SITE)}`);
+    expect(ga).toBe(`${withGaCsp(withAnalyticsCsp(HEADERS))}/ga.js\n  Cache-Control: no-cache\n${cameraHeaders(true)}${domainHeaders(SITE)}`);
     expect(ga).not.toContain('fenced-frame-src');
     expect(adsHeaderProblems(ga, false)).toEqual([]);
   });

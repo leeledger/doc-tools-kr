@@ -380,7 +380,7 @@ describe('gen-brand (P.10)', () => {
     expect(pngSize(out['brand/icon-maskable-512.png'])).toMatchObject({ w: 512, h: 512 });
     // One share image per og.json image (Polish Q), 1200×630, ≤ 300 KB; no single og.png any more.
     const og = Object.keys(out).filter((k) => /^brand\/og-[a-z-]+\.png$/.test(k)).sort();
-    expect(og).toEqual(['char-count', 'default', 'english-name', 'home', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'id-copy', 'id-photo', 'image-to-jpg', 'jpg-to-pdf', 'loan-note', 'pdf-compress', 'pdf-edit', 'pdf-merge', 'pdf-password', 'pdf-sign', 'pdf-split', 'pdf-to-jpg', 'photo-compress', 'power-of-attorney', 'stamp-maker', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
+    expect(og).toEqual(['char-count', 'default', 'english-name', 'home', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'id-copy', 'id-photo-camera', 'id-photo', 'image-to-jpg', 'jpg-to-pdf', 'loan-note', 'pdf-compress', 'pdf-edit', 'pdf-merge', 'pdf-password', 'pdf-sign', 'pdf-split', 'pdf-to-jpg', 'photo-compress', 'power-of-attorney', 'stamp-maker', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
     expect(out).not.toHaveProperty(['brand/og.png']);
     for (const k of og) {
       expect(pngSize(out[k]), k).toMatchObject({ w: 1200, h: 630, png: true });
@@ -666,7 +666,9 @@ describe('built output', () => {
    */
   const builtLive = () => {
     // tools.ts places BG_REMOVE_TOOL right before hwp-to-pdf (FORM1020 put power-of-attorney between it and stamp-signature).
-    const live = existsSync(join(DIST, 'remove-background')) ? LIVE_TOOLS.flatMap((t) => (t.slug === 'hwp-to-pdf' ? [BG_REMOVE_TOOL, t] : [t])) : LIVE_TOOLS;
+    // IDCAM1022: unit tests run with /id-photo-camera/ on (its default); a PUBLIC_ID_CAMERA=0 build has no such page.
+    const shipped = existsSync(join(DIST, 'id-photo-camera')) ? LIVE_TOOLS : LIVE_TOOLS.filter((t) => t.slug !== 'id-photo-camera');
+    const live = existsSync(join(DIST, 'remove-background')) ? shipped.flatMap((t) => (t.slug === 'hwp-to-pdf' ? [BG_REMOVE_TOOL, t] : [t])) : shipped;
     // ADDREN1016: a PUBLIC_ADDR_EN=1 build (the CI checks job) also has /english-address/, last as in tools.ts.
     return existsSync(join(DIST, 'english-address')) ? [...live, ADDR_EN_TOOL] : live;
   };
@@ -690,6 +692,8 @@ describe('built output', () => {
     ...(existsSync(join(DIST, 'english-address'))
       ? { PUBLIC_ADDR_EN: '1', PUBLIC_PRIVACY_OFFICER: process.env.PUBLIC_PRIVACY_OFFICER || '이종림', PUBLIC_CONTACT_EMAIL: process.env.PUBLIC_CONTACT_EMAIL || 'robotncoding@kakao.com' }
       : { PUBLIC_ADDR_EN: '0' }),
+    // IDCAM1022: 증명사진 촬영 when its page was built (PUBLIC_ID_CAMERA, default on).
+    PUBLIC_ID_CAMERA: existsSync(join(DIST, 'id-photo-camera')) ? '1' : '0',
     PUBLIC_GA_ID: existsSync(join(DIST, 'ga.js')) ? (/gtag\('config','(G-[A-Z0-9]+)'/.exec(readFileSync(join(DIST, 'ga.js'), 'utf8'))?.[1] ?? '') : '',
   });
   /** The build under test has the anonymous usage statistics (PUBLIC_USAGE_STATS=1): /privacy/ has id="usage". */
@@ -1092,6 +1096,27 @@ describe('built output', () => {
     const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_BG_REMOVE: on ? '0' : '1' }, encoding: 'utf8' });
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(on ? /names \/remove-background\/ in a build with PUBLIC_BG_REMOVE off/ : /remove-background\/index\.html: no file found/);
+  });
+
+  it('/id-photo-camera/ (IDCAM1022 D10): all of it with PUBLIC_ID_CAMERA on, no trace with it off; check-dist enforces both', () => {
+    need();
+    const on = existsSync(join(DIST, 'id-photo-camera', 'index.html'));
+    const sitemap = readFileSync(join(DIST, 'sitemap.xml'), 'utf8');
+    const llms = readFileSync(join(DIST, 'llms.txt'), 'utf8');
+    const home = readFileSync(join(DIST, 'index.html'), 'utf8');
+    const idPhoto = readFileSync(join(DIST, 'id-photo', 'index.html'), 'utf8');
+    const headers = readFileSync(join(DIST, '_headers'), 'utf8');
+    expect(sitemap.includes('/id-photo-camera/')).toBe(on);
+    expect(llms.includes('/id-photo-camera/')).toBe(on);
+    expect(home.includes('href="/id-photo-camera/"')).toBe(on);
+    expect(idPhoto.includes('id="idp-camera"')).toBe(on);
+    expect(existsSync(join(DIST, 'brand', 'og-id-photo-camera.png'))).toBe(on);
+    expect(headers.includes('camera=(self)')).toBe(on);
+    expect(readFileSync(join(DIST, 'embed', 'id-photo', 'index.html'), 'utf8')).not.toContain('id="idp-camera"');
+    // The other state is refused by check-dist on this build.
+    const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'check-dist.mjs')], { env: { ...buildEnv(), PUBLIC_ID_CAMERA: on ? '0' : '1' }, encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(on ? /the 증명사진 촬영 page in a build with PUBLIC_ID_CAMERA off/ : /id-photo-camera\/index\.html: no file found/);
   });
 
   it('/english-address/ (ADDREN1016): all of it with PUBLIC_ADDR_EN on, no trace with it off; never the key or the juso API; check-dist enforces both', () => {

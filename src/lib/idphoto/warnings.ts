@@ -30,7 +30,9 @@ export type CheckId =
   | 'size'
   | 'bytes'
   | 'inside'
-  | 'pose';
+  | 'pose'
+  | 'bgremoved'
+  | 'bgmaybe';
 
 export interface CheckItem {
   id: CheckId;
@@ -58,7 +60,17 @@ export interface ChecklistInput {
   manualReason?: 'noface' | 'skipped' | 'failed' | null;
   /** The custom-size field message, when the custom input is invalid. */
   customError?: string | null;
+  /**
+   * The photo came from 배경 지우기 (이어서 하기 `from`; IDCAM1022 D8c). The controller decides it, so a build without that
+   * tool never names it here.
+   */
+  bgEdited?: boolean;
 }
+
+/** Presets whose source forbids a removed background: saving is blocked, the rule is quoted (D8c). */
+export const BG_FORBIDDEN: readonly string[] = ['passport_online', 'driver_license'];
+/** Preset groups (and the user's own size) where an edited background is the user's call: no item (D8b). */
+const BG_FREE_GROUPS: readonly string[] = ['이력서', '기타'];
 
 const n1 = (v: number): string => v.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const n0 = (v: number): string => Math.round(v).toLocaleString('ko-KR');
@@ -81,6 +93,11 @@ export const COPY = {
   bytes: (kb: string) => `${kb} 안으로 맞춥니다.`,
   inside: '사진 안쪽만 씁니다.',
   pose: '얼굴이 정면이고 표정·눈 상태에 문제가 보이지 않습니다.',
+  /** D8c: 외교부 menuPos=12 「제출 불가한 사진파일 안내」 (read 2026-10-22). */
+  bgPassport: '배경을 지운 사진은 낼 수 없습니다. 외교부는 「배경이 흰색이 아니거나, 배경색을 사진 편집 프로그램으로 제거하여 사진이 변형된 경우」를 받지 않습니다. 원본 사진으로 다시 해 주세요.',
+  /** D8c: 도로교통공단 사진 규격 (guide driver-license-photo, retrieved 2026-10-06). */
+  bgLicense: '배경을 지운 사진은 낼 수 없습니다. 도로교통공단은 「인위적으로 합성된 사진 불가」라고 안내합니다. 원본 사진으로 다시 해 주세요.',
+  bgMaybe: '배경을 지운 사진은 기관에 따라 받지 않을 수 있어요.',
 } as const;
 
 /** "500 KB 이하" / "350 KB 미만" / "10 MB 이하" for the byte limit line. */
@@ -106,6 +123,10 @@ export function checklist(i: ChecklistInput): Checklist {
   const oks: CheckItem[] = [];
   const out = { w: i.preset.outW, h: i.preset.outH };
   if (i.customError) blocks.push({ id: 'custom', text: i.customError });
+  if (i.bgEdited) {
+    if (BG_FORBIDDEN.includes(i.preset.id)) blocks.push({ id: 'bgremoved', text: i.preset.id === 'driver_license' ? COPY.bgLicense : COPY.bgPassport });
+    else if (i.preset.id !== 'custom' && !BG_FREE_GROUPS.includes(i.preset.group)) warns.push({ id: 'bgmaybe', text: COPY.bgMaybe });
+  }
   if (i.lowres) blocks.push({ id: 'lowres', text: COPY.lowres(out.w, out.h) });
   else if (!inside(i.state, out, i.srcW, i.srcH)) blocks.push({ id: 'outside', text: COPY.outside });
 

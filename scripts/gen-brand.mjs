@@ -223,8 +223,8 @@ export function buildIco(pngs) {
   return Buffer.concat([header, ...pngs.map((p) => p.data)]);
 }
 
-/** Share images that ship only with their release flag on (Sprint C, C2: PUBLIC_BG_REMOVE; ADDREN1016: PUBLIC_ADDR_EN). */
-export const FLAGGED_IMAGES = { 'remove-background': 'bgRemove', 'english-address': 'addrEn' };
+/** Share images that ship only with their release flag on (Sprint C, C2: PUBLIC_BG_REMOVE; ADDREN1016: PUBLIC_ADDR_EN; IDCAM1022: PUBLIC_ID_CAMERA, default on). */
+export const FLAGGED_IMAGES = { 'remove-background': 'bgRemove', 'english-address': 'addrEn', 'id-photo-camera': 'idCamera' };
 
 /**
  * Guide figures of a guide that ships only with its release flag (CONTENT1021 B2: guide remove-background, `requires:
@@ -248,9 +248,9 @@ export function syncFlaggedGuideImages(pub, flags) {
 }
 
 /**
- * Every output, keyed by its path under public/. `flags.bgRemove`: the /remove-background/ image ships (default off); `flags.addrEn`: the /english-address/ one.
+ * Every output, keyed by its path under public/. `flags.bgRemove`: the /remove-background/ image ships (default off); `flags.addrEn`: the /english-address/ one; `flags.idCamera`: the /id-photo-camera/ one.
  */
-export function renderBrand(domain = ogDomain(), flags = /** @type {{ bgRemove?: boolean, addrEn?: boolean }} */ ({ bgRemove: false, addrEn: false })) {
+export function renderBrand(domain = ogDomain(), flags = /** @type {{ bgRemove?: boolean, addrEn?: boolean, idCamera?: boolean }} */ ({ bgRemove: false, addrEn: false, idCamera: true })) {
   const ogImages = Object.fromEntries(
     Object.entries(OG.images)
       .filter(([name]) => !(name in FLAGGED_IMAGES) || flags[FLAGGED_IMAGES[name]])
@@ -277,8 +277,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { publicEnv } = await import('./lib/dist.mjs');
   const { bgRemoveOn } = await import('./lib/bgremove.mjs');
   const { addrEnOn } = await import('./lib/addren.mjs');
+  const { idCameraOn } = await import('./lib/idcamera.mjs');
   const env = publicEnv();
-  const out = { ...renderBrand(ogDomain(), { bgRemove: bgRemoveOn(env.PUBLIC_BG_REMOVE), addrEn: addrEnOn(env) }), ...renderBrandEn(ogDomain()) };
+  const out = { ...renderBrand(ogDomain(), { bgRemove: bgRemoveOn(env.PUBLIC_BG_REMOVE), addrEn: addrEnOn(env), idCamera: idCameraOn(env) }), ...renderBrandEn(ogDomain()) };
   // A share image whose page entry was removed (or the old single og.png) must not ship.
   for (const f of readdirSync(join(pub, 'brand'))) if (/^og.*\.png$/.test(f) && !(`brand/${f}` in out)) rmSync(join(pub, 'brand', f));
   for (const [path, data] of Object.entries(out)) writeFileSync(join(pub, path), data);

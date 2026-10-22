@@ -12,6 +12,7 @@ import { ADS_CFG_PATH, CONTENT_ROUTES, adsenseConfig, withContentCsp } from './l
 import { analyticsToken, withAnalyticsCsp } from './lib/analytics.mjs';
 import { BG_PATH, bgRemoveOn } from './lib/bgremove.mjs';
 import { GA_LOADER, gaId, withGaCsp } from './lib/ga.mjs';
+import { ID_CAMERA_PATH, cameraHeaders, idCameraOn } from './lib/idcamera.mjs';
 import { distDir, publicEnv } from './lib/dist.mjs';
 
 export const PAGES_DEV = 'doc-tools-kr.pages.dev';
@@ -73,9 +74,14 @@ export function siteHeaders(headers, env) {
   }
   // Path rules before the host rules: the COEP block applies on every host.
   if (coep) out += coep;
+  // IDCAM1022 D9: the camera page alone may use the camera (detach the site-wide policy, set camera=(self)).
+  // Once: check-dist may run this on a dist/_headers that gen-headers already wrote.
+  const camera = cameraHeaders(idCameraOn(env));
+  if (camera && !out.includes(camera)) out += camera;
   const block = domainHeaders(site);
   if (block) out += block;
   if (coep) log.push(`COEP require-corp on ${COEP_PATHS.join(', ')}`);
+  if (camera) log.push(`Permissions-Policy camera=(self) on ${ID_CAMERA_PATH} only`);
   log.push(block ? `HSTS for ${new URL(site).host}, noindex on ${PAGES_DEV}` : 'pages.dev site, nothing added');
   return { headers: out, log };
 }

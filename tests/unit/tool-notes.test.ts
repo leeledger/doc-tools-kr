@@ -23,11 +23,12 @@ const notes = files.map((f) => {
 });
 
 describe('tool notes (CONTENT1021 D8)', () => {
-  it('one note per Korean tool page, the two flag-gated pages included, and no other', () => {
-    expect(NOTE_SLUGS).toHaveLength(23);
+  it('one note per Korean tool page, the flag-gated pages included, and no other', () => {
+    expect(NOTE_SLUGS).toHaveLength(24);
     for (const t of TOOLS) expect(NOTE_SLUGS, t.slug).toContain(t.slug);
     expect(NOTE_SLUGS).toContain('remove-background');
     expect(NOTE_SLUGS).toContain('english-address');
+    expect(NOTE_SLUGS).toContain('id-photo-camera');
     expect(notes.map((n) => n.slug).sort()).toEqual([...NOTE_SLUGS].sort());
   });
 

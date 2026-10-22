@@ -82,6 +82,11 @@ function must<T extends HTMLElement>(id: string): T {
   return e as T;
 }
 
+/** IDCAM1022 D8c: the tool that handed the photo over (이어서 하기 record `from`); null for a photo picked here. */
+export interface OpenOptions {
+  from?: string | null;
+}
+
 interface Photo {
   bitmap: ImageBitmap;
   preview: ImageBitmap;
@@ -93,7 +98,7 @@ interface Photo {
  * Loaded by entry.ts on the first interaction (never on page load alone). `pending` is a photo that arrived
  * (drop or picker) while this module was loading; the preset controls may already have been changed.
  */
-export function initIdPhotoTool(pending?: File): { open(file: File): void } | null {
+export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenOptions): void } | null {
   const found = document.getElementById('idp-tool');
   if (!found) return null;
   const root: HTMLElement = found;
@@ -160,6 +165,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
   let sayTimer: ReturnType<typeof setTimeout> | undefined;
   /** A one-off message put in front of the next checklist announcement. */
   let note = '';
+  /** Where the open photo came from (OpenOptions.from); a photo picked or dropped here has none. */
+  let from: string | null = null;
 
   const say = (msg: string): void => live('status', msg, root);
 
@@ -347,6 +354,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
       bg,
       manualReason: photo.manualReason,
       customError: customMsg,
+      // D8c: only a build with 배경 지우기 can receive its photos (and only it names that tool).
+      bgEdited: __BG_REMOVE__ && from === 'remove-background',
     });
     const items: [keyof typeof ICON, string][] = [
       ...current.blocks.map((b) => ['block', b.text] as [keyof typeof ICON, string]),
@@ -431,8 +440,9 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
     setPhase('empty');
   }
 
-  async function openFile(file: File): Promise<void> {
+  async function openFile(file: File, opts: OpenOptions = {}): Promise<void> {
     releasePhoto();
+    from = opts.from ?? null;
     hideError();
     hideEngineError();
     const my = run;
@@ -712,6 +722,6 @@ export function initIdPhotoTool(pending?: File): { open(file: File): void } | nu
   setPhase('empty');
   const first = pending ?? input.files?.[0];
   if (first) void openFile(first);
-  return { open: (file) => void openFile(file) };
+  return { open: (file, opts) => void openFile(file, opts) };
 }
 

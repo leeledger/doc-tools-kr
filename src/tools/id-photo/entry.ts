@@ -6,13 +6,14 @@
 // that cannot load (offline, a new deploy) shows the shared engine panel.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
-import { sweepIfDue } from '../../lib/ui/handoff-marker';
+import { pendingHandoff, sweepIfDue } from '../../lib/ui/handoff-marker';
+import { serialize } from '../../lib/ui/deeplink';
 import { bindQuickLinks, readUrl, writeUrl } from '../../lib/ui/quicklinks';
 import { startUsage, track } from '../../lib/ui/usage';
 import { getPreset } from '../../data/id-photo-presets';
 import { renderSource } from './source';
 
-type Api = { open(file: File): void } | null;
+type Api = { open(file: File, opts?: { from?: string | null }): void } | null;
 
 const root = document.getElementById('idp-tool');
 const drop = document.getElementById('idp-drop');
@@ -51,8 +52,11 @@ if (root && drop) {
   for (const ev of EVENTS) root.addEventListener(ev, start, { passive: true });
   drop.addEventListener('dragover', onDragOver);
   drop.addEventListener('drop', onDrop);
-  // This page sends files (이어서 하기): a file stored earlier and never taken is deleted once older than 10 minutes.
-  sweepIfDue();
+  // A photo handed over by another tool (이어서 하기; IDCAM1022 D2: 증명사진 촬영) is taken below, after the preset; this
+  // page sends files too, so otherwise a file stored earlier and never taken is deleted once older than 10 minutes.
+  const notice = document.getElementById('idp-notice');
+  const receiving = !!notice && pendingHandoff('id-photo');
+  if (!receiving) sweepIfDue();
 
   // Deep links (Growth G.5, G.6): ?preset=<id> picks that 제출처 before the controller loads (the controller reads
   // the select when it starts), and the address follows the select from then on.
@@ -65,7 +69,16 @@ if (root && drop) {
       select.value = preset.id;
       renderSource(source, preset);
     }
-    select.addEventListener('change', () => writeUrl('id-photo', select.value === 'custom' ? null : { preset: select.value }));
+    // IDCAM1022 D1: 「카메라로 찍기」 opens the camera page with the same preset.
+    const camera = document.getElementById('idp-camera') as HTMLAnchorElement | null;
+    const cameraHref = (): void => {
+      if (camera) camera.href = `/id-photo-camera/${serialize('id-photo', select.value === 'custom' ? null : { preset: select.value })}`;
+    };
+    cameraHref();
+    select.addEventListener('change', () => {
+      writeUrl('id-photo', select.value === 'custom' ? null : { preset: select.value });
+      cameraHref();
+    });
     bindQuickLinks(
       'id-photo',
       (s) => {
@@ -77,5 +90,20 @@ if (root && drop) {
       },
       root,
     );
+  }
+
+  if (receiving && notice) {
+    // Start at once and open the photo as if picked, telling the controller where it came from (D8c).
+    const ready = load();
+    void import('../../lib/ui/handoff')
+      .then(({ receiveHandoff }) =>
+        receiveHandoff('id-photo', root, async (f, from) => {
+          const api = await ready;
+          if (!api) return false;
+          api.open(f, { from });
+          return true;
+        }, { notice }),
+      )
+      .catch(() => void showEngineError());
   }
 }

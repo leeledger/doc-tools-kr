@@ -10,6 +10,8 @@ declare const __BG_REMOVE__: boolean;
 declare const __BG_CLOUD__: boolean;
 /** Build-time constant (astro.config.mjs `define`): the /english-address/ tool ships (PUBLIC_ADDR_EN; scripts/lib/addren.mjs). */
 declare const __ADDR_EN__: boolean;
+/** Build-time constant (astro.config.mjs `define`): the /id-photo-camera/ page ships (PUBLIC_ID_CAMERA, default on; scripts/lib/idcamera.mjs). */
+declare const __ID_CAMERA__: boolean;
 interface ImportMetaEnv {
   /** Google Analytics 4 measurement ID (owner 2026-10-08; scripts/lib/ga.mjs). Unset: no GA. */
   readonly PUBLIC_GA_ID?: string;

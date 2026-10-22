@@ -3840,3 +3840,50 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Richard: clear, 0 Must Fix (handoff/REVIEW-FEEDBACK-IDCAM1022-A.md). Note for Step B: pass the on-screen crop rect size to guides() and offset by its origin, not the video frame size.
 - Decision: qa:visual is a live-site matrix (scripts/qa/visual.mjs: "the deploy gate runs it against the live site"), so it runs after merge against docttak.com/id-photo/, not before. Pixel identity is covered pre-merge by the bit-for-bit vitest.
 - PR to main; owner merges after green CI (no --auto: no required checks in this repo).
+
+## IDCAM1022 B — /id-photo/ receiver + /id-photo-camera/ core (Bob, 2026-10-22) — DONE_WITH_CONCERNS
+- Branch `idcam1022-b` (stacked on idcam1022 / PR #16). Review: handoff/REVIEW-REQUEST-IDCAM1022-B.md.
+- Built: PUBLIC_ID_CAMERA (scripts/lib/idcamera.mjs, default "1"; astro.config inject + `__ID_CAMERA__`); the page
+  src/tools/id-photo-camera/{page.astro, camera.css, entry.ts, controller.ts, capture.ts, errors.ts, copy.ts, send.ts};
+  ID_CAMERA_TOOL in tools.ts (right after id-photo, 5 FAQ, tool note src/content/tool-notes/id-photo-camera.md with 2 외교부
+  quotes); og image + description; home order; NEXT_GUIDES; sw runtime page (flagged); gen-headers block
+  (`! Permissions-Policy` + camera=(self)) on /id-photo-camera/* only; check-dist rules (headers per route, flag on/off
+  traces, video attrs, camera API only in the lazy chunk, budgets); usage slug; /id-photo/ receiver (pendingHandoff ->
+  receiveHandoff -> open(file, {from})) + 「카메라로 찍기」 link (#idp-camera, follows ?preset, not in the embed widget);
+  D8c checklist plumbing (warnings.ts `bgEdited` -> block on passport/driver with the quoted rule, note on other official
+  presets, nothing on 이력서/기타/custom).
+- Decisions (Bob):
+  - Reviewer note on Step A applied: overlay.ts now exports `drawGuides(g, preset, W, H)` (drawOverlay calls it with the
+    same arguments, so /id-photo/ is unchanged); the camera canvas passes the on-screen guide rectangle's size and
+    translates to its origin (controller.ts draw()).
+  - ID prefix `cam-` (not `ic-`): `.ic-stage` etc. are global id-copy rules in app.css.
+  - Handoff into /id-photo/ is a direct sendTo with go -> `/id-photo/?preset=<id>` (send.ts), not a next-steps FLOW row:
+    FLOW buttons are tool-name labels to `/<to>/` without a query, and the brief's button is 「이 사진으로 규격 맞추기」 with
+    the preset. Usage: next event t=id-photo-camera v=id-photo.
+  - `receiveHandoff` deliver now gets `(file, from)`; `takeHandoffFrom` returns the record's `from` (takeHandoff unchanged).
+  - D8c in a PUBLIC_BG_REMOVE=0 build: the controller passes `bgEdited: __BG_REMOVE__ && from === 'remove-background'`, so a
+    flag-off bundle never names that tool (check-dist rule caught the first try).
+  - Usage events mapped onto existing kinds (no Function change): cam ok = start (o=preset), cam fail = fail c=denied|notfound|
+    busy|nosupport|other p=load, capture = success, handoff = next, fallback = pick.
+  - Copy reworded to existing glyphs (D11; never grow the preload): 「앞/뒤 카메라 바꾸기」 -> 「카메라 바꾸기」; 「팔을 뻗은
+    셀카보다 …」 -> 「휴대폰을 세워 두고 조금 떨어져서 타이머로 찍으세요」 on the page (the full advice with the 외교부 근접 촬영
+    quote is in the tool note, system font); late copy 「켰어요/껐어요/까맣게」 reworded (late-800 face was 8.2/8 KB).
+  - Preset select lists the real presets only (no 직접 입력: the camera page has no size fields); /id-photo/ builds the link
+    without a preset for 직접 입력.
+  - Front preview mirrored by CSS (data-mirror), facing from track settings, else the request; the still is drawn from the
+    frame (never mirrored). Black frame (mean luma < 4 on a 32 px probe) is refused with a retry message, camera stays on.
+  - Sharpness/burst left to Step C with the rest of D5 burst (brief: "Live hints/burst are Step C").
+  - Fixtures: no committed y4m. Step B e2e uses Chromium's built-in fake device (real getUserMedia + Permissions-Policy)
+    and a canvas-stream getUserMedia (all browsers with a camera path) — the y4m files are Step C's hint fixtures.
+- Budgets: /id-photo-camera/ initial JS 13.7 KB / 30; controller (lazy) 5.1 KB -> budget 6.2 KB (measured + 20 %);
+  preloaded UI fonts 92.1 / 92.66 KB unchanged; late faces 7.5 / 7.9 of 8 KB; precache 427.0 / 450 (page is runtime-cached).
+- Fixes during the run: check-dist tool-length rule skips /id-photo-camera/ when the flag is off; gen-headers adds the
+  camera block once (idempotent); camera page select overflowed at 360 px (grid min-content) — `.cam .ph-field`
+  minmax(0,1fr) + select width 100%.
+- Gates: check 0/0; vitest 2,176/2,176; default / AUTOFRAME=1 / PUBLIC_ID_CAMERA=0 builds check-dist OK (+ postbuild.test on
+  the off build 77/77); e2e 1 worker: camera specs chromium + mobile-chrome 14/14, id-photo + chain chromium + manual-chromium
+  89 pass / 16 skip, site + polish chromium 177 pass (after the 2 fixes above). Not run locally: firefox/webkit/mobile-safari,
+  cloud-*, LHCI, qa:visual (CI / deploy gate).
+- Known Gaps (IDCAM1022): D8c 「원본 사진으로 다시 하기」 button deferred to Step D (the original is not on /id-photo/);
+  Firefox fake-camera resolution unverified (synthetic test covers the path); O1/O2 real phones and in-app viewers.
+- Escalations: none.
