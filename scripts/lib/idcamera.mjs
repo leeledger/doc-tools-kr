@@ -20,6 +20,13 @@ export function idCameraOn(env) {
 
 /** The path of the camera page. */
 export const ID_CAMERA_PATH = '/id-photo-camera/';
+/** Its guide (IDCAM1022 E, `requires: id-camera`): shown only with the page. */
+export const ID_CAMERA_GUIDE_PATH = '/guide/self-id-photo/';
+
+/** Paths no Markdown page may link in this build (scripts/lib/drop-links.mjs): both pages above when the flag is off. */
+export function idCameraHiddenPaths(on) {
+  return on ? [] : [ID_CAMERA_PATH, ID_CAMERA_GUIDE_PATH];
+}
 /** The site-wide policy (public/_headers `/*`). */
 export const SITE_POLICY = 'camera=(), microphone=(), geolocation=()';
 /** The camera page's policy: its own origin may use the camera; microphone and location stay off. */

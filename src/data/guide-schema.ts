@@ -76,16 +76,20 @@ export const specRowSchema = z
 /**
  * TOOL-GUIDES Part B: a guide about a tool that ships only behind a release flag. `requires: bg-remove` lets the guide
  * name 사진 배경 지우기 (tools, cta) and hides it everywhere while PUBLIC_BG_REMOVE is off (isVisibleGuide).
+ * IDCAM1022 E: `requires: id-camera` does the same for 증명사진 촬영 (PUBLIC_ID_CAMERA, default on).
  */
-const requiresFlag = z.literal('bg-remove').optional();
+const requiresFlag = z.enum(['bg-remove', 'id-camera']).optional();
 export type GuideRequires = z.infer<typeof requiresFlag>;
 
 /** The tool each release flag adds. */
-const FLAG_TOOLS: Readonly<Record<NonNullable<GuideRequires>, string>> = { 'bg-remove': 'remove-background' };
+const FLAG_TOOLS: Readonly<Record<NonNullable<GuideRequires>, string>> = { 'bg-remove': 'remove-background', 'id-camera': 'id-photo-camera' };
 
 /** Shown (page, sitemap, RSS, llms.txt, share image, /guide/, 관련 안내): published, and its release flag on if it has one. */
-export function isVisibleGuide(data: { draft: boolean; requires?: GuideRequires }, bgRemoveOn: boolean): boolean {
-  return data.draft === false && (!data.requires || bgRemoveOn);
+export function isVisibleGuide(data: { draft: boolean; requires?: GuideRequires }, bgRemoveOn: boolean, idCameraOn = true): boolean {
+  if (data.draft !== false) return false;
+  if (data.requires === 'bg-remove') return bgRemoveOn;
+  if (data.requires === 'id-camera') return idCameraOn;
+  return true;
 }
 
 export const publishedGuideSchema = z

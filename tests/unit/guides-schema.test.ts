@@ -415,9 +415,9 @@ describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
     // Any other tool a guide names must not have room for a new guide: a tool with fewer than 4 own guides shows
     // next-step guides after them, and a new guide naming it would push one off. Those tools stay as they are.
     const named = new Set(published.flatMap((g) => g.parsed.tools));
-    const partial = ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'pdf-password', 'image-to-jpg', 'hwp-viewer', 'hwpx-to-hwp', 'stamp-signature', 'hwp-to-pdf', 'remove-background', 'id-copy', 'english-name', 'power-of-attorney', 'loan-note'];
+    const partial = ['jpg-to-pdf', 'pdf-to-jpg', 'pdf-split', 'pdf-sign', 'pdf-password', 'image-to-jpg', 'hwp-viewer', 'hwpx-to-hwp', 'stamp-signature', 'hwp-to-pdf', 'remove-background', 'id-copy', 'english-name', 'power-of-attorney', 'loan-note', 'id-photo-camera'];
     for (const tool of named) if (!FROZEN[tool]) expect(partial, `${tool}: freeze its 4 in TOOL_GUIDE_PINS before a new guide names it`).toContain(tool);
-    const OWN_COUNT: Record<string, number> = { 'jpg-to-pdf': 1, 'pdf-to-jpg': 1, 'pdf-split': 1, 'pdf-sign': 1, 'pdf-password': 1, 'image-to-jpg': 1, 'hwp-viewer': 3, 'hwpx-to-hwp': 2, 'stamp-signature': 3, 'hwp-to-pdf': 4, 'remove-background': 1, 'id-copy': 1, 'english-name': 1, 'power-of-attorney': 1, 'loan-note': 1 };
+    const OWN_COUNT: Record<string, number> = { 'jpg-to-pdf': 1, 'pdf-to-jpg': 1, 'pdf-split': 1, 'pdf-sign': 1, 'pdf-password': 1, 'image-to-jpg': 1, 'hwp-viewer': 3, 'hwpx-to-hwp': 2, 'stamp-signature': 3, 'hwp-to-pdf': 4, 'remove-background': 1, 'id-copy': 1, 'english-name': 1, 'power-of-attorney': 1, 'loan-note': 1, 'id-photo-camera': 1 };
     for (const tool of partial) expect(published.filter((g) => g.parsed.tools.includes(tool)).length, `${tool}: a new guide names it (its 관련 안내 would change)`).toBe(OWN_COUNT[tool]);
   });
 
@@ -498,6 +498,51 @@ describe('TOOL-GUIDES Part B: a guide behind the 배경 지우기 release flag',
     for (const bgOn of [false, true]) {
       const shown = new Set(published.filter((g) => isVisibleGuide(g.parsed, bgOn)).map((g) => g.slug));
       for (const g of published.filter((x) => shown.has(x.slug))) for (const r of g.parsed.related) expect(shown.has(r), `${bgOn ? 'on' : 'off'}: ${g.slug} → ${r}`).toBe(true);
+    }
+  });
+});
+
+describe('IDCAM1022 E: the 집에서 증명사진 guide behind PUBLIC_ID_CAMERA', () => {
+  const cam = published.find((g) => g.slug === 'self-id-photo');
+  const base = () => publishedGuideSchema.parse(published.find((g) => g.slug === 'pdf-sign')!.data);
+
+  it('requires id-camera, names the camera tool first, and is visible only with the flag on', () => {
+    expect(cam, 'src/content/guides/self-id-photo.md').toBeDefined();
+    expect(cam!.parsed.requires).toBe('id-camera');
+    expect(guideProblems(cam!.parsed)).toEqual([]);
+    expect(cam!.parsed.tools[0]).toBe('id-photo-camera');
+    expect(cam!.parsed.cta.href).toBe('/id-photo-camera/');
+    expect(TOOL_GUIDE_PINS['id-photo-camera']).toEqual(['self-id-photo']);
+    expect(isVisibleGuide(cam!.parsed, false, true)).toBe(true);
+    expect(isVisibleGuide(cam!.parsed, true, false)).toBe(false);
+    expect(isVisibleGuide(base(), false, false)).toBe(true);
+    expect(isVisibleGuide({ draft: false, requires: 'bg-remove' }, false, true)).toBe(false);
+  });
+
+  it('a guide without requires that names id-photo-camera fails; with requires: id-camera it passes', () => {
+    const g = base();
+    const msg = 'needs requires: id-camera';
+    expect(guideProblems({ ...g, tools: ['pdf-sign', 'id-photo-camera'] }).join()).toContain(msg);
+    expect(guideProblems({ ...g, cta: { href: '/id-photo-camera/', label: 'x' } }).join()).toContain(msg);
+    expect(guideProblems({ ...g, related: ['stamp-image', 'id-photo-camera'] }).join()).toContain(msg);
+    expect(guideProblems({ ...g, requires: 'id-camera', tools: ['id-photo-camera'], cta: { href: '/id-photo-camera/', label: 'x' } })).toEqual([]);
+  });
+
+  it('the four photo guides and the tool note link it, each link in its own paragraph (dropped with the flag off)', () => {
+    const toolNote = readFileSync(join(import.meta.dirname, '..', '..', 'src', 'content', 'tool-notes', 'id-photo-camera.md'), 'utf8');
+    const bodies = [...['passport-photo', 'driver-license-photo', 'resume-photo', 'id-card-photo'].map((s) => [s, published.find((g) => g.slug === s)!.body] as const), ['tool note', toolNote] as const];
+    const paragraphs = (body: string) => body.split(/\r?\n\s*\r?\n/).map((p) => p.trim());
+    for (const [name, body] of bodies) {
+      const paras = paragraphs(body).filter((p) => p.includes('/guide/self-id-photo/'));
+      expect(paras.length, name).toBe(1);
+      expect(paras[0]!.split(/\r?\n/).length, `${name}: the link paragraph is one line`).toBe(1);
+      expect(paras[0]!.startsWith('-'), `${name}: not a list item next to other items`).toBe(false);
+    }
+    // No always-shown guide links the camera page itself; a link to its guide stands in a one-line paragraph.
+    for (const g of published.filter((x) => !x.parsed.requires)) {
+      expect(g.body, g.slug).not.toMatch(/\/id-photo-camera\//);
+      for (const p of paragraphs(g.body).filter((x) => x.includes('/guide/self-id-photo/'))) expect(p.split(/\r?\n/).length, g.slug).toBe(1);
+      for (const f of g.parsed.faq) expect(f.a, g.slug).not.toMatch(/id-photo-camera|self-id-photo/);
     }
   });
 });

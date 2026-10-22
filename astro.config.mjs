@@ -1,4 +1,5 @@
 // @ts-check
+import { satteri } from '@astrojs/markdown-satteri';
 import { renameSync, rmdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +10,8 @@ import { adsenseGate } from './scripts/lib/adsense.mjs';
 import { autoframeOn } from './scripts/lib/autoframe.mjs';
 import { bgCloudOn, privacyGate } from './scripts/lib/bgcloud.mjs';
 import { BG_PATH, bgRemoveOn } from './scripts/lib/bgremove.mjs';
-import { ID_CAMERA_PATH, idCameraOn } from './scripts/lib/idcamera.mjs';
+import { dropLinksPlugin } from './scripts/lib/drop-links.mjs';
+import { ID_CAMERA_PATH, idCameraHiddenPaths, idCameraOn } from './scripts/lib/idcamera.mjs';
 import { rhwpNoDefaultWasm } from './scripts/lib/vite-rhwp.mjs';
 import { usageOn, usageSample } from './scripts/lib/usage.mjs';
 
@@ -36,6 +38,8 @@ const bgCloud = bgCloudOn(env);
 const addrEn = addrEnOn(env);
 // IDCAM1022 D10 (scripts/lib/idcamera.mjs): 증명사진 촬영 /id-photo-camera/, default on; "0" builds no such route.
 const idCamera = idCameraOn(env);
+// Pages a Markdown paragraph may not link in this build (scripts/lib/drop-links.mjs).
+const hiddenPaths = idCameraHiddenPaths(idCamera);
 // ADS1020 (scripts/lib/adsense.mjs): the AdSense tag needs the contact and the privacy officer too; an invalid client fails here.
 const gate = [...privacyGate(env), ...addrEnGate(env), ...adsenseGate(env)];
 if (gate.length) throw new Error(gate.join('; '));
@@ -75,6 +79,9 @@ export default defineConfig({
   build: { format: 'directory', inlineStylesheets: 'never' },
   devToolbar: { enabled: false },
   integrations: [bgRemoveRoute, en404],
+  // IDCAM1022 E: with PUBLIC_ID_CAMERA off, a Markdown paragraph linking /id-photo-camera/ or its guide is left out.
+  // With the flag on (default) there is nothing to hide and Astro keeps its default Markdown processor.
+  ...(hiddenPaths.length ? { markdown: { processor: satteri({ hastPlugins: [dropLinksPlugin(hiddenPaths)] }) } } : {}),
   vite: {
     build: {
       sourcemap: false,

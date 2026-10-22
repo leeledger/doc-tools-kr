@@ -4056,3 +4056,43 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   C2 behaviour; owner real-phone check). If it does not, a held photo there shows the download panel, which is still
   correct and still waits for the press.
 - Gates: `npm run check` 0 errors (spec only). No vitest (no unit file touched); no e2e run (WebKit needs memory).
+
+## IDCAM1022 E — guide /guide/self-id-photo/ 「집에서 증명사진 찍는 법」 (Bob, 2026-10-22) — DONE_WITH_CONCERNS
+- Branch `idcam1022-e` (stacked on idcam1022-d / PR #19). Review: handoff/REVIEW-REQUEST-IDCAM1022-E.md.
+- Built: src/content/guides/self-id-photo.md (query 「집에서 증명사진 찍기」; rendered body 2,716 chars by
+  scripts/guide-length.mjs; 15 URL quotes + preset passport_online: 외교부 menuPos=32 ×9 and menuPos=12 ×3 re-read
+  2026-10-22, 도로교통공단 popup ×2 re-read 2026-10-22 (text sits in an img alt; the exact check finds it), 정부24
+  주민등록증 ×1 (2026-10-02); `check:quotes` --exact: 608 verbatim site-wide, the guide's 15 checked alone too: 0 changed).
+  Two own SVGs (src/assets/flagged/img/guide/self-id-photo/: 1-phone-setup side view, 2-framing good/too close/too
+  small/tilted against the crown line and chin band; no numbers in them). No distance or height number anywhere (none
+  is published); 3초/10초 are the tool's own timer labels.
+- Links: one-line paragraph + link in passport-photo (after the 사진관/직접 찍기 list), driver-license-photo (휴대폰 사진으로
+  준비한다면), resume-photo (이력서 사진 고르는 기준), id-card-photo (이렇게 찍어요) and the /id-photo-camera/ tool note;
+  their `updated` -> 2026-10-22 (LOAN1022 precedent). TOOL_GUIDE_PINS 'id-photo-camera' -> ['self-id-photo'];
+  guide-titles regenerated; lighthouserc + /guide/self-id-photo/. Sitemap, llms.txt, RSS, OG image, byline: automatic.
+- Decisions (Bob):
+  - The guide names the camera page (tools, CTA), which exists only with PUBLIC_ID_CAMERA on, so it is flag-gated like
+    remove-background: `requires` now takes 'id-camera' (guide-schema FLAG_TOOLS, isVisibleGuide(data, bgOn, idCameraOn
+    = true), guides.ts passes __ID_CAMERA__, check-dist's visible list); its figures live under src/assets/flagged/ and
+    gen-brand copies them only with the flag on (FLAGGED_GUIDE_IMAGES, .gitignore).
+  - The four always-shown guides must not dead-link the gated guide when the kill switch is used. Astro 7 renders
+    Markdown with Sätteri (rehypePlugins would need @astrojs/markdown-remark, a new package), so scripts/lib/drop-links.mjs
+    is a Sätteri hast plugin: with PUBLIC_ID_CAMERA off it removes each p/li that links /id-photo-camera/ or
+    /guide/self-id-photo/. astro.config adds `markdown.processor: satteri({ hastPlugins })` ONLY when there is a hidden
+    path, so the flag-on (default, production) build keeps Astro's default processor untouched. `satteri` is imported
+    from @astrojs/markdown-satteri, the package astro 7.3.5 pins exactly (0.4.2; MIT; no new install, licences
+    unchanged). Unit test runs the real Sätteri pass. check-dist flag off now also rejects any text file naming
+    /guide/self-id-photo/ and any file path containing self-id-photo.
+  - Background-whitening copy: rule-based (여권/운전면허 quotes) and true in both 배경 지우기 flag states; the guide never
+    links /remove-background/.
+- Out-of-step fix (separate commit "[IDCAM1022 D fix]"): the default build's check-dist failed on Step D code —
+  send.ts (in the /id-photo-camera/ initial chunk) named 'remove-background' in a PUBLIC_BG_REMOVE-off build. sendToBg is
+  now `__BG_REMOVE__ ? send(...) : Promise.resolve(false)` (dead code drops the slug). 2 lines; Step D never ran a
+  default build locally. Cherry-pick to idcam1022-d if PR #19 merges first.
+- Gates: `npm run check` 0 errors / 0 warnings; vitest guides-schema, guide-check, drop-links (new), visits,
+  id-photo-camera, idphoto-bglink, adsense, en-check, tool-notes, next-steps green; postbuild + visits 124/124 on the
+  final dist (run 2 caught the banned 「처음부터」 twice in the guide: reworded); default build
+  (PUBLIC_SITE_URL=https://docttak.com) + check-dist OK (3 runs: 1 found the Step D issue above, 3 after the reword);
+  guide-length: self-id-photo 2,716, the four linking guides 2,555–2,596, /id-photo-camera/ 2,677; precache 427.1 / 450 KB.
+- Not run locally (memory): PUBLIC_ID_CAMERA=0 build (the drop-links path and the new flag-off check-dist rule; unit
+  test covers the plugin with the real engine) and the BG/cloud builds, Playwright, LHCI, qa:visual -> CI.

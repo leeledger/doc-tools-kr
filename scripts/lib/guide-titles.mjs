@@ -41,6 +41,7 @@ export default {
   "qnet-photo": "큐넷 사진 등록 규격과 안 될 때 확인할 점",
   "remove-background": "누끼 따기 쉽게 하는 법, 사진 배경 지우기",
   "resume-photo": "이력서 사진 규격, 사람인·잡코리아 크기와 용량",
+  "self-id-photo": "집에서 증명사진 찍는 법: 휴대폰 세우기, 배경, 빛",
   "stamp-image": "도장·서명 이미지 만들기 (배경 없는 PNG)",
   "teps-photo": "텝스(TEPS) 사진 규격, 50 KB 이하 JPG",
   "univ-docs-upload": "대학 원서 서류 올리기, 용량·파일이 안 될 때",
