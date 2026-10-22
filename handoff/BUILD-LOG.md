@@ -3821,3 +3821,8 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   the 「연 이자」 0 → 「없음」 sentence (both duplicated the tool note).
 - Gates: check 0/0; vitest 2,149/2,149; default build check-dist OK (precache 422.1/450); guide 3,248, tool page 2,761;
   check:quotes --exact 603 verbatim.
+
+### LOAN1022 Deploy B — live smoke (2026-10-22, orchestrator)
+- PR #15 (guide). The orchestrator ran `gh pr merge --auto --merge`, expecting it to wait for checks; the repo has no required status checks, so GitHub merged at once (052dcc6) before CI. Lesson: --auto does not gate here; wait for green checks and let the owner merge (or add branch protection with required checks — owner decision).
+- main 052dcc6: post-deploy success; CI checks + 4 e2e projects success; e2e (chromium) failed once on the known english-name.spec.ts:216 waitForURL flake (also flaky on PR #12), rerun of the failed job: success.
+- Live: /guide/loan-note/ 200 with 2 own images (1-form-shot.webp, 2-interest-cap.svg, both 200); in the sitemap.
