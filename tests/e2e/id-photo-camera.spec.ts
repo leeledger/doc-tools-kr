@@ -17,7 +17,7 @@ import { PRESETS } from '../../src/data/id-photo-presets';
 import { sniffImage } from '../../src/lib/image/sniff';
 import { HINTS } from '../../src/tools/id-photo-camera/copy';
 import { CAMERA_ERRORS } from '../../src/tools/id-photo-camera/errors';
-import { AXE_TAGS, CAMERA_POLICY, SITE_POLICY, arrived, guard, shootNow, stored, tool, type Win } from './idcam';
+import { AXE_TAGS, CAMERA_POLICY, SITE_POLICY, arrived, guard, shootNow, stored, syntheticCamera, tool, type Win } from './idcam';
 import { expect, gotoReady, test } from './no-upload';
 import { photoFixture } from './paths';
 
@@ -26,41 +26,6 @@ const HANDOFF_CHUNK = /\/_astro\/handoff\.[^/]+\.js$/;
 const PASSPORT = PRESETS.find((p) => p.id === 'passport_online')!;
 
 guard();
-
-/** Replaces getUserMedia with a canvas stream: a light frame, a grey head, a dark block near the left edge. */
-async function syntheticCamera(page: Page, w = 432, h = 560): Promise<void> {
-  await page.addInitScript(
-    ([fw, fh]) => {
-      const win = window as unknown as Win;
-      const fake = async (): Promise<MediaStream> => {
-        const cv = document.createElement('canvas');
-        cv.width = fw;
-        cv.height = fh;
-        const g = cv.getContext('2d')!;
-        let tick = 0;
-        const paint = (): void => {
-          tick++;
-          g.fillStyle = tick % 2 ? '#fafafa' : '#f9f9f9';
-          g.fillRect(0, 0, fw, fh);
-          g.fillStyle = '#808080';
-          g.beginPath();
-          g.ellipse(fw / 2, fh * 0.45, fw * 0.25, fh * 0.27, 0, 0, Math.PI * 2);
-          g.fill();
-          g.fillStyle = '#101010';
-          g.fillRect(Math.round(fw * 0.05), Math.round(fh * 0.1), Math.round(fw * 0.15), Math.round(fh * 0.15));
-        };
-        paint();
-        setInterval(paint, 100);
-        const s = (cv as HTMLCanvasElement & { captureStream(fps: number): MediaStream }).captureStream(10);
-        win.__tracks = s.getTracks();
-        return s;
-      };
-      if (!navigator.mediaDevices) Object.defineProperty(navigator, 'mediaDevices', { value: {}, configurable: true });
-      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { value: fake, configurable: true });
-    },
-    [w, h] as const,
-  );
-}
 
 /** Replaces getUserMedia with a canvas stream of a still scene: `bg` everywhere, a `face` oval where the guide's is. */
 async function sceneCamera(page: Page, bg: string, face: string): Promise<void> {
@@ -151,6 +116,8 @@ test.describe('synthetic camera', () => {
     expect(await stillLuma(page, 0.12, 0.17)).toBeLessThan(60);
     expect(await stillLuma(page, 0.88, 0.17)).toBeGreaterThan(200);
     await expect(page.locator('#cam-lowres')).toBeHidden();
+    // Step D (D8b): this build has no 배경 지우기, so no 「배경을 흰색으로 바꾸기」 (remove-background.spec covers it on).
+    await expect(page.locator('#cam-bg')).toHaveCount(0);
     expect(await page.evaluate(() => (window as unknown as Win).__tracks!.every((t) => t.readyState === 'ended'))).toBe(true);
     const axe = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
     expect(axe.violations.map((v) => v.id)).toEqual([]);

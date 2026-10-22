@@ -3948,3 +3948,48 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 ### IDCAM1022 Step A + B — live (2026-10-22)
 - PR #16 (A) merged by owner as 14be75e after a firefox rerun (scattered 20 s timeouts on slow runners; all green on rerun). PR #17 (B) merged by owner as 792645b, all green (checks 52 min under the new 65-min timeout).
 - Live smoke 792645b: /id-photo-camera/ 200, title 「집에서 증명사진 찍기 – …」, h1 「증명사진 촬영」; Permissions-Policy camera=(self) on it, camera=() on /id-photo/ and /embed/id-photo/; 「카메라로 찍기」 link on /id-photo/; in sitemap and llms.txt; og /brand/og-id-photo-camera.png 200; page assets 200; no AdSense tag. Post-deploy job green on 14be75e and 792645b. Real-phone tests remain owner items (O1/O2).
+
+## IDCAM1022 D — background link (D8b/c) (Bob, 2026-10-22) — DONE_WITH_CONCERNS
+- Branch `idcam1022-d` (stacked on idcam1022-c / PR #18, bbe4d3d). Review: handoff/REVIEW-REQUEST-IDCAM1022-D.md.
+- Built: src/lib/idphoto/bglink.ts (pure: BG_PRESETS allowlist saramin/jobkorea/half_card, bgOffered (+custom per D8b),
+  bgPreset -> allowed id else saramin, parseBgLink(?bg=white, ?preset), bgUrl, idPhotoBack). Camera review button
+  「배경을 흰색으로 바꾸기」 (#cam-bg, page.astro only under __BG_REMOVE__, shown by the controller for allowed presets) ->
+  send.ts sendToBg = sendTo('remove-background', from id-photo-camera) -> /remove-background/?bg=white&preset=<id>.
+  /remove-background/ receiver (entry.ts: pendingHandoff -> receiveHandoff -> api.open(file, {held:true}); #bg-arrived
+  notice; ?bg=white checks the 흰색 chip before the controller loads). bg.ts: a held photo stops at ready (cloud,
+  unchanged) or the consent panel even when the engine is cached (model.ts startsAtOnce(engineReady, held); with the
+  engine ready the panel says COPY.held and the button reads 「배경 지우기」, consentKeep hidden); with ?preset= in the
+  address the result shows 「이력서 사진 규격 맞추기」 (#bg-idphoto) -> sendTo('id-photo', from remove-background) ->
+  /id-photo/?preset=<allowed id>. /id-photo/: the D8c blocking item carries 「원본 사진으로 다시 하기」 (#idp-redo, built
+  only under __BG_REMOVE__) -> back to the empty picker (사진 선택 / 카메라로 찍기).
+- Decisions (Bob):
+  - Pass-through allowlist = saramin, jobkorea, half_card. custom is in the D8b offer set (bgOffered) but cannot travel:
+    /id-photo/ deep links never carry custom (deeplink.ts), so it maps to saramin like any other id. Passport/driver ids
+    can never come back through the link (unit test parses every way-back URL with the real deep-link parser), and if
+    a user switches to them on /id-photo/, D8c blocks (from=remove-background, unchanged warnings.ts).
+  - "Held" on the local path means: never auto-start even with a cached engine (brief: arrival -> ready|consent). The
+    cached case reuses the consent panel with its own line instead of the download line (no false "받아요").
+  - The way back to /id-photo/ shows only when the address carries ?preset= (from the camera chain); a plain visit to
+    /remove-background/ keeps its C2 "not for ID photos" positioning and never links to /id-photo/.
+  - 「원본 사진으로 다시 하기」 = toEmpty + focus the picker: the original is not on /id-photo/ (B Known Gap); the empty
+    state shows 「사진 선택」 and 「카메라로 찍기」, which is the way to an unedited photo.
+  - Usage: next t=id-photo-camera v=remove-background; next t=remove-background v=id-photo (existing kinds).
+  - Copy (late/dynamic, glyph-checked by the build): 「배경을 바꾸는 화면으로 넘기는 중이에요」, 「사진을 가져왔어요. 배경
+    지우기를 누르면 이 기기에서 배경을 지워요.」, 「이력서 사진 규격 맞추기」, failure 「사진을 넘기지 못했어요. 흰색 배경으로
+    내려받은 뒤 여권·증명사진 규격 맞추기에서 골라 주세요.」. COPY.md + remove-background tool note (provenance loss,
+    D8c) updated.
+  - e2e helpers: syntheticCamera moved from id-photo-camera.spec to idcam.ts (shared); new seedHandoff (record + marker,
+    as sendTo leaves them) for WebKit and the cached-engine case.
+- Budgets (PUBLIC_BG_REMOVE=1 build): remove-background controller 14.0 / 14.5 KB; /remove-background/ initial 11.0 / 30;
+  camera controller 5.6 / 6.2, initial 14.2 / 30, hints 2.0 / 2.5; preloaded UI fonts 92.2 / 92.66 KB (core 616 chars;
+  not raised); late 7.5 / 7.9 of 8 KB; precache 430.4 / 450.
+- Gates: `npm run check` 0/0; vitest idphoto-bglink + id-photo-camera + bgremove + tool-notes (new/changed) green;
+  ONE build PUBLIC_BG_REMOVE=1 + check-dist OK (-> dist-bg). The remove-background tool-note line was appended while
+  that build ran, so its dist does not contain it (tool-notes unit test green; CI builds it).
+  e2e remove-background.spec bg-chromium, 1 worker, @model excluded: 8/8 (2 new: camera chain; held with cached engine).
+- Not run locally (memory): default and PUBLIC_ID_CAMERA=0 / cloud builds, id-photo-camera.spec (dist/ is a pre-change
+  build), remove-background.cloud.spec (needs dist-bgcloud), bg-mobile-safari, firefox/webkit, LHCI, qa:visual -> CI.
+- Known Gaps (IDCAM1022): back from /id-photo/ (bfcache) to a /remove-background/ result shows a freed canvas (pagehide
+  releases the cut-out; pre-existing for the next-steps buttons too) — 「다른 사진 고르기」 works; with
+  PUBLIC_ID_CAMERA=0 and 배경 지우기 on, the remove-background tool note still names 증명사진 촬영 (both flags are on in
+  production).
