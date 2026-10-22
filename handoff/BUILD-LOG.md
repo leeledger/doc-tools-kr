@@ -3897,3 +3897,4 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Test: id-photo-camera.spec 'review: one capture per tap …' (double tap -> 1 object URL; select disabled in review; pageshow persisted re-enables; retake revokes the URL, select enabled).
 - Gates: `npm run check` 0/0. vitest, the default build and the camera e2e were stopped by the harness (system low on memory) before they reported; not re-run on my own per the harness note. Not committed until they pass.
 - Orchestrator: local vitest was killed for low machine memory; the B fixes are verified by CI on the PR instead (vitest, build + check-dist, e2e on 5 browsers). Owner merges only on green.
+- PR #17 CI: `checks` job cancelled at its 50-min timeout (the Lighthouse step itself finished green, 42 min on slow runners; firefox/mobile-safari e2e also ~49 min today). Raised the job timeout 50 → 65 min in ci.yml; no assertion or budget changed.
