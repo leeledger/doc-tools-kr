@@ -3795,3 +3795,29 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Gates: check 0/0; vitest 2,149/2,149; prod + BG builds with check-dist OK (core 615 / late 81 unchanged; preload
   92.1 / 92.2 BG of 92.66; late-800 7.9/8; loan-note controller 7.8 (7.9 BG)/8.4 KB; precache 422.1 / 425.1); tool page
   2,713; check:quotes --exact 593 verbatim; e2e chromium loan-note + power-of-attorney 17/17.
+
+## LOAN1022 L5 — /guide/loan-note/ 「차용증 쓰는 법」 (Bob, 2026-10-22) — DONE
+- Branch `loan1022-guide` from loan1022 @ 504c468 (PR #14 untouched, not pushed). Commit ff70e34. Review:
+  handoff/REVIEW-REQUEST-LOAN1022-B.md.
+- Guide: 3,307 rendered chars (both builds); 8 H2 per L-D14 incl. 공증 (민사집행법 56조 saved); 14 sources (13 statute +
+  klac 132), all verbatim, retrieved 2026-10-22; FAQ ×4 new. Figures: 1-form-shot.webp 9.6 KB (guide-shots, fixed dates),
+  2-interest-cap.svg 2.2 KB.
+- Decisions: klac line paraphrased (postbuild T9: only law.go.kr quotes may render); answer as one sentence (schema);
+  no digit+원 amounts in text (fact checker unit 원; examples written in 한글); 이자제한법 ① quoted up to 「범위 안에서」
+  (the saved 「대통령령 으로」 is a link artifact); ④ omitted; 상증법 단서 paraphrased; TOOL_GUIDE_PINS loan-note.
+- Gates: check 0/0; vitest 2,148/2,149 (char-count timing flake, 21/21 alone); default + BG builds check-dist OK
+  (precache 422.1 / 425.1 KB); check:quotes --exact 603 verbatim; e2e chromium hubs+growth+loan-note 31/31.
+- Known Gap (carried): 국세청 family-loan page not saved; the guide links nts.go.kr home without a quote.
+- Escalations: none.
+
+### LOAN1022 Deploy A — live smoke (2026-10-22, orchestrator)
+- PR #14 merged by the owner (d85eeb4) before its checks finished; main CI on d85eeb4: success (5-project e2e + checks/LHCI); post-deploy success.
+- Live: /loan-note/ 200 (title 「차용증 만들기 — 차용증 양식 무료, HWP·PDF 저장 | 문서딱」), /power-of-attorney/ 200. Headless run on the live page: amount 10000000 → 만들기 → ready; 차용증.hwp 14,336 B (OLE d0cf11e0), 차용증.pdf 30,665 B (%PDF). Off-site requests: only CF RUM beacon, GA page_view and the /api/usage beacon (allowed); no file data.
+- Owner-only O1 still open: real-한글 open of 위임장.hwp / 차용증.hwp (`npm run forms:hancom`, click 「접근 허용」).
+
+## LOAN1022 B round 2 (Bob, 2026-10-22) — Richard's Should Fix 1–4 — DONE
+- Blank form: 「빈 양식으로 받기」 described as ignoring what was typed (no "아무 칸도 채우지 않고"); tooBig item now quotes
+  「1조 원보다 적게 써 주세요.」 (fact checker passes); SVG <title> + alt 「넘는 부분은 무효」; cut the 소수점 sentence and
+  the 「연 이자」 0 → 「없음」 sentence (both duplicated the tool note).
+- Gates: check 0/0; vitest 2,149/2,149; default build check-dist OK (precache 422.1/450); guide 3,248, tool page 2,761;
+  check:quotes --exact 603 verbatim.
