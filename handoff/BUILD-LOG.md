@@ -3944,3 +3944,7 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   a failed middle grab is skipped.
 - Gates: `npm run check` 0/0; vitest id-photo-camera-burst + idphoto-live + id-photo-camera 35/35. No build/e2e re-run
   locally (controller change is two lines; CI on the PR).
+
+### IDCAM1022 Step A + B — live (2026-10-22)
+- PR #16 (A) merged by owner as 14be75e after a firefox rerun (scattered 20 s timeouts on slow runners; all green on rerun). PR #17 (B) merged by owner as 792645b, all green (checks 52 min under the new 65-min timeout).
+- Live smoke 792645b: /id-photo-camera/ 200, title 「집에서 증명사진 찍기 – …」, h1 「증명사진 촬영」; Permissions-Policy camera=(self) on it, camera=() on /id-photo/ and /embed/id-photo/; 「카메라로 찍기」 link on /id-photo/; in sitemap and llms.txt; og /brand/og-id-photo-camera.png 200; page assets 200; no AdSense tag. Post-deploy job green on 14be75e and 792645b. Real-phone tests remain owner items (O1/O2).
