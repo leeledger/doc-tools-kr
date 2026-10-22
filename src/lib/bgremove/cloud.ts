@@ -175,3 +175,27 @@ export async function decodeAlpha(blob: Blob, copy: { width: number; height: num
     bm?.close();
   }
 }
+
+/**
+ * One try (brief §4): the copy, the request, the answer's alpha. Null when `alive()` turns false on the way (취소, a
+ * new photo) or the request was aborted; `answered` runs between the answer and its decoding. Lives here rather than
+ * in the controller (bg.ts) so the controller chunk keeps its budget (IDCAM1022 D fix2).
+ */
+export async function cutoutOnce(
+  src: CanvasImageSource & { width: number; height: number },
+  create: (w: number, h: number) => Canvas2d | null,
+  signal: AbortSignal,
+  alive: () => boolean,
+  answered: () => void,
+): Promise<{ mask: Mask } | { fail: CloudKind | 'busy' | 'quota' | 'copy' | 'answer' } | null> {
+  const copy = await makeCopy(src, create);
+  if (!alive()) return null;
+  if (!copy) return { fail: 'copy' };
+  const r = await requestCutout(copy.bytes, signal);
+  if (!alive()) return null;
+  if (!r.ok) return r.why === 'aborted' ? null : { fail: r.why === 'failed' ? r.kind : r.why };
+  answered();
+  const m = await decodeAlpha(r.blob, copy);
+  if (!alive()) return null;
+  return m ? { mask: m } : { fail: 'answer' };
+}

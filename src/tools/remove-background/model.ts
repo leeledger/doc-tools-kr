@@ -47,7 +47,7 @@ export interface View {
  * ready (live, kept or cached); a photo handed over by another tool (`held`) always waits at the consent panel, as it
  * waits at ready on the cloud path: it is never worked on or sent by itself.
  */
-export const startsAtOnce = (engineReady: boolean, held: boolean): boolean => engineReady && !held;
+export const startsAtOnce = (engineReady: boolean, held?: boolean): boolean => engineReady && !held;
 
 /** Which panels a phase shows. */
 export function view(p: Phase): View {

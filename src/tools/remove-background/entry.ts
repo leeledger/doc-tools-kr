@@ -14,7 +14,7 @@ import { parseBgLink } from '../../lib/idphoto/bglink';
 import { startUsage, track, trackOut } from '../../lib/ui/usage';
 import { COPY } from './copy';
 
-type Api = { open(file: File, opts?: { held?: boolean }): void } | null;
+type Api = { open(file: File, opts?: { held?: boolean }): void; picture: import('./bg').Picture } | null;
 
 const root = document.getElementById('bg-tool');
 const drop = document.getElementById('bg-drop');
@@ -60,9 +60,21 @@ if (root && drop) {
   drop.addEventListener('dragover', onDragOver);
   drop.addEventListener('drop', onDrop);
   // The result's 배경 chips are native controls: ?bg=white is chosen before the controller loads (it reads them).
-  if (parseBgLink(location.search).white) {
+  const link = parseBgLink(location.search);
+  if (link.white) {
     const white = root.querySelector<HTMLInputElement>('input[name="bg-bg"][value="white"]');
     if (white) white.checked = true;
+  }
+  // With ?preset= the result links back to /id-photo/ (./back, loaded on the press; the controller lends the picture).
+  const back = document.getElementById('bg-idphoto') as HTMLButtonElement | null;
+  const preset = link.preset;
+  if (back && preset) {
+    back.hidden = false;
+    back.addEventListener('click', () => {
+      void Promise.all([load(), import('./back')])
+        .then(([api, m]) => api && m.goBack(back, api.picture, preset))
+        .catch(() => void showEngineError());
+    });
   }
   const notice = document.getElementById('bg-arrived');
   if (notice && pendingHandoff('remove-background')) {

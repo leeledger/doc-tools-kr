@@ -34,3 +34,5 @@
 .bg-mode { margin: 0 0 12px; }
 .bg-mode[hidden] { display: none; }
 .bg .link-btn { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+/* IDCAM1022 D8b: a handed-over photo with the engine ready (bg.ts sets data-held): its own button text, no download lines. */
+#bg-consent[data-held="1"] .bg-asked, #bg-consent:not([data-held="1"]) .bg-held { display: none; }

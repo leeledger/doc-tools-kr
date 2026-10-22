@@ -3994,3 +3994,26 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   PUBLIC_ID_CAMERA=0 and 배경 지우기 on, the remove-background tool note still names 증명사진 촬영 (both flags are on in
   production).
 - IDCAM1022 D review: clear, 0 Must Fix; 2 notes logged, not fixed (custom → saramin per the brief's else-saramin rule; sweepIfDue skipped on a visit with a waiting hand-over, harmless). PR stacked on #18; CI verifies the builds/browsers Bob could not run locally.
+
+## IDCAM1022 D fix2 — remove-background controller over budget in the cloud build (Bob, 2026-10-23) — DONE_WITH_CONCERNS
+- Symptom (PR #19 CI, cloud build = ci.yml dist-bgcloud env, also the production build): remove-background controller
+  (bg + messages + sniff + decode) 14.7 KB gzip / 14.5. My Step D measure (14.0) came from the device-only build.
+  Budget NOT raised.
+- Root cause: Step D added ~0.2 KB gzip to bg.ts (held wording, the way-back click handler + bglink import) on top of
+  a controller that was already ~14.4 KB in the cloud build.
+- Fix (behaviour unchanged):
+  - The way back to /id-photo/ is a new lazy chunk src/tools/remove-background/back.ts (goBack: picture -> sendTo
+    id-photo -> /id-photo/?preset=<allowed>; its failure line BACK_FAILED). entry.ts shows #bg-idphoto when ?preset= is
+    present and loads ./back on the press; bg.ts only lends `picture` (the 이어서 하기 encoder, now shared).
+  - Held + engine ready: bg.ts sets data-held on #bg-consent and the held line; the button's two labels and the
+    「한 번 받으면…」 line switch by CSS (bg.css). HELD_START / TO_ID_PHOTO are page-markup constants, not in COPY.
+  - cloudOnce's copy -> request -> decode sequence moved into lib/bgremove/cloud.ts `cutoutOnce` (the cloud client,
+    already lazy, loaded after the pick); bg.ts keeps loading it, the retry loop and the run checks.
+  - check-dist: new budget for back*.js = measured 0.55 KB + 20 % = 0.7 KB (D11), exactly one chunk, never initial.
+- Sizes (cloud build env copied from ci.yml): controller 14.7 KB (15,0xx B) -> 14.4 KB (14,762 B) / 14.5; bg.js 10,276
+  -> 10,007 B; back.js 0.5 / 0.7 KB; cloud client 1.5 / 3 KB; /remove-background/ initial 12.9 -> 13.0 / 30;
+  preloaded fonts 92.2 / 92.66; precache 438.2 / 450.
+- Gates: vitest bgcloud + idphoto-bglink + network-guard + bgremove 127/127; cloud build + check-dist OK. `npm run check`
+  was killed (V8 out of memory) and not retried -> CI. e2e remove-background.cloud.spec on cloud-chromium, 1 worker:
+  16/16 (incl. the hand-over waits at ready, retries, quota/device paths). Not run: remove-background.spec (needs a
+  dist-bg rebuild; its held-with-cached-engine test now checks the CSS-switched label) and other browsers -> CI.

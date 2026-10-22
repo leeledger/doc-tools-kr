@@ -56,13 +56,12 @@ export const COPY = {
   saved: (name: string) => `${name} 파일을 내려받아요.`,
   /** IDCAM1022 D8b: a handed-over photo with the engine ready waits for this press (startsAtOnce). */
   held: '사진을 가져왔어요. 배경 지우기를 누르면 이 기기에서 배경을 지워요.',
-  heldStart: '배경 지우기',
-  /** The consent panel's button (page.astro), put back after a held photo. */
-  start: '받고 시작',
-  /** The result's way back to /id-photo/ (D8b, only when the address carries ?preset=). */
-  toIdPhoto: '이력서 사진 규격 맞추기',
-  toIdPhotoFailed: '사진을 넘기지 못했어요. 흰색 배경으로 내려받은 뒤 여권·증명사진 규격 맞추기에서 골라 주세요.',
 } as const;
+
+/** The consent button for a held photo with the engine ready (page markup; bg.css shows it by data-held). */
+export const HELD_START = '배경 지우기';
+/** The result's way back to /id-photo/ (D8b, only when the address carries ?preset=); page markup only. */
+export const TO_ID_PHOTO = '이력서 사진 규격 맞추기';
 
 /**
  * C2-cloud (brief §4 and §7.3, owner-approved 2026-10-02): the cloud path's lines. `deviceMB` is the page's real

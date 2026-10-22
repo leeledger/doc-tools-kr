@@ -11,7 +11,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import type { Download, Page, Route } from '@playwright/test';
 import { resizeMask } from '../../src/lib/bgremove/infer';
-import { COPY } from '../../src/tools/remove-background/copy';
+import { COPY, HELD_START, TO_ID_PHOTO } from '../../src/tools/remove-background/copy';
 import { COPY as CHECK_COPY } from '../../src/lib/idphoto/warnings';
 import { ARRIVED, arrived, seedHandoff, shootNow, stored, syntheticCamera, tool } from './idcam';
 
@@ -330,7 +330,7 @@ test('camera chain: 「배경을 흰색으로 바꾸기」 only for 이력서; a
   await done(page);
   await expect(page.getByRole('radio', { name: '흰색' })).toBeChecked();
   await expect(page.locator('#bg-download')).toHaveText('JPG로 내려받기');
-  await expect(page.locator('#bg-idphoto')).toHaveText(COPY.toIdPhoto);
+  await expect(page.locator('#bg-idphoto')).toHaveText(TO_ID_PHOTO);
   await page.locator('#bg-idphoto').click();
   await arrived(page, 'saramin');
   expect(page.url()).toMatch(/\/id-photo\/\?preset=saramin$/);
@@ -356,8 +356,8 @@ test('a handed-over photo waits even with the engine ready (「배경 지우기�
   await gotoReady(page, `${PATH}?bg=white&preset=passport_online`);
   await expect(page.locator('#bg-arrived')).toHaveText(ARRIVED);
   await expect(page.locator('#bg-consent-text')).toHaveText(COPY.held, { timeout: 30_000 });
-  await expect(page.locator('#bg-start')).toHaveText(COPY.heldStart);
-  await expect(page.locator('#bg-consent-keep')).toBeHidden();
+  await expect(page.locator('#bg-consent').getByRole('button', { name: HELD_START, exact: true })).toBeVisible();
+  await expect(page.getByText(COPY.consentKeep)).toBeHidden();
   await page.waitForTimeout(1500);
   await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'consent');
   await page.locator('#bg-start').click();

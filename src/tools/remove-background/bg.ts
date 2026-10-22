@@ -15,8 +15,9 @@
 //
 // IDCAM1022 D8b: a photo handed over by 증명사진 촬영 is opened `held`: it stops at ready (cloud) or at the consent panel
 // (even with the engine ready), so nothing is sent or worked on before the user's press. With ?preset= in the address
-// the result offers 「이력서 사진 규격 맞추기」: the picture goes to /id-photo/?preset=<allowed id> (이어서 하기, from
-// remove-background, so /id-photo/ blocks it for passport and driver's licence, D8c).
+// the result offers 「이력서 사진 규격 맞추기」 (entry.ts + ./back, a lazy chunk; this module only lends `picture`):
+// the picture goes to /id-photo/?preset=<allowed id> (이어서 하기, from remove-background, so /id-photo/ blocks it for
+// passport and driver's licence, D8c).
 import {
   AssetError,
   browserDeps,
@@ -40,7 +41,6 @@ import { OPT_LEVEL, type InitRequest } from '../../lib/bgremove/infer-core';
 import type { Mask } from '../../lib/bgremove/cloud';
 import { fusionRadii, hasSubject, pilResizeRgba, resizeMask, SIZE, toInput, validMask } from '../../lib/bgremove/infer';
 import { chooseDevice, deviceChosen } from '../../lib/bgremove/mode';
-import { idPhotoBack, parseBgLink } from '../../lib/idphoto/bglink';
 import { plainCutout } from '../../lib/bgremove/fusion';
 import type { FusionRequest, FusionResponse } from '../../lib/bgremove/fusion.worker';
 import { disposeTimers, EngineError, keepEngine, pickBackend, shouldFallBack, startEngine, type EngineHandle, type WorkerLike } from '../../lib/bgremove/session';
@@ -109,9 +109,11 @@ function saveBlob(blob: Blob, name: string): void {
 }
 
 type OpenOptions = { held?: boolean };
+/** The result as the next tool gets it (with the chosen background), or null. */
+export type Picture = () => Promise<{ blob: Blob; name: string } | null>;
 
 /** Loaded by entry.ts. `pending`: a photo that arrived while this module was loading. */
-export function initBgTool(pending?: File): { open(file: File, opts?: OpenOptions): void } | null {
+export function initBgTool(pending?: File): { open(file: File, opts?: OpenOptions): void; picture: Picture } | null {
   const found = document.getElementById('bg-tool');
   if (!found) return null;
   const root: HTMLElement = found;
@@ -119,7 +121,6 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
   const drop = must<HTMLElement>('bg-drop');
   const consent = must<HTMLElement>('bg-consent');
   const consentText = must<HTMLElement>('bg-consent-text');
-  const consentKeep = must<HTMLElement>('bg-consent-keep');
   const lowDevice = must<HTMLElement>('bg-low-device');
   const startBtn = must<HTMLButtonElement>('bg-start');
   const consentCancel = must<HTMLButtonElement>('bg-consent-cancel');
@@ -152,9 +153,6 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
   const ready = document.getElementById('bg-ready');
   const deviceRetry = document.getElementById('bg-device-retry');
   const modeLine = document.getElementById('bg-mode');
-  // D8b: the way back to /id-photo/, only when the address names a 제출처.
-  const backTo = parseBgLink(location.search).preset;
-  const idBtn = backTo ? (document.getElementById('bg-idphoto') as HTMLButtonElement | null) : null;
 
   const deps = browserDeps();
   const storage = sessionStore();
@@ -208,7 +206,6 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
     cancelBtn.hidden = !v.cancel;
     result.hidden = !v.result;
     if (phase !== 'done') hideNext();
-    if (idBtn) idBtn.hidden = !v.result;
     nosubject.hidden = !v.nosubject;
     if (!v.bytes) bar.removeAttribute('value');
   }
@@ -460,12 +457,7 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
       .then(({ showNextStepsLater }) => {
         // Still this result (not a new photo or 다른 사진 고르기 while the module loaded).
         if (phase !== 'done' || cut !== shown) return;
-        showNextStepsLater(nextSlot, 'remove-background', [
-          async () => {
-            const blob = (await encode(1)) ?? (await encode(0.5));
-            return blob ? { blob, name: fileName(choice(), format()) } : null;
-          },
-        ]);
+        showNextStepsLater(nextSlot, 'remove-background', [picture]);
       })
       .catch(() => undefined);
     title.focus();
@@ -527,7 +519,13 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
     return blob;
   }
 
-  async function openFile(file: File, held = false): Promise<void> {
+  /** The result for 이어서 하기 and the way back to /id-photo/ (D8b): full size, else half. */
+  const picture: Picture = async () => {
+    const blob = (await encode(1)) ?? (await encode(0.5));
+    return blob ? { blob, name: fileName(choice(), format()) } : null;
+  };
+
+  async function openFile(file: File, held?: boolean): Promise<void> {
     release();
     hideError();
     hideEngineError();
@@ -596,7 +594,7 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
    * The C2 path for the open photo: a live or cached engine starts at once, otherwise the consent panel. A `held`
    * photo (handed over, D8b) waits at that panel either way; with the engine ready it only asks for the press.
    */
-  async function onDevice(my: number, held = false): Promise<void> {
+  async function onDevice(my: number, held?: boolean): Promise<void> {
     if (!bitmap || my !== run) return;
     via = 'device';
     // A live engine is used as it is; after a WebGPU failure this page stays on WASM.
@@ -605,14 +603,13 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
     const engineReady = (engine && !engine.disposed) || !!keptModel || (await isCached(deps, backend));
     if (my !== run) return;
     if (startsAtOnce(engineReady, held)) return void start(my);
-    const asked = !engineReady;
-    consentText.textContent = asked ? COPY.consent(downloadBytes(backend)) : COPY.held;
-    consentKeep.hidden = !asked;
-    startBtn.textContent = asked ? COPY.start : COPY.heldStart;
-    consentExtra.textContent = asked && backend === 'webgpu' ? COPY.consentExtra(runtimeBytes('wasm')) : '';
-    consentExtra.hidden = !consentExtra.textContent;
+    // A held photo with the engine ready: the panel's 「받고 시작」 lines give way to its own (bg.css, data-held).
+    consent.dataset.held = engineReady ? '1' : '';
+    consentText.textContent = engineReady ? COPY.held : COPY.consent(downloadBytes(backend));
+    consentExtra.textContent = backend === 'webgpu' ? COPY.consentExtra(runtimeBytes('wasm')) : '';
+    consentExtra.hidden = backend !== 'webgpu';
     const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-    lowDevice.hidden = !(asked && typeof mem === 'number' && mem < LOW_DEVICE_MEMORY);
+    lowDevice.hidden = !(typeof mem === 'number' && mem < LOW_DEVICE_MEMORY);
     setPhase('consent');
     say([consentText.textContent, consentExtra.textContent, lowDevice.hidden ? '' : COPY.lowDevice].filter(Boolean).join(' '));
     startBtn.focus();
@@ -638,20 +635,19 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
       return { fail: 'load' };
     }
     if (my !== run) return null;
-    const copy = await mod.makeCopy(bm, (w, h) => {
-      const k = canvas2d(w, h);
-      return k && { canvas: k.c, g: k.g };
-    });
-    if (my !== run) return null;
-    if (!copy) return { fail: 'copy' };
-    const r = await mod.requestCutout(copy.bytes, signal);
-    if (my !== run) return null;
-    if (!r.ok) return r.why === 'aborted' ? null : { fail: r.why === 'failed' ? r.kind : r.why };
-    setPhase('working');
-    busy(CLOUD.refining);
-    const m = await mod.decodeAlpha(r.blob, copy);
-    if (my !== run) return null;
-    return m ? { mask: m } : { fail: 'answer' };
+    return mod.cutoutOnce(
+      bm,
+      (w, h) => {
+        const k = canvas2d(w, h);
+        return k && { canvas: k.c, g: k.g };
+      },
+      signal,
+      () => my === run,
+      () => {
+        setPhase('working');
+        busy(CLOUD.refining);
+      },
+    );
   }
 
   /**
@@ -798,27 +794,6 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
     track({ e: 'download', t: 'remove-background' });
     say(COPY.saved(name));
   });
-  idBtn?.addEventListener('click', async () => {
-    if (!cut || !backTo) return;
-    const btn = idBtn;
-    btn.disabled = true;
-    const blob = (await encode(1)) ?? (await encode(0.5));
-    let ok = false;
-    if (blob) {
-      try {
-        const { sendTo } = await import('../../lib/ui/handoff');
-        ok = await sendTo('id-photo', 'remove-background', blob, fileName(choice(), format()), blob.type, (path) => {
-          track({ e: 'next', t: 'remove-background', o: 'next', v: 'id-photo' });
-          location.assign(idPhotoBack(path, backTo));
-        });
-      } catch {
-        ok = false;
-      }
-    }
-    if (ok) return;
-    btn.disabled = false;
-    showError(COPY.toIdPhotoFailed, false);
-  });
   for (const b of [newBtn, ...root.querySelectorAll<HTMLButtonElement>('[data-new]')]) {
     b.addEventListener('click', () => {
       toEmpty();
@@ -839,5 +814,5 @@ export function initBgTool(pending?: File): { open(file: File, opts?: OpenOption
   setPhase('empty');
   const first = pending ?? input.files?.[0];
   if (first) void openFile(first);
-  return { open: (file, opts) => void openFile(file, opts?.held === true) };
+  return { open: (file, opts) => void openFile(file, opts?.held), picture };
 }
