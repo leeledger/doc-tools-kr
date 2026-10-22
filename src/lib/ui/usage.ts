@@ -10,7 +10,7 @@ import { detectDevice, type Device } from './device';
 
 export const USAGE_ON: boolean = __USAGE_STATS__;
 
-export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name' | 'english-address' | 'power-of-attorney';
+export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name' | 'english-address' | 'power-of-attorney' | 'loan-note';
 /** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/affiliate.test.ts keeps the links' dests equal to it). */
 export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod';
 /** STAMP_STYLES in scripts/lib/usage.mjs (= the 도장 만들기 style ids). */
@@ -22,7 +22,7 @@ const NAME_FORMS: readonly string[] = ['joined', 'hyphen', 'space'];
 export type AddrField = 'line1' | 'line2' | 'city' | 'state' | 'zip' | 'country' | 'full' | 'road';
 const ADDR_FIELDS: readonly string[] = ['line1', 'line2', 'city', 'state', 'zip', 'country', 'full', 'road'];
 /** The form tools (src/tools/form-tool): their download event names the file format. */
-export type FormToolId = 'power-of-attorney';
+export type FormToolId = 'power-of-attorney' | 'loan-note';
 /** FORM_FORMATS in scripts/lib/usage.mjs: the form tool file downloaded. */
 export type FormFormat = 'hwp' | 'pdf';
 const FORM_FORMATS: readonly string[] = ['hwp', 'pdf'];
@@ -117,7 +117,7 @@ export function buildPayload(ev: UsageEvent | Arrive | Land, ctx: PayloadContext
   } else if (ev.e === 'download' && ev.t === 'english-address' && 'o' in ev && ev.o === 'field' && ADDR_FIELDS.includes(ev.v)) {
     p.o = ev.o;
     p.v = ev.v;
-  } else if (ev.e === 'download' && ev.t === 'power-of-attorney' && 'o' in ev && ev.o === 'format' && FORM_FORMATS.includes(ev.v)) {
+  } else if (ev.e === 'download' && (ev.t === 'power-of-attorney' || ev.t === 'loan-note') && 'o' in ev && ev.o === 'format' && FORM_FORMATS.includes(ev.v)) {
     p.o = ev.o;
     p.v = ev.v;
   } else if (ev.e === 'arrive') {

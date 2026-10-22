@@ -34,3 +34,9 @@ textarea.pa-input { min-height: 7.5em; resize: vertical; line-height: 1.5; }
 .pa-with span { color: var(--muted); font-size: 15px; }
 .tool-legal { margin-top: 12px; color: var(--muted); font-size: 14px; }
 .tool-legal p { margin: 4px 0; }
+/* LOAN1022 L-D6: the % unit after a number input, the amount echo, the field error under an input. */
+.pa-unit { display: flex; align-items: center; gap: 8px; max-width: 12em; }
+.pa-unit > span { font-weight: 800; }
+.pa-echo { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pa-echo:empty { display: none; }
+.pa-input[aria-invalid="true"] { border-color: var(--danger); }

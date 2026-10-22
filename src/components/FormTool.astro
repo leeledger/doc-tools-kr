@@ -4,6 +4,8 @@
 // 하기, preview) and the live status. Every id is `${prefix}-…` (src/tools/form-tool/controller.ts reads them); the
 // class names are shared (src/tools/form-tool/form-tool.css). The inputs have no name attributes and the form has no
 // action: nothing typed is stored, sent or put in the URL (FORM1020 D7). Slot "caution": a notice above the buttons.
+// LOAN1022 L-D6: a date may sit in a fieldset; an amount is a numeric text input with a live 「10,000,000원」 echo
+// (filled by the controller) and an error line; a number is a decimal text input with a 「%」 unit and an error line.
 import EngineError from './EngineError.astro';
 import type { FormField, FormSpec } from '../lib/form/spec';
 
@@ -37,14 +39,26 @@ const loose = after.map(field);
       <fieldset class="pa-group" id={`${p}-group-${g.id}`}>
         <legend>{g.legend}</legend>
         {g.fields.map((f) => (
-          <div class="pa-field">
+          <div class={f.kind === 'date' ? 'pa-field pa-date' : 'pa-field'}>
             <label for={`${p}-${f.id}`}>{f.label}</label>
             {f.kind === 'multiline' ? (
               <textarea id={`${p}-${f.id}`} class="pa-input" data-field={f.id} maxlength={f.maxLength} rows={f.maxLines} lang="ko" autocomplete="off" spellcheck="false" aria-describedby={`${p}-${f.id}-hint`}></textarea>
+            ) : f.kind === 'date' ? (
+              <input id={`${p}-${f.id}`} class="pa-input" type="date" data-field={f.id} min="1900-01-01" max="2999-12-31" autocomplete="off">
+            ) : f.kind === 'amount' ? (
+              <input id={`${p}-${f.id}`} class="pa-input" type="text" inputmode="numeric" data-field={f.id} maxlength={f.maxLength} autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={`${p}-${f.id}-echo ${p}-${f.id}-error`}>
+            ) : f.kind === 'number' ? (
+              <span class="pa-unit">
+                <input id={`${p}-${f.id}`} class="pa-input" type="text" inputmode="decimal" data-field={f.id} maxlength={f.maxLength} autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={[f.hint ? `${p}-${f.id}-hint` : '', `${p}-${f.id}-error`].filter(Boolean).join(' ')}>
+                <span aria-hidden="true">%</span>
+              </span>
             ) : (
               <input id={`${p}-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next">
             )}
             {f.kind === 'multiline' && <p class="hint" id={`${p}-${f.id}-hint`}>{f.maxLines}줄까지 쓸 수 있습니다.</p>}
+            {f.kind !== 'multiline' && f.hint && <p class="hint" id={`${p}-${f.id}-hint`}>{f.hint}</p>}
+            {f.kind === 'amount' && <p class="pa-echo" id={`${p}-${f.id}-echo`} aria-live="polite"></p>}
+            {(f.kind === 'amount' || f.kind === 'number') && <p class="field-error" id={`${p}-${f.id}-error`}></p>}
           </div>
         ))}
       </fieldset>

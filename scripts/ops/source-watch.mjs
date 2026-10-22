@@ -8,7 +8,7 @@
 // Exit 0 once reported (or all clear); 1 only if the job itself failed.
 import { BOT_UA, cell, fetchText, isMain, isoDate, parseArgs, sleep, today } from './lib/common.mjs';
 import { createGitHub } from './lib/github.mjs';
-import { readGuides, readHubs, readPresets, readToolSources, watchList } from './lib/guides.mjs';
+import { readGuides, readHubs, readPresets, readToolNotes, readToolSources, watchList } from './lib/guides.mjs';
 import { findQuote, hasExactQuote, pageText, pageTextExact, quoteFragments } from './lib/html.mjs';
 
 export const LABEL = 'ops:source-changed';
@@ -89,7 +89,7 @@ export async function run(argv, io = {}) {
   const exact = flags.has('exact');
   const log = io.log ?? console.log;
   const env = io.env ?? process.env;
-  const list = watchList(io.guides ?? [...readGuides(), ...readHubs()], io.presets ?? readPresets(), io.tools ?? readToolSources());
+  const list = watchList(io.guides ?? [...readGuides(), ...readHubs(), ...readToolNotes()], io.presets ?? readPresets(), io.tools ?? readToolSources());
   const urls = new Set(list.flatMap((e) => e.urls));
   log(`source-watch: 출처 ${urls.size}곳, 인용 ${list.length}개`);
   let first = true;

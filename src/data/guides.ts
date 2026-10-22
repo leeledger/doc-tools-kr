@@ -59,7 +59,8 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
  * PDF 글자 넣기·편집 → PDF 서명 넣는 법, 정부24 PDF 저장, 전자서명법 (TOOLS1015 E1);
  * 도장 만들기 → 도장·서명 이미지 만들기, 전자서명법 (그림 도장을 받는지), PDF 서명 넣는 법 (STAMP1015);
  * 영문 이름 변환기 → 여권 사진, 여권 재발급 사진, 국제운전면허 (영문 이름을 쓰는 서류; ROMANIZE1016 D5);
- * 위임장 만들기 → 신분증 사본 만드는 법, 도장·서명 이미지 만들기, PDF 서명 넣는 법 (함께 내는 것; FORM1020 D8).
+ * 위임장 만들기 → 신분증 사본 만드는 법, 도장·서명 이미지 만들기, PDF 서명 넣는 법 (함께 내는 것; FORM1020 D8);
+ * 차용증 만들기 → 위임장 쓰는 법, 도장·서명 이미지 만들기, PDF 서명 넣는 법 (LOAN1022; its own guide comes with L5).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
@@ -79,6 +80,7 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'stamp-maker': ['stamp-image', 'e-signature-law', 'pdf-sign'],
   'english-name': ['passport-english-name', 'passport-photo', 'passport-reissue-photo', 'intl-driving-license'],
   'power-of-attorney': ['id-card-copy', 'stamp-image', 'pdf-sign'],
+  'loan-note': ['power-of-attorney', 'stamp-image', 'pdf-sign'],
 };
 
 /** Published guides that point at a tool (the tool pages' "관련 안내"; pinned ones first, ./tool-guide-order), then its next-step guides, at most `max`. */

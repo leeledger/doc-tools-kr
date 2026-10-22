@@ -13,7 +13,8 @@ import type { PageInfo } from '../../lib/hwp/engine';
 import type { HwpErrorCode } from '../../lib/hwp/errors';
 import type { HwpRequest, HwpResponse } from '../../lib/hwp/hwp.worker';
 import { prefetchRhwpWasm } from '../../lib/hwp/wasm-browser';
-import { blankValues, normalizeValues } from '../../lib/form/values';
+import { groupDigits } from '../../lib/form/amount';
+import { blankValues, fieldProblem, normalizeAmount, normalizeValues, type FieldProblem } from '../../lib/form/values';
 import type { FormSpec, FormValues } from '../../lib/form/spec';
 import { announce as live, clearAlert, clearStatus } from '../../lib/ui/announce';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
@@ -73,6 +74,8 @@ export interface FormToolConfig {
   tool: FormToolId & NextSource;
   /** Date fields that start at today (the reset puts today back). */
   today: readonly string[];
+  /** The field error lines of amount and number fields (LOAN1022 L-D3; a spec without them needs none). */
+  problems?: Readonly<Record<FieldProblem, string>>;
 }
 
 export interface FormStart {
@@ -109,6 +112,13 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
   const nextSlot = must<HTMLDivElement>('next');
   const preview = must<HTMLDivElement>('preview');
   const inputs = Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-field]'));
+  const fieldOf = (el: HTMLInputElement | HTMLTextAreaElement) => SPEC.fields.find((f) => f.id === el.dataset.field);
+  /** Amount and number inputs: checked on 「… 만들기」 (fieldProblem), with an error line each. */
+  const checked = inputs.flatMap((el) => {
+    const f = fieldOf(el);
+    const error = document.getElementById(`${cfg.prefix}-${el.dataset.field}-error`);
+    return f && error && (f.kind === 'amount' || f.kind === 'number') ? [{ el, f, error, echo: f.kind === 'amount' ? document.getElementById(`${cfg.prefix}-${f.id}-echo`) : null }] : [];
+  });
 
   let state: State = 'empty';
   let run = 0;
@@ -237,8 +247,35 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
 
   // ---------- build ----------
 
+  /** Shows (or clears) one field's error line. */
+  function setProblem(c: (typeof checked)[number], problem: FieldProblem | null): void {
+    c.error.textContent = problem && cfg.problems ? cfg.problems[problem] : '';
+    if (problem) c.el.setAttribute('aria-invalid', 'true');
+    else c.el.removeAttribute('aria-invalid');
+  }
+
+  /** The amount echo: 「10,000,000원」 for what is typed so far (digits and 원 only), else nothing. */
+  function echo(c: (typeof checked)[number]): void {
+    if (!c.echo) return;
+    const d = normalizeAmount(c.el.value);
+    c.echo.textContent = d ? `${groupDigits(d)}원` : '';
+  }
+
+  /** LOAN1022 L-D3: what was typed in an amount or number field is never dropped silently: a problem blocks the build. */
+  function fieldsOk(): boolean {
+    let first: HTMLElement | null = null;
+    for (const c of checked) {
+      const problem = fieldProblem(c.f, c.el.value);
+      setProblem(c, problem);
+      if (problem) first ??= c.el;
+    }
+    first?.focus();
+    return !first;
+  }
+
   function build(k: BuildKind): void {
     if (state === 'building') return;
+    if (k === 'filled' && !fieldsOk()) return;
     const values: FormValues = k === 'blank' ? blankValues(SPEC) : normalizeValues(SPEC, readInputs());
     kind = k;
     editedWhileBuilding = false;
@@ -441,6 +478,10 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
     stopWorker();
     dropResult();
     for (const el of inputs) el.value = cfg.today.includes(el.dataset.field!) ? start.today() : '';
+    for (const c of checked) {
+      setProblem(c, null);
+      echo(c);
+    }
     clearAlert(root);
     clearStatus(root);
     hideEngineError();
@@ -457,7 +498,13 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
     if (!preloadSkipped((navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection)) void prefetchRhwpWasm();
   };
   form.addEventListener('focusin', prefetch);
-  form.addEventListener('input', markStale);
+  form.addEventListener('input', (ev) => {
+    markStale();
+    const c = checked.find((x) => x.el === ev.target);
+    if (!c) return;
+    if (c.el.hasAttribute('aria-invalid')) setProblem(c, null);
+    echo(c);
+  });
   form.addEventListener('submit', (ev) => {
     ev.preventDefault();
     build('filled');
@@ -483,6 +530,8 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
   });
 
   if (hwpBtn) hwpBtn.hidden = !FORM_HWP;
+  // An amount typed before the controller ran gets its echo now.
+  for (const c of checked) echo(c);
   setState('empty');
   if (start.action) {
     prefetch();

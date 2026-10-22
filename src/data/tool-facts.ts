@@ -21,6 +21,8 @@ import { TARGET_MB_BYTES } from '../lib/pdf/compress/levels';
 import { LIMITS as PHOTO_LIMITS } from '../tools/photo-compress/limits';
 import { KB_BYTES, RANGES } from '../tools/photo-compress/options';
 import { POWER_OF_ATTORNEY } from './forms/power-of-attorney';
+import { LOAN_NOTE } from './forms/loan-note';
+import { AMOUNT_MAX_DIGITS } from '../lib/form/values';
 
 /** A unit the fact check knows (a fact without one is a count or a word and is not number-checked). */
 export type FactUnit = 'KB' | 'MB';
@@ -80,6 +82,9 @@ export const TOOL_FACTS = {
   // FORM1020: the 위임장 form (src/data/forms/power-of-attorney.ts).
   'power-of-attorney.taskMaxLines': { value: POWER_OF_ATTORNEY.fields.find((f) => f.id === 'task')?.maxLines ?? 0 },
   'power-of-attorney.taskMaxLength': { value: POWER_OF_ATTORNEY.fields.find((f) => f.id === 'task')?.maxLength ?? 0 },
+  // LOAN1022: the 차용증 form (src/data/forms/loan-note.ts, src/lib/form/values.ts).
+  'loan-note.termsMaxLines': { value: LOAN_NOTE.fields.find((f) => f.id === 'terms')?.maxLines ?? 0 },
+  'loan-note.amountMaxDigits': { value: AMOUNT_MAX_DIGITS },
   'pdf-edit.maxFileMb.desktop': { value: PDF_EDIT_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
   'pdf-edit.maxFileMb.mobile': { value: PDF_EDIT_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
   'pdf-edit.maxItems': { value: PDF_EDIT_MAX_ITEMS },

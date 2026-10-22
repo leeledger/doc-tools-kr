@@ -45,7 +45,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out', 'land'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address', 'power-of-attorney'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address', 'power-of-attorney', 'loan-note'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct', 'embed'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -86,7 +86,7 @@ export const FORM_BUILDS = ['blank', 'filled'];
 /** 위임장 만들기 the downloaded file (FORM1020 D9), on download only: HWP | PDF. */
 export const FORM_FORMATS = ['hwp', 'pdf'];
 /** Tool -> the one setting its download event may carry (every other download has no o / v). */
-export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format' };
+export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format' };
 /** Setting key -> its allowed values. */
 export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS, field: ADDR_FIELDS, build: FORM_BUILDS, format: FORM_FORMATS };
 
@@ -381,6 +381,7 @@ export const TOOL_LABELS = {
   'english-name': '영문 이름 변환기',
   'english-address': '영문주소 변환기',
   'power-of-attorney': '위임장 만들기',
+  'loan-note': '차용증 만들기',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**

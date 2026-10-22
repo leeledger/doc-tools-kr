@@ -969,7 +969,11 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
 // 인감증명 form: 「인감」 appears only in the caution (#pa-caution) and its 정부24 link. Budgets: measured + 20 % of the
 // larger build (위임장 initial 9.1 KB default, 10.7 KB in the cloud build with the usage tracker; controller 7.0 KB gzip;
 // FORM1020).
-const FORM_TOOLS = [{ slug: 'power-of-attorney', prefix: 'pa', initialKb: 12.8, lazyKb: 8.4 }];
+const FORM_TOOLS = [
+  { slug: 'power-of-attorney', prefix: 'pa', initialKb: 12.8, lazyKb: 8.4 },
+  // LOAN1022 L-D11: the same rules and budgets.
+  { slug: 'loan-note', prefix: 'ln', initialKb: 12.8, lazyKb: 8.4 },
+];
 for (const t of FORM_TOOLS) {
   const html = pageHtml.get(`${t.slug}/index.html`);
   if (!html) {

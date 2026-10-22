@@ -2,7 +2,8 @@
 // claim in the document. Page labels are plain words in the core UI glyphs (L-D7: 「얼마를 빌렸나요」, 「돌려줄 날」 —
 // 돈/액/갚 are not core glyphs); document text (doc / docLabel / docSection / docTemplate / docBlank / docZero) is
 // drawn only in the document. Everything after the first table is plain 10 pt (rhwp 0.8.6, src/lib/form/build.ts).
-// maxLength per field keeps the all-max form on 1 page in rhwp (tests/unit/loan-note.test.ts).
+// maxLength per field keeps the all-max form on 1 page in rhwp (tests/unit/loan-note.test.ts). The two people's section
+// labels break before 「(채권자)」/「(채무자)」 (one cell paragraph per line), not inside 「사람」 in the narrow column.
 import type { FormSpec } from '../../lib/form/spec';
 
 /** L-D3 / L-D12: the HWP download. Off only if the real-한글 gate fails and cannot be fixed (then PDF only). */
@@ -20,7 +21,7 @@ export const LOAN_NOTE: FormSpec = {
     { id: 'amount', label: '얼마를 빌렸나요', docLabel: '빌린 돈', kind: 'amount', maxLength: 20, docBlank: '금                원정 (                원)' },
     { id: 'loanDate', label: '빌린 날', docLabel: '빌린 날', kind: 'date', maxLength: 10 },
     { id: 'dueDate', label: '돌려줄 날', docLabel: '갚을 날', kind: 'date', maxLength: 10 },
-    { id: 'rate', label: '1년 이자', docLabel: '이자', kind: 'number', maxLength: 8, docTemplate: '연 {v}%', docZero: '없음', docBlank: '연      %', hint: '이자가 없으면 0을 쓰세요.' },
+    { id: 'rate', label: '연 이자', docLabel: '이자', kind: 'number', maxLength: 8, docTemplate: '연 {v}%', docZero: '없음', docBlank: '연      %', hint: '이자가 없으면 0을 쓰세요.' },
     { id: 'interestDay', label: '이자를 내는 날', docLabel: '이자 내는 날', kind: 'text', maxLength: 20 },
     { id: 'repayHow', label: '돌려주는 방법', docLabel: '갚는 방법', kind: 'text', maxLength: 50 },
     { id: 'terms', label: '그 밖의 약속', docLabel: '그 밖의 약속', kind: 'multiline', maxLength: 120, maxLines: 4, rowLines: 3 },
@@ -39,9 +40,9 @@ export const LOAN_NOTE: FormSpec = {
     { type: 'gap', size: 10 },
     { type: 'table', docSection: '차용 내용', rows: ['amount', 'loanDate', 'dueDate', 'rate', 'interestDay', 'repayHow', 'terms'], colWidths: COLS, rowHeight: ROW },
     { type: 'gap', size: 10 },
-    { type: 'table', docSection: '빌려준 사람(채권자)', rows: ['lenderName', 'lenderBirth', 'lenderAddress', 'lenderPhone'], colWidths: COLS, rowHeight: ROW },
+    { type: 'table', docSection: '빌려준 사람\n(채권자)', rows: ['lenderName', 'lenderBirth', 'lenderAddress', 'lenderPhone'], colWidths: COLS, rowHeight: ROW },
     { type: 'gap', size: 10 },
-    { type: 'table', docSection: '빌린 사람(채무자)', rows: ['borrowerName', 'borrowerBirth', 'borrowerAddress', 'borrowerPhone'], colWidths: COLS, rowHeight: ROW },
+    { type: 'table', docSection: '빌린 사람\n(채무자)', rows: ['borrowerName', 'borrowerBirth', 'borrowerAddress', 'borrowerPhone'], colWidths: COLS, rowHeight: ROW },
     { type: 'gap', size: 10 },
     { type: 'para', doc: '위 돈을 틀림없이 빌렸으며, 위에 적은 대로 갚겠습니다.', align: 'center' },
     { type: 'gap', size: 10 },

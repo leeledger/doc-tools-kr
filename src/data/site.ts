@@ -44,6 +44,7 @@ export const HOME_DESC_ORDER: readonly string[] = [
   'pdf-split',
   'stamp-signature',
   'power-of-attorney',
+  'loan-note',
   'pdf-sign',
   'id-copy',
   'char-count',
