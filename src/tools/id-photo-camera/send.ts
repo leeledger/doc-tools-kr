@@ -33,7 +33,8 @@ export const sendToIdPhoto = (blob: Blob, name: string, type: string, preset: st
 
 /**
  * D8b (only called in a build with 배경 지우기, __BG_REMOVE__): the still goes to /remove-background/?bg=white&preset=<id>,
- * which opens it and waits for the user's tap there; nothing is sent from this page.
+ * which opens it and waits for the user's tap there; nothing is sent from this page. Without the flag it is a stub, so
+ * the page script (send.ts lands in the initial chunk) never names /remove-background/ (check-dist, flag off).
  */
 export const sendToBg = (blob: Blob, name: string, type: string, preset: string, assign: Assign = go): Promise<boolean> =>
-  send('remove-background', blob, name, type, (path) => bgUrl(path, preset), assign);
+  __BG_REMOVE__ ? send('remove-background', blob, name, type, (path) => bgUrl(path, preset), assign) : Promise.resolve(false);
