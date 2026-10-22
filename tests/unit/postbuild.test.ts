@@ -380,7 +380,7 @@ describe('gen-brand (P.10)', () => {
     expect(pngSize(out['brand/icon-maskable-512.png'])).toMatchObject({ w: 512, h: 512 });
     // One share image per og.json image (Polish Q), 1200×630, ≤ 300 KB; no single og.png any more.
     const og = Object.keys(out).filter((k) => /^brand\/og-[a-z-]+\.png$/.test(k)).sort();
-    expect(og).toEqual(['char-count', 'default', 'english-name', 'home', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'id-copy', 'id-photo', 'image-to-jpg', 'jpg-to-pdf', 'pdf-compress', 'pdf-edit', 'pdf-merge', 'pdf-password', 'pdf-sign', 'pdf-split', 'pdf-to-jpg', 'photo-compress', 'power-of-attorney', 'stamp-maker', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
+    expect(og).toEqual(['char-count', 'default', 'english-name', 'home', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'id-copy', 'id-photo', 'image-to-jpg', 'jpg-to-pdf', 'loan-note', 'pdf-compress', 'pdf-edit', 'pdf-merge', 'pdf-password', 'pdf-sign', 'pdf-split', 'pdf-to-jpg', 'photo-compress', 'power-of-attorney', 'stamp-maker', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
     expect(out).not.toHaveProperty(['brand/og.png']);
     for (const k of og) {
       expect(pngSize(out[k]), k).toMatchObject({ w: 1200, h: 630, png: true });

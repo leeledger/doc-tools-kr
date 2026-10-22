@@ -1,6 +1,6 @@
 # 문서딱 (docttak.com)
 
-Free Korean document tools that run 100% in the visitor's browser: PDF 합치기, PDF 용량 줄이기, 사진 PDF 변환, PDF JPG 변환, PDF 암호 해제·설정, PDF 나누기·쪽 편집, PDF 서명·도장 넣기, 사진 JPG 변환, 사진 용량 줄이기, 여권·증명사진 규격 맞추기, 전자서명·도장 이미지, 사진 배경 지우기, HWP→PDF, HWPX→HWP, HWP 보기, 글자수 세기, 신분증 사본 만들기, PDF 글자 넣기·편집, 도장 만들기, 영문 이름 변환기, 영문주소 변환기, 위임장 만들기. Astro static site on Cloudflare Pages (Free plan; Pages Functions only for `/api/remove-bg`, `/api/usage`, `/api/addr-en` and `/admin/`). GitHub `leeledger/doc-tools-kr`; push to `main` deploys production.
+Free Korean document tools that run 100% in the visitor's browser: PDF 합치기, PDF 용량 줄이기, 사진 PDF 변환, PDF JPG 변환, PDF 암호 해제·설정, PDF 나누기·쪽 편집, PDF 서명·도장 넣기, 사진 JPG 변환, 사진 용량 줄이기, 여권·증명사진 규격 맞추기, 전자서명·도장 이미지, 사진 배경 지우기, HWP→PDF, HWPX→HWP, HWP 보기, 글자수 세기, 신분증 사본 만들기, PDF 글자 넣기·편집, 도장 만들기, 영문 이름 변환기, 영문주소 변환기, 위임장 만들기, 차용증 만들기. Astro static site on Cloudflare Pages (Free plan; Pages Functions only for `/api/remove-bg`, `/api/usage`, `/api/addr-en` and `/admin/`). GitHub `leeledger/doc-tools-kr`; push to `main` deploys production.
 
 **Start here:** `handoff/CLOUD-HANDOFF.md` (current state, open branches, next steps, owner-only items).
 

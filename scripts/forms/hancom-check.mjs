@@ -2,7 +2,7 @@
 // the filled sample and the all-max cases with the real engine in Node (src/lib/form/build.ts, the same code the
 // worker runs), passes each through the HWP reload gate (src/lib/hwp/export-hwp.ts), writes the .hwp, then opens it
 // in the installed 한글 through COM (./hancom-open.ps1): it must open, be 1 page in 한글, and 한글's own text must
-// hold every docLabel, every section label and every non-empty value. 한글's PDF of each file is saved next to it
+// hold every docLabel, every section label and every value's document text (docText: dates, amounts in 한글). 한글's PDF of each file is saved next to it
 // for a visual compare. Output: spikes/forms-hancom/ (git-ignored).
 //   npm run forms:hancom                       every spec
 //   npm run forms:hancom -- --file a.hwp       open one file (a live download) and report pages + text only
@@ -70,7 +70,7 @@ async function loadModules() {
     stdin: {
       contents: [
         "export { buildForm } from './src/lib/form/build.ts';",
-        "export { normalizeValues, formatDate } from './src/lib/form/values.ts';",
+        "export { normalizeValues, docText } from './src/lib/form/values.ts';",
         "export { FORM_SPECS } from './src/data/forms/index.ts';",
         "export { exportHwp } from './src/lib/hwp/export-hwp.ts';",
         "export { SAMPLE_VALUES, allMaxValues, allMaxLines } from './tests/helpers/form-samples.ts';",
@@ -105,8 +105,8 @@ function expected(m, spec, values) {
   const out = [];
   for (const f of spec.fields) {
     if (f.docLabel) out.push(f.docLabel);
-    const v = values[f.id];
-    if (v) out.push(f.kind === 'date' ? m.formatDate(v) : v);
+    const d = m.docText(f, values[f.id] ?? '');
+    if (d.trim()) out.push(d);
   }
   for (const b of spec.blocks) if (b.type === 'table' && b.docSection) out.push(b.docSection);
   return out;

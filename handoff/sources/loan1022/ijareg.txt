@@ -1,0 +1,5 @@
+Title: 이자제한법 제2조제1항의 최고이자율에 관한 규정
+URL: https://www.law.go.kr/LSW/lsInfoR.do?lsiSeq=230727&chrClsCd=010202&urlMode=lsInfoP&efYd=20210707&ancYnChk=0
+Fetched: 2026-10-22 (curl, server HTML, UTF-8; lsiSeq/efYd from DRF lawSearch OC=test)
+[시행 2021. 7. 7.] [대통령령 제31593호, 2021. 4. 6., 일부개정]
+최고이자율은 연 20퍼센트로 한다.

@@ -426,6 +426,34 @@ test('위임장 만들기 (FORM1020 D7, D9): start (o=build, filled|blank), succ
   for (const b of beacons) expect(b.body).not.toMatch(/홍길동|010-1234|5678|등본|위임장\.|\.hwp|\.pdf/);
 });
 
+test('차용증 만들기 (LOAN1022 L-D8): a blocked amount sends nothing; start, success, download format, next; never a typed value, an amount or the file name', async ({ page }) => {
+  test.setTimeout(300_000);
+  const beacons = await record(page);
+  await gotoReady(page, '/loan-note/');
+  await page.locator('[data-field="amount"]').fill('1천만');
+  await page.locator('[data-field="borrowerName"]').fill('홍길동');
+  await page.locator('[data-field="borrowerPhone"]').fill('010-1234-5678');
+  await page.locator('#ln-make').click();
+  await expect(page.locator('#ln-amount-error')).toHaveText('숫자로만 써 주세요.');
+  await page.locator('[data-field="amount"]').fill('12,345,000');
+  await page.locator('[data-field="rate"]').fill('4.5');
+  await page.locator('#ln-make').click();
+  await expect(page.locator('#ln-tool')).toHaveAttribute('data-state', 'ready', { timeout: 180_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#ln-hwp').click()]);
+  await Promise.all([page.waitForEvent('download', { timeout: 90_000 }), page.locator('#ln-pdf').click()]);
+  await Promise.all([page.waitForURL('**/pdf-sign/'), page.locator('#ln-next').getByRole('button', { name: 'PDF 서명·도장 넣기' }).click()]);
+  const mine = () => beacons.filter((b) => b.ev.t === 'loan-note');
+  await expect.poll(() => mine().map((b) => [b.ev.e, b.ev.o ?? '', b.ev.v ?? ''].join(' '))).toEqual([
+    'start build filled',
+    'success  ',
+    'download format hwp',
+    'download format pdf',
+    'next next pdf-sign',
+  ]);
+  expectClean(beacons);
+  for (const b of beacons) expect(b.body).not.toMatch(/홍길동|010-1234|5678|12345000|12,345,000|1천만|4\.5|차용증\.|\.hwp|\.pdf/);
+});
+
 test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

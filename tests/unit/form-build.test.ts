@@ -87,7 +87,9 @@ describe('spec lint', () => {
       ],
     };
     const p = lintSpec(bad).join('\n');
-    for (const s of ['duplicate field a', 'a: maxLength', 'm: maxLines', 'unknown field zz', '3 widths for 2 columns', 'd: a date field belongs on a dateLine', 'a: placed 2 times', 'm: placed 0 times']) expect(p).toContain(s);
+    for (const s of ['duplicate field a', 'a: maxLength', 'm: maxLines', 'unknown field zz', '3 widths for 2 columns', 'd: docLabel', 'a: placed 2 times', 'm: placed 0 times']) expect(p).toContain(s);
+    // LOAN1022 L-D3: a date may sit in a table row.
+    expect(p).not.toContain('dateLine');
   });
   it('위임장: no 인감 in the document; fixed file name; plain page labels', () => {
     const doc = POWER_OF_ATTORNEY.blocks.map((b) => JSON.stringify(b)).join() + POWER_OF_ATTORNEY.fields.map((f) => f.docLabel ?? '').join();

@@ -96,6 +96,23 @@ export function readHubs(root = ROOT) {
     });
 }
 
+/**
+ * Every tool note (src/content/tool-notes/*.md, CONTENT1021 D8; LOAN1022: a note may quote a law): the same shape, path
+ * = the tool page, so the source watch checks note quotes like guide quotes.
+ * @returns {({ slug: string, path: string } & Frontmatter)[]}
+ */
+export function readToolNotes(root = ROOT) {
+  const dir = join(root, 'src', 'content', 'tool-notes');
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.md'))
+    .sort()
+    .map((f) => {
+      const fm = parseFrontmatter(readFileSync(join(dir, f), 'utf8'));
+      const slug = f.replace(/\.md$/, '');
+      return { slug, path: `/${slug}/`, title: '', query: '', draft: false, sources: [], ...fm };
+    });
+}
+
 const tsString = (s) => {
   const q = s[0];
   return s.slice(1, -1).replace(new RegExp(`\\\\${q}`, 'g'), q).replace(/\\\\/g, '\\');

@@ -24,6 +24,7 @@
         "http://127.0.0.1:4173/stamp-maker/",
         "http://127.0.0.1:4173/english-name/",
         "http://127.0.0.1:4173/power-of-attorney/",
+        "http://127.0.0.1:4173/loan-note/",
         "http://127.0.0.1:4173/english-address/",
         "http://127.0.0.1:4173/id-photo/",
         "http://127.0.0.1:4173/stamp-signature/",

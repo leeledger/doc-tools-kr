@@ -2,36 +2,31 @@
 // /power-of-attorney/ (FORM1020): 위임장 만들기. The visitor fills the blanks (or none, D6) and gets the same document as
 // HWP and PDF, built on this device by the HWP worker from the form spec (src/data/forms). The inputs have no name
 // attributes, the form has no action and its submit is prevented: nothing typed is stored, sent or put in the URL (D7).
-// The controller (with the worker, the preview and the downloads) loads after the first user signal (entry.ts). Every
+// The widget is src/components/FormTool.astro (generic form tool, LOAN1022 L-D4). The controller (with the worker, the
+// preview and the downloads) loads after the first user signal (entry.ts). Every
 // static string uses the preloaded UI glyphs (no new core glyph); the controller's lines are late copy.
 import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
 import ToolNotes from '../../components/ToolNotes.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
-import EngineError from '../../components/EngineError.astro';
+import FormTool from '../../components/FormTool.astro';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { FORM_HWP, POWER_OF_ATTORNEY as SPEC } from '../../data/forms/power-of-attorney';
 import { GOV24_INGAM_URL } from '../../tools/power-of-attorney/sources';
+import { PA_PREFIX } from '../../tools/power-of-attorney/config';
 import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
 // Page-only styles, inlined (the /english-name/ pattern): no other page carries them.
-import paCss from '../../tools/power-of-attorney/power-of-attorney.css?inline';
+import paCss from '../../tools/form-tool/form-tool.css?inline';
 
 const tool = getTool('power-of-attorney');
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
-const field = (id: string) => {
-  const f = SPEC.fields.find((x) => x.id === id);
-  if (!f) throw new Error(`power-of-attorney: no field ${id}`);
-  return f;
-};
 const groups = [
   { id: 'giver', legend: '위임하는 사람 (위임인)', fields: ['giverName', 'giverBirth', 'giverAddress', 'giverPhone'] },
   { id: 'agent', legend: '대신 가는 사람 (대리인)', fields: ['agentName', 'agentBirth', 'agentAddress', 'agentPhone', 'agentRelation'] },
   { id: 'task', legend: '위임할 일', fields: ['submitTo', 'task'] },
-].map((g) => ({ ...g, fields: g.fields.map(field) }));
-const date = field('date');
-const task = field('task');
+];
 ---
 <Base title={tool.title} description={tool.description}>
   <JsonLd slot="head" data={jsonLd} />
@@ -45,66 +40,12 @@ const task = field('task');
 
   <section class="tool" aria-label={`${tool.name} 도구`}>
     <div class="wrap narrow">
-      <div id="pa-tool" class="pa" data-state="empty">
-        <form class="pa-form" id="pa-form" novalidate autocomplete="off">
-          {groups.map((g) => (
-            <fieldset class="pa-group" id={`pa-group-${g.id}`}>
-              <legend>{g.legend}</legend>
-              {g.fields.map((f) => (
-                <div class="pa-field">
-                  <label for={`pa-${f.id}`}>{f.label}</label>
-                  {f.kind === 'multiline' ? (
-                    <textarea id={`pa-${f.id}`} class="pa-input" data-field={f.id} maxlength={f.maxLength} rows={f.maxLines} lang="ko" autocomplete="off" spellcheck="false" aria-describedby={`pa-${f.id}-hint`}></textarea>
-                  ) : (
-                    <input id={`pa-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next">
-                  )}
-                  {f.id === task.id && <p class="hint" id={`pa-${f.id}-hint`}>{task.maxLines}줄까지 쓸 수 있습니다.</p>}
-                </div>
-              ))}
-            </fieldset>
-          ))}
-          <div class="pa-field pa-date">
-            <label for={`pa-${date.id}`}>{date.label}</label>
-            <input id={`pa-${date.id}`} class="pa-input" type="date" data-field={date.id} min="1900-01-01" max="2999-12-31" autocomplete="off">
-          </div>
-          <div class="notice pa-caution" id="pa-caution">
-            <p>관공서에 따라 정해진 위임장 서식이 있어요. 내기 전에 그 기관에 확인하세요.</p>
-            <p>인감증명서를 대신 받을 때는 <a href={GOV24_INGAM_URL} rel="noopener">정부24 인감증명서 발급 안내</a>에 있는 정해진 위임장을 쓰세요.</p>
-          </div>
-          <div class="row pa-actions">
-            <button type="submit" class="btn primary" id="pa-make">위임장 만들기</button>
-            <button type="button" class="btn ghost" id="pa-blank">빈 양식으로 받기</button>
-            <button type="button" class="btn ghost" id="pa-reset">모두 지우기</button>
-          </div>
-          <p class="privacy-note">쓴 내용은 이 기기 밖으로 보내지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
-        </form>
-
-        <div class="progress-box" id="pa-progress" hidden>
-          <p id="pa-progress-text"></p>
-          <progress id="pa-progress-bar" aria-labelledby="pa-progress-text"></progress>
+      <FormTool spec={SPEC} prefix={PA_PREFIX} groups={groups} after={['date']} hwp={FORM_HWP}>
+        <div class="notice pa-caution" id="pa-caution" slot="caution">
+          <p>관공서에 따라 정해진 위임장 서식이 있어요. 내기 전에 그 기관에 확인하세요.</p>
+          <p>인감증명서를 대신 받을 때는 <a href={GOV24_INGAM_URL} rel="noopener">정부24 인감증명서 발급 안내</a>에 있는 정해진 위임장을 쓰세요.</p>
         </div>
-
-        <EngineError />
-        <div class="error-box" id="pa-error" role="alert" tabindex="-1" hidden>
-          <p id="pa-error-text"></p>
-          <button type="button" class="btn ghost" id="pa-retry"></button>
-        </div>
-
-        <div class="pa-result" id="pa-result" tabindex="-1" aria-labelledby="pa-result-title" hidden>
-          <h2 id="pa-result-title">만든 위임장</h2>
-          <p class="notice warn" id="pa-stale" hidden></p>
-          <div class="row pa-downloads" id="pa-downloads">
-            {FORM_HWP && <button type="button" class="btn primary" id="pa-hwp">한글(HWP)로 받기</button>}
-            <button type="button" class="btn primary" id="pa-pdf">PDF로 받기</button>
-          </div>
-          <p class="field-error" id="pa-hwp-error" role="alert"></p>
-          <p class="field-error" id="pa-pdf-error" role="alert"></p>
-          <p class="pa-done" id="pa-done"></p>
-          <div class="next-steps" id="pa-next" role="group" aria-labelledby="pa-next-label" hidden></div>
-          <div class="hw-preview pa-preview" id="pa-preview" tabindex="0" aria-label="미리 보기"></div>
-        </div>
-        <p class="visually-hidden" id="pa-status" aria-live="polite" data-live="status"></p>
-      </div>
+      </FormTool>
 
       <section class="pa-with" id="pa-with" aria-labelledby="pa-with-title">
         <h2 id="pa-with-title">함께 준비하는 것</h2>
@@ -155,7 +96,7 @@ const task = field('task');
       ))}
     </div>
   </section>
-  <RelatedTools current={tool.slug} only={['id-copy', 'stamp-maker', 'pdf-sign', 'pdf-merge']} />
+  <RelatedTools current={tool.slug} only={['id-copy', 'stamp-maker', 'pdf-sign', 'pdf-merge', 'loan-note']} />
   <aside class="tool-legal" aria-label="한글(HWP) 문서 관련 고지">
     <div class="wrap narrow">
       <p>{HANCOM_NOTICE}</p>

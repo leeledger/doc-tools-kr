@@ -23,7 +23,8 @@ export type NextSource =
   | 'id-photo'
   | 'id-copy'
   | 'pdf-edit'
-  | 'power-of-attorney';
+  | 'power-of-attorney'
+  | 'loan-note';
 
 /**
  * Button order = array order. A tool never offers itself. The 배경 지우기 row exists only in a build with
@@ -49,6 +50,8 @@ export const FLOW = {
   'pdf-edit': ['pdf-sign', 'pdf-compress', 'pdf-password'],
   // FORM1020 D8: the 위임장 PDF: 도장·서명 넣기 first, then 글자 넣기 or a smaller file.
   'power-of-attorney': ['pdf-sign', 'pdf-edit', 'pdf-compress'],
+  // LOAN1022 L-D10: the 차용증 PDF, the same row (both people sign it).
+  'loan-note': ['pdf-sign', 'pdf-edit', 'pdf-compress'],
   ...(__BG_REMOVE__ ? { 'remove-background': ['jpg-to-pdf', 'photo-compress'] } : {}),
 } as Readonly<Record<NextSource, readonly NextTarget[] | undefined>>;
 

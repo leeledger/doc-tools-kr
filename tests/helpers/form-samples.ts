@@ -18,14 +18,35 @@ export const SAMPLE_VALUES: Readonly<Record<string, FormValues>> = {
     task: '주민등록표 등본 발급 신청과 수령\n관련 서류 제출',
     date: '2026-10-20',
   },
+  'loan-note': {
+    amount: '10,000,000',
+    loanDate: '2026-10-22',
+    dueDate: '2027-10-21',
+    rate: '5',
+    interestDay: '매달 25일',
+    repayHow: '김철수 명의 계좌로 이체',
+    terms: '원금은 갚을 날에 한꺼번에 갚는다.\n갚을 날을 넘기면 미리 연락한다.',
+    lenderName: '김철수',
+    lenderBirth: '1975년 5월 5일',
+    lenderAddress: '서울특별시 종로구 세종대로 209',
+    lenderPhone: '010-1111-2222',
+    borrowerName: '홍길동',
+    borrowerBirth: '1980년 3월 1일',
+    borrowerAddress: '경기도 성남시 분당구 판교역로 166',
+    borrowerPhone: '010-3333-4444',
+    date: '2026-10-22',
+  },
 };
 
 const WIDE = '가';
 
-/** Every field at maxLength (multiline: one line). */
+/** The longest document text of each kind: an amount of 12 digits (its 한글 the longest), a number of 3 + 2 digits. */
+const MAX_OF: Partial<Record<FormSpec['fields'][number]['kind'], string>> = { date: '2026-12-31', amount: '999999999999', number: '999.99' };
+
+/** Every field at maxLength (multiline: one line; dates, amounts and numbers at their longest). */
 export function allMaxValues(spec: FormSpec): FormValues {
   const out: FormValues = {};
-  for (const f of spec.fields) out[f.id] = f.kind === 'date' ? '2026-12-31' : WIDE.repeat(f.maxLength);
+  for (const f of spec.fields) out[f.id] = MAX_OF[f.kind] ?? WIDE.repeat(f.maxLength);
   return out;
 }
 

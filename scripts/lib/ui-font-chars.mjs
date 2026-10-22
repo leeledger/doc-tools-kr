@@ -27,9 +27,10 @@ export function stripComments(s) {
     // (.out-links, .guide-page; src/data/print-links.ts, src/data/affiliate.ts: every visible string is in the constants below).
     .replace(/\b(?:PRINT_COPY|AFF_COPY)\s*=\s*\{[^}]*\}/g, '')
     .replace(/\bAFF_LINKS\b[^=\n]*=\s*\[[^\]]*\]/g, '')
-    // FORM1020: a form's document text (src/lib/form/spec.ts keys doc, docLabel, docSection) is drawn only in the
-    // document's own faces (the HWP, the PDF and their preview), never in the UI font.
-    .replace(/\b(?:doc|docLabel|docSection):\s*'(?:[^'\\\n]|\\.)*'/g, '')
+    // FORM1020: a form's document text (src/lib/form/spec.ts keys doc, docLabel, docSection, docTemplate, docBlank,
+    // docZero; LOAN1022) is drawn only in the document's own faces (the HWP, the PDF and their preview), never in the
+    // UI font.
+    .replace(/\b(?:doc|docLabel|docSection|docTemplate|docBlank|docZero):\s*'(?:[^'\\\n]|\\.)*'/g, '')
     .replace(/\bCOUPANG_DISCLOSURE\s*=\s*'(?:[^'\\\n]|\\.)*'/g, '')
     // CONTENT1021: the fact-check unit pattern (src/data/guide-facts.ts) lists syllables that are never shown.
     .replace(/\bconst UNIT\s*=\s*String\.raw`[^`]*`/g, '');
@@ -58,6 +59,11 @@ export const EN_DIRS = ['i18n/', 'pages/en/'];
  * guide prose, so their pages and the /about/ milestone data are in neither set (paths relative to src/).
  */
 export const SYSTEM_FONT_PATHS = ['pages/about/', 'pages/contact/', 'data/about.ts'];
+/**
+ * LOAN1022 L-D3: files whose text is document text only (drawn in the HWP/PDF faces, never in the UI font): in neither
+ * set (paths relative to src/). The 금액 한글 digits and places (일 … 구, 십 백 천, 만 억 조).
+ */
+export const DOC_TEXT_PATHS = ['lib/form/amount.ts'];
 /** Punctuation used in generated UI strings (progress, separators, quotes). */
 const FORCED = '…·—–‘’“”©';
 
@@ -87,6 +93,7 @@ export function uiCharSets(src) {
         // EN1 (brief EN decision 4): English text renders in the system font (html[lang="en"]), so neither set needs it.
         if (EN_DIRS.some((d) => rel.startsWith(d))) continue;
         if (SYSTEM_FONT_PATHS.some((d) => rel.startsWith(d))) continue;
+        if (DOC_TEXT_PATHS.includes(rel)) continue;
         const t = readFileSync(p, 'utf8');
         const late = LATE_DIRS.includes(rel.split('/')[0]) && !CORE_PATHS.includes(rel);
         (late ? lateTexts : coreTexts).push(e.name.endsWith('.json') ? t : stripComments(t));

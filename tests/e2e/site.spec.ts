@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, gotoReady, test } from './no-upload';
 import { fixturePath, photoFixture, runtimePath } from './paths';
 
-const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
+const PAGES = ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/loan-note/', '/privacy/', '/terms/', '/licenses/', '/offline/', '/does-not-exist/'];
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 for (const path of PAGES) {
@@ -39,7 +39,7 @@ test('axe: /pdf-compress/ in the ready state (details open) and the done state',
   expect(await serious()).toEqual([]);
 });
 
-for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/privacy/', '/terms/']) {
+for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/loan-note/', '/privacy/', '/terms/']) {
   test(`SEO smoke on ${path}`, async ({ page, baseURL }) => {
     const res = await gotoReady(page, path);
     expect(res?.status()).toBe(200);
@@ -79,6 +79,7 @@ for (const [path, name] of [
   ['/stamp-maker/', '도장 이미지'],
   ['/english-name/', '여권 영문 이름으로'],
   ['/power-of-attorney/', '위임장 양식'],
+  ['/loan-note/', '차용증 양식'],
 ] as const) {
   test(`tool page JSON-LD, title and description on ${path}`, async ({ page }) => {
     await gotoReady(page, path);
@@ -122,6 +123,7 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     ['/stamp-maker/', '도장 만들기'],
     ['/english-name/', '영문 이름 변환기'],
     ['/power-of-attorney/', '위임장 만들기'],
+    ['/loan-note/', '차용증 만들기'],
   ] as const;
   const related: Record<string, string[]> = {
     '/hwp-to-pdf/': ['/hwp-viewer/', '/hwpx-to-hwp/', '/pdf-merge/', '/pdf-compress/'],
@@ -141,7 +143,7 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     // TOOLS5 U2 (brief decision 12).
     '/pdf-split/': ['/pdf-merge/', '/pdf-compress/', '/pdf-to-jpg/'],
     // TOOLS5 U3 (brief decision 12).
-    '/pdf-sign/': ['/stamp-maker/', '/stamp-signature/', '/pdf-merge/', '/pdf-password/', '/power-of-attorney/'],
+    '/pdf-sign/': ['/stamp-maker/', '/stamp-signature/', '/pdf-merge/', '/pdf-password/', '/power-of-attorney/', '/loan-note/'],
     // TOOLS1015 C1.
     '/char-count/': ['/id-photo/', '/photo-compress/', '/jpg-to-pdf/'],
     // TOOLS1015 I1.
@@ -149,11 +151,13 @@ test('related tools: each tool page links to the other live tools (the HWP tools
     // TOOLS1015 E1.
     '/pdf-edit/': ['/pdf-sign/', '/pdf-merge/', '/pdf-compress/'],
     // STAMP1015 D2.
-    '/stamp-maker/': ['/stamp-signature/', '/pdf-sign/', '/jpg-to-pdf/', '/power-of-attorney/'],
+    '/stamp-maker/': ['/stamp-signature/', '/pdf-sign/', '/jpg-to-pdf/', '/power-of-attorney/', '/loan-note/'],
     // ROMANIZE1016 D5.
     '/english-name/': ['/id-photo/', '/id-copy/', '/char-count/'],
     // FORM1020 D8: what goes with a 위임장.
-    '/power-of-attorney/': ['/id-copy/', '/stamp-maker/', '/pdf-sign/', '/pdf-merge/'],
+    '/power-of-attorney/': ['/id-copy/', '/stamp-maker/', '/pdf-sign/', '/pdf-merge/', '/loan-note/'],
+    // LOAN1022 L-D10: what goes with a 차용증.
+    '/loan-note/': ['/stamp-maker/', '/pdf-sign/', '/id-copy/', '/power-of-attorney/'],
   };
   for (const [path] of tools) {
     await gotoReady(page, path);
@@ -183,7 +187,7 @@ test('sitemap lists exactly the live pages; robots points to it', async ({ reque
   // ADS1020 D8, D12: /about/ and /contact/ only with the operator pages built; /licenses/ and /embed/ (noindex) never.
   const operator = (await request.get('/about/')).status() === 200;
   const pages = locs.filter((p) => !p.startsWith('/guide/') && !p.startsWith('/en/') && !['/about/', '/contact/'].includes(p));
-  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/char-count/', '/id-copy/', '/pdf-edit/', '/photo-compress/', '/privacy/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/'].sort());
+  expect(pages.sort()).toEqual(['/', '/hwp-to-pdf/', '/hwp-viewer/', '/id-photo/', '/jpg-to-pdf/', '/pdf-compress/', '/pdf-merge/', '/pdf-password/', '/pdf-to-jpg/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/char-count/', '/id-copy/', '/pdf-edit/', '/photo-compress/', '/privacy/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/loan-note/', '/stamp-signature/', '/terms/', '/hwpx-to-hwp/'].sort());
   expect(locs.filter((p) => ['/about/', '/contact/'].includes(p))).toEqual(operator ? ['/about/', '/contact/'] : []);
   for (const p of ['/embed/', '/embed/id-photo/', '/licenses/']) expect(locs).not.toContain(p);
   // Growth G: /guide/ and every published guide (drafts never). G2 A1: hwp-to-pdf is published; both hubs are in.
@@ -219,7 +223,7 @@ test('CSP header is present with the locked policy', async ({ request }) => {
 test('landing page: live cards link to their tools, soon tools are names only, footer has legal links', async ({ page }) => {
   await gotoReady(page, '/');
   const cards = page.locator('.card.live');
-  await expect(cards).toHaveCount(20);
+  await expect(cards).toHaveCount(21);
   await expect(cards.getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
   await expect(cards.getByRole('link', { name: 'PDF 용량 줄이기' })).toHaveAttribute('href', '/pdf-compress/');
   await expect(cards.getByRole('link', { name: '사진 PDF 변환' })).toHaveAttribute('href', '/jpg-to-pdf/');
@@ -239,9 +243,10 @@ test('landing page: live cards link to their tools, soon tools are names only, f
   await expect(cards.getByRole('link', { name: 'PDF 글자 넣기·편집' })).toHaveAttribute('href', '/pdf-edit/');
   await expect(cards.getByRole('link', { name: '도장 만들기', exact: true })).toHaveAttribute('href', '/stamp-maker/');
   await expect(cards.getByRole('link', { name: '위임장 만들기' })).toHaveAttribute('href', '/power-of-attorney/');
+  await expect(cards.getByRole('link', { name: '차용증 만들기' })).toHaveAttribute('href', '/loan-note/');
   await expect(cards.getByRole('link', { name: '영문 이름 변환기' })).toHaveAttribute('href', '/english-name/');
-  await expect(cards.locator('.status')).toHaveText(Array(20).fill('사용하기'));
-  await expect(page.locator('.card')).toHaveCount(20);
+  await expect(cards.locator('.status')).toHaveText(Array(21).fill('사용하기'));
+  await expect(page.locator('.card')).toHaveCount(21);
   await expect(page.getByText('곧 공개')).toHaveCount(0);
   // Every tool is live: the 준비 중 block is not rendered at all.
   await expect(page.locator('.soon')).toHaveCount(0);
@@ -271,7 +276,7 @@ test('licenses page lists the shipped packages and their texts', async ({ page }
 test.describe('mobile layout', () => {
   test.use({ viewport: { width: 360, height: 780 } });
 
-  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/privacy/', '/terms/', '/licenses/']) {
+  for (const path of ['/', '/pdf-merge/', '/pdf-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/pdf-split/', '/pdf-sign/', '/image-to-jpg/', '/photo-compress/', '/id-photo/', '/stamp-signature/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/power-of-attorney/', '/loan-note/', '/privacy/', '/terms/', '/licenses/']) {
     test(`no horizontal scroll at 360 px on ${path}`, async ({ page }) => {
       await gotoReady(page, path);
       const [sw, cw] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);

@@ -58,7 +58,7 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * /stamp-signature/ precached, so it leaves (stored when visited, sw.ts RUNTIME_PAGES). Its photo controller was already
  * runtime-cached only. The limit is never raised.
  */
-export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/about/', '/contact/', '/remove-background/', '/stamp-signature/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/english-address/', '/power-of-attorney/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/') || path.startsWith('/embed/') || path.startsWith('/en/');
+export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/about/', '/contact/', '/remove-background/', '/stamp-signature/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/english-name/', '/english-address/', '/power-of-attorney/', '/loan-note/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/') || path.startsWith('/embed/') || path.startsWith('/en/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

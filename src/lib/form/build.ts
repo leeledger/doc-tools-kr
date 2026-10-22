@@ -16,9 +16,10 @@
 // Any call that throws or answers ok:false → HwpError export (memory → oom). One code path.
 import { classifyParseError } from '../hwp/engine';
 import { HwpError } from '../hwp/errors';
-import { BODY_PT, type Align, type FormBlock, type FormSpec, type FormValues } from './spec';
+import { BODY_PT, type Align, type FormBlock, type FormField, type FormSpec, type FormValues } from './spec';
+import { BLANK_DATE, docText } from './values';
 
-import { formatDate } from './values';
+export { BLANK_DATE };
 
 /** The part of rhwp's HwpDocument the builder uses. */
 export interface FormDocument {
@@ -38,8 +39,6 @@ export interface FormDocument {
 
 /** What an empty name slot or sign line leaves to write in by hand. */
 export const BLANK_SLOT = ' '.repeat(16);
-/** The date line of the blank form (D5). */
-export const BLANK_DATE = '     년     월     일';
 export const SIGN_MARK = '(서명 또는 인)';
 
 interface ParaPlan {
@@ -80,19 +79,24 @@ function num(j: Json, key: string, what: string): number {
   return v;
 }
 
-const fill = (doc: string, values: FormValues): string => doc.replace(/\{([A-Za-z][\w-]*)\}/g, (_, id: string) => values[id] || BLANK_SLOT);
+/** A field's document text (./values docText; LOAN1022). */
+const docOf = (spec: FormSpec, values: FormValues, id: string): string => {
+  const field: FormField | undefined = spec.fields.find((f) => f.id === id);
+  return field ? docText(field, values[id] ?? '') : (values[id] ?? '');
+};
 
 /** The document's paragraphs, top to bottom. */
 export function planParagraphs(spec: FormSpec, values: FormValues): ParaPlan[] {
+  const fill = (doc: string): string => doc.replace(/\{([A-Za-z][\w-]*)\}/g, (_, id: string) => docOf(spec, values, id) || BLANK_SLOT);
   const out: ParaPlan[] = [];
   for (const b of spec.blocks) {
     if (b.type === 'title') out.push({ text: b.doc, align: 'center', size: b.size, bold: true });
     else if (b.type === 'para') {
       if (b.onlyIf && !values[b.onlyIf]) continue;
-      out.push({ text: fill(b.doc, values), align: b.align ?? 'justify', size: b.size ?? BODY_PT, bold: b.bold ?? false });
+      out.push({ text: fill(b.doc), align: b.align ?? 'justify', size: b.size ?? BODY_PT, bold: b.bold ?? false });
     } else if (b.type === 'table') out.push({ text: '', align: 'center', size: BODY_PT, bold: false, table: b });
-    else if (b.type === 'dateLine') out.push({ text: formatDate(values[b.field] ?? '') || BLANK_DATE, align: b.align ?? 'center', size: BODY_PT, bold: false });
-    else if (b.type === 'signLine') out.push({ text: `${b.docLabel}  ${values[b.field] || BLANK_SLOT}  ${SIGN_MARK}`, align: b.align ?? 'right', size: BODY_PT, bold: false });
+    else if (b.type === 'dateLine') out.push({ text: docOf(spec, values, b.field) || BLANK_DATE, align: b.align ?? 'center', size: BODY_PT, bold: false });
+    else if (b.type === 'signLine') out.push({ text: `${b.docLabel}  ${docOf(spec, values, b.field) || BLANK_SLOT}  ${SIGN_MARK}`, align: b.align ?? 'right', size: BODY_PT, bold: false });
     else out.push({ text: ' ', align: 'left', size: b.size, bold: false });
   }
   return out;
@@ -125,7 +129,7 @@ function buildTable(doc: FormDocument, spec: FormSpec, values: FormValues, t: Ex
     const height = t.rowHeight * Math.max(1, field.rowLines ?? 1);
     for (let c = 0; c < cols; c++) call('setCellProperties', () => doc.setCellProperties(SEC, para, control, r * cols + c, JSON.stringify({ height })));
     cellText(doc, para, control, r * cols + labelCol, field.docLabel ?? '', 'center');
-    const v = values[id] ?? '';
+    const v = docText(field, values[id] ?? '');
     if (v) cellText(doc, para, control, r * cols + labelCol + 1, v, 'left');
   });
   if (t.docSection) {

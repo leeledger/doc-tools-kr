@@ -1,13 +1,16 @@
 // 양식 채우기 엔진 (FORM1020 D3): the declarative form a page fills and the HWP worker builds (./build). A form is
 // data only: fields (what the visitor types) and blocks (the document, top to bottom). Document text sits under
-// the keys `doc`, `docLabel` and `docSection`; it is drawn in the document's own faces (HWP/PDF), never in the UI
-// font, so scripts/lib/ui-font-chars.mjs leaves those strings out of the UI glyph sets.
+// the keys `doc`, `docLabel`, `docSection`, `docTemplate`, `docBlank` and `docZero`; it is drawn in the document's own
+// faces (HWP/PDF), never in the UI font, so scripts/lib/ui-font-chars.mjs leaves those strings out of the UI glyph sets.
 
 /** Body text size (points): the template's own. Everything after a form's first table is body text (./build). */
 export const BODY_PT = 10;
 
-/** text: one line. multiline: up to maxLines lines. date: an ISO date (YYYY-MM-DD) or empty. */
-export type FieldKind = 'text' | 'multiline' | 'date';
+/**
+ * text: one line. multiline: up to maxLines lines. date: an ISO date (YYYY-MM-DD) or empty. amount: whole 원, 1–12
+ * digits (LOAN1022). number: a decimal, up to 3 digits and 2 decimals (LOAN1022).
+ */
+export type FieldKind = 'text' | 'multiline' | 'date' | 'amount' | 'number';
 
 export interface FormField {
   id: string;
@@ -21,8 +24,16 @@ export interface FormField {
   /** multiline only. */
   maxLines?: number;
   placeholder?: string;
+  /** A line under the page's input (plain words; LOAN1022). */
+  hint?: string;
   /** Row height in table rows: rowHeight × rowLines (room to write by hand on the blank form). Default 1. */
   rowLines?: number;
+  /** number only: the document text of a value, with `{v}` for it (「연 {v}%」). */
+  docTemplate?: string;
+  /** amount, number or date: the document text of an empty value (room to write by hand). */
+  docBlank?: string;
+  /** number only: the document text of the value 0 (「없음」). */
+  docZero?: string;
 }
 
 export type Align = 'left' | 'center' | 'right' | 'justify';
@@ -77,7 +88,9 @@ export function referredFields(block: FormBlock): string[] {
 /**
  * Spec rules (FORM1020 test map "spec lint"): ids unique; every field has exactly one home; table fields have a
  * docLabel; every reference names a field; maxLength set; multiline has maxLines; table widths match its columns;
- * after the first table (and right before it) only body text (./build: rhwp breaks pages on a char format there).
+ * after the first table (and right before it) only body text (./build: rhwp breaks pages on a char format there);
+ * a dateLine names a date field (a date may also sit in a table row, LOAN1022); docTemplate has `{v}`; docTemplate and
+ * docZero only on number fields, docBlank only on amount, number and date fields.
  * Returns the problems (empty = valid).
  */
 export function lintSpec(spec: FormSpec): string[] {
@@ -89,6 +102,9 @@ export function lintSpec(spec: FormSpec): string[] {
     if (!(Number.isInteger(f.maxLength) && f.maxLength > 0)) out.push(`${f.id}: maxLength`);
     if (f.kind === 'multiline' && !(Number.isInteger(f.maxLines) && f.maxLines! > 0)) out.push(`${f.id}: maxLines`);
     if (!f.label.trim()) out.push(`${f.id}: label`);
+    if (f.docTemplate !== undefined && !f.docTemplate.includes('{v}')) out.push(`${f.id}: docTemplate needs {v}`);
+    if ((f.docTemplate !== undefined || f.docZero !== undefined) && f.kind !== 'number') out.push(`${f.id}: docTemplate and docZero are for number fields`);
+    if (f.docBlank !== undefined && !['amount', 'number', 'date'].includes(f.kind)) out.push(`${f.id}: docBlank is for amount, number and date fields`);
   }
   const homes = new Map<string, number>();
   const firstTable = spec.blocks.findIndex((b) => b.type === 'table');
@@ -106,7 +122,6 @@ export function lintSpec(spec: FormSpec): string[] {
       const cols = b.docSection ? 3 : 2;
       if (b.colWidths.length !== cols) out.push(`table ${b.rows[0]}: ${b.colWidths.length} widths for ${cols} columns`);
       for (const id of b.rows) if (!ids.get(id)?.docLabel?.trim()) out.push(`${id}: docLabel`);
-      for (const id of b.rows) if (ids.get(id)?.kind === 'date') out.push(`${id}: a date field belongs on a dateLine`);
     }
     if (b.type === 'dateLine' && ids.get(b.field) && ids.get(b.field)!.kind !== 'date') out.push(`${b.field}: dateLine needs a date field`);
   });

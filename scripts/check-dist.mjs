@@ -959,41 +959,53 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
     budget('english-name initial JS', initial, ENGLISH_NAME_INITIAL_KB * KB);
   }
 }
-// 위임장 만들기 (FORM1020 D7, D10): the controller (the controller*.js chunk that owns #pa-hwp-error, and what only it
-// imports) loads after the first user signal, never with the page; no initial script names the HWP worker, the rhwp glue,
-// the viewer or the PDF export. Nothing typed is stored or put in the URL: no Web Storage, IndexedDB or history call in
-// the page's own initial chunk or the controller's closure (the 이어서 하기 handoff chunk loads on its click only); the
-// form has no action and its fields no name. The page offers no 인감증명 form: 「인감」 appears only in the caution
-// (#pa-caution) and its 정부24 link. Not an ads content page (no AdSense tag), and no off-site script besides the
-// visitor-count beacon of an analytics build. Budgets: measured + 20 % of the larger build (initial 9.1 KB default, 10.7 KB in
-// the cloud build with the usage tracker; controller 7.0 KB gzip; FORM1020).
-{
-  const html = pageHtml.get('power-of-attorney/index.html');
-  if (!html) errors.push('power-of-attorney/index.html: no file found');
+// Form tools (FORM1020 D7, D10; generic since LOAN1022 L-D4: src/tools/form-tool, src/components/FormTool.astro): the
+// controller (the controller*.js chunk the page's own initial chunk imports dynamically, and its static closure) loads
+// after the first user signal, never with the page, and is the form controller (it names hwp-error and form-build); no initial
+// script names the HWP worker, the rhwp glue, the viewer or the PDF export. Nothing typed is stored or put in the URL: no
+// Web Storage, IndexedDB or history call in the page's own initial chunk or the controller's closure (the 이어서 하기
+// handoff chunk loads on its click only); the form has no action and its fields no name. Not an ads content page (no
+// AdSense tag), and no off-site script besides the visitor-count beacon of an analytics build. 위임장: the page offers no
+// 인감증명 form: 「인감」 appears only in the caution (#pa-caution) and its 정부24 link. Budgets: measured + 20 % of the
+// larger build (위임장 initial 9.1 KB default, 10.7 KB in the cloud build with the usage tracker; controller 7.0 KB gzip;
+// FORM1020).
+const FORM_TOOLS = [
+  { slug: 'power-of-attorney', prefix: 'pa', initialKb: 12.8, lazyKb: 8.4 },
+  // LOAN1022 L-D11: the same rules and budgets.
+  { slug: 'loan-note', prefix: 'ln', initialKb: 12.8, lazyKb: 8.4 },
+];
+for (const t of FORM_TOOLS) {
+  const html = pageHtml.get(`${t.slug}/index.html`);
+  if (!html) {
+    errors.push(`${t.slug}/index.html: no file found`);
+    continue;
+  }
+  const initial = new Set(initialJs(html));
+  const lazyImports = (f) => [...read(f).toString('utf8').matchAll(/import\([`"']\.\/(controller\.[\w-]{8}\.js)[`"']\)/g)].map((m) => posix.join(posix.dirname(f), m[1]));
+  const own = [...initial].filter((f) => lazyImports(f).length > 0 && read(f).includes(t.slug));
+  if (own.length !== 1) errors.push(`${t.slug} page script: ${own.length} initial chunk(s) start its controller, expected 1`);
+  const controller = [...new Set(own.flatMap(lazyImports))];
+  if (controller.length !== 1) errors.push(`${t.slug} controller: ${controller.length} lazy controller chunk(s), expected 1`);
+  if (controller.some((f) => initial.has(f))) errors.push(`the /${t.slug}/ controller loads with the page`);
+  const lazyOwn = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
+  if (!lazyOwn.some((f) => read(f).includes('hwp-error') && read(f).includes('form-build'))) errors.push(`${t.slug} controller: not the form tool controller (no hwp-error / form-build)`);
+  for (const f of initial) if (/hwp\.worker|rhwp_bg|HwpDocument|__wbindgen|createViewer|exportPdf/.test(read(f).toString('utf8'))) errors.push(`${f}: the HWP worker, the rhwp glue, the viewer or the PDF export in the /${t.slug}/ initial JS`);
+  for (const f of [...own, ...lazyOwn]) if (/localStorage|sessionStorage|indexedDB|history\.(push|replace)State/.test(read(f).toString('utf8'))) errors.push(`${f}: the /${t.slug}/ scripts use storage or the URL`);
+  const form = new RegExp(String.raw`<form\b[^>]*id="${t.prefix}-form"[^>]*>([\s\S]*?)</form>`).exec(html);
+  if (!form) errors.push(`${t.slug}/index.html: no #${t.prefix}-form`);
   else {
-    const initial = new Set(initialJs(html));
-    const own = [...initial].filter((f) => read(f).includes('pa-blank'));
-    if (own.length !== 1) errors.push(`power-of-attorney page script: ${own.length} initial chunk(s) name #pa-blank, expected 1`);
-    const controller = match(/^_astro\/controller\.[\w-]{8}\.js$/).filter((f) => read(f).includes('pa-hwp-error'));
-    if (controller.length !== 1) errors.push(`power-of-attorney controller: ${controller.length} chunk(s) name #pa-hwp-error, expected 1`);
-    if (controller.some((f) => initial.has(f))) errors.push('the /power-of-attorney/ controller loads with the page');
-    for (const f of initial) if (/hwp\.worker|rhwp_bg|HwpDocument|__wbindgen|createViewer|exportPdf/.test(read(f).toString('utf8'))) errors.push(`${f}: the HWP worker, the rhwp glue, the viewer or the PDF export in the /power-of-attorney/ initial JS`);
-    const lazyOwn = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
-    for (const f of [...own, ...lazyOwn]) if (/localStorage|sessionStorage|indexedDB|history\.(push|replace)State/.test(read(f).toString('utf8'))) errors.push(`${f}: the /power-of-attorney/ scripts use storage or the URL`);
-    const form = /<form\b[^>]*id="pa-form"[^>]*>([\s\S]*?)<\/form>/.exec(html);
-    if (!form) errors.push('power-of-attorney/index.html: no #pa-form');
-    else {
-      if (/\baction=/.test(form[0].slice(0, form[0].indexOf('>')))) errors.push('power-of-attorney/index.html: #pa-form has an action');
-      if (/<(input|textarea)\b[^>]*\bname=/.test(form[1])) errors.push('power-of-attorney/index.html: a field in #pa-form has a name');
-    }
+    if (/\baction=/.test(form[0].slice(0, form[0].indexOf('>')))) errors.push(`${t.slug}/index.html: #${t.prefix}-form has an action`);
+    if (/<(input|textarea)\b[^>]*\bname=/.test(form[1])) errors.push(`${t.slug}/index.html: a field in #${t.prefix}-form has a name`);
+  }
+  if (t.slug === 'power-of-attorney') {
     const outside = html.replace(/<div class="notice pa-caution" id="pa-caution">[\s\S]*?<\/div>/, '');
     if (outside === html) errors.push('power-of-attorney/index.html: no #pa-caution');
     if (outside.includes('인감')) errors.push('power-of-attorney/index.html: 「인감」 outside the caution');
-    if (/adsbygoogle|pagead2\.googlesyndication/.test(html)) errors.push('power-of-attorney/index.html: carries the AdSense tag (a tool page, not a content page)');
-    for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`power-of-attorney/index.html: off-site script ${m[2]}`);
-    budget('power-of-attorney initial JS', [...initial], 12.8 * KB);
-    budget('power-of-attorney controller (lazy)', lazyOwn, 8.4 * KB);
   }
+  if (/adsbygoogle|pagead2\.googlesyndication/.test(html)) errors.push(`${t.slug}/index.html: carries the AdSense tag (a tool page, not a content page)`);
+  for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`${t.slug}/index.html: off-site script ${m[2]}`);
+  budget(`${t.slug} initial JS`, [...initial], t.initialKb * KB);
+  budget(`${t.slug} controller (lazy)`, lazyOwn, t.lazyKb * KB);
 }
 // 여권 영문 이름 정하는 법 (ROMANIZE1016 R4, brief Failure modes): every 「N%」 in the guide's visible text is a 비율 of
 // mofa.ts or stands in one of the guide's own source quotes (the 50% rule of 외교부 고시).
