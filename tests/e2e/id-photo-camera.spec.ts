@@ -131,6 +131,44 @@ test.describe('synthetic camera', () => {
     expect(bytes.length).toBeLessThanOrEqual(PASSPORT.limitBytes!);
   });
 
+  test('review: one capture per tap (double tap on 바로), 제출처 fixed until 다시 찍기, Back (bfcache) re-enables the hand-over', async ({ page }) => {
+    await syntheticCamera(page);
+    await page.addInitScript(() => {
+      const w = window as unknown as { __urls: { made: number; revoked: number } };
+      w.__urls = { made: 0, revoked: 0 };
+      const make = URL.createObjectURL.bind(URL);
+      const revoke = URL.revokeObjectURL.bind(URL);
+      URL.createObjectURL = (o: Blob | MediaSource) => (w.__urls.made++, make(o));
+      URL.revokeObjectURL = (u: string) => (w.__urls.revoked++, revoke(u));
+    });
+    await gotoReady(page, '/id-photo-camera/');
+    await page.locator('#cam-on').click();
+    await expect(tool(page)).toHaveAttribute('data-state', 'live', { timeout: 20_000 });
+    await expect(page.locator('#cam-video')).toHaveJSProperty('paused', false);
+    await page.getByLabel('바로').check();
+    // Two taps before the first capture finishes: one still.
+    await page.locator('#cam-shoot').evaluate((b: HTMLButtonElement) => {
+      b.click();
+      b.click();
+    });
+    await expect(tool(page)).toHaveAttribute('data-state', 'review', { timeout: 20_000 });
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => (window as unknown as { __urls: { made: number } }).__urls.made)).toBe(1);
+    // The still was cut for this 제출처: the choice is fixed on the review screen.
+    await expect(page.locator('#cam-preset')).toBeDisabled();
+    // Back from /id-photo/ restores the page from the back-forward cache with the hand-over button pressed: usable again.
+    await page.evaluate(() => {
+      (document.getElementById('cam-use') as HTMLButtonElement).disabled = true;
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    });
+    await expect(page.locator('#cam-use')).toBeEnabled();
+    // 다시 찍기: the old still's address is released and the 제출처 can change again.
+    await page.locator('#cam-retake').click();
+    await expect(tool(page)).toHaveAttribute('data-state', 'live', { timeout: 20_000 });
+    await expect(page.locator('#cam-preset')).toBeEnabled();
+    expect(await page.evaluate(() => (window as unknown as { __urls: { revoked: number } }).__urls.revoked)).toBe(1);
+  });
+
   test('the page hidden mid-countdown stops the camera and the timer; 「카메라 켜기」 shows again', async ({ page }) => {
     await syntheticCamera(page);
     await gotoReady(page, '/id-photo-camera/');

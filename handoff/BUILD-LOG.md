@@ -3887,3 +3887,13 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Known Gaps (IDCAM1022): D8c 「원본 사진으로 다시 하기」 button deferred to Step D (the original is not on /id-photo/);
   Firefox fake-camera resolution unverified (synthetic test covers the path); O1/O2 real phones and in-app viewers.
 - Escalations: none.
+
+## IDCAM1022 B fix (Bob, 2026-10-22) — Richard's 4 Should Fix — UNVERIFIED (gate run stopped)
+- 1 pageshow: back from /id-photo/ (bfcache, persisted) in review re-enables 「이 사진으로 규격 맞추기」 (a new record is stored on re-send).
+- 2 double capture: `capturing` flag + 찍기 disabled at capture start (shoot() and the timer both go through it); a superseded still URL is revoked.
+- 3 tool note: 「한두 걸음 떨어져」 -> 「조금 떨어져서」 (no distance figure, D8(d)).
+- 4 제출처 during review: decision = the preset select is disabled on the review screen (the still was cut at that aspect) and re-enabled by 「다시 찍기」; simplest, no recrop.
+- Brief: Step B "next-steps id-photo-camera -> id-photo" marked superseded (sendTo + ?preset); Step D carries 「원본 사진으로 다시 하기」.
+- Test: id-photo-camera.spec 'review: one capture per tap …' (double tap -> 1 object URL; select disabled in review; pageshow persisted re-enables; retake revokes the URL, select enabled).
+- Gates: `npm run check` 0/0. vitest, the default build and the camera e2e were stopped by the harness (system low on memory) before they reported; not re-run on my own per the harness note. Not committed until they pass.
+- Orchestrator: local vitest was killed for low machine memory; the B fixes are verified by CI on the PR instead (vitest, build + check-dist, e2e on 5 browsers). Owner merges only on green.

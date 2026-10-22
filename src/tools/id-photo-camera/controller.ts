@@ -64,6 +64,8 @@ export function initCamera(): { start(): void } | null {
   let timer: ReturnType<typeof setInterval> | undefined;
   let shot: Blob | null = null;
   let shotUrl: string | null = null;
+  /** A capture is running (toBlob is async): a second tap or timer end must not start another. */
+  let capturing = false;
 
   const preset = (): IdPreset => getPreset(select.value) ?? getPreset(DEFAULT_PRESET)!;
   const say = (msg: string): void => announce('status', msg, root);
@@ -78,6 +80,8 @@ export function initCamera(): { start(): void } | null {
     shootBtn.disabled = p !== 'live';
     flipBtn.disabled = p !== 'live';
     count.hidden = p !== 'countdown';
+    // The still was cut at the chosen 제출처's aspect: the choice is fixed until 「다시 찍기」 (review fix 4).
+    select.disabled = p === 'review';
   }
 
   function stopTracks(): void {
@@ -183,7 +187,7 @@ export function initCamera(): { start(): void } | null {
   }
 
   function shoot(): void {
-    if (phase !== 'live') return;
+    if (phase !== 'live' || capturing) return;
     const checked = root.querySelector<HTMLInputElement>('input[name="cam-timer"]:checked');
     let left = Number(checked?.value ?? '3');
     if (!(left > 0)) {
@@ -206,6 +210,17 @@ export function initCamera(): { start(): void } | null {
   }
 
   async function capture(): Promise<void> {
+    if (capturing) return;
+    capturing = true;
+    shootBtn.disabled = true;
+    try {
+      await captureOnce();
+    } finally {
+      capturing = false;
+    }
+  }
+
+  async function captureOnce(): Promise<void> {
     const fw = video.videoWidth;
     const fh = video.videoHeight;
     const rect = unmirrorRect(frameRect(), fw, mirrored);
@@ -239,6 +254,7 @@ export function initCamera(): { start(): void } | null {
     }
     stopTracks();
     shot = blob;
+    if (shotUrl) URL.revokeObjectURL(shotUrl);
     shotUrl = URL.createObjectURL(blob);
     still.src = shotUrl;
     const p = preset();
@@ -310,6 +326,11 @@ export function initCamera(): { start(): void } | null {
   window.addEventListener('pagehide', () => {
     stopTracks();
     if (phase !== 'review') setPhase('idle');
+  });
+  // Back from /id-photo/ (back-forward cache): the review is as it was, so the photo can be handed over again (a new
+  // record; the first one was taken).
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted && phase === 'review' && shot) useBtn.disabled = false;
   });
 
   setPhase('idle');
