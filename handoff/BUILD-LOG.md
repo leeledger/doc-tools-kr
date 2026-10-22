@@ -4109,3 +4109,4 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   Gates: npm run check 0/0; vitest drop-links + guides-schema + guide-check green, postbuild 77/77 on the new default build;
   build + check-dist OK; guide-length self-id-photo 2,793; the guide's 15 quotes re-checked --exact: 0 changed.
   Commit df857a2 was cherry-picked onto idcam1022-d by the coordinator; E rebased (53d89b5).
+- Orchestrator 2026-10-23: local PUBLIC_ID_CAMERA=0 build of 11a9b56 (CI never builds it): check-dist OK, precache 423.9/450 KB; no dist/id-photo-camera or dist/guide/self-id-photo; 0 mentions in sitemap.xml, llms.txt, sw.js, _headers (no camera=(self)); /id-photo/ has no idp-camera link. One harmless trace: the IdPhotoTool chunk still holds the /id-photo-camera/ href template, guarded by a null element (dead code with the flag off). Known gap: CI has no flag-off build job.
