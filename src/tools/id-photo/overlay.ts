@@ -1,20 +1,11 @@
 // The guide overlay of /id-photo/ (brief Step 4 §3.2 "adjust"). Drawn on its own canvas above the photo, in
 // output coordinates scaled to the stage. Colour plus a label or a line style for every guide, never colour
 // alone: crown line (solid), head band (hatched green band with its label), eye line (dashed, 참고), centre
-// line (dotted), face oval (dashed), and grey hatching where the frame is outside the photo.
+// line (dotted), face oval (dashed), and grey hatching where the frame is outside the photo. The geometry and
+// labels come from src/lib/idphoto/guides.ts (shared with the camera page).
 import type { IdPreset } from '../../data/id-photo-presets';
-import { EYE_FRAC } from '../../lib/idphoto/calibration';
 import { toOutput, type CropState } from '../../lib/idphoto/crop';
-import { CROWN_FRAC, HEAD_FRAC } from '../../lib/idphoto/frame';
-
-export const LABELS = {
-  crown: '정수리(머리카락 제외)',
-  /** A head rule measured from the top of the hair (headBand.measure 'hair'). */
-  hair: '머리 맨 위(머리카락 포함)',
-  chinOfficial: '턱 끝 위치 (규격 32–36 mm)',
-  chinReference: '턱 끝 위치 (참고 범위)',
-  eye: '눈 높이(참고)',
-} as const;
+import { guides } from '../../lib/idphoto/guides';
 
 const CROWN = '#1d4ed8';
 const BAND = 'rgba(22, 163, 74, 0.22)';
@@ -87,10 +78,8 @@ export function drawOverlay(canvas: HTMLCanvasElement, preset: IdPreset, st: Cro
 
   const line = Math.max(1, W / 300);
   const fontPx = Math.max(10, Math.round(W / 30));
-  const crownY = CROWN_FRAC * H;
-  const head = HEAD_FRAC * H;
-  const bandTop = crownY + preset.headBand.minFrac * H;
-  const bandBottom = crownY + preset.headBand.maxFrac * H;
+  const gd = guides(preset, { w: W, h: H });
+  const { crownY, eyeY, bandTop, bandBottom, oval } = gd;
 
   // Face oval (dashed): crown to the target chin, centred.
   g.save();
@@ -98,16 +87,15 @@ export function drawOverlay(canvas: HTMLCanvasElement, preset: IdPreset, st: Cro
   g.strokeStyle = GUIDE;
   g.lineWidth = line;
   g.beginPath();
-  g.ellipse(W / 2, crownY + head / 2, head * 0.34, head / 2, 0, 0, Math.PI * 2);
+  g.ellipse(oval.cx, oval.cy, oval.rx, oval.ry, 0, 0, Math.PI * 2);
   g.stroke();
   // Centre line (dotted).
   g.setLineDash([line, line * 3]);
   g.beginPath();
-  g.moveTo(W / 2, 0);
-  g.lineTo(W / 2, H);
+  g.moveTo(gd.centerX, 0);
+  g.lineTo(gd.centerX, H);
   g.stroke();
   // Eye line (dashed, reference).
-  const eyeY = crownY + EYE_FRAC * head;
   g.setLineDash([line * 8, line * 4]);
   g.beginPath();
   g.moveTo(0, eyeY);
@@ -133,7 +121,7 @@ export function drawOverlay(canvas: HTMLCanvasElement, preset: IdPreset, st: Cro
   g.stroke();
 
   const pad = fontPx * 0.5;
-  label(g, preset.headBand.measure === 'hair' ? LABELS.hair : LABELS.crown, pad, crownY, fontPx, CROWN, true);
-  label(g, LABELS.eye, pad, eyeY, fontPx, '#0f172a');
-  label(g, preset.headBand.kind === 'official' ? LABELS.chinOfficial : LABELS.chinReference, pad, bandBottom, fontPx, BAND_EDGE, true);
+  label(g, gd.labels.crown, pad, crownY, fontPx, CROWN, true);
+  label(g, gd.labels.eye, pad, eyeY, fontPx, '#0f172a');
+  label(g, gd.labels.chin, pad, bandBottom, fontPx, BAND_EDGE, true);
 }

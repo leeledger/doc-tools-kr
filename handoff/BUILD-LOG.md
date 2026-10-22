@@ -3826,3 +3826,12 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - PR #15 (guide). The orchestrator ran `gh pr merge --auto --merge`, expecting it to wait for checks; the repo has no required status checks, so GitHub merged at once (052dcc6) before CI. Lesson: --auto does not gate here; wait for green checks and let the owner merge (or add branch protection with required checks — owner decision).
 - main 052dcc6: post-deploy success; CI checks + 4 e2e projects success; e2e (chromium) failed once on the known english-name.spec.ts:216 waitForURL flake (also flaky on PR #12), rerun of the failed job: success.
 - Live: /guide/loan-note/ 200 with 2 own images (1-form-shot.webp, 2-interest-cap.svg, both 200); in the sitemap.
+
+## IDCAM1022 A — guide geometry extracted to src/lib/idphoto/guides.ts (Bob, 2026-10-22) — DONE
+- Branch `idcam1022` from main 5d77043. Refactor only: `guides(preset, size)` (default output px) + `LABELS` moved from
+  src/tools/id-photo/overlay.ts; overlay draws from it with its canvas size. Review: handoff/REVIEW-REQUEST-IDCAM1022-A.md.
+- Decision: overlay passes (W, H) instead of scaling output coords by k, because k·outH ≠ H in the last bit would break pixel
+  identity; unit test asserts bit-for-bit equality with the old arithmetic (all presets × 4 sizes).
+- Gates: check 0/0; vitest 2,155/2,155; default + AUTOFRAME=1 builds check-dist OK (fonts preload 92.1/92.66 unchanged, precache
+  422.4/450); e2e id-photo.spec chromium + manual-chromium 71 passed / 15 skipped, 1 worker. qa:visual not run (low memory, not in CI).
+- Escalations: none.
