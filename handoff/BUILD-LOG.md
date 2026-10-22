@@ -3814,3 +3814,10 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - PR #14 merged by the owner (d85eeb4) before its checks finished; main CI on d85eeb4: success (5-project e2e + checks/LHCI); post-deploy success.
 - Live: /loan-note/ 200 (title 「차용증 만들기 — 차용증 양식 무료, HWP·PDF 저장 | 문서딱」), /power-of-attorney/ 200. Headless run on the live page: amount 10000000 → 만들기 → ready; 차용증.hwp 14,336 B (OLE d0cf11e0), 차용증.pdf 30,665 B (%PDF). Off-site requests: only CF RUM beacon, GA page_view and the /api/usage beacon (allowed); no file data.
 - Owner-only O1 still open: real-한글 open of 위임장.hwp / 차용증.hwp (`npm run forms:hancom`, click 「접근 허용」).
+
+## LOAN1022 B round 2 (Bob, 2026-10-22) — Richard's Should Fix 1–4 — DONE
+- Blank form: 「빈 양식으로 받기」 described as ignoring what was typed (no "아무 칸도 채우지 않고"); tooBig item now quotes
+  「1조 원보다 적게 써 주세요.」 (fact checker passes); SVG <title> + alt 「넘는 부분은 무효」; cut the 소수점 sentence and
+  the 「연 이자」 0 → 「없음」 sentence (both duplicated the tool note).
+- Gates: check 0/0; vitest 2,149/2,149; default build check-dist OK (precache 422.1/450); guide 3,248, tool page 2,761;
+  check:quotes --exact 603 verbatim.

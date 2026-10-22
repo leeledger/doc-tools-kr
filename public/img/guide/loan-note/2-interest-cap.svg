@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
-<title id="t">약속한 이자가 최고이자율 연 20퍼센트를 넘으면 넘는 부분만 무효라는 것을 막대 두 개로 나타낸 그림</title>
+<title id="t">약속한 이자가 최고이자율 연 20퍼센트를 넘으면 넘는 부분은 무효라는 것을 막대 두 개로 나타낸 그림</title>
 <defs>
 <pattern id="h" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#fdecea"/><line x1="0" y1="0" x2="0" y2="10" stroke="#b42318" stroke-width="3"/></pattern>
 </defs>
