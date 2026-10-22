@@ -6,10 +6,10 @@
 import { unsourcedFacts } from './guide-facts';
 import { TOOL_FACTS, isToolFactRef } from './tool-facts';
 import type { ToolNoteData } from './tool-note-schema';
-import { ADDR_EN_TOOL, BG_REMOVE_TOOL, TOOLS } from './tools';
+import { ADDR_EN_TOOL, BG_REMOVE_TOOL, ID_CAMERA_TOOL, TOOLS } from './tools';
 
-/** Every Korean tool page that may be built: the live tools plus the two flag-gated pages, whatever this build's flags. */
-export const NOTE_SLUGS: readonly string[] = [...new Set([...TOOLS.map((t) => t.slug), BG_REMOVE_TOOL.slug, ADDR_EN_TOOL.slug])];
+/** Every Korean tool page that may be built: the live tools plus the flag-gated pages, whatever this build's flags. */
+export const NOTE_SLUGS: readonly string[] = [...new Set([...TOOLS.map((t) => t.slug), BG_REMOVE_TOOL.slug, ADDR_EN_TOOL.slug, ID_CAMERA_TOOL.slug])];
 
 /** Problems of one note (empty = ok): an unknown tool slug, a wrong tool fact, a number with a unit nothing backs. */
 export function toolNoteProblems(slug: string, data: ToolNoteData, body: string): string[] {

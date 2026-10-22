@@ -1,0 +1,25 @@
+/* 증명사진 촬영 (/id-photo-camera/, IDCAM1022). Inlined on that page only. Mobile first (360 px). */
+.cam { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; text-align: left; }
+.cam .ph-field { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.cam .select { width: 100%; max-width: 100%; min-width: 0; }
+.cam-start, .cam-fallback { display: grid; gap: 8px; justify-items: start; }
+.cam-start .level-desc { margin: 0; }
+.cam-passport a { display: inline-block; min-height: 24px; }
+.cam-live, .cam-review { display: grid; gap: 12px; }
+.cam-stage {
+  position: relative; width: min(100%, 420px, calc(68vh * var(--cam-arn, 0.75))); aspect-ratio: var(--cam-ar, 3 / 4);
+  margin-inline: auto; overflow: hidden; border-radius: 4px; background: #111;
+}
+.cam-stage video, .cam-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cam-stage video { object-fit: fill; }
+.cam-stage[data-mirror="1"] video { transform: scaleX(-1); }
+.cam-count {
+  position: absolute; inset: 0; margin: 0; display: grid; place-items: center; font-size: 96px; font-weight: 800; line-height: 1;
+  color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7); pointer-events: none;
+}
+.cam-count[hidden] { display: none; }
+.cam-timer { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; border: 0; }
+.cam-timer legend { padding: 0; margin-bottom: 4px; font-weight: 800; }
+.cam-timer .check { min-height: 44px; }
+.cam-review img { display: block; width: min(100%, 300px); height: auto; margin-inline: auto; border: 1px solid var(--line); border-radius: 4px; }
+.cam .row { display: flex; flex-wrap: wrap; gap: 8px; }

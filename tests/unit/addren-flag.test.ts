@@ -35,9 +35,12 @@ describe('PUBLIC_ADDR_EN', () => {
 
 describe('service worker (acting-Arch Q1)', () => {
   it('names /english-address/ only in a build with PUBLIC_ADDR_EN on; sw.ts itself never does', () => {
-    expect(flaggedRuntimePages({})).toEqual([]);
-    expect(flaggedRuntimePages({ PUBLIC_ADDR_EN: '0' })).toEqual([]);
-    expect(flaggedRuntimePages({ PUBLIC_ADDR_EN: '1' })).toEqual(['/english-address/']);
+    // IDCAM1022: /id-photo-camera/ is flag-gated the same way (PUBLIC_ID_CAMERA, default on; off here).
+    const off = { PUBLIC_ID_CAMERA: '0' };
+    expect(flaggedRuntimePages(off)).toEqual([]);
+    expect(flaggedRuntimePages({ ...off, PUBLIC_ADDR_EN: '0' })).toEqual([]);
+    expect(flaggedRuntimePages({ ...off, PUBLIC_ADDR_EN: '1' })).toEqual(['/english-address/']);
+    expect(flaggedRuntimePages({ PUBLIC_ADDR_EN: '1' })).toEqual(['/english-address/', '/id-photo-camera/']);
     expect(readFileSync(join(__dirname, '..', '..', 'src', 'sw', 'sw.ts'), 'utf8')).not.toContain('english-address');
   });
 });

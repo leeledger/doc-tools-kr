@@ -220,6 +220,52 @@ export const ADDR_EN_TOOL: Tool = {
   keywords: ['영문주소', '영문주소 변환', '영문 주소 변환', '주소 영문 변환', '도로명주소 영문', '해외직구 영문주소'],
 };
 
+/**
+ * 증명사진 촬영 (IDCAM1022 D1, D10). In TOOLS (after 여권·증명사진 규격 맞추기) only when PUBLIC_ID_CAMERA is on
+ * (scripts/lib/idcamera.mjs, default on): with it off there is no page, so no nav link, card, sitemap or llms.txt line
+ * may name it. The page only takes the photo; /id-photo/ crops it and saves it (D2). name = h1 (COPY.md). Every string
+ * here is in the preloaded UI font. FAQ 1 quotes 외교부 menuPos=12 and 32, FAQ 5 menuPos=12 (handoff/sources/idcam1022/, 2026-10-22).
+ */
+export const ID_CAMERA_TOOL: Tool = {
+  slug: 'id-photo-camera',
+  name: '증명사진 촬영',
+  title: '집에서 증명사진 찍기 – 휴대폰 카메라로 규격 맞춰 촬영 | 문서딱',
+  description: '휴대폰 카메라로 증명사진을 찍어요. 제출처 규격 안내선에 얼굴을 맞춰 찍고, 바로 크기와 용량을 맞춰 저장해요. 가입 없이 무료.',
+  h1: '증명사진 촬영',
+  summary: '휴대폰 카메라 화면의 안내선에 얼굴을 맞춰 증명사진을 찍고, 바로 제출처 규격에 맞춥니다.',
+  icon: '<path d="M4 8h3.5l1.5-2.5h6L16.5 8H20v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  status: 'live',
+  updated: '2026-10-22',
+  faq: [
+    {
+      q: '집에서 찍은 사진도 여권에 쓸 수 있나요?',
+      a: '외교부는 「휴대폰 등 모바일 기기로 촬영된 사진」을 권장하지 않고, 「본인이 직접 촬영한 사진은 여권사진 규격에 적합한 경우에만 사용 가능함」이라고 안내합니다. 흰 배경, 정면, 입을 다문 무표정을 지켜 찍고, 내기 전에 외교부 「온라인 여권 사진 검증」에서 한 번 더 확인하세요. 그곳에서는 사진을 외교부로 보냅니다.',
+      links: [
+        { href: PASSPORT_RULE_URL, text: '외교부 여권사진 규격 안내 (새 창)' },
+        { href: PASSPORT_CHECK_URL, text: '외교부 온라인 여권 사진 검증 (새 창)' },
+      ],
+    },
+    {
+      q: '찍은 사진은 어떻게 되나요?',
+      a: '「이 사진으로 규격 맞추기」를 누르면 여권·증명사진 규격 맞추기 화면에서 그 사진이 바로 열립니다. 그곳에서 위치를 확인하고 제출처가 요구하는 크기와 용량으로 저장합니다. 문서딱은 사진을 따로 보관하지 않습니다.',
+      links: [{ href: '/id-photo/', text: '여권·증명사진 규격 맞추기' }],
+    },
+    {
+      q: '카메라가 켜지지 않아요.',
+      a: '카메라 사용을 허용하지 않았거나 다른 앱이 카메라를 쓰고 있으면 켜지지 않습니다. 이때는 「휴대폰 카메라로 찍기」를 눌러 휴대폰의 카메라 앱으로 찍으세요. 찍은 사진은 규격 맞추기 화면으로 바로 넘어갑니다.',
+    },
+    {
+      q: '어떻게 찍어야 잘 나오나요?',
+      a: '뒤가 흰색인 곳에 서고, 창문을 등지지 말고 얼굴에 빛이 고르게 들게 하세요. 휴대폰을 손에 들고 얼굴 가까이에서 찍으면 얼굴이 실제와 다르게 보일 수 있습니다. 휴대폰을 세워 두고 조금 떨어져서 타이머로 찍으세요.',
+    },
+    {
+      q: '배경을 흰색으로 바꿔 주나요?',
+      a: '바꾸지 않습니다. 이 화면은 안내선 안을 잘라 넘기기만 하고 얼굴이나 배경을 고치지 않습니다. 외교부는 「배경색을 사진 편집 프로그램으로 제거하여 사진이 변형된 경우」를 받지 않으니 뒤가 흰색인 곳에서 찍어 주세요.',
+    },
+  ],
+  keywords: ['집에서 증명사진 찍기', '핸드폰으로 증명사진 찍기', '여권사진 집에서 찍기', '셀프 증명사진 촬영', '증명사진 어플 무료'],
+};
+
 export const TOOLS: Tool[] = [
   {
     slug: 'pdf-merge',
@@ -688,6 +734,8 @@ export const TOOLS: Tool[] = [
     ],
     keywords: ['여권사진 규격', '여권사진', '증명사진 사이즈', '여권사진 사이즈', '증명사진 용량 줄이기'],
   },
+  // IDCAM1022: right after the tool it hands its photo to (PUBLIC_ID_CAMERA, default on).
+  ...(__ID_CAMERA__ ? [ID_CAMERA_TOOL] : []),
   {
     // TOOLS1015 I1. name = h1 (COPY.md). A photo tool: after 여권·증명사진 규격 맞추기 (the photo group keeps its order).
     // Every string here is in the preloaded UI font (brief decision 2: 뒤 7자리, not the missing glyph).

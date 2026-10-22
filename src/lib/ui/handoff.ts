@@ -157,6 +157,11 @@ export async function sweepLingering(deps: HandoffDeps = {}): Promise<void> {
  * marker for `slug`, the record is missing, older than 10 minutes, meant for another tool, or storage fails.
  */
 export async function takeHandoff(slug: string, deps: HandoffDeps = {}): Promise<File | null> {
+  return (await takeHandoffFrom(slug, deps))?.file ?? null;
+}
+
+/** takeHandoff, plus the sending tool (the record's `from`; IDCAM1022 D8c: /id-photo/ treats 배경 지우기 photos apart). */
+export async function takeHandoffFrom(slug: string, deps: HandoffDeps = {}): Promise<{ file: File; from: string } | null> {
   const session = deps.session === undefined ? tabSession() : deps.session;
   const marker = readMarker(session);
   removeMarker(session);
@@ -180,7 +185,7 @@ export async function takeHandoff(slug: string, deps: HandoffDeps = {}): Promise
   }
   await sweepLingering(deps);
   if (!rec || !bytes) return null;
-  return new File([bytes], rec.name, { type: rec.type });
+  return { file: new File([bytes], rec.name, { type: rec.type }), from: typeof rec.from === 'string' ? rec.from : '' };
 }
 
 /**
@@ -236,22 +241,23 @@ export interface ReceiveOptions {
 }
 
 /**
- * Receiver: takes the waiting file and hands it to the tool's own pick path (`deliver`), then shows ARRIVED unless the
- * tool reported an error for the file (its alert is showing) or `deliver` returned false (the tool did not start).
+ * Receiver: takes the waiting file and hands it to the tool's own pick path (`deliver`, with the sending tool), then
+ * shows ARRIVED unless the tool reported an error for the file (its alert is showing) or `deliver` returned false (the
+ * tool did not start).
  */
 export async function receiveHandoff(
   slug: string,
   root: HTMLElement,
-  deliver: (file: File) => unknown,
+  deliver: (file: File, from: string) => unknown,
   opts: ReceiveOptions,
   deps: HandoffDeps = {},
 ): Promise<void> {
-  const file = await takeHandoff(slug, deps);
-  if (!file) {
+  const taken = await takeHandoffFrom(slug, deps);
+  if (!taken) {
     (opts.fail ?? ((msg: string) => announce('alert', msg, root)))(TAKE_FAILED);
     return;
   }
-  if ((await deliver(file)) === false) return;
+  if ((await deliver(taken.file, taken.from)) === false) return;
   const alert = root.querySelector<HTMLElement>('[data-live="alert"]');
   if (alert && !alert.hidden && alert.textContent) return;
   const { notice } = opts;

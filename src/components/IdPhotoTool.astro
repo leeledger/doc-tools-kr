@@ -19,6 +19,8 @@ const { embed = false } = Astro.props;
 
 const tool = getTool('id-photo');
 const autoframe = __ID_PHOTO_AUTOFRAME__;
+// IDCAM1022 D10: the 「카메라로 찍기」 link only where /id-photo-camera/ is built.
+const camera = !embed && __ID_CAMERA__;
 // 인화·사진관 링크 (REV2): PUBLIC_PRINT_INFO=0 drops the info link; PUBLIC_AFF_COUPANG=1 adds the affiliate group (REV3: OutLinks).
 const infoLinks = embed ? [] : printLinks({ PUBLIC_PRINT_INFO: import.meta.env.PUBLIC_PRINT_INFO });
 const aff = embed ? null : affBlock('tool', 'id-photo', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
@@ -81,12 +83,16 @@ const nudges = [
           <p class="idp-privacy">사진은 이 기기 밖으로 전송되지 않습니다. {embed ? <a href="/privacy/" rel="noopener" target="_blank">개인정보 처리방침 (새 창)</a> : <a href="/privacy/">개인정보 처리방침</a>}</p>
           <input id="idp-input" class="file-input" type="file" accept={accept}>
           <label class="btn primary" for="idp-input" id="idp-pick">사진 선택</label>
+          {/* IDCAM1022 D1: the camera page, with this preset (entry.ts keeps ?preset= in step); not in the embed widget. */}
+          {camera && <a class="btn ghost" id="idp-camera" href="/id-photo-camera/">카메라로 찍기</a>}
           <p class="drop-hint">또는 여기에 사진 한 장을 끌어다 놓으세요 (JPG·PNG·WebP)</p>
           <p class="drop-hint-touch">휴대폰의 사진 보관함이나 「파일」 앱에서 고를 수 있습니다 (JPG·PNG·WebP).</p>
           {autoframe && <p class="privacy-note" id="idp-download-note">얼굴 위치 자동 맞춤을 위해 처음 한 번 약 6 MB의 프로그램 파일을 내려받습니다. 사진은 보내지 않습니다.</p>}
         </div>
 
         <p class="error-box" id="idp-error" role="alert" data-live="alert" hidden></p>
+        {/* 이어서 하기 receiver (IDCAM1022 D2): 「방금 만든 파일을 가져왔습니다.」 when a photo was handed over. */}
+        {!embed && <p class="notice" id="idp-notice" hidden></p>}
 
         <div class="progress-box" id="idp-loading" hidden>
           <p id="idp-loading-text">사진을 여는 중입니다</p>

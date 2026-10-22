@@ -14,7 +14,8 @@ import { GA_LOADER, gaId, loaderSource } from './lib/ga.mjs';
 import { API_PATH as CLOUD_API, CLAIM_FILE_RE, EXCEPTION_PAGES, EXCEPTION_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, bgCloudOn, claimText, privacyGate, unqualifiedClaims } from './lib/bgcloud.mjs';
 import { bgRemoveOn } from './lib/bgremove.mjs';
 import { ADDR_EN_PATH, API_PATH as ADDR_API, addrEnOn, privacyGate as addrEnGate } from './lib/addren.mjs';
-import { GUIDE_OUT, TOOL_OUT, USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
+import { ID_CAMERA_PATH, cameraHeaderProblems, idCameraOn } from './lib/idcamera.mjs';
+import { GUIDE_OUT, TOOLS as USAGE_TOOLS, TOOL_OUT, USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
 import { headMeta, metaLen, metaProblems } from './lib/meta-length.mjs';
@@ -33,6 +34,9 @@ const KB = 1024;
 const STAMP_CONTROLLER_KB = 13.6;
 /** /english-name/ initial JS gzip (ROMANIZE1016 D7: measured + 20 %, < 30 KB; BUILD-LOG R2). */
 const ENGLISH_NAME_INITIAL_KB = 22.2;
+/** /id-photo-camera/ (IDCAM1022 D11): initial JS at most 30 KB gzip; the camera controller (lazy) = measured + 20 % (5.1 KB at B, BUILD-LOG IDCAM1022 B). */
+const ID_CAMERA_INITIAL_KB = 30;
+const ID_CAMERA_LAZY_KB = 6.2;
 /** The UI font weights (Polish P.12; 700 retired in LCP round 2): one static instance each; no other weight may appear in the CSS. */
 const UI_WEIGHTS = new Set(['400', '800']);
 /** Copy that describes auto-framing; none of it may ship when PUBLIC_ID_PHOTO_AUTOFRAME is off. */
@@ -641,6 +645,57 @@ if (!addrEn) {
     budget('english-address controller (lazy)', lazy, 4.5 * KB);
   }
 }
+// 증명사진 촬영 (IDCAM1022 D9-D11). The flag (PUBLIC_ID_CAMERA, default on) decides everything: off, no page, no path in
+// any text file (sitemap, llms.txt, manifest, sw.js, _headers), no 「카메라로 찍기」 link on /id-photo/. On: the page, the
+// link on /id-photo/ only (not the embed widget), camera=(self) on that route alone and camera=() everywhere else (the
+// final _headers gen-headers will write), the camera API only in the lazy controller (no prompt can come from the page
+// script), the video element inline and muted (iOS), no AdSense tag, and the usage slug.
+{
+  const idCamera = idCameraOn(env);
+  if (files.some((f) => f.path === '_headers')) {
+    try {
+      errors.push(...cameraHeaderProblems(siteHeaders(read('_headers').toString('utf8'), env).headers, idCamera));
+    } catch (e) {
+      if (!errors.includes(e.message)) errors.push(e.message);
+    }
+  }
+  let sw = '';
+  try {
+    sw = buildServiceWorker(dist, env).code;
+  } catch {
+    // Reported by the 영문주소 check above.
+  }
+  if (sw && sw.includes(ID_CAMERA_PATH) !== idCamera) errors.push(`sw.js ${idCamera ? 'does not name' : 'names'} ${ID_CAMERA_PATH} in a build with PUBLIC_ID_CAMERA ${idCamera ? 'on' : 'off'}`);
+  const idPhoto = pageHtml.get('id-photo/index.html') ?? '';
+  const embed = pageHtml.get('embed/id-photo/index.html') ?? '';
+  if (embed.includes('id="idp-camera"')) errors.push('embed/id-photo/index.html: has the 「카메라로 찍기」 link (not in the widget)');
+  if (!USAGE_TOOLS.includes('id-photo-camera')) errors.push('scripts/lib/usage.mjs: TOOLS has no id-photo-camera');
+  if (!idCamera) {
+    for (const f of files) if (f.path.startsWith(ID_CAMERA_PATH.slice(1))) errors.push(`${f.path}: the 증명사진 촬영 page in a build with PUBLIC_ID_CAMERA off`);
+    if (idPhoto.includes('id="idp-camera"')) errors.push('id-photo/index.html: the 「카메라로 찍기」 link in a build with PUBLIC_ID_CAMERA off');
+    for (const f of match(/\.(html|xml|txt|json|webmanifest)$|^_headers$|^_redirects$/)) if (read(f).toString('utf8').includes(ID_CAMERA_PATH)) errors.push(`${f}: names ${ID_CAMERA_PATH} in a build with PUBLIC_ID_CAMERA off`);
+  } else {
+    const html = pageHtml.get('id-photo-camera/index.html');
+    if (!html) errors.push('id-photo-camera/index.html: no file found');
+    if (!/<a [^>]*id="idp-camera"[^>]*href="\/id-photo-camera\/"|<a [^>]*href="\/id-photo-camera\/"[^>]*id="idp-camera"/.test(idPhoto)) errors.push('id-photo/index.html: no 「카메라로 찍기」 link (#idp-camera to /id-photo-camera/)');
+    if (html) {
+      const video = /<video\b[^>]*id="cam-video"[^>]*>/.exec(html)?.[0] ?? '';
+      for (const a of ['playsinline', 'muted', 'autoplay']) if (!new RegExp(String.raw`\s${a}[\s>=]`).test(video)) errors.push(`id-photo-camera/index.html: the video element has no ${a}`);
+      if (/adsbygoogle|pagead2\.googlesyndication/.test(html)) errors.push('id-photo-camera/index.html: carries the AdSense tag (a tool page, not a content page)');
+      if (!/<input\b[^>]*id="cam-file"[^>]*capture="user"/.test(html)) errors.push('id-photo-camera/index.html: no native camera input (#cam-file, capture=user)');
+      const initial = initialJs(html);
+      const own = initial.filter((f) => read(f).includes('cam-tool'));
+      if (own.length !== 1) errors.push(`id-photo-camera page script: ${own.length} initial chunk(s) name #cam-tool, expected 1`);
+      const controller = [...new Set(own.flatMap(dynamicImports))].filter((f) => /\/controller\.[\w-]{8}\.js$/.test(f));
+      if (controller.length !== 1) errors.push(`id-photo-camera controller: ${controller.length} lazy controller chunk(s), expected 1`);
+      const lazy = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.includes(f));
+      for (const f of initial) if (read(f).includes('getUserMedia')) errors.push(`${f}: the camera API in the /id-photo-camera/ initial JS (the camera starts on the tap only)`);
+      if (!lazy.some((f) => read(f).includes('getUserMedia'))) errors.push('id-photo-camera controller: does not call getUserMedia');
+      budget('id-photo-camera initial JS', initial, ID_CAMERA_INITIAL_KB * KB);
+      budget('id-photo-camera controller (lazy)', lazy, ID_CAMERA_LAZY_KB * KB);
+    }
+  }
+}
 // Test inputs never ship: no tests/ path and no file named like a committed corpus photo.
 const corpusDir = join(import.meta.dirname, '..', 'tests', 'corpus', 'id-photo');
 let corpusNames = [];
@@ -818,7 +873,7 @@ for (const p of ['guide/heic-to-jpg/index.html', 'llms.txt']) {
     return { key: slug, chars: html && html.includes('<div class="guide-body">') ? guideBodyChars(html) : null };
   }), GUIDE_MIN_CHARS, 'guide');
   const toolSlugs = [...readFileSync(join(root, 'src', 'data', 'tools.ts'), 'utf8').matchAll(/^\s*slug: '([a-z0-9-]+)',$/gm)].map((m) => m[1])
-    .filter((s) => (s !== 'remove-background' || bgOn) && (s !== 'english-address' || addrEn));
+    .filter((s) => (s !== 'remove-background' || bgOn) && (s !== 'english-address' || addrEn) && (s !== 'id-photo-camera' || idCameraOn(env)));
   const t = lengthProblems(toolSlugs.map((s) => {
     const html = pageHtml.get(`${s}/index.html`);
     return { key: `/${s}/`, chars: html && html.includes('<section class="tool"') ? toolBodyChars(html) : null };

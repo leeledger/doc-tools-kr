@@ -114,13 +114,14 @@ Step B — /id-photo/ receiver + camera page core
   D8c items in src/lib/idphoto/warnings.ts (Step B adds the plumbing; the remove-background sender arrives in Step D).
 - New src/tools/id-photo-camera/{entry.ts, controller.ts, capture.ts (pure: rect math, unmirror, sharpness), errors.ts (error -> copy),
   copy.ts}; src/pages/id-photo-camera/index.astro; preset select reuses src/data/id-photo-presets.ts + renderSource (source.ts).
-- src/data/tools.ts entry (FAQ, tool notes ≥2,000), menu, home card, sitemap, llms.txt, OG image, next-steps id-photo-camera -> id-photo.
+- src/data/tools.ts entry (FAQ, tool notes ≥2,000), menu, home card, sitemap, llms.txt, OG image, ~~next-steps id-photo-camera -> id-photo~~ (superseded in Step B: the review button hands over with sendTo + ?preset, src/tools/id-photo-camera/send.ts; see BUILD-LOG IDCAM1022 B).
 - public/_headers block (D9) + check-dist rules; PUBLIC_ID_CAMERA (D10) in astro.config define + check-dist + postbuild test.
 - Usage slug (D9). 「카메라로 찍기」 link on /id-photo/ (flag on only). Review-screen fallback 「사진 저장」 when the handoff store fails.
 - Flag: Bob must not add pixel edits, sounds, a motion-permission prompt, UA-based behavior, or any network call.
 Step C — live hints + burst (D5 burst, D6). Pure analysers in src/lib/idphoto/live.ts (luma/L* stats; reuse checkBackground).
 Step D — background link (D8b/c): /remove-background/ receiver (stop at ready/consent), ?bg=white preselect, ?preset allowlist
-  pass-through, result link to /id-photo/; camera review button for allowed presets; all behind __BG_REMOVE__.
+  pass-through, result link to /id-photo/; camera review button for allowed presets; all behind __BG_REMOVE__;
+  /id-photo/ 「원본 사진으로 다시 하기」 button on the D8c blocking item (deferred from Step B).
 Step E — guide /guide/self-id-photo/ 「집에서 증명사진 찍는 법」 (query 「집에서 증명사진 찍기」; ≥2,500 chars; 2 own SVGs: phone setup,
   good/bad framing silhouettes; every number cited, reuse the quotes above, check:quotes --exact); links from passport-photo,
   driver-license-photo, resume-photo and id-card guides (「직접 찍을 때」 parts) and the tool page. Similarity bar as CONTENT1021.
