@@ -3993,3 +3993,4 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   releases the cut-out; pre-existing for the next-steps buttons too) — 「다른 사진 고르기」 works; with
   PUBLIC_ID_CAMERA=0 and 배경 지우기 on, the remove-background tool note still names 증명사진 촬영 (both flags are on in
   production).
+- IDCAM1022 D review: clear, 0 Must Fix; 2 notes logged, not fixed (custom → saramin per the brief's else-saramin rule; sweepIfDue skipped on a visit with a waiting hand-over, harmless). PR stacked on #18; CI verifies the builds/browsers Bob could not run locally.
