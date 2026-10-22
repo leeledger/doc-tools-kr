@@ -21,7 +21,9 @@ const NAME_FORMS: readonly string[] = ['joined', 'hyphen', 'space'];
 /** ADDR_FIELDS in scripts/lib/usage.mjs: the 영문주소 변환기 field a copy button copied. */
 export type AddrField = 'line1' | 'line2' | 'city' | 'state' | 'zip' | 'country' | 'full' | 'road';
 const ADDR_FIELDS: readonly string[] = ['line1', 'line2', 'city', 'state', 'zip', 'country', 'full', 'road'];
-/** FORM_FORMATS in scripts/lib/usage.mjs: the 위임장 만들기 file downloaded. */
+/** The form tools (src/tools/form-tool): their download event names the file format. */
+export type FormToolId = 'power-of-attorney';
+/** FORM_FORMATS in scripts/lib/usage.mjs: the form tool file downloaded. */
 export type FormFormat = 'hwp' | 'pdf';
 const FORM_FORMATS: readonly string[] = ['hwp', 'pdf'];
 export type UsagePhase = 'load' | 'parse' | 'process' | 'save';
@@ -51,7 +53,7 @@ export type UsageEvent =
   /** 영문주소 변환기 복사 (ADDREN1016 decision 17): which field was copied; never the address. */
   | { e: 'download'; t: 'english-address'; o: 'field'; v: AddrField }
   /** 위임장 만들기 내려받기 (FORM1020 D9): HWP or PDF; never a value. */
-  | { e: 'download'; t: 'power-of-attorney'; o: 'format'; v: FormFormat }
+  | { e: 'download'; t: FormToolId; o: 'format'; v: FormFormat }
   | ({ e: 'start'; t: UsageTool } & (UsageSetting | { o?: undefined; v?: undefined }))
   /** 이어서 하기 (CHAIN): the result of `t` was handed to the tool `v`. */
   | { e: 'next'; t: UsageTool; o: 'next'; v: UsageTool }

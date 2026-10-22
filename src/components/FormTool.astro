@@ -1,0 +1,92 @@
+---
+// The form tool widget (FORM1020; generic since LOAN1022 L-D4): fieldsets of a form spec's fields, the date fields
+// after them, the 「… 만들기」 / 「빈 양식으로 받기」 / 「모두 지우기」 buttons, progress, error, result (downloads, 이어서
+// 하기, preview) and the live status. Every id is `${prefix}-…` (src/tools/form-tool/controller.ts reads them); the
+// class names are shared (src/tools/form-tool/form-tool.css). The inputs have no name attributes and the form has no
+// action: nothing typed is stored, sent or put in the URL (FORM1020 D7). Slot "caution": a notice above the buttons.
+import EngineError from './EngineError.astro';
+import type { FormField, FormSpec } from '../lib/form/spec';
+
+interface Group {
+  id: string;
+  legend: string;
+  fields: string[];
+}
+interface Props {
+  spec: FormSpec;
+  prefix: string;
+  groups: Group[];
+  /** Fields after the fieldsets (the document's date). */
+  after: string[];
+  /** The HWP download button (the spec module's kill switch). */
+  hwp: boolean;
+}
+
+const { spec, prefix: p, groups, after, hwp } = Astro.props;
+const field = (id: string): FormField => {
+  const f = spec.fields.find((x) => x.id === id);
+  if (!f) throw new Error(`${spec.id}: no field ${id}`);
+  return f;
+};
+const fieldsets = groups.map((g) => ({ ...g, fields: g.fields.map(field) }));
+const loose = after.map(field);
+---
+<div id={`${p}-tool`} class="pa" data-state="empty">
+  <form class="pa-form" id={`${p}-form`} novalidate autocomplete="off">
+    {fieldsets.map((g) => (
+      <fieldset class="pa-group" id={`${p}-group-${g.id}`}>
+        <legend>{g.legend}</legend>
+        {g.fields.map((f) => (
+          <div class="pa-field">
+            <label for={`${p}-${f.id}`}>{f.label}</label>
+            {f.kind === 'multiline' ? (
+              <textarea id={`${p}-${f.id}`} class="pa-input" data-field={f.id} maxlength={f.maxLength} rows={f.maxLines} lang="ko" autocomplete="off" spellcheck="false" aria-describedby={`${p}-${f.id}-hint`}></textarea>
+            ) : (
+              <input id={`${p}-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next">
+            )}
+            {f.kind === 'multiline' && <p class="hint" id={`${p}-${f.id}-hint`}>{f.maxLines}줄까지 쓸 수 있습니다.</p>}
+          </div>
+        ))}
+      </fieldset>
+    ))}
+    {loose.map((f) => (
+      <div class="pa-field pa-date">
+        <label for={`${p}-${f.id}`}>{f.label}</label>
+        <input id={`${p}-${f.id}`} class="pa-input" type="date" data-field={f.id} min="1900-01-01" max="2999-12-31" autocomplete="off">
+      </div>
+    ))}
+    <slot name="caution" />
+    <div class="row pa-actions">
+      <button type="submit" class="btn primary" id={`${p}-make`}>{spec.title} 만들기</button>
+      <button type="button" class="btn ghost" id={`${p}-blank`}>빈 양식으로 받기</button>
+      <button type="button" class="btn ghost" id={`${p}-reset`}>모두 지우기</button>
+    </div>
+    <p class="privacy-note">쓴 내용은 이 기기 밖으로 보내지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>
+  </form>
+
+  <div class="progress-box" id={`${p}-progress`} hidden>
+    <p id={`${p}-progress-text`}></p>
+    <progress id={`${p}-progress-bar`} aria-labelledby={`${p}-progress-text`}></progress>
+  </div>
+
+  <EngineError />
+  <div class="error-box" id={`${p}-error`} role="alert" tabindex="-1" hidden>
+    <p id={`${p}-error-text`}></p>
+    <button type="button" class="btn ghost" id={`${p}-retry`}></button>
+  </div>
+
+  <div class="pa-result" id={`${p}-result`} tabindex="-1" aria-labelledby={`${p}-result-title`} hidden>
+    <h2 id={`${p}-result-title`}>만든 {spec.title}</h2>
+    <p class="notice warn" id={`${p}-stale`} hidden></p>
+    <div class="row pa-downloads" id={`${p}-downloads`}>
+      {hwp && <button type="button" class="btn primary" id={`${p}-hwp`}>한글(HWP)로 받기</button>}
+      <button type="button" class="btn primary" id={`${p}-pdf`}>PDF로 받기</button>
+    </div>
+    <p class="field-error" id={`${p}-hwp-error`} role="alert"></p>
+    <p class="field-error" id={`${p}-pdf-error`} role="alert"></p>
+    <p class="pa-done" id={`${p}-done`}></p>
+    <div class="next-steps" id={`${p}-next`} role="group" aria-labelledby={`${p}-next-label`} hidden></div>
+    <div class="hw-preview pa-preview" id={`${p}-preview`} tabindex="0" aria-label="미리 보기"></div>
+  </div>
+  <p class="visually-hidden" id={`${p}-status`} aria-live="polite" data-live="status"></p>
+</div>

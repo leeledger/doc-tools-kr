@@ -1,4 +1,4 @@
-/* 위임장 만들기 (/power-of-attorney/, FORM1020). Inlined on that page only. */
+/* Form tools (src/components/FormTool.astro: /power-of-attorney/, FORM1020; LOAN1022 L-D4). Inlined on those pages only. */
 .pa-form { display: grid; gap: 14px; text-align: left; }
 .pa-group { margin: 0; padding: 12px 14px 14px; border: 1px solid var(--line); border-radius: var(--radius); display: grid; gap: 10px; }
 .pa-group legend { padding: 0 6px; font-weight: 800; }
