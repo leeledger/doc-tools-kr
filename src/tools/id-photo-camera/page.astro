@@ -97,6 +97,8 @@ const timers = [
           <div class="row">
             <button type="button" class="btn primary" id="cam-use">이 사진으로 규격 맞추기</button>
             <button type="button" class="btn ghost" id="cam-retake">다시 찍기</button>
+            {/* IDCAM1022 D8b: 이력서·반명함 only (the controller shows it), and only in a build with 배경 지우기. */}
+            {__BG_REMOVE__ && <button type="button" class="btn ghost" id="cam-bg" hidden>배경을 흰색으로 바꾸기</button>}
           </div>
           <p class="row" id="cam-save-row" hidden><a class="btn ghost" id="cam-save" download="photo.jpg">사진 저장</a></p>
         </div>

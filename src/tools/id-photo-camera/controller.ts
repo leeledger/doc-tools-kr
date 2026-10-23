@@ -6,14 +6,17 @@
 // camera preview is). Nothing leaves the device: the still goes to /id-photo/ through the 이어서 하기 store.
 // Step C: while live, ./hints (its own lazy chunk, loaded when the camera is on) shows advice under the view (D6) and
 // the shutter keeps the sharpest frame of a short burst (D5); without that chunk the shutter takes one frame.
+// Step D (D8b, only in a build with 배경 지우기): for 이력서 and 반명함 the review also offers 「배경을 흰색으로 바꾸기」,
+// which hands the still to /remove-background/ the same way (that page waits for the user's tap; nothing is sent here).
 import { getPreset, DEFAULT_PRESET, type IdPreset } from '../../data/id-photo-presets';
+import { bgOffered } from '../../lib/idphoto/bglink';
 import { announce, clearAlert } from '../../lib/ui/announce';
 import { track } from '../../lib/ui/usage';
 import { drawGuides } from '../id-photo/overlay';
 import { isBlackFrame, isLowres, overlayRect, toBox, unmirrorRect, type Rect } from './capture';
 import { COPY } from './copy';
 import { CAMERA_ERRORS, cameraFailCode } from './errors';
-import { SLUG, sendToIdPhoto } from './send';
+import { SLUG, sendToBg, sendToIdPhoto } from './send';
 
 type Hints = typeof import('./hints');
 type Phase = 'idle' | 'starting' | 'live' | 'countdown' | 'review';
@@ -58,6 +61,8 @@ export function initCamera(): { start(): void } | null {
   const saveRow = must<HTMLElement>('cam-save-row');
   const saveLink = must<HTMLAnchorElement>('cam-save');
   const hintEl = must<HTMLElement>('cam-hint');
+  // D8b: the button exists only in a build with 배경 지우기 (page.astro).
+  const bgBtn = __BG_REMOVE__ ? (document.getElementById('cam-bg') as HTMLButtonElement | null) : null;
 
   let phase: Phase = 'idle';
   let facing: Facing = 'user';
@@ -304,6 +309,10 @@ export function initCamera(): { start(): void } | null {
     if (low) fallback.hidden = false;
     saveRow.hidden = true;
     useBtn.disabled = false;
+    if (bgBtn) {
+      bgBtn.hidden = !bgOffered(p.id);
+      bgBtn.disabled = false;
+    }
     setPhase('review');
     track({ e: 'success', t: SLUG });
     say(COPY.captured);
@@ -319,15 +328,18 @@ export function initCamera(): { start(): void } | null {
     saveLink.removeAttribute('href');
   }
 
-  async function use(): Promise<void> {
+  /** Hands the still over: to /id-photo/ (「이 사진으로 규격 맞추기」) or, D8b, to /remove-background/. */
+  async function use(toBg = false): Promise<void> {
     if (!shot || !shotUrl) return;
     useBtn.disabled = true;
+    if (bgBtn) bgBtn.disabled = true;
     clearAlert(root);
-    say(COPY.sending);
-    const ok = await sendToIdPhoto(shot, 'photo.jpg', 'image/jpeg', preset().id);
+    say(toBg ? COPY.sendingBg : COPY.sending);
+    const ok = await (toBg ? sendToBg : sendToIdPhoto)(shot, 'photo.jpg', 'image/jpeg', preset().id);
     if (ok) return;
     // F: storage blocked or full: the still can still be saved and picked on /id-photo/.
     useBtn.disabled = false;
+    if (bgBtn) bgBtn.disabled = false;
     saveLink.href = shotUrl;
     saveRow.hidden = false;
     announce('alert', COPY.sendFailed, root);
@@ -349,6 +361,7 @@ export function initCamera(): { start(): void } | null {
     void start();
   });
   useBtn.addEventListener('click', () => void use());
+  bgBtn?.addEventListener('click', () => void use(true));
   retakeBtn.addEventListener('click', () => {
     dropShot();
     setPhase('idle');
@@ -371,7 +384,9 @@ export function initCamera(): { start(): void } | null {
   // Back from /id-photo/ (back-forward cache): the review is as it was, so the photo can be handed over again (a new
   // record; the first one was taken).
   window.addEventListener('pageshow', (e) => {
-    if (e.persisted && phase === 'review' && shot) useBtn.disabled = false;
+    if (!e.persisted || phase !== 'review' || !shot) return;
+    useBtn.disabled = false;
+    if (bgBtn) bgBtn.disabled = false;
   });
 
   setPhase('idle');

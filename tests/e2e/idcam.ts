@@ -36,6 +36,41 @@ export function guard(): void {
 
 export const tool = (page: Page) => page.locator('#cam-tool');
 
+/** Replaces getUserMedia with a canvas stream: a light frame, a grey head, a dark block near the left edge. */
+export async function syntheticCamera(page: Page, w = 432, h = 560): Promise<void> {
+  await page.addInitScript(
+    ([fw, fh]) => {
+      const win = window as unknown as Win;
+      const fake = async (): Promise<MediaStream> => {
+        const cv = document.createElement('canvas');
+        cv.width = fw;
+        cv.height = fh;
+        const g = cv.getContext('2d')!;
+        let tick = 0;
+        const paint = (): void => {
+          tick++;
+          g.fillStyle = tick % 2 ? '#fafafa' : '#f9f9f9';
+          g.fillRect(0, 0, fw, fh);
+          g.fillStyle = '#808080';
+          g.beginPath();
+          g.ellipse(fw / 2, fh * 0.45, fw * 0.25, fh * 0.27, 0, 0, Math.PI * 2);
+          g.fill();
+          g.fillStyle = '#101010';
+          g.fillRect(Math.round(fw * 0.05), Math.round(fh * 0.1), Math.round(fw * 0.15), Math.round(fh * 0.15));
+        };
+        paint();
+        setInterval(paint, 100);
+        const s = (cv as HTMLCanvasElement & { captureStream(fps: number): MediaStream }).captureStream(10);
+        win.__tracks = s.getTracks();
+        return s;
+      };
+      if (!navigator.mediaDevices) Object.defineProperty(navigator, 'mediaDevices', { value: {}, configurable: true });
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { value: fake, configurable: true });
+    },
+    [w, h] as const,
+  );
+}
+
 /** 카메라 켜기 -> 바로 -> 찍기 -> the review shows the still. */
 export async function shootNow(page: Page): Promise<void> {
   await page.locator('#cam-on').click();
@@ -75,3 +110,32 @@ export const stored = (page: Page): Promise<number> =>
         };
       }),
   );
+
+/**
+ * A file waiting for `to` in this tab, as sendTo leaves it (record + session marker): the receiver opens it on its next
+ * load. For browsers without a synthetic camera (Playwright WebKit) and for receiver states the camera cannot set up.
+ */
+export async function seedHandoff(page: Page, to: string, from: string, file: { name: string; mimeType: string; buffer: Buffer }): Promise<void> {
+  await page.evaluate(
+    ([t, f, name, type, bytes]) =>
+      new Promise<void>((resolve, reject) => {
+        const key = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+        const r = indexedDB.open('docttak-handoff', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('files', { keyPath: 'key' });
+        r.onerror = () => reject(r.error);
+        r.onsuccess = () => {
+          const db = r.result;
+          const tx = db.transaction('files', 'readwrite');
+          tx.objectStore('files').put({ key, to: t, from: f, name, type, blob: new Uint8Array(bytes).buffer, at: Date.now() });
+          tx.oncomplete = () => {
+            db.close();
+            localStorage.setItem('docttak:handoff-sweep', '1');
+            sessionStorage.setItem('docttak:handoff', JSON.stringify({ to: t, key }));
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    [to, from, file.name, file.mimeType, Array.from(file.buffer)] as const,
+  );
+}

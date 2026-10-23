@@ -357,13 +357,13 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
       // D8c: only a build with 배경 지우기 can receive its photos (and only it names that tool).
       bgEdited: __BG_REMOVE__ && from === 'remove-background',
     });
-    const items: [keyof typeof ICON, string][] = [
-      ...current.blocks.map((b) => ['block', b.text] as [keyof typeof ICON, string]),
-      ...current.warns.map((w) => ['warn', w.text] as [keyof typeof ICON, string]),
-      ...current.oks.map((o) => ['ok', o.text] as [keyof typeof ICON, string]),
+    const items: [keyof typeof ICON, string, string][] = [
+      ...current.blocks.map((b) => ['block', b.text, b.id] as [keyof typeof ICON, string, string]),
+      ...current.warns.map((w) => ['warn', w.text, w.id] as [keyof typeof ICON, string, string]),
+      ...current.oks.map((o) => ['ok', o.text, o.id] as [keyof typeof ICON, string, string]),
     ];
     list.replaceChildren(
-      ...items.map(([kind, text]) => {
+      ...items.map(([kind, text, id]) => {
         const li = document.createElement('li');
         li.className = `idp-item ${kind}`;
         li.innerHTML = ICON[kind];
@@ -372,7 +372,26 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
         sr.textContent = `${KIND_LABEL[kind]}: `;
         const t = document.createElement('span');
         t.textContent = text;
-        li.append(sr, t);
+        let body: HTMLElement = t;
+        if (__BG_REMOVE__ && id === 'bgremoved') {
+          // D8c (Step D): the edited photo cannot be saved for this 제출처; back to the picker (or 「카메라로 찍기」).
+          const box = document.createElement('div');
+          const row = document.createElement('div');
+          row.className = 'row';
+          const redo = document.createElement('button');
+          redo.type = 'button';
+          redo.className = 'btn ghost';
+          redo.id = 'idp-redo';
+          redo.textContent = '원본 사진으로 다시 하기';
+          redo.addEventListener('click', () => {
+            toEmpty();
+            input.focus();
+          });
+          row.append(redo);
+          box.append(t, row);
+          body = box;
+        }
+        li.append(sr, body);
         return li;
       }),
     );

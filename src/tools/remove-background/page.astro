@@ -16,7 +16,7 @@ import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import { downloadBytes } from '../../lib/bgremove/assets';
-import { aboutMB, CLOUD, COPY, FIT_LINE, NOT_FOR_ID, NOT_FOR_ID_SOURCE, STAMP_LINK_TEXT } from './copy';
+import { aboutMB, CLOUD, COPY, FIT_LINE, HELD_START, NOT_FOR_ID, NOT_FOR_ID_SOURCE, STAMP_LINK_TEXT, TO_ID_PHOTO } from './copy';
 // Page-only styles, inlined (the /stamp-signature/ pattern): no other page carries them.
 import bgCss from './bg.css?inline';
 
@@ -69,6 +69,8 @@ const limits = [
           )}
         </div>
         <p class="error-box" id="bg-crash" role="alert" hidden></p>
+        {/* 이어서 하기 receiver (IDCAM1022 D8b): 「방금 만든 파일을 가져왔습니다.」 when 증명사진 촬영 handed a photo over. */}
+        <p class="notice" id="bg-arrived" hidden></p>
 
         <div class="drop" id="bg-drop">
           {!cloud && <p class="bg-privacy">사진은 이 기기 밖으로 전송되지 않습니다. <a href="/privacy/">개인정보 처리방침</a></p>}
@@ -92,11 +94,11 @@ const limits = [
 
         <div class="bg-panel" id="bg-consent" role="group" aria-labelledby="bg-consent-text" hidden>
           <p id="bg-consent-text"></p>
-          <p>{COPY.consentKeep}</p>
+          <p class="bg-asked">{COPY.consentKeep}</p>
           <p id="bg-consent-extra" hidden></p>
           <p id="bg-low-device" hidden>{COPY.lowDevice}</p>
           <div class="bg-row">
-            <button type="button" class="btn primary" id="bg-start">받고 시작</button>
+            <button type="button" class="btn primary" id="bg-start"><span class="bg-asked">받고 시작</span><span class="bg-held">{HELD_START}</span></button>
             <button type="button" class="btn ghost" id="bg-consent-cancel">취소</button>
           </div>
         </div>
@@ -146,6 +148,8 @@ const limits = [
             <button type="button" class="btn ghost" id="bg-compare" aria-pressed="false">원본과 비교</button>
             <button type="button" class="btn ghost" id="bg-new">다른 사진 고르기</button>
           </div>
+          {/* IDCAM1022 D8b: shown by entry.ts only when the address carries ?preset= (from 증명사진 촬영). */}
+          <div class="bg-row"><button type="button" class="btn ghost" id="bg-idphoto" hidden>{TO_ID_PHOTO}</button></div>
           <OutLinks block={aff} />
           <div id="bg-next" class="next-steps" role="group" aria-labelledby="bg-next-label" hidden></div>
           <p class="save-name" id="bg-save-name"></p>

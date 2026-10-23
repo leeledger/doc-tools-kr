@@ -42,6 +42,13 @@ export interface View {
   nosubject: boolean;
 }
 
+/**
+ * IDCAM1022 D8b: whether the on-device path starts without a press. Only for a photo picked here with the engine
+ * ready (live, kept or cached); a photo handed over by another tool (`held`) always waits at the consent panel, as it
+ * waits at ready on the cloud path: it is never worked on or sent by itself.
+ */
+export const startsAtOnce = (engineReady: boolean, held?: boolean): boolean => engineReady && !held;
+
 /** Which panels a phase shows. */
 export function view(p: Phase): View {
   const busy = p === 'opening' || p === 'sending' || p === 'downloading' || p === 'loading-engine' || p === 'working';

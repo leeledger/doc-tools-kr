@@ -2,15 +2,19 @@
 // workers) is imported on the first interaction with the tool, never on page load (LCP; the /stamp-signature/
 // pattern). A photo picked or dropped while it loads is handed to it. A module that cannot load shows the shared
 // engine panel. The only thing done at load: the crash check of the previous attempt in this tab (guard.ts).
+// IDCAM1022 D8b: a photo handed over by 증명사진 촬영 (이어서 하기) loads the controller at once and stops where the user
+// decides (ready on the cloud path, the consent panel on this device): it is never sent or worked on by itself.
+// ?bg=white opens the result on white.
 import { takeCrash } from '../../lib/bgremove/guard';
 import { sessionStore } from '../../lib/face/guard';
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
-import { sweepIfDue } from '../../lib/ui/handoff-marker';
+import { pendingHandoff, sweepIfDue } from '../../lib/ui/handoff-marker';
+import { parseBgLink } from '../../lib/idphoto/bglink';
 import { startUsage, track, trackOut } from '../../lib/ui/usage';
-import { COPY } from './copy';
+import { BACK_FAILED, COPY } from './copy';
 
-type Api = { open(file: File): void } | null;
+type Api = { open(file: File, opts?: { held?: boolean }): void; picture: import('./bg').Picture } | null;
 
 const root = document.getElementById('bg-tool');
 const drop = document.getElementById('bg-drop');
@@ -55,6 +59,47 @@ if (root && drop) {
   for (const ev of EVENTS) root.addEventListener(ev, start, { passive: true });
   drop.addEventListener('dragover', onDragOver);
   drop.addEventListener('drop', onDrop);
-  // This page sends files (이어서 하기): a file stored earlier and never taken is deleted once older than 10 minutes.
-  sweepIfDue();
+  // The result's 배경 chips are native controls: ?bg=white is chosen before the controller loads (it reads them).
+  const link = parseBgLink(location.search);
+  if (link.white) {
+    const white = root.querySelector<HTMLInputElement>('input[name="bg-bg"][value="white"]');
+    if (white) white.checked = true;
+  }
+  // With ?preset= the result links back to /id-photo/ (./back, loaded on the press; the controller lends the picture).
+  const back = document.getElementById('bg-idphoto') as HTMLButtonElement | null;
+  const preset = link.preset;
+  if (back && preset) {
+    back.hidden = false;
+    // Disabled at once (a second press never stores twice); on any failure enabled again with BACK_FAILED.
+    const failed = (): void => {
+      back.disabled = false;
+      const box = document.getElementById('bg-error');
+      if (box) {
+        box.textContent = BACK_FAILED;
+        box.hidden = false;
+      }
+    };
+    back.addEventListener('click', () => {
+      back.disabled = true;
+      void Promise.all([load(), import('./back')]).then(([api, m]) => (api ? m.goBack(api.picture, preset, failed) : failed()), failed);
+    });
+  }
+  const notice = document.getElementById('bg-arrived');
+  if (notice && pendingHandoff('remove-background')) {
+    // Opened as if picked, but held at ready / consent (D8b: never sent by itself).
+    const ready = load();
+    void import('../../lib/ui/handoff')
+      .then(({ receiveHandoff }) =>
+        receiveHandoff('remove-background', root, async (f) => {
+          const api = await ready;
+          if (!api) return false;
+          api.open(f, { held: true });
+          return true;
+        }, { notice }),
+      )
+      .catch(() => void showEngineError());
+  } else {
+    // This page sends files (이어서 하기): a file stored earlier and never taken is deleted once older than 10 minutes.
+    sweepIfDue();
+  }
 }

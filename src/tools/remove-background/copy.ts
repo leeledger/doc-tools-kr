@@ -54,7 +54,16 @@ export const COPY = {
   animated: '움직이는 이미지는 쓸 수 없어요. 사진 파일을 선택해 주세요.',
   cancelled: '받기를 멈췄어요.',
   saved: (name: string) => `${name} 파일을 내려받아요.`,
+  /** IDCAM1022 D8b: a handed-over photo with the engine ready waits for this press (startsAtOnce). */
+  held: '사진을 가져왔어요. 배경 지우기를 누르면 이 기기에서 배경을 지워요.',
 } as const;
+
+/** The consent button for a held photo with the engine ready (page markup; bg.css shows it by data-held). */
+export const HELD_START = '배경 지우기';
+/** The way back to /id-photo/ could not store the picture (entry.ts, back.ts). */
+export const BACK_FAILED = '사진을 넘기지 못했어요. 흰색 배경으로 내려받은 뒤 여권·증명사진 규격 맞추기에서 골라 주세요.';
+/** The result's way back to /id-photo/ (D8b, only when the address carries ?preset=); page markup only. */
+export const TO_ID_PHOTO = '이력서 사진 규격 맞추기';
 
 /**
  * C2-cloud (brief §4 and §7.3, owner-approved 2026-10-02): the cloud path's lines. `deviceMB` is the page's real

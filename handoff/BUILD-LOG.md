@@ -3948,3 +3948,111 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 ### IDCAM1022 Step A + B — live (2026-10-22)
 - PR #16 (A) merged by owner as 14be75e after a firefox rerun (scattered 20 s timeouts on slow runners; all green on rerun). PR #17 (B) merged by owner as 792645b, all green (checks 52 min under the new 65-min timeout).
 - Live smoke 792645b: /id-photo-camera/ 200, title 「집에서 증명사진 찍기 – …」, h1 「증명사진 촬영」; Permissions-Policy camera=(self) on it, camera=() on /id-photo/ and /embed/id-photo/; 「카메라로 찍기」 link on /id-photo/; in sitemap and llms.txt; og /brand/og-id-photo-camera.png 200; page assets 200; no AdSense tag. Post-deploy job green on 14be75e and 792645b. Real-phone tests remain owner items (O1/O2).
+
+## IDCAM1022 D — background link (D8b/c) (Bob, 2026-10-22) — DONE_WITH_CONCERNS
+- Branch `idcam1022-d` (stacked on idcam1022-c / PR #18, bbe4d3d). Review: handoff/REVIEW-REQUEST-IDCAM1022-D.md.
+- Built: src/lib/idphoto/bglink.ts (pure: BG_PRESETS allowlist saramin/jobkorea/half_card, bgOffered (+custom per D8b),
+  bgPreset -> allowed id else saramin, parseBgLink(?bg=white, ?preset), bgUrl, idPhotoBack). Camera review button
+  「배경을 흰색으로 바꾸기」 (#cam-bg, page.astro only under __BG_REMOVE__, shown by the controller for allowed presets) ->
+  send.ts sendToBg = sendTo('remove-background', from id-photo-camera) -> /remove-background/?bg=white&preset=<id>.
+  /remove-background/ receiver (entry.ts: pendingHandoff -> receiveHandoff -> api.open(file, {held:true}); #bg-arrived
+  notice; ?bg=white checks the 흰색 chip before the controller loads). bg.ts: a held photo stops at ready (cloud,
+  unchanged) or the consent panel even when the engine is cached (model.ts startsAtOnce(engineReady, held); with the
+  engine ready the panel says COPY.held and the button reads 「배경 지우기」, consentKeep hidden); with ?preset= in the
+  address the result shows 「이력서 사진 규격 맞추기」 (#bg-idphoto) -> sendTo('id-photo', from remove-background) ->
+  /id-photo/?preset=<allowed id>. /id-photo/: the D8c blocking item carries 「원본 사진으로 다시 하기」 (#idp-redo, built
+  only under __BG_REMOVE__) -> back to the empty picker (사진 선택 / 카메라로 찍기).
+- Decisions (Bob):
+  - Pass-through allowlist = saramin, jobkorea, half_card. custom is in the D8b offer set (bgOffered) but cannot travel:
+    /id-photo/ deep links never carry custom (deeplink.ts), so it maps to saramin like any other id. Passport/driver ids
+    can never come back through the link (unit test parses every way-back URL with the real deep-link parser), and if
+    a user switches to them on /id-photo/, D8c blocks (from=remove-background, unchanged warnings.ts).
+  - "Held" on the local path means: never auto-start even with a cached engine (brief: arrival -> ready|consent). The
+    cached case reuses the consent panel with its own line instead of the download line (no false "받아요").
+  - The way back to /id-photo/ shows only when the address carries ?preset= (from the camera chain); a plain visit to
+    /remove-background/ keeps its C2 "not for ID photos" positioning and never links to /id-photo/.
+  - 「원본 사진으로 다시 하기」 = toEmpty + focus the picker: the original is not on /id-photo/ (B Known Gap); the empty
+    state shows 「사진 선택」 and 「카메라로 찍기」, which is the way to an unedited photo.
+  - Usage: next t=id-photo-camera v=remove-background; next t=remove-background v=id-photo (existing kinds).
+  - Copy (late/dynamic, glyph-checked by the build): 「배경을 바꾸는 화면으로 넘기는 중이에요」, 「사진을 가져왔어요. 배경
+    지우기를 누르면 이 기기에서 배경을 지워요.」, 「이력서 사진 규격 맞추기」, failure 「사진을 넘기지 못했어요. 흰색 배경으로
+    내려받은 뒤 여권·증명사진 규격 맞추기에서 골라 주세요.」. COPY.md + remove-background tool note (provenance loss,
+    D8c) updated.
+  - e2e helpers: syntheticCamera moved from id-photo-camera.spec to idcam.ts (shared); new seedHandoff (record + marker,
+    as sendTo leaves them) for WebKit and the cached-engine case.
+- Budgets (PUBLIC_BG_REMOVE=1 build): remove-background controller 14.0 / 14.5 KB; /remove-background/ initial 11.0 / 30;
+  camera controller 5.6 / 6.2, initial 14.2 / 30, hints 2.0 / 2.5; preloaded UI fonts 92.2 / 92.66 KB (core 616 chars;
+  not raised); late 7.5 / 7.9 of 8 KB; precache 430.4 / 450.
+- Gates: `npm run check` 0/0; vitest idphoto-bglink + id-photo-camera + bgremove + tool-notes (new/changed) green;
+  ONE build PUBLIC_BG_REMOVE=1 + check-dist OK (-> dist-bg). The remove-background tool-note line was appended while
+  that build ran, so its dist does not contain it (tool-notes unit test green; CI builds it).
+  e2e remove-background.spec bg-chromium, 1 worker, @model excluded: 8/8 (2 new: camera chain; held with cached engine).
+- Not run locally (memory): default and PUBLIC_ID_CAMERA=0 / cloud builds, id-photo-camera.spec (dist/ is a pre-change
+  build), remove-background.cloud.spec (needs dist-bgcloud), bg-mobile-safari, firefox/webkit, LHCI, qa:visual -> CI.
+- Known Gaps (IDCAM1022): back from /id-photo/ (bfcache) to a /remove-background/ result shows a freed canvas (pagehide
+  releases the cut-out; pre-existing for the next-steps buttons too) — 「다른 사진 고르기」 works; with
+  PUBLIC_ID_CAMERA=0 and 배경 지우기 on, the remove-background tool note still names 증명사진 촬영 (both flags are on in
+  production).
+- IDCAM1022 D review: clear, 0 Must Fix; 2 notes logged, not fixed (custom → saramin per the brief's else-saramin rule; sweepIfDue skipped on a visit with a waiting hand-over, harmless). PR stacked on #18; CI verifies the builds/browsers Bob could not run locally.
+
+## IDCAM1022 D fix2 — remove-background controller over budget in the cloud build (Bob, 2026-10-23) — DONE_WITH_CONCERNS
+- Symptom (PR #19 CI, cloud build = ci.yml dist-bgcloud env, also the production build): remove-background controller
+  (bg + messages + sniff + decode) 14.7 KB gzip / 14.5. My Step D measure (14.0) came from the device-only build.
+  Budget NOT raised.
+- Root cause: Step D added ~0.2 KB gzip to bg.ts (held wording, the way-back click handler + bglink import) on top of
+  a controller that was already ~14.4 KB in the cloud build.
+- Fix (behaviour unchanged):
+  - The way back to /id-photo/ is a new lazy chunk src/tools/remove-background/back.ts (goBack: picture -> sendTo
+    id-photo -> /id-photo/?preset=<allowed>; its failure line BACK_FAILED). entry.ts shows #bg-idphoto when ?preset= is
+    present and loads ./back on the press; bg.ts only lends `picture` (the 이어서 하기 encoder, now shared).
+  - Held + engine ready: bg.ts sets data-held on #bg-consent and the held line; the button's two labels and the
+    「한 번 받으면…」 line switch by CSS (bg.css). HELD_START / TO_ID_PHOTO are page-markup constants, not in COPY.
+  - cloudOnce's copy -> request -> decode sequence moved into lib/bgremove/cloud.ts `cutoutOnce` (the cloud client,
+    already lazy, loaded after the pick); bg.ts keeps loading it, the retry loop and the run checks.
+  - check-dist: new budget for back*.js = measured 0.55 KB + 20 % = 0.7 KB (D11), exactly one chunk, never initial.
+- Sizes (cloud build env copied from ci.yml): controller 14.7 KB (15,0xx B) -> 14.4 KB (14,762 B) / 14.5; bg.js 10,276
+  -> 10,007 B; back.js 0.5 / 0.7 KB; cloud client 1.5 / 3 KB; /remove-background/ initial 12.9 -> 13.0 / 30;
+  preloaded fonts 92.2 / 92.66; precache 438.2 / 450.
+- Gates: vitest bgcloud + idphoto-bglink + network-guard + bgremove 127/127; cloud build + check-dist OK. `npm run check`
+  was killed (V8 out of memory) and not retried -> CI. e2e remove-background.cloud.spec on cloud-chromium, 1 worker:
+  16/16 (incl. the hand-over waits at ready, retries, quota/device paths). Not run: remove-background.spec (needs a
+  dist-bg rebuild; its held-with-cached-engine test now checks the CSS-switched label) and other browsers -> CI.
+
+## IDCAM1022 D fix3 — Richard's fix2 Must Fix + 2 Should Fix (Bob, 2026-10-23) — DONE
+- Review: handoff/REVIEW-FEEDBACK-IDCAM1022-D.md "fix2" section (committed here).
+- Must Fix: bg.ts onDevice — with a held photo and the engine ready, the WebGPU fallback line (#bg-consent-extra, text
+  and hidden) and the low-device line stay hidden and are not announced again (`!engineReady` guard restored).
+  e2e held-with-cached-engine test asserts both hidden.
+- Should Fix: entry.ts disables 「이력서 사진 규격 맞추기」 synchronously on the press (no double store); every failure
+  (controller or back chunk not loading, nothing stored) re-enables it and shows BACK_FAILED in #bg-error (role=alert).
+  BACK_FAILED moved to copy.ts (in the page chunk, so it shows even when ./back cannot load); back.ts is now only
+  goBack(picture, preset, failed).
+- check-dist: back*.js budget 0.7 -> 0.33 KB (measured 0.27 KB + 20 %, D11; the chunk shrank).
+- Sizes (one cloud build, exact ci.yml env): controller 14,769 B (14.4 KB) / 14,848 B (14.5 KB); back.js 267 B;
+  /remove-background/ initial 13.1 / 30; preloaded fonts 92.2 / 92.66; precache 438.2 / 450.
+- Known risk: the controller budget margin is ~79 B. The next brief that touches bg.ts must plan a chunk move (e.g.
+  the device-path consent/download code or the cloud retry loop into their lazy modules) up front, never a budget raise.
+- Gates: `npm run check` 0/0; vitest idphoto-bglink + bgcloud + network-guard 80/80; cloud build check-dist OK (the
+  0.33 KB back budget re-checked by running check-dist again on that dist: no budget error; that re-run also prints
+  _headers errors, which come from running it a second time after gen-headers has already written _headers, not from
+  this change); remove-background.cloud.spec cloud-chromium 1 worker 16/16. Not run: remove-background.spec (dist-bg not
+  rebuilt) -> CI.
+
+## IDCAM1022 D fix4 — bg-mobile-safari / webkit: "held photo waits with the engine ready" (Bob, 2026-10-23) — DONE_WITH_CONCERNS
+- Symptom (PR #19 c861314, #20): remove-background.spec.ts:348 on bg-mobile-safari (and webkit on #20) shows the download
+  line 「배경을 지우는 프로그램 13.6 MB를 한 번 받아요」 instead of COPY.held, every run; chromium passes.
+- Root cause (from code + log; WebKit not runnable here): the test's precondition is an engine kept on the device
+  across a page load (this tool's Cache Storage: isCached). In Playwright WebKit nothing is kept between the two page
+  loads. 13.6 MB = the WASM runtime alone (the stand-in model's bytes are patched to KB size), so the panel asks for
+  the uncached runtime: that is the right panel for a device with nothing cached, and a held photo still waits for the
+  press. Not a product bug in Step D. The test only looked as if it should work on WebKit because the existing
+  "second photo needs no consent" test stays on one page (live engine / in-page model), which needs no Cache Storage.
+- Change: the test checks this tool's Cache Storage on the held page and skips when it is empty ("engine ready" cannot
+  be set up), with a comment; chromium still runs it. No product change, budgets untouched (controller 14,769 B).
+- ads.cloud.spec.ts:76 (#idp-confirm "did not change its state", once on cloud-mobile-safari): the known WebKit flake
+  class logged since round 1 (BUILD-LOG lines on id-photo :532, stamp-signature "modes", C2 CI round 3), on a plain
+  /id-photo/ pick where the Step B receiver code does not run (no handoff marker). Not related; it passed on #20.
+- Known Gap: whether real Safari keeps the 배경 지우기 engine in Cache Storage between visits is unverified (pre-existing
+  C2 behaviour; owner real-phone check). If it does not, a held photo there shows the download panel, which is still
+  correct and still waits for the press.
+- Gates: `npm run check` 0 errors (spec only). No vitest (no unit file touched); no e2e run (WebKit needs memory).

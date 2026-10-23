@@ -11,7 +11,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import type { Download, Page, Route } from '@playwright/test';
 import { resizeMask } from '../../src/lib/bgremove/infer';
-import { COPY } from '../../src/tools/remove-background/copy';
+import { COPY, HELD_START, TO_ID_PHOTO } from '../../src/tools/remove-background/copy';
+import { COPY as CHECK_COPY } from '../../src/lib/idphoto/warnings';
+import { ARRIVED, arrived, seedHandoff, shootNow, stored, syntheticCamera, tool } from './idcam';
 
 import { expect, gotoReady, test } from './no-upload';
 
@@ -171,6 +173,8 @@ test('consent: 취소 downloads nothing; 받고 시작 downloads with progress, 
   await expect(page.locator('#bg-done-title')).toBeFocused();
   await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'done');
   await expect(page.locator('#bg-save-name')).toContainText('누끼.png · 600×400픽셀');
+  // IDCAM1022 D8b: no ?preset= in the address, so no way to /id-photo/.
+  await expect(page.locator('#bg-idphoto')).toBeHidden();
 
   const t = await save(page);
   expect(t.name).toBe('누끼.png');
@@ -290,4 +294,87 @@ test('the 누끼 guide: listed on /guide/, CTA reaches /remove-background/, whos
   await page.waitForFunction(() => document.readyState === 'complete');
   const first = await page.locator('a[href^="/guide/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')).find((h) => h !== '/guide/'));
   expect(first).toBe('/guide/remove-background/');
+});
+
+// IDCAM1022 Step D (D8b/c): 증명사진 촬영 -> 사진 배경 지우기 -> 여권·증명사진 규격 맞추기. The arriving photo waits for the
+// user's press (consent here; ready on the cloud path, remove-background.cloud.spec.ts), opens the result on white, and
+// goes back to /id-photo/ with an allowed preset only; /id-photo/ still blocks it for the passport.
+test('camera chain: 「배경을 흰색으로 바꾸기」 only for 이력서; arrival waits at consent; result on white -> /id-photo/?preset=saramin; passport blocked, 원본 사진으로 다시 하기', async ({ page, browserName }) => {
+  test.skip(browserName === 'webkit', 'Playwright WebKit has no camera stream; the seeded test below covers this receiver there.');
+  const { hits } = await stubModel(page);
+  await syntheticCamera(page);
+  await gotoReady(page, '/id-photo-camera/?preset=passport_online');
+  await shootNow(page);
+  // Passport: never offered (D8b).
+  await expect(page.locator('#cam-bg')).toBeHidden();
+  await page.locator('#cam-retake').click();
+  await expect(tool(page)).toHaveAttribute('data-state', 'live', { timeout: 20_000 });
+  await page.selectOption('#cam-preset', 'saramin');
+  await page.locator('#cam-shoot').click();
+  await expect(tool(page)).toHaveAttribute('data-state', 'review', { timeout: 20_000 });
+  await expect(page.locator('#cam-bg')).toBeVisible();
+  await expect(page.locator('#cam-bg')).toHaveText('배경을 흰색으로 바꾸기');
+
+  await page.locator('#cam-bg').click();
+  await page.waitForURL(/\/remove-background\/\?bg=white&preset=saramin$/);
+  await expect(page.locator('#bg-arrived')).toHaveText(ARRIVED);
+  await expect(page.locator('#bg-consent')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'consent');
+  // Nothing loads or runs by itself.
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'consent');
+  expect(hits).toEqual([]);
+  expect(await stored(page)).toBe(0);
+
+  await agree(page);
+  await done(page);
+  await expect(page.getByRole('radio', { name: '흰색' })).toBeChecked();
+  await expect(page.locator('#bg-download')).toHaveText('JPG로 내려받기');
+  await expect(page.locator('#bg-idphoto')).toHaveText(TO_ID_PHOTO);
+  await page.locator('#bg-idphoto').click();
+  await arrived(page, 'saramin');
+  expect(page.url()).toMatch(/\/id-photo\/\?preset=saramin$/);
+  await expect(page.locator('#idp-checklist')).not.toContainText('배경을 지운 사진');
+
+  // Switched to the passport: the D8c blocking item, save off, and the way back to a new photo.
+  await page.selectOption('#idp-preset', 'passport_online');
+  await expect(page.locator('#idp-checklist')).toContainText(CHECK_COPY.bgPassport);
+  await expect(page.locator('#idp-save')).toBeDisabled();
+  await page.locator('#idp-redo').click();
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', 'empty');
+  await expect(page.locator('#idp-drop')).toBeVisible();
+});
+
+test('a handed-over photo waits even with the engine ready (「배경 지우기」 press); ?preset=passport_online goes back as saramin', async ({ page }) => {
+  await stubModel(page);
+  await gotoReady(page, PATH);
+  await pick(page, SUBJECT);
+  await agree(page);
+  await done(page);
+  // The engine is in this tool's Cache Storage now: a photo picked here would start at once.
+  await seedHandoff(page, 'remove-background', 'id-photo-camera', SUBJECT);
+  await gotoReady(page, `${PATH}?bg=white&preset=passport_online`);
+  // The precondition is an engine kept on the device across a page load (this tool's Cache Storage). Playwright WebKit
+  // keeps none here (CI fix4: the held photo correctly gets the download panel, because nothing is cached): skip
+  // where the cache is empty, as the page itself then rightly asks to download. Chromium keeps it and runs the test.
+  const kept = await page.evaluate(async () => {
+    for (const k of await caches.keys()) if ((await (await caches.open(k)).keys()).length > 0) return true;
+    return false;
+  }).catch(() => false);
+  test.skip(!kept, 'This browser kept no engine files between page loads, so "engine ready" cannot be set up here.');
+  await expect(page.locator('#bg-arrived')).toHaveText(ARRIVED);
+  await expect(page.locator('#bg-consent-text')).toHaveText(COPY.held, { timeout: 30_000 });
+  await expect(page.locator('#bg-consent').getByRole('button', { name: HELD_START, exact: true })).toBeVisible();
+  await expect(page.getByText(COPY.consentKeep)).toBeHidden();
+  // No download lines with the engine ready (fix3): the WebGPU fallback and low-device lines stay hidden.
+  await expect(page.locator('#bg-consent-extra')).toBeHidden();
+  await expect(page.locator('#bg-low-device')).toBeHidden();
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'consent');
+  await page.locator('#bg-start').click();
+  await done(page);
+  await expect(page.getByRole('radio', { name: '흰색' })).toBeChecked();
+  await page.locator('#bg-idphoto').click();
+  await arrived(page, 'saramin');
+  expect(page.url()).toMatch(/\/id-photo\/\?preset=saramin$/);
 });

@@ -14,6 +14,7 @@ import { sniffImage } from '../../src/lib/image/sniff';
 import { CLOUD, COPY } from '../../src/tools/remove-background/copy';
 import { openPdf, renderRgba } from '../../scripts/regress/lib.mjs';
 import { expect, gotoReady, test } from './no-upload';
+import { ARRIVED, arrived, seedHandoff } from './idcam';
 
 // Two entries: Playwright reads an array whose second item is an object as [value, options], hence the tuple form.
 test.use({ allowUpload: [[{ method: 'POST', path: '/api/remove-bg' }, { method: 'POST', path: '/api/usage' }], { scope: 'test' }] });
@@ -511,4 +512,26 @@ test('이어서 하기: the transparent cut-out → 사진 PDF 변환 arrives; i
   }
   expect(red).toBeGreaterThan(1000);
   expect(dark).toBe(0);
+});
+
+// IDCAM1022 Step D (D8b): a photo handed over by 증명사진 촬영 stops at ready; nothing is sent until 배경 지우기 is pressed.
+test('a handed-over photo waits at ready: 0 requests to /api/remove-bg until the press; the result goes to /id-photo/ with the allowed preset', async ({ page }) => {
+  const { bodies } = await api(page, ok);
+  await gotoReady(page, '/');
+  await seedHandoff(page, 'remove-background', 'id-photo-camera', SUBJECT);
+  await gotoReady(page, `${PATH}?bg=white&preset=jobkorea`);
+  await expect(page.locator('#bg-arrived')).toHaveText(ARRIVED);
+  await ready(page);
+  await page.waitForTimeout(2000);
+  await expect(page.locator('#bg-tool')).toHaveAttribute('data-state', 'ready');
+  expect(bodies.length).toBe(0);
+
+  await page.locator('#bg-send').click();
+  await expect(page.locator('#bg-result')).toBeVisible({ timeout: 30_000 });
+  expect(bodies.length).toBe(1);
+  await expect(page.getByRole('radio', { name: '흰색' })).toBeChecked();
+  await page.locator('#bg-idphoto').click();
+  await arrived(page, 'jobkorea');
+  expect(page.url()).toMatch(/\/id-photo\/\?preset=jobkorea$/);
+  await expect(page.locator('#idp-checklist')).not.toContainText('배경을 지운 사진');
 });
