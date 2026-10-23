@@ -4,6 +4,7 @@
 // build fails when the note is missing, names a wrong tool fact or shows a number with a unit nothing backs.
 import { getEntry, render } from 'astro:content';
 import { toolNoteProblems } from '../data/tool-notes';
+import NoteGate from './NoteGate.astro';
 
 interface Props {
   slug: string;
@@ -20,6 +21,6 @@ if (!first) throw new Error(`tool note ${slug}: no H2 (the section is labelled b
 ---
 <section class="tool-notes" aria-labelledby={first.slug}>
   <div class="wrap narrow">
-    <Content />
+    <NoteGate><Content /></NoteGate>
   </div>
 </section>

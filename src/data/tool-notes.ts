@@ -23,3 +23,16 @@ export function toolNoteProblems(slug: string, data: ToolNoteData, body: string)
   if (unsourced.length) out.push(`numbers without a source: ${unsourced.join(', ')}`);
   return out;
 }
+
+/** The only flag a tool note may gate a passage on (PRINT1023 A): `<span data-requires="id-camera">…</span>` in the Markdown. */
+const CAMERA_SPAN = /<span data-requires="id-camera">([\s\S]*?)<\/span>(\s*)/g;
+
+/**
+ * The rendered note HTML for this build: with 증명사진 촬영 on (PUBLIC_ID_CAMERA) a marked passage loses only its wrapper,
+ * so the page reads as before; off, the passage and the space after it go. Any other or leftover marker fails the build.
+ */
+export function gateNoteHtml(html: string, idCamera: boolean): string {
+  const out = html.replace(CAMERA_SPAN, (_, inner: string, space: string) => (idCamera ? inner + space : ''));
+  if (out.includes('data-requires=')) throw new Error('tool note: a data-requires marker gateNoteHtml does not handle (only id-camera, not nested)');
+  return out;
+}

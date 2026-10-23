@@ -1187,10 +1187,12 @@ describe('built output', () => {
         const fm = /^---\n([\s\S]*?)\n---/.exec(raw)![1]!;
         return { slug: f.replace(/\.md$/, ''), data: parseYaml(fm) as Record<string, unknown> };
       });
-  // TOOL-GUIDES Part B: the guides this build shows (a requires: bg-remove guide only in a PUBLIC_BG_REMOVE build).
+  // TOOL-GUIDES Part B: the guides this build shows (a requires: bg-remove guide only in a PUBLIC_BG_REMOVE build;
+  // PRINT1023 A: a requires: id-camera guide only when 증명사진 촬영 was built, PUBLIC_ID_CAMERA on).
   const bgBuilt = () => existsSync(join(DIST, 'remove-background'));
+  const cameraBuilt = () => existsSync(join(DIST, 'id-photo-camera'));
   const allPublished = () => guideSources().filter((g) => g.data.draft !== true).map((g) => ({ slug: g.slug, data: publishedGuideSchema.parse(g.data) }));
-  const publishedGuides = () => allPublished().filter((g) => isVisibleGuide(g.data, bgBuilt()));
+  const publishedGuides = () => allPublished().filter((g) => isVisibleGuide(g.data, bgBuilt(), cameraBuilt()));
   const draftSlugs = () => guideSources().filter((g) => g.data.draft === true).map((g) => g.slug);
   const pageOf = (path: string) => readFileSync(join(DIST, ...path.split('/').filter(Boolean), 'index.html'), 'utf8');
   const jsonLdOf = (html: string): Record<string, unknown>[] =>

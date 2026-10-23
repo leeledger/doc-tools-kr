@@ -4136,3 +4136,21 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 - Owner-only: O1 print one passport sheet at any 4×6 service and measure a tile (3.5×4.5 cm expected); O2 optional kiosk try.
 - Known Gaps (PRINT1023): other sheet sizes (5×7, A4 home printer, L판), mixed presets on one sheet, copy-count picker, sheet in
   /embed/ and /en/, PDF sheet; real print accuracy unverified (O1).
+
+## PRINT1023 A — CI flag-off job + /remove-background/ note gate (Bob, 2026-10-24) — DONE
+- Branch print1023-a. New parallel CI job `flag-off` (ubuntu-24.04, 25 min): PUBLIC_ID_CAMERA=0 default build + dist tests
+  (postbuild, en-check, hwp-viewer), then PUBLIC_ID_CAMERA=0 + the dist-bgcloud env + (en-check, hwp-viewer). Existing jobs
+  unchanged. Local wall time: each build ~42 s, postbuild+en-check+hwp-viewer ~220 s; CI wall time to be logged from the PR.
+- Gate mechanism (decision): Markdown cannot read __ID_CAMERA__, so the note marks the passage with
+  `<span data-requires="id-camera">`; NoteGate.astro renders the note through gateNoteHtml (src/data/tool-notes.ts):
+  unwrapped when on (HTML as before), dropped when off; unknown markers fail the build. Chosen over a remark plugin (the
+  content layer caches rendered Markdown across builds with different flags).
+- check-dist: camera off -> remove-background/index.html must not contain 증명사진 촬영 (verified it fires by injection).
+- Root cause found by the new job: postbuild.test.ts publishedGuides() ignored the camera flag (expected
+  /guide/self-id-photo/ in a camera-off dist, 9 failures); fixed by passing existsSync(dist/id-photo-camera).
+- Gates: check 0/0; default, camera-off and camera-off+production builds check-dist OK (precache 427.1 / 424.5 / 435.6 KB);
+  dist tests green on each as the job runs them; tool-notes+guides-schema 52/52. Full npm test not run (memory).
+- Known Gaps (PRINT1023 A): postbuild.test.ts assumes a GA-, AdSense- and usage-off dist: 5 tests fail on any
+  dist-bgcloud-like build, camera on or off (check-dist re-run after gen-headers vs AdSense detach x2, privacy 시행일,
+  a docttak string in ui-shared/utm-land chunks, example.kr contact line), so the job runs it after build 1 only.
+  check:quotes --exact: 1 Apple 미리보기 quote drifted at the source (unrelated).

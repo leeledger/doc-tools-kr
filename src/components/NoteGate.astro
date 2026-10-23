@@ -1,0 +1,8 @@
+---
+// PRINT1023 A: renders its slot (a tool note's Markdown) through gateNoteHtml, so a passage marked
+// <span data-requires="id-camera"> is built only with 증명사진 촬영 on (PUBLIC_ID_CAMERA).
+import { gateNoteHtml } from '../data/tool-notes';
+
+const html = await Astro.slots.render('default');
+---
+<Fragment set:html={gateNoteHtml(html, __ID_CAMERA__)} />
