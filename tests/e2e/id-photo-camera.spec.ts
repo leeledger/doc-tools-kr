@@ -8,11 +8,14 @@
 //   photo opens in /id-photo/ with the chosen preset.
 // - Camera refused (NotAllowedError): the D7 message and the native input.
 // - /id-photo/: the 「카메라로 찍기」 link follows the preset; a plain visit loads no handoff code; the widget has no link.
+// - Step C live hints (synthetic scenes drawn with the guide's face oval): white background none, dark face 'dark',
+//   bright background 'backlight', a sideways roll from deviceorientation 'level'; a hint never stops 찍기.
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { PRESETS } from '../../src/data/id-photo-presets';
 import { sniffImage } from '../../src/lib/image/sniff';
+import { HINTS } from '../../src/tools/id-photo-camera/copy';
 import { CAMERA_ERRORS } from '../../src/tools/id-photo-camera/errors';
 import { AXE_TAGS, CAMERA_POLICY, SITE_POLICY, arrived, guard, shootNow, stored, tool, type Win } from './idcam';
 import { expect, gotoReady, test } from './no-upload';
@@ -57,6 +60,44 @@ async function syntheticCamera(page: Page, w = 432, h = 560): Promise<void> {
     },
     [w, h] as const,
   );
+}
+
+/** Replaces getUserMedia with a canvas stream of a still scene: `bg` everywhere, a `face` oval where the guide's is. */
+async function sceneCamera(page: Page, bg: string, face: string): Promise<void> {
+  await page.addInitScript(
+    ([b, f]) => {
+      const win = window as unknown as Win;
+      const fake = async (): Promise<MediaStream> => {
+        const cv = document.createElement('canvas');
+        cv.width = 432;
+        cv.height = 560;
+        const g = cv.getContext('2d')!;
+        const paint = (): void => {
+          g.fillStyle = b;
+          g.fillRect(0, 0, 432, 560);
+          g.fillStyle = f;
+          g.beginPath();
+          g.ellipse(216, 267, 150, 190, 0, 0, Math.PI * 2);
+          g.fill();
+        };
+        paint();
+        setInterval(paint, 100);
+        const s = (cv as HTMLCanvasElement & { captureStream(fps: number): MediaStream }).captureStream(10);
+        win.__tracks = s.getTracks();
+        return s;
+      };
+      if (!navigator.mediaDevices) Object.defineProperty(navigator, 'mediaDevices', { value: {}, configurable: true });
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { value: fake, configurable: true });
+    },
+    [bg, face] as const,
+  );
+}
+
+/** 카메라 켜기 -> live. */
+async function cameraOn(page: Page): Promise<void> {
+  await gotoReady(page, '/id-photo-camera/?preset=passport_online');
+  await page.locator('#cam-on').click();
+  await expect(tool(page)).toHaveAttribute('data-state', 'live', { timeout: 20_000 });
 }
 
 /** Mean luma of a small square of the review still at (fx, fy) (fractions of its size). */
@@ -187,6 +228,54 @@ test.describe('synthetic camera', () => {
     expect(await page.evaluate(() => (window as unknown as Win).__tracks!.every((t) => t.readyState === 'ended'))).toBe(true);
     await page.waitForTimeout(1500);
     await expect(tool(page)).toHaveAttribute('data-state', 'idle');
+  });
+});
+
+test.describe('live hints (Step C)', () => {
+  test.skip(({ browserName }) => browserName === 'webkit', 'Playwright WebKit has no camera path.');
+
+  test('white background, lit face: no hint', async ({ page }) => {
+    await sceneCamera(page, '#f5f5f5', '#c8a08c');
+    await cameraOn(page);
+    // Eight analyses at 4 per second: none settles.
+    await page.waitForTimeout(2000);
+    await expect(page.locator('#cam-hint')).toHaveText('');
+  });
+
+  test('dark face: the dark hint', async ({ page }) => {
+    await sceneCamera(page, '#787878', '#323232');
+    await cameraOn(page);
+    await expect(page.locator('#cam-hint')).toHaveText(HINTS.dark, { timeout: 10_000 });
+  });
+
+  test('bright background: the backlight hint; 찍기 still works and the hint goes with the camera', async ({ page }) => {
+    await sceneCamera(page, '#ffffff', '#464646');
+    await cameraOn(page);
+    await expect(page.locator('#cam-hint')).toHaveText(HINTS.backlight, { timeout: 10_000 });
+    await expect(page.locator('#cam-shoot')).toBeEnabled();
+    await page.getByLabel('바로').check();
+    await page.locator('#cam-shoot').click();
+    await expect(tool(page)).toHaveAttribute('data-state', 'review', { timeout: 20_000 });
+    await expect(page.locator('#cam-still')).toHaveAttribute('src', /^blob:/);
+    await expect(page.locator('#cam-hint')).toHaveText('');
+  });
+
+  test('a sideways roll (deviceorientation, no prompt): the level hint; upright again clears it', async ({ page }) => {
+    await sceneCamera(page, '#f5f5f5', '#c8a08c');
+    await cameraOn(page);
+    const tilt = (beta: number, gamma: number) =>
+      page.evaluate(
+        ([b, g]) => {
+          const w = window as unknown as { __tilt?: ReturnType<typeof setInterval> };
+          clearInterval(w.__tilt);
+          w.__tilt = setInterval(() => window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { beta: b, gamma: g })), 100);
+        },
+        [beta, gamma] as const,
+      );
+    await tilt(80, 90);
+    await expect(page.locator('#cam-hint')).toHaveText(HINTS.level, { timeout: 10_000 });
+    await tilt(90, 0);
+    await expect(page.locator('#cam-hint')).toHaveText('', { timeout: 10_000 });
   });
 });
 

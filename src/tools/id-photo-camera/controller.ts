@@ -4,6 +4,8 @@
 // whole frame with the preset's guide (src/tools/id-photo/overlay.ts drawGuides, the /id-photo/ geometry) inside the
 // overlay rectangle; the still is that rectangle cut from the frame at its own resolution, never mirrored (the front
 // camera preview is). Nothing leaves the device: the still goes to /id-photo/ through the 이어서 하기 store.
+// Step C: while live, ./hints (its own lazy chunk, loaded when the camera is on) shows advice under the view (D6) and
+// the shutter keeps the sharpest frame of a short burst (D5); without that chunk the shutter takes one frame.
 import { getPreset, DEFAULT_PRESET, type IdPreset } from '../../data/id-photo-presets';
 import { announce, clearAlert } from '../../lib/ui/announce';
 import { track } from '../../lib/ui/usage';
@@ -13,6 +15,7 @@ import { COPY } from './copy';
 import { CAMERA_ERRORS, cameraFailCode } from './errors';
 import { SLUG, sendToIdPhoto } from './send';
 
+type Hints = typeof import('./hints');
 type Phase = 'idle' | 'starting' | 'live' | 'countdown' | 'review';
 type Facing = 'user' | 'environment';
 
@@ -54,6 +57,7 @@ export function initCamera(): { start(): void } | null {
   const retakeBtn = must<HTMLButtonElement>('cam-retake');
   const saveRow = must<HTMLElement>('cam-save-row');
   const saveLink = must<HTMLAnchorElement>('cam-save');
+  const hintEl = must<HTMLElement>('cam-hint');
 
   let phase: Phase = 'idle';
   let facing: Facing = 'user';
@@ -66,6 +70,10 @@ export function initCamera(): { start(): void } | null {
   let shotUrl: string | null = null;
   /** A capture is running (toBlob is async): a second tap or timer end must not start another. */
   let capturing = false;
+  /** The hints chunk, once loaded (until then, or when it cannot load: no hints, single-frame capture). */
+  let hintsLoad: Promise<Hints | null> | null = null;
+  let hints: Hints | null = null;
+  let stopHints: (() => void) | null = null;
 
   const preset = (): IdPreset => getPreset(select.value) ?? getPreset(DEFAULT_PRESET)!;
   const say = (msg: string): void => announce('status', msg, root);
@@ -86,6 +94,8 @@ export function initCamera(): { start(): void } | null {
 
   function stopTracks(): void {
     run++;
+    stopHints?.();
+    stopHints = null;
     for (const t of stream?.getTracks() ?? []) t.stop();
     stream = null;
     video.srcObject = null;
@@ -112,6 +122,8 @@ export function initCamera(): { start(): void } | null {
     const my = run;
     setPhase('starting');
     say(COPY.starting);
+    // The hints chunk loads while the camera starts.
+    void loadHints();
     let s: MediaStream;
     try {
       s = await media.getUserMedia(constraints(facing));
@@ -142,7 +154,19 @@ export function initCamera(): { start(): void } | null {
     layout();
     track({ e: 'start', t: SLUG, o: 'preset', v: preset().id });
     say(COPY.live);
+    hints ??= await loadHints();
+    if (hints && my === run && !stopHints) {
+      stopHints = hints.watchHints(video, frameRect, preset, (text) => {
+        hintEl.textContent = text;
+      });
+    }
   }
+
+  const loadHints = (): Promise<Hints | null> =>
+    (hintsLoad ??= import('./hints').catch(() => {
+      hintsLoad = null;
+      return null;
+    }));
 
   /** The overlay rectangle of the current frame and preset, in frame pixels. */
   const frameRect = (): Rect => overlayRect({ w: video.videoWidth, h: video.videoHeight }, { w: preset().outW, h: preset().outH });
@@ -213,6 +237,8 @@ export function initCamera(): { start(): void } | null {
     if (capturing) return;
     capturing = true;
     shootBtn.disabled = true;
+    // A camera switch mid-burst would drop the shot; the next setPhase enables it again (review fix C1).
+    flipBtn.disabled = true;
     try {
       await captureOnce();
     } finally {
@@ -220,20 +246,34 @@ export function initCamera(): { start(): void } | null {
     }
   }
 
-  async function captureOnce(): Promise<void> {
+  /** The overlay rectangle of the current frame at its own resolution, unmirrored; null when there is no frame. */
+  function grab(): HTMLCanvasElement | null {
     const fw = video.videoWidth;
     const fh = video.videoHeight;
     const rect = unmirrorRect(frameRect(), fw, mirrored);
+    if (!fw || !fh || !rect.w || !rect.h) return null;
     const canvas = document.createElement('canvas');
     canvas.width = rect.w;
     canvas.height = rect.h;
     const g = canvas.getContext('2d');
-    if (!fw || !fh || !rect.w || !rect.h || !g) {
+    if (!g) return null;
+    g.drawImage(video, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+    return canvas;
+  }
+
+  async function captureOnce(): Promise<void> {
+    const my = run;
+    count.hidden = true;
+    // Never waits for the hints chunk: not loaded yet means one frame.
+    const canvas = hints ? await hints.sharpestFrame(grab, () => my === run) : grab();
+    // Stopped mid-burst (page hidden or left): stopForHide has already said so.
+    if (my !== run) return;
+    if (!canvas) {
       setPhase('live');
       announce('alert', COPY.black, root);
       return;
     }
-    g.drawImage(video, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+    const rect = { w: canvas.width, h: canvas.height };
     const probe = document.createElement('canvas');
     probe.width = PROBE;
     probe.height = PROBE;
@@ -302,6 +342,7 @@ export function initCamera(): { start(): void } | null {
 
   shootBtn.addEventListener('click', shoot);
   flipBtn.addEventListener('click', () => {
+    if (capturing) return;
     facing = facing === 'user' ? 'environment' : 'user';
     stopTracks();
     setPhase('idle');
