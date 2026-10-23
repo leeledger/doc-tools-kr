@@ -409,6 +409,11 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .idp-done .level-desc { margin: 0; }
 .idp-result-box { margin: 0; display: grid; gap: 6px; justify-items: start; overflow-x: auto; }
 .idp-result-box img { display: block; max-width: none; height: auto; border: 1px solid var(--line); background: #fff; image-rendering: auto; }
+/* PRINT1023 B: 인화용 모아찍기 (the block's text is system font via .out-links). */
+.idp-sheet-result { display: grid; gap: 6px; justify-items: start; }
+/* .out-links a (inline-block, 24 px) would shrink the download button: keep the .btn box. */
+.idp-sheet-result a.btn { display: inline-flex; min-height: 48px; color: var(--brand-ink); }
+.idp-sheet-result img { display: block; width: 100%; max-width: 320px; height: auto; border: 1px solid var(--line); background: #fff; }
 .idp-cannot { margin: 12px 0 0; padding-left: 1.3em; display: grid; gap: 4px; }
 
 .ph-compare { margin: 20px 0 0; display: grid; gap: 10px; }

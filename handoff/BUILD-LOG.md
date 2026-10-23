@@ -4154,3 +4154,35 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   dist-bgcloud-like build, camera on or off (check-dist re-run after gen-headers vs AdSense detach x2, privacy 시행일,
   a docttak string in ui-shared/utm-land chunks, example.kr contact line), so the job runs it after build 1 only.
   check:quotes --exact: 1 Apple 미리보기 quote drifted at the source (unrelated).
+
+## PRINT1023 B — 인화용 모아찍기 on /id-photo/ (Bob, 2026-10-24) — DONE
+- Branch print1023-b (on print1023-a). B0: 찍스 raw dump (curl, CP949 -> UTF-8, sha256 in the source file) CONFIRMS
+  「4x6 (10.2cm x 15.1cm)」 verbatim under 「사진인화」; 포토몬, 스냅스 not found (script-rendered), 퍼블로그 only a 4x6 frame
+  category (not citable). Appended to handoff/sources/print1023/print-size-2026-10-23.txt. Step B UI says only 「4×6 크기」.
+- Built: src/lib/idphoto/sheet.ts (pure tileSize/sheetPlan/sheetUpscales; P1-P5, numbers as the brief: 8 landscape for 35×45,
+  9 portrait for 30×40); renderOutput(..., scale = 1) (scale 1 untouched; scaled: white pre-fill so a rounded edge is never
+  transparent); src/tools/id-photo/sheet-build.ts (lazy, 1.4 KB: composeSheet with putImageData, buildSheet -> {ok}|{ok:false},
+  pageDeps = renderOutput + canvas + one encode worker per sheet, ended on answer or AbortSignal); controller snapshot
+  {p, st, plan} taken in showDone, block hidden on any phase but done, on 다시 만들기 / 다른 사진 (releasePhoto) and its URL
+  revoked there and on pagehide; run token + abort for double taps; beacon download o=sheet v=<preset>.
+- Decisions: (1) the sheet JFIF is always PRINT_PPI 300, not p.dpi (gosi's file dpi is 99: the unit test caught it).
+  (2) Block placed after #idp-english (still after #idp-print, before #idp-print-links). (3) FAQ question reworded to
+  「증명사진을 여러 장 인화하려면 어떻게 하나요?」: the brief's 「…뽑을 수 있나요?」 needs 뽑, not in the core UI font (P11 reword
+  rule); 뽑 stays only in SHEET_COPY and the tool note (system font). (4) Error line announced via the status region
+  (the page's alert region is #idp-error at the top of the tool). (5) Download link in .out-links keeps the .btn box
+  (a.btn rule: .out-links a would shrink it to 24 px). (6) e2e expectSpec gets headerOnly for the sheets: an 1800×1200 JPEG
+  held the bytes "GPS" in entropy data on manual-firefox; the Exif/GPS text search stops at SOS there (APP1 marker check
+  and sniff unchanged); single-photo checks unchanged.
+- Gates: check 0/0 (12 hints as before); vitest 2,242: 2,241 + ga.test re-run green on a default dist (it failed only
+  because dist was the AUTOFRAME=1 e2e build); builds check-dist OK: default (PUBLIC_SITE_URL), AUTOFRAME=0, AUTOFRAME=1,
+  BG_REMOVE=1, PUBLIC_ID_CAMERA=0 (+ postbuild/en-check/hwp-viewer 121/121), production-like dist-bgcloud env.
+  Budgets: initial JS /id-photo/ 13.2 KB (unchanged), /embed/id-photo/ 11.7 (unchanged), production 14.8; UI font core 615 /
+  late 81 chars unchanged, preloaded 92.1 / 92.66 KB unchanged, late faces 7.5 / 7.9 of 8 KB unchanged; precache default
+  427.1 -> 432.8 KB (+5.7: controller +3.8, page HTML +1.4, CSS +0.3), production-like 444.8 / 450 (base est. ~439.1).
+  e2e id-photo + chain: chromium, manual-chromium, firefox, manual-firefox, webkit, mobile-chrome, mobile-safari green
+  (webkit 'adjust: keys…' flaky once, passed on retry, untouched code); camera specs chromium green; remove-background
+  bg-chromium 9/9 (D8c: #idp-sheet hidden); usage.spec cloud-chromium 30/30. check:licenses FAILs locally in this worktree
+  (node_modules junction: entries read as "undefined null"); package.json/lock unchanged vs a5eb7ca, so no new deps.
+  LHCI not run locally (memory); the CI checks job runs it.
+- Known Gaps (PRINT1023 B): production precache headroom is 5.2 KB; no e2e for the sheet beacon (unit-tested whitelist and
+  client payload); a sheet in flight when the page is restored from bfcache is dropped (button works again).

@@ -1,7 +1,7 @@
 ---
 // The 여권·증명사진 tool body (REV5 R5.1): /id-photo/ and the embed widget /embed/id-photo/ render the same markup.
 // embed (REV5 Decision 3) leaves out what does not belong inside a host site's frame: the 인화·사진관 and affiliate
-// links, the share buttons, 이어서 하기 and the ad slot; the privacy link opens in a new tab instead of the frame.
+// links, the 인화용 모아찍기 block (PRINT1023 P13), the share buttons, 이어서 하기 and the ad slot; the privacy link opens in a new tab instead of the frame.
 import AdSlot from './AdSlot.astro';
 import EngineError from './EngineError.astro';
 import Share from './Share.astro';
@@ -9,6 +9,7 @@ import OutLinks from './OutLinks.astro';
 import { getTool } from '../data/tools';
 import { sharePreview } from '../data/site';
 import { PRINT_COPY, printLinks } from '../data/print-links';
+import { SHEET_COPY } from '../data/print-sheet';
 import { affBlock, affOn } from '../data/affiliate';
 import { CUSTOM_BOUNDS, DEFAULT_PRESET, PASSPORT_CHECK_URL, PASSPORT_RULE_URL, PRESETS, PRESET_GROUPS, RETRIEVED } from '../data/id-photo-presets';
 
@@ -174,6 +175,23 @@ const nudges = [
           <p class="save-name" id="idp-save-name"></p>
           <p class="notice" id="idp-print" hidden></p>
           {!embed && <p class="notice" id="idp-english" hidden></p>}
+          {/* PRINT1023 B: 인화용 모아찍기 (shown by the controller for a preset with a paper size; system font, .out-links). */}
+          {!embed && (
+            <div class="out-links idp-sheet" id="idp-sheet" hidden>
+              <p>{SHEET_COPY.lead}</p>
+              <p id="idp-sheet-count"></p>
+              <div class="row">
+                <button type="button" class="btn ghost" id="idp-sheet-make">{SHEET_COPY.make}</button>
+              </div>
+              <p class="notice" id="idp-sheet-lowres" hidden>{SHEET_COPY.lowres}</p>
+              <p class="error-box" id="idp-sheet-error" hidden>{SHEET_COPY.error}</p>
+              <div class="idp-sheet-result" id="idp-sheet-result" hidden>
+                <a class="btn primary" id="idp-sheet-download">{SHEET_COPY.download}</a>
+                <img id="idp-sheet-preview" alt="" decoding="async">
+                <p id="idp-sheet-howto"></p>
+              </div>
+            </div>
+          )}
           {(infoLinks.length > 0 || aff) && (
             <div class="out-links" id="idp-print-links">
               <p>{PRINT_COPY.lead}</p>

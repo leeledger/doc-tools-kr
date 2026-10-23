@@ -6,7 +6,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
-import { PRESETS } from '../../src/data/id-photo-presets';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { PRESETS, getPreset } from '../../src/data/id-photo-presets';
+import { SHEET_COPY } from '../../src/data/print-sheet';
+import { OUTLINE, sheetPlan } from '../../src/lib/idphoto/sheet';
 import { readJfif } from '../../src/lib/image/jfif';
 import { sniffImage } from '../../src/lib/image/sniff';
 import { jpegMarkers } from '../../src/lib/idphoto/encode';
@@ -107,8 +110,12 @@ async function save(page: Page): Promise<{ bytes: Uint8Array; name: string }> {
   return { bytes: new Uint8Array(readFileSync((await d.path())!)), name: d.suggestedFilename() };
 }
 
-/** The download against the spec: size, limit, SOF0, JFIF density, no APP1/Exif/GPS, nothing after EOI. */
-function expectSpec(b: Uint8Array, w: number, h: number, limit: number | undefined, dpi: number): void {
+/**
+ * The download against the spec: size, limit, SOF0, JFIF density, no APP1/Exif/GPS, nothing after EOI. `headerOnly`
+ * (PRINT1023 B, the 1800×1200 sheet): the Exif/GPS text search stops at the first SOS, because a file that large holds
+ * "GPS" by chance in its entropy-coded data (seen on manual-firefox); metadata can only sit before SOS.
+ */
+function expectSpec(b: Uint8Array, w: number, h: number, limit: number | undefined, dpi: number, headerOnly = false): void {
   const s = sniffImage(b);
   expect([s.format, s.width, s.height]).toEqual(['jpeg', w, h]);
   if (limit !== undefined) expect(b.length).toBeLessThanOrEqual(limit);
@@ -116,10 +123,21 @@ function expectSpec(b: Uint8Array, w: number, h: number, limit: number | undefin
   expect(markers.find((m) => m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc)).toBe(0xc0);
   expect(markers).not.toContain(0xe1);
   expect(readJfif(b)).toEqual({ units: 1, x: dpi, y: dpi });
-  const buf = Buffer.from(b);
+  if (headerOnly) expect(sosOffset(b)).toBeLessThan(b.length - 2);
+  const buf = headerOnly ? Buffer.from(b.subarray(0, sosOffset(b))) : Buffer.from(b);
   expect(buf.includes(Buffer.from('Exif'))).toBe(false);
   expect(buf.includes(Buffer.from('GPS'))).toBe(false);
   expect([b.at(-2), b.at(-1)]).toEqual([0xff, 0xd9]);
+}
+
+/** Offset of the first SOS marker (the segment walk of jpegMarkers); the file length if none. */
+function sosOffset(b: Uint8Array): number {
+  let i = 2;
+  while (i + 3 < b.length && b[i] === 0xff) {
+    if (b[i + 1] === 0xda) return i;
+    i += 2 + ((b[i + 2]! << 8) | b[i + 3]!);
+  }
+  return b.length;
 }
 
 const readout = (page: Page) => page.locator('#idp-readout');
@@ -381,6 +399,11 @@ test('lowres: a 300 × 375 photo for passport is blocked; no download', async ({
   // A smaller preset is still possible from the same photo.
   await choosePreset(page, 'gosi');
   await expect(tool(page)).toHaveAttribute('data-state', 'adjust');
+  // PRINT1023 P7: its 인화용 모아찍기 would enlarge this small photo, so the block says it may print soft.
+  await save(page);
+  await expect(page.locator('#idp-sheet')).toBeVisible();
+  await expect(page.locator('#idp-sheet-count')).toHaveText('3.5×4.5 cm 사진 8장');
+  await expect(page.locator('#idp-sheet-lowres')).toHaveText(SHEET_COPY.lowres);
 });
 
 // ---------- 7 fallbacks ----------
@@ -691,6 +714,79 @@ test('인화·사진관 링크 (REV2): the info link on every result, no sponsor
   }
 });
 
+// ---------- PRINT1023 B 인화용 모아찍기 ----------
+
+/** RGB of a decoded JPEG, averaged over the (2r+1)² square around (x, y). */
+async function rgbAt(bytes: Uint8Array, x: number, y: number, r = 0): Promise<number[]> {
+  const img = await loadImage(Buffer.from(bytes));
+  const c = createCanvas(img.width, img.height);
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  const d = g.getImageData(x - r, y - r, 2 * r + 1, 2 * r + 1).data;
+  const sum = [0, 0, 0];
+  for (let i = 0; i < d.length; i += 4) for (let k = 0; k < 3; k++) sum[k]! += d[i + k]!;
+  return sum.map((v) => v / (d.length / 4));
+}
+
+async function makeSheet(page: Page): Promise<{ bytes: Uint8Array; name: string }> {
+  await page.locator('#idp-sheet-make').click();
+  const link = page.locator('#idp-sheet-download');
+  await expect(link).toHaveAttribute('href', /^blob:/, { timeout: 60_000 });
+  await expect(page.locator('#idp-sheet-make')).toBeEnabled();
+  await link.scrollIntoViewIfNeeded();
+  const [d] = await Promise.all([page.waitForEvent('download'), link.click()]);
+  return { bytes: new Uint8Array(readFileSync((await d.path())!)), name: d.suggestedFilename() };
+}
+
+test('인화용 모아찍기 (PRINT1023 B): passport -> one 4×6 JPG with 8 photos and grey cut lines; axe; saramin has none; 다시 만들기 hides it', async ({ page }) => {
+  await open(page, '/id-photo/?preset=passport_online');
+  await pick(page, PORTRAIT);
+  await expect(tool(page)).toHaveAttribute('data-state', 'adjust');
+  await expect(page.locator('#idp-sheet')).toBeHidden();
+  const single = await save(page);
+  await expect(page.locator('#idp-sheet')).toBeVisible();
+  await expect(page.locator('#idp-sheet-count')).toHaveText('3.5×4.5 cm 사진 8장');
+  await expect(page.locator('#idp-sheet-lowres')).toBeHidden();
+  await expect(page.locator('#idp-sheet-result')).toBeHidden();
+  const { bytes, name } = await makeSheet(page);
+  expect(name).toBe('print4x6_passport_8.jpg');
+  expectSpec(bytes, 1800, 1200, undefined, 300, true);
+  await expect(page.locator('#idp-sheet-error')).toBeHidden();
+  await expect(page.locator('#idp-sheet-preview')).toHaveAttribute('alt', `${SHEET_COPY.altA}8${SHEET_COPY.altB}`);
+  await expect(page.locator('#idp-sheet-howto')).toHaveText(`${SHEET_COPY.howtoA}3.5×4.5 cm${SHEET_COPY.howtoB}`);
+  // The pixels: a tile is the saved photo (same crop, same size for the passport), its outline grey, the margin white.
+  const plan = sheetPlan(getPreset('passport_online')!)!;
+  const r0 = plan.rects[0]!;
+  const centre = await rgbAt(bytes, r0.x + (r0.w >> 1), r0.y + (r0.h >> 1), 4);
+  const photoCentre = await rgbAt(single.bytes, r0.w >> 1, r0.h >> 1, 4);
+  centre.forEach((v, k) => expect(Math.abs(v - photoCentre[k]!), `channel ${k}`).toBeLessThanOrEqual(12));
+  for (const v of await rgbAt(bytes, r0.x - OUTLINE + 1, r0.y + (r0.h >> 1))) expect(Math.abs(v - 0x99)).toBeLessThanOrEqual(24);
+  for (const v of await rgbAt(bytes, 8, 8, 2)) expect(v).toBeGreaterThanOrEqual(245);
+  const serious = (await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()).violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+  expect(serious).toEqual([]);
+
+  // Another preset: the block and its sheet go (P6); a preset without a paper size has none (P2).
+  await page.getByRole('button', { name: '다른 규격으로 다시 만들기' }).click();
+  await expect(page.locator('#idp-sheet')).toBeHidden();
+  await expect(page.locator('#idp-sheet-download')).not.toHaveAttribute('href', /.+/);
+  await choosePreset(page, 'saramin');
+  await save(page);
+  await expect(page.locator('#idp-sheet')).toBeHidden();
+});
+
+test('인화용 모아찍기: 30×40 presets make 9 on a portrait sheet', async ({ page }) => {
+  await open(page, '/id-photo/?preset=police');
+  await pick(page, PORTRAIT);
+  await expect(tool(page)).toHaveAttribute('data-state', 'adjust');
+  await save(page);
+  await expect(page.locator('#idp-sheet-count')).toHaveText('3×4 cm 사진 9장');
+  const { bytes, name } = await makeSheet(page);
+  expect(name).toBe('print4x6_police_9.jpg');
+  expectSpec(bytes, 1200, 1800, undefined, 300, true);
+});
+
 // ---------- 15 mobile ----------
 
 test('mobile at 360 px: no horizontal scroll; stage buttons, sliders and the checkbox label are ≥ 44 px', async ({ page, isMobile }) => {
@@ -722,7 +818,7 @@ test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedToo
   // RelatedTools on /id-photo/ has no `only` list: every other live tool, so the set is read from the home cards
   // below instead of a hard-coded count (site.spec owns the per-page mapping).
   const related = await page.locator('.related a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
-  await expect(page.locator('.faq details')).toHaveCount(6);
+  await expect(page.locator('.faq details')).toHaveCount(7); // PRINT1023 B: + 「증명사진을 여러 장 인화하려면 어떻게 하나요?」
   // Round 2: the copy matches the build — a manual-only page never promises auto-framing.
   const body = (await page.locator('main').textContent()) ?? '';
   if (isManualBuild()) {

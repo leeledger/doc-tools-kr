@@ -43,19 +43,31 @@ export function drawCrop(g: Ctx, src: CanvasImageSource, srcW: number, srcH: num
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-/** The output pixels (outW × outH), from the working bitmap and the crop state. */
-export async function renderOutput(bitmap: ImageBitmap, st: CropState, outW: number, outH: number): Promise<ImageData> {
+/**
+ * The output pixels (outW × outH), from the working bitmap and the crop state. `scale` (PRINT1023 B, 인화용 모아찍기)
+ * draws the same crop at round(outW·scale) × round(outH·scale) from the bitmap itself, never from a smaller saved file;
+ * 1 is the saved output, unchanged.
+ */
+export async function renderOutput(bitmap: ImageBitmap, st: CropState, outW: number, outH: number, scale = 1): Promise<ImageData> {
+  const w = scale === 1 ? outW : Math.max(1, Math.round(outW * scale));
+  const h = scale === 1 ? outH : Math.max(1, Math.round(outH * scale));
+  const s = st.s * scale;
   let src: ImageBitmap = bitmap;
-  if (st.s < PRESCALE_BELOW) {
-    const w = Math.max(1, Math.ceil(bitmap.width * 2 * st.s));
-    const h = Math.max(1, Math.ceil(bitmap.height * 2 * st.s));
-    src = await createImageBitmap(bitmap, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
+  if (s < PRESCALE_BELOW) {
+    const pw = Math.max(1, Math.ceil(bitmap.width * 2 * s));
+    const ph = Math.max(1, Math.ceil(bitmap.height * 2 * s));
+    src = await createImageBitmap(bitmap, { resizeWidth: pw, resizeHeight: ph, resizeQuality: 'high' });
   }
-  const c = surface(outW, outH);
+  const c = surface(w, h);
   try {
     const g = context(c);
-    drawCrop(g, src, bitmap.width, bitmap.height, st, outW, outH);
-    return g.getImageData(0, 0, outW, outH);
+    if (scale !== 1) {
+      // A rounded edge can lie past outW·scale: white there, never transparent.
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, w, h);
+    }
+    drawCrop(g, src, bitmap.width, bitmap.height, st, outW, outH, scale);
+    return g.getImageData(0, 0, w, h);
   } finally {
     if (src !== bitmap) src.close();
     c.width = 0;

@@ -25,7 +25,8 @@ export function stripComments(s) {
     .replace(/\bTOPICS\s*=\s*\[[^\]]*\]/g, '')
     // REV2/REV3: the 인화·사진관 and affiliate link blocks and the guides' affiliate line render in the system font
     // (.out-links, .guide-page; src/data/print-links.ts, src/data/affiliate.ts: every visible string is in the constants below).
-    .replace(/\b(?:PRINT_COPY|AFF_COPY)\s*=\s*\{[^}]*\}/g, '')
+    // PRINT1023 B: the 인화용 모아찍기 block (.out-links.idp-sheet; src/data/print-sheet.ts SHEET_COPY) too.
+    .replace(/\b(?:PRINT_COPY|AFF_COPY|SHEET_COPY)\s*=\s*\{[^}]*\}/g, '')
     .replace(/\bAFF_LINKS\b[^=\n]*=\s*\[[^\]]*\]/g, '')
     // FORM1020: a form's document text (src/lib/form/spec.ts keys doc, docLabel, docSection, docTemplate, docBlank,
     // docZero; LOAN1022) is drawn only in the document's own faces (the HWP, the PDF and their preview), never in the

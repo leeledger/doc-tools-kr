@@ -15,6 +15,7 @@
 //                   next (CHAIN 이어서 하기, required): o = "next", v = the tool the result was handed to (one of TOOLS)
 //                   out (REV2/REV3 링크 누름, required): o = "out", v = a dest of TOOL_OUT[t] (a result screen) or, with g,
 //                   of GUIDE_OUT[t] (a guide; t = its tools[0]); never the href
+//                   download (optional): only the setting DOWNLOAD_SETTING[t] names (id-photo: sheet = 모아찍기 preset)
 //   g   guide slug  arrive, and out from a guide; land with t = guide (optional: the /guide/ index has none)
 //   dl  deep link   arrive only, "0" | "1"
 //   via             every event, guide | direct | embed (the embed widget /embed/..., REV5)
@@ -85,10 +86,12 @@ export const ADDR_FIELDS = ['line1', 'line2', 'city', 'state', 'zip', 'country',
 export const FORM_BUILDS = ['blank', 'filled'];
 /** 위임장 만들기 the downloaded file (FORM1020 D9), on download only: HWP | PDF. */
 export const FORM_FORMATS = ['hwp', 'pdf'];
+/** 여권·증명사진 인화용 모아찍기 (PRINT1023 P12), on download only: the preset of the sheet. Equal to the presets with a paper size (`mm`, src/data/id-photo-presets.ts; unit test). */
+export const SHEET_PRESETS = ['passport_online', 'id_card', 'driver_license', 'gosi', 'kuksiwon', 'police', 'hanja', 'jlpt', 'half_card'];
 /** Tool -> the one setting its download event may carry (every other download has no o / v). */
-export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format' };
+export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format', 'id-photo': 'sheet' };
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS, field: ADDR_FIELDS, build: FORM_BUILDS, format: FORM_FORMATS };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS, field: ADDR_FIELDS, build: FORM_BUILDS, format: FORM_FORMATS, sheet: SHEET_PRESETS };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -491,7 +494,7 @@ export const OUT_LABELS = {
 };
 /** The 자리 of the guide rows of the link table (every guide summed). */
 export const OUT_GUIDE_PLACE = '안내 글';
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양', form: '이름 모양', field: '복사한 칸' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양', form: '이름 모양', field: '복사한 칸', sheet: '모아찍기' };
 /** Values whose label depends on the setting (ROMANIZE1016: form `space` is 빈칸, basis `space` stays 공백 포함). */
 export const SETTING_VALUE_LABELS = {
   form: { joined: '붙여 쓰기', hyphen: '붙임표', space: '빈칸' },

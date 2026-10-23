@@ -340,6 +340,8 @@ test('camera chain: 「배경을 흰색으로 바꾸기」 only for 이력서; a
   await page.selectOption('#idp-preset', 'passport_online');
   await expect(page.locator('#idp-checklist')).toContainText(CHECK_COPY.bgPassport);
   await expect(page.locator('#idp-save')).toBeDisabled();
+  // PRINT1023 B (P6): no save, so no done screen and no 인화용 모아찍기.
+  await expect(page.locator('#idp-sheet')).toBeHidden();
   await page.locator('#idp-redo').click();
   await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', 'empty');
   await expect(page.locator('#idp-drop')).toBeVisible();

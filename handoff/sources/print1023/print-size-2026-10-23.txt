@@ -7,3 +7,16 @@ the page copy may cite only lines found here verbatim.
 2. Second print service listing a 4x6 size: Bob tries 2 more (e.g. a 사진 인화 price page of another Korean service);
    paste verbatim or write "not found" with the URL and date.
 3. Not sourced (never stated on a page): kiosk (편의점) support, "fit/fill" print options, print accuracy.
+
+--- B0 raw dump (Bob, 2026-10-24) ---
+1. 찍스 https://www.zzixx.com/ fetched 2026-10-24 with curl (Chrome UA), page is CP949, converted with iconv -f CP949 -t UTF-8.
+   Raw HTML 103,303 bytes, sha256 b6b343a7a3509ae14201fd072e1d9b1c18e4dd89d2e0684293ba65d6f40e7986. Line 1214 (UTF-8), verbatim:
+   <div class="p_info"><div class="p_title">사진인화</div><div class="p_desc">4x6 (10.2cm x 15.1cm)</div><div class="p_price">190원</div></div></div
+   CONFIRMED verbatim: 「4x6 (10.2cm x 15.1cm)」 under the product title 「사진인화」 (price 190원 is not cited).
+2. Other print services (2026-10-24, curl):
+   - 포토몬 https://www.photomon.com/ , /category/photo-prints , /product/photo-prints-standard-print-original/original-photo-print:
+     not found (sizes load by script; no 4x6 string in the raw HTML).
+   - 스냅스 https://www.snaps.com/ : not found (6.9 KB script shell, no text).
+   - 퍼블로그 https://www.publog.co.kr/ : only a frame category link "book_size=4x6" (포토 · 매트액자), no print size in cm; not citable
+     for photo prints.
+   -> The page cites only 찍스 「4x6 (10.2cm x 15.1cm)」 with fetch date 2026-10-24 (Step C). Step B UI copy says only 「4×6 크기」.
