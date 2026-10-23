@@ -32,7 +32,11 @@ const CAMERA_SPAN = /<span data-requires="id-camera">([\s\S]*?)<\/span>(\s*)/g;
  * so the page reads as before; off, the passage and the space after it go. Any other or leftover marker fails the build.
  */
 export function gateNoteHtml(html: string, idCamera: boolean): string {
-  const out = html.replace(CAMERA_SPAN, (_, inner: string, space: string) => (idCamera ? inner + space : ''));
+  const out = html.replace(CAMERA_SPAN, (_, inner: string, space: string) => {
+    // The pattern stops at the first </span>, so an inner span would cut the passage short (review A, Should Fix 1).
+    if (inner.includes('<span')) throw new Error('tool note: an id-camera passage may not contain its own <span>');
+    return idCamera ? inner + space : '';
+  });
   if (out.includes('data-requires=')) throw new Error('tool note: a data-requires marker gateNoteHtml does not handle (only id-camera, not nested)');
   return out;
 }
