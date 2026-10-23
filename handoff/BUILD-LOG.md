@@ -4193,3 +4193,23 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   Arch decisions taken by the orchestrator: the FAQ rewording 「증명사진을 여러 장 인화하려면 어떻게 하나요?」 is accepted (no 뽑
   glyph). Precache headroom: production 444.8/450 KB; the next feature that adds precached bytes must first move a page or
   chunk to the runtime cache (as the camera page did) — never raise the budget.
+
+## PRINT1023 C — guide section 「찍은 사진 종이로 뽑기」 + figure (Bob, 2026-10-24) — DONE
+- Built: src/content/guides/self-id-photo.md new H2 「찍은 사진 종이로 뽑기」 after 「문서딱으로 찍고 바로 규격 맞추기」: why
+  (인화지 창구, quoted 도로교통공단 line already on the page), 4×6 = 10.2 cm × 15.1 cm cited to 찍스 (new source
+  https://www.zzixx.com/, quote 「4x6 (10.2cm x 15.1cm)」, retrieved 2026-10-24 = the B0 raw dump in
+  handoff/sources/print1023/print-size-2026-10-23.txt), 4 steps linking [여권·증명사진 규격 맞추기](/id-photo/) and the
+  two button labels of SHEET_COPY, ruler check (3.5 cm × 4.5 cm via the existing 외교부 menuPos=12 quote), a line that presets
+  without a paper size get no sheet. updated -> 2026-10-24.
+- Figure: own SVG src/assets/flagged/img/guide/self-id-photo/3-print-sheet.svg (8.2 KB; flagged dir, copied with
+  PUBLIC_ID_CAMERA like the guide's other two). Drawn from the real 35×45 layout (1800×1200, tile 413×531, 4×2, gap 24,
+  scaled 0.233), grey outlines, a cut-out tile with a ruler and scissors; no numbers; white card + border like 1/2, so it reads
+  the same in dark mode (screenshot checked light/dark).
+- Decisions: no 편의점/키오스크, no fit/fill claim beyond the UI's own 「사진이 잘리지 않게」; "8장" is the tool's own count for
+  3.5×4.5 cm (product fact, not a spec); 30×40 count (9) not stated to avoid an unsourced cm pair in this guide.
+- Gates: npm run check 0/0/12 hints; default build + check-dist OK (guide similarity max pair photo-sizes ~ upload-limits
+  0.093 / 0.45; precache 432.8/450 KB, unchanged by the guide); guide-length self-id-photo 3,319 (was 2,793); the guide's
+  quotes --exact alone: 16 verbatim (15 + 찍스; zzixx served via the source-watch BOT UA, CP949 decoded); vitest full: 2241/2242,
+  the 1 fail = char-count 100k-chars-under-50 ms timing (50.65 ms under load), passes alone 21/21; guide-check,
+  guides-schema, guide-length, idphoto-guides, drop-links, guide-out, postbuild 160/160; ad-hoc axe on
+  /guide/self-id-photo/ light + dark (390 px): 0 serious/critical. e2e suites not run (content-only change).
