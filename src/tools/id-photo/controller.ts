@@ -797,6 +797,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
     if (!bytes) {
       sheet.error.hidden = false;
       say(SHEET_COPY.error);
+      // Review B Should Fix 1: the disabled button dropped keyboard focus; give it back.
+      sheet.make.focus();
       return;
     }
     sheetUrl = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }));
@@ -808,6 +810,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
     sheet.preview.alt = SHEET_COPY.altA + plan.n + SHEET_COPY.altB;
     sheet.result.hidden = false;
     say(SHEET_COPY.made);
+    // Review B Should Fix 1: focus moves to the new download link instead of being lost with the disabled button.
+    sheet.download.focus();
   }
 
   if (sheet) {

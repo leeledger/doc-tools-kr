@@ -4186,3 +4186,10 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   LHCI not run locally (memory); the CI checks job runs it.
 - Known Gaps (PRINT1023 B): production precache headroom is 5.2 KB; no e2e for the sheet beacon (unit-tested whitelist and
   client payload); a sheet in flight when the page is restored from bfcache is dropped (button works again).
+- Orchestrator 2026-10-24, PRINT1023 B review (handoff/REVIEW-FEEDBACK-PRINT1023-B.md): clear, 0 Must Fix. Should Fix 1 done:
+  focus moves to 「모아찍기 내려받기」 after a sheet is made and back to the make button on failure (e2e asserts toBeFocused;
+  chromium sheet specs 2/2). Should Fix 2 noted, by design (P12): a sheet download is counted as an id-photo download with
+  o=sheet, so one visitor saving both files counts 1 start and 2 downloads; read o=sheet separately in /admin/.
+  Arch decisions taken by the orchestrator: the FAQ rewording 「증명사진을 여러 장 인화하려면 어떻게 하나요?」 is accepted (no 뽑
+  glyph). Precache headroom: production 444.8/450 KB; the next feature that adds precached bytes must first move a page or
+  chunk to the runtime cache (as the camera page did) — never raise the budget.

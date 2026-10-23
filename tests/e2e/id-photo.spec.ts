@@ -733,6 +733,8 @@ async function makeSheet(page: Page): Promise<{ bytes: Uint8Array; name: string 
   const link = page.locator('#idp-sheet-download');
   await expect(link).toHaveAttribute('href', /^blob:/, { timeout: 60_000 });
   await expect(page.locator('#idp-sheet-make')).toBeEnabled();
+  // Review B Should Fix 1: keyboard focus lands on the new download link.
+  await expect(link).toBeFocused();
   await link.scrollIntoViewIfNeeded();
   const [d] = await Promise.all([page.waitForEvent('download'), link.click()]);
   return { bytes: new Uint8Array(readFileSync((await d.path())!)), name: d.suggestedFilename() };
