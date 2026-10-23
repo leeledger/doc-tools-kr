@@ -409,9 +409,11 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .idp-done .level-desc { margin: 0; }
 .idp-result-box { margin: 0; display: grid; gap: 6px; justify-items: start; overflow-x: auto; }
 .idp-result-box img { display: block; max-width: none; height: auto; border: 1px solid var(--line); background: #fff; image-rendering: auto; }
-/* PRINT1023 B: 인화용 모아찍기 (the block's text is system font via .out-links). */
+/* PRINT1023 B: 인화용 모아찍기. Its own class, not .out-links (that class marks link blocks for the affiliate checks). */
+.idp-sheet { display: grid; gap: 6px; }
+.idp-sheet p { margin: 0; }
 .idp-sheet-result { display: grid; gap: 6px; justify-items: start; }
-/* .out-links a (inline-block, 24 px) would shrink the download button: keep the .btn box. */
+/* Keep the .btn box for the download link. */
 .idp-sheet-result a.btn { display: inline-flex; min-height: 48px; color: var(--brand-ink); }
 .idp-sheet-result img { display: block; width: 100%; max-width: 320px; height: auto; border: 1px solid var(--line); background: #fff; }
 .idp-cannot { margin: 12px 0 0; padding-left: 1.3em; display: grid; gap: 4px; }
@@ -495,7 +497,7 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
    follow-up). check-dist only honours exemptions from this stylesheet. ADS1020: the /about/ and /contact/ text (.site-info).
    CONTENT1021 D8: the tool notes (.tool-notes). */
 .guide-page, .guide-index .guide-topics, .guide-index section h2,
-.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides, .en-guides, .out-links, .site-info, .tool-notes { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides, .en-guides, .out-links, .idp-sheet, .site-info, .tool-notes { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
 /* EN1 (brief EN decision 3): English pages use the system font, so they never fetch the UI font. html[lang="en"], never
    :lang(en): the "English" link on Korean pages carries lang="en" and keeps the UI font. */
 html[lang="en"] body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }

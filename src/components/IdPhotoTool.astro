@@ -175,9 +175,9 @@ const nudges = [
           <p class="save-name" id="idp-save-name"></p>
           <p class="notice" id="idp-print" hidden></p>
           {!embed && <p class="notice" id="idp-english" hidden></p>}
-          {/* PRINT1023 B: 인화용 모아찍기 (shown by the controller for a preset with a paper size; system font, .out-links). */}
+          {/* PRINT1023 B: 인화용 모아찍기 (shown by the controller for a preset with a paper size; system font via .idp-sheet, not a link block). */}
           {!embed && (
-            <div class="out-links idp-sheet" id="idp-sheet" hidden>
+            <div class="idp-sheet" id="idp-sheet" hidden>
               <p>{SHEET_COPY.lead}</p>
               <p id="idp-sheet-count"></p>
               <div class="row">

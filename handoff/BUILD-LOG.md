@@ -4217,3 +4217,8 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   Decision on the escalated point: with PUBLIC_ID_CAMERA=0 the whole /guide/self-id-photo/ is dropped (guide-schema.ts:91), so
   the new 「찍은 사진 종이로 뽑기」 section goes with it. Accepted: the flag is an emergency kill switch, and /id-photo/ keeps the
   sheet how-to (tool note bullet + FAQ) in every build.
+- Orchestrator 2026-10-24, PR #23 CI: site.spec REV3 (no affiliate block) failed on every engine: /id-photo/ had 2 `.out-links`
+  because the 모아찍기 block borrowed that class for the system font. Fix: the block has its own `.idp-sheet` class (grid, p
+  margin 0, added to the system-font list); `.out-links` again marks link blocks only (affiliate/print checks). The test is
+  unchanged. Local: build + check-dist OK, REV3 1/1 and the two 모아찍기 specs 2/2 on chromium. Firefox also had ~30 scattered
+  timeouts on that run (slow runner pattern seen on PR #16/#18); judged by the rerun.

@@ -1,5 +1,5 @@
 // 인화용 모아찍기 (brief handoff/ARCHITECT-BRIEF-PRINT1023.md, P9-P10): every visible string of the #idp-sheet block of
-// /id-photo/. The block renders in the system font (.out-links in src/styles/app.css) and SHEET_COPY is left out of the UI
+// /id-photo/. The block renders in the system font (.idp-sheet in src/styles/app.css) and SHEET_COPY is left out of the UI
 // font (scripts/lib/ui-font-chars.mjs, stripComments), like PRINT_COPY. That strip ends at the first closing brace, so no
 // value here may contain one: the count line, the how-to and the preview text are joined by concatenation
 // (src/tools/id-photo/controller.ts). Never 편의점/키오스크 (unsourced), 업로드/서버/브라우저, a px/dpi number or an
