@@ -10,7 +10,7 @@ export type Guide = Omit<CollectionEntry<'guides'>, 'data'> & { data: GuideData 
 export type Hub = Omit<CollectionEntry<'hubs'>, 'data'> & { data: HubData };
 
 /** Published and, for a guide that requires a release flag (TOOL-GUIDES Part B), built with that flag on. */
-const isPublished = (e: CollectionEntry<'guides'>): e is Guide => isVisibleGuide(e.data, __BG_REMOVE__);
+const isPublished = (e: CollectionEntry<'guides'>): e is Guide => isVisibleGuide(e.data, __BG_REMOVE__, __ID_CAMERA__);
 
 export const guidePath = (slug: string): string => `/guide/${slug}/`;
 
@@ -81,7 +81,7 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'english-name': ['passport-english-name', 'passport-photo', 'passport-reissue-photo', 'intl-driving-license'],
   'power-of-attorney': ['id-card-copy', 'stamp-image', 'pdf-sign'],
   'loan-note': ['power-of-attorney', 'stamp-image', 'pdf-sign'],
-  // IDCAM1022: the photo guides of the presets people shoot for most (its own guide comes with Step E).
+  // IDCAM1022: after its own guide (self-id-photo, pinned), the photo guides of the presets people shoot for most.
   'id-photo-camera': ['passport-photo', 'resume-photo', 'id-card-photo'],
 };
 

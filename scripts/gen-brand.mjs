@@ -228,10 +228,10 @@ export const FLAGGED_IMAGES = { 'remove-background': 'bgRemove', 'english-addres
 
 /**
  * Guide figures of a guide that ships only with its release flag (CONTENT1021 B2: guide remove-background, `requires:
- * bg-remove`). Committed under src/assets/flagged/img/guide/<slug>/; copied to public/img/guide/<slug>/ (gitignored)
+ * bg-remove`; IDCAM1022 E: guide self-id-photo, `requires: id-camera`). Committed under src/assets/flagged/img/guide/<slug>/; copied to public/img/guide/<slug>/ (gitignored)
  * only when the flag is on, so a flag-off build ships no file named after the tool (check-dist).
  */
-export const FLAGGED_GUIDE_IMAGES = { 'remove-background': 'bgRemove' };
+export const FLAGGED_GUIDE_IMAGES = { 'remove-background': 'bgRemove', 'self-id-photo': 'idCamera' };
 export const FLAGGED_GUIDE_IMAGE_DIR = join(root, 'src', 'assets', 'flagged', 'img', 'guide');
 
 /** Copies (flag on) or removes (flag off) each flagged guide's figures under `pub`/img/guide/; returns the slugs copied. */
@@ -284,6 +284,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   for (const f of readdirSync(join(pub, 'brand'))) if (/^og.*\.png$/.test(f) && !(`brand/${f}` in out)) rmSync(join(pub, 'brand', f));
   for (const [path, data] of Object.entries(out)) writeFileSync(join(pub, path), data);
   console.log(`gen-brand: ${Object.entries(out).map(([p, d]) => `${p} ${(d.length / 1024).toFixed(1)} KiB`).join(', ')}`);
-  const guideImages = syncFlaggedGuideImages(pub, { bgRemove: bgRemoveOn(env.PUBLIC_BG_REMOVE), addrEn: addrEnOn(env) });
+  const guideImages = syncFlaggedGuideImages(pub, { bgRemove: bgRemoveOn(env.PUBLIC_BG_REMOVE), addrEn: addrEnOn(env), idCamera: idCameraOn(env) });
   console.log(`gen-brand: flagged guide figures ${guideImages.length ? guideImages.join(', ') : 'none (flags off)'}`);
 }

@@ -14,7 +14,7 @@ import { GA_LOADER, gaId, loaderSource } from './lib/ga.mjs';
 import { API_PATH as CLOUD_API, CLAIM_FILE_RE, EXCEPTION_PAGES, EXCEPTION_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, bgCloudOn, claimText, privacyGate, unqualifiedClaims } from './lib/bgcloud.mjs';
 import { bgRemoveOn } from './lib/bgremove.mjs';
 import { ADDR_EN_PATH, API_PATH as ADDR_API, addrEnOn, privacyGate as addrEnGate } from './lib/addren.mjs';
-import { ID_CAMERA_PATH, cameraHeaderProblems, idCameraOn } from './lib/idcamera.mjs';
+import { ID_CAMERA_GUIDE_PATH, ID_CAMERA_PATH, cameraHeaderProblems, idCameraOn } from './lib/idcamera.mjs';
 import { GUIDE_OUT, TOOLS as USAGE_TOOLS, TOOL_OUT, USAGE_PATH, usageOn, usageSample } from './lib/usage.mjs';
 import { distDir, moduleEntries, publicEnv, staticClosure, walkFiles } from './lib/dist.mjs';
 import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mjs';
@@ -681,7 +681,11 @@ if (!addrEn) {
   if (!idCamera) {
     for (const f of files) if (f.path.startsWith(ID_CAMERA_PATH.slice(1))) errors.push(`${f.path}: the 증명사진 촬영 page in a build with PUBLIC_ID_CAMERA off`);
     if (idPhoto.includes('id="idp-camera"')) errors.push('id-photo/index.html: the 「카메라로 찍기」 link in a build with PUBLIC_ID_CAMERA off');
-    for (const f of match(/\.(html|xml|txt|json|webmanifest)$|^_headers$|^_redirects$/)) if (read(f).toString('utf8').includes(ID_CAMERA_PATH)) errors.push(`${f}: names ${ID_CAMERA_PATH} in a build with PUBLIC_ID_CAMERA off`);
+    for (const f of match(/\.(html|xml|txt|json|webmanifest)$|^_headers$|^_redirects$/)) {
+      const text = read(f).toString('utf8');
+      for (const p of [ID_CAMERA_PATH, ID_CAMERA_GUIDE_PATH]) if (text.includes(p)) errors.push(`${f}: names ${p} in a build with PUBLIC_ID_CAMERA off`);
+    }
+    for (const f of files) if (f.path.includes(ID_CAMERA_GUIDE_PATH.split('/')[2])) errors.push(`${f.path}: the 증명사진 촬영 guide in a build with PUBLIC_ID_CAMERA off`);
   } else {
     const html = pageHtml.get('id-photo-camera/index.html');
     if (!html) errors.push('id-photo-camera/index.html: no file found');
@@ -879,7 +883,7 @@ for (const p of ['guide/heic-to-jpg/index.html', 'llms.txt']) {
   // 4: SVG safety; 5: no shared ≥ 60-character block; 6: merged paths gone.
   const root = join(import.meta.dirname, '..');
   const hubSlugs = readdirSync(join(root, 'src', 'content', 'hubs')).filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, ''));
-  const visible = readGuides(root).filter((g) => !g.draft && (!g.requires || bgOn)).map((g) => g.slug);
+  const visible = readGuides(root).filter((g) => !g.draft && (!g.requires || (g.requires === 'id-camera' ? idCameraOn(env) : bgOn))).map((g) => g.slug);
   const guideSlugs = [...visible, ...hubSlugs];
   const guidePage = (slug) => pageHtml.get(`guide/${slug}/index.html`);
   const g = lengthProblems(guideSlugs.map((slug) => {

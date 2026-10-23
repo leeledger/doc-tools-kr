@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" width="720" height="360" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">안내선에 맞게 찍은 얼굴과 너무 가깝거나 작거나 기울어진 얼굴을 견준 증명사진 틀 네 개</title>
+<defs><clipPath id="c1"><rect x="17" y="52" width="156" height="200"/></clipPath><clipPath id="c2"><rect x="197" y="52" width="156" height="200"/></clipPath><clipPath id="c3"><rect x="377" y="52" width="156" height="200"/></clipPath><clipPath id="c4"><rect x="557" y="52" width="156" height="200"/></clipPath></defs>
+<rect x="0.5" y="0.5" width="719" height="359" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="32" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">정수리는 위쪽 선에, 턱은 아래 띠 안에</text>
+<g clip-path="url(#c1)">
+<rect x="17" y="52" width="156" height="200" fill="#f7f8f8"/>
+<ellipse cx="95" cy="128" rx="34" ry="44" fill="#d8dedc"/>
+<path d="M27 252 Q30 190 95 186 Q160 190 163 252 Z" fill="#d8dedc"/>
+</g>
+<rect x="17" y="52" width="156" height="200" fill="none" stroke="#0f766e" stroke-width="2"/>
+<line x1="17" y1="84" x2="173" y2="84" stroke="#0f766e" stroke-width="2" stroke-dasharray="5 4"/>
+<rect x="17" y="164" width="156" height="16" fill="#0f766e" fill-opacity="0.15"/>
+<line x1="95" y1="52" x2="95" y2="252" stroke="#0f766e" stroke-dasharray="3 4"/>
+<circle cx="95" cy="290" r="16" fill="none" stroke="#0f766e" stroke-width="4"/>
+<text x="95" y="336" font-size="14" fill="#1c2321" text-anchor="middle">선에 맞음</text>
+<g clip-path="url(#c2)">
+<rect x="197" y="52" width="156" height="200" fill="#f7f8f8"/>
+<ellipse cx="275" cy="150" rx="70" ry="92" fill="#d8dedc"/>
+</g>
+<rect x="197" y="52" width="156" height="200" fill="none" stroke="#b42318" stroke-width="2"/>
+<line x1="197" y1="84" x2="353" y2="84" stroke="#0f766e" stroke-width="2" stroke-dasharray="5 4"/>
+<rect x="197" y="164" width="156" height="16" fill="#0f766e" fill-opacity="0.15"/>
+<line x1="262" y1="277" x2="288" y2="303" stroke="#b42318" stroke-width="4"/><line x1="288" y1="277" x2="262" y2="303" stroke="#b42318" stroke-width="4"/>
+<text x="275" y="336" font-size="14" fill="#1c2321" text-anchor="middle">너무 가까움(셀카)</text>
+<g clip-path="url(#c3)">
+<rect x="377" y="52" width="156" height="200" fill="#f7f8f8"/>
+<ellipse cx="455" cy="150" rx="17" ry="22" fill="#d8dedc"/>
+<path d="M415 230 Q418 180 455 177 Q492 180 495 230 Z" fill="#d8dedc"/>
+</g>
+<rect x="377" y="52" width="156" height="200" fill="none" stroke="#b42318" stroke-width="2"/>
+<line x1="377" y1="84" x2="533" y2="84" stroke="#0f766e" stroke-width="2" stroke-dasharray="5 4"/>
+<rect x="377" y="164" width="156" height="16" fill="#0f766e" fill-opacity="0.15"/>
+<line x1="442" y1="277" x2="468" y2="303" stroke="#b42318" stroke-width="4"/><line x1="468" y1="277" x2="442" y2="303" stroke="#b42318" stroke-width="4"/>
+<text x="455" y="336" font-size="14" fill="#1c2321" text-anchor="middle">너무 작음</text>
+<g clip-path="url(#c4)">
+<rect x="557" y="52" width="156" height="200" fill="#f7f8f8"/>
+<ellipse cx="635" cy="128" rx="34" ry="44" fill="#d8dedc" transform="rotate(-14 635 128)"/>
+<path d="M567 252 Q570 190 635 186 Q700 190 703 252 Z" fill="#d8dedc"/>
+</g>
+<rect x="557" y="52" width="156" height="200" fill="none" stroke="#b42318" stroke-width="2"/>
+<line x1="557" y1="84" x2="713" y2="84" stroke="#0f766e" stroke-width="2" stroke-dasharray="5 4"/>
+<rect x="557" y="164" width="156" height="16" fill="#0f766e" fill-opacity="0.15"/>
+<line x1="622" y1="277" x2="648" y2="303" stroke="#b42318" stroke-width="4"/><line x1="648" y1="277" x2="622" y2="303" stroke="#b42318" stroke-width="4"/>
+<text x="635" y="336" font-size="14" fill="#1c2321" text-anchor="middle">고개가 기울어짐</text>
+</svg>

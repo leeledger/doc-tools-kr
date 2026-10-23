@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" width="720" height="360" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">집에서 증명사진 찍을 때 사람, 흰 벽, 눈높이에 세운 휴대폰, 창문 빛의 자리를 옆에서 본 그림</title>
+<rect x="0.5" y="0.5" width="719" height="359" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="32" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">옆에서 본 자리 잡기</text>
+<line x1="24" y1="300" x2="696" y2="300" stroke="#c9d1cf" stroke-width="2"/>
+<rect x="40" y="60" width="26" height="240" fill="#f7f8f8" stroke="#5b6663"/>
+<text x="53" y="326" font-size="14" fill="#1c2321" text-anchor="middle">흰 벽</text>
+<circle cx="170" cy="112" r="24" fill="#d8dedc"/>
+<path d="M150 140 Q170 132 190 140 L196 230 L144 230 Z" fill="#d8dedc"/>
+<rect x="148" y="230" width="14" height="70" fill="#d8dedc"/><rect x="178" y="230" width="14" height="70" fill="#d8dedc"/>
+<line x1="78" y1="270" x2="140" y2="270" stroke="#0f766e" stroke-width="2" stroke-dasharray="5 4"/>
+<text x="110" y="262" font-size="13" fill="#0f766e" text-anchor="middle">조금 띄우기</text>
+<rect x="430" y="98" width="12" height="28" rx="3" fill="#1c2321"/>
+<rect x="414" y="126" width="44" height="174" fill="#e6f3f1" stroke="#0f766e"/>
+<text x="436" y="326" font-size="14" fill="#1c2321" text-anchor="middle">받침에 세운 휴대폰</text>
+<line x1="196" y1="112" x2="428" y2="112" stroke="#1c2321" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="312" y="134" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">눈높이 그대로</text>
+<text x="312" y="160" font-size="13" fill="#5b6663" text-anchor="middle">팔을 뻗지 않고 떨어져서, 타이머로</text>
+<rect x="590" y="70" width="80" height="120" fill="#fff8db" stroke="#a37b00" stroke-width="2"/>
+<line x1="630" y1="70" x2="630" y2="190" stroke="#a37b00"/><line x1="590" y1="130" x2="670" y2="130" stroke="#a37b00"/>
+<text x="630" y="214" font-size="14" fill="#1c2321" text-anchor="middle">창문·조명</text>
+<path d="M584 78 L234 92" stroke="#a37b00" stroke-width="3" fill="none"/>
+<path d="M243 84 L226 92 L244 100 Z" fill="#a37b00"/>
+<text x="440" y="66" font-size="14" fill="#a37b00" text-anchor="middle" font-weight="bold">빛은 얼굴 앞쪽에서</text>
+</svg>
