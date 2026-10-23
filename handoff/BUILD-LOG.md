@@ -4110,3 +4110,21 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   build + check-dist OK; guide-length self-id-photo 2,793; the guide's 15 quotes re-checked --exact: 0 changed.
   Commit df857a2 was cherry-picked onto idcam1022-d by the coordinator; E rebased (53d89b5).
 - Orchestrator 2026-10-23: local PUBLIC_ID_CAMERA=0 build of 11a9b56 (CI never builds it): check-dist OK, precache 423.9/450 KB; no dist/id-photo-camera or dist/guide/self-id-photo; 0 mentions in sitemap.xml, llms.txt, sw.js, _headers (no camera=(self)); /id-photo/ has no idp-camera link. One harmless trace: the IdPhotoTool chunk still holds the /id-photo-camera/ href template, guarded by a null element (dead code with the flag off). Known gap: CI has no flag-off build job.
+
+## PRINT1023 — design locked (Arch, 2026-10-23): 인화용 모아찍기 + CI flag-off job
+- Brief: handoff/ARCHITECT-BRIEF-PRINT1023.md (IDCAM1022 Step F). Sources: handoff/sources/print1023/print-size-2026-10-23.txt.
+- Steps: A = CI flag-off job (2 builds: PUBLIC_ID_CAMERA=0 default, and =0 with the production-like dist-bgcloud env) in a NEW
+  parallel job + closes the IDCAM1022 D gap (/remove-background/ tool note names 증명사진 촬영 with the camera off; gated on
+  __ID_CAMERA__ + check-dist rule). B = the sheet. C = /guide/self-id-photo/ section 「찍은 사진 종이로 뽑기」 + 1 own SVG.
+- Decisions (P1–P15): one sheet size 4×6 in at 300 ppi (1800×1200 / 1200×1800, JFIF 300, JPG); 4×6 cited to 찍스
+  「4x6 (10.2cm x 15.1cm)」 (B0 confirms verbatim); only presets with a sourced paper size (mm) get a sheet (no-mm presets and
+  custom: none, else we would invent a print size); tile rendered from the original at printPx(mm) (k = min ratio; gosi 411×531,
+  kuksiwon 413×530, hanja 350×472); margin 3 mm, gap 2 mm (our choices, never shown as rules) -> 35×45: 8 per sheet
+  (landscape 4×2), 30×40: 9 (portrait 3×3); 2 px #999 outline outside each tile, no text on the sheet; sheet only in the done
+  panel from the save snapshot (so D8c/lowres/outside blocks are honoured by construction); upscale note when st.s*k > 1;
+  encode worker reused (no limit); copy in SHEET_COPY (system font, stripped from the UI font); builder lazy-loaded; beacon
+  download o=sheet v=preset; no feature flag (revert = rollback); not in /embed/ or /en/; FAQ + tool note on /id-photo/,
+  keywords += 증명사진 출력/인쇄; no new guide (too few sourced print facts). Copy never names 편의점/키오스크 (unverified).
+- Owner-only: O1 print one passport sheet at any 4×6 service and measure a tile (3.5×4.5 cm expected); O2 optional kiosk try.
+- Known Gaps (PRINT1023): other sheet sizes (5×7, A4 home printer, L판), mixed presets on one sheet, copy-count picker, sheet in
+  /embed/ and /en/, PDF sheet; real print accuracy unverified (O1).
