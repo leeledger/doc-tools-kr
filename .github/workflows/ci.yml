@@ -61,6 +61,58 @@ jobs:
           include-hidden-files: true
           retention-days: 7
 
+  # PRINT1023 A (brief P14): the 증명사진 촬영 kill switch (PUBLIC_ID_CAMERA=0) is built on every PR, in parallel with the
+  # other jobs. Build 1: defaults; build 2: the production flags of dist-bgcloud below. check-dist runs in postbuild; after
+  # each build the unit tests that read dist/ run with the same env. postbuild.test.ts runs after build 1 only: it assumes
+  # a GA-, AdSense- and usage-off dist (5 of its tests fail on any dist-bgcloud-like build, camera on or off; BUILD-LOG
+  # PRINT1023 A Known Gaps). ga.test.ts is left out: it runs its own GA-on build, covered by the checks job.
+  flag-off:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Build (camera off, defaults; check-dist in postbuild)
+        run: npm run build
+        env:
+          PUBLIC_ID_CAMERA: '0'
+      - name: Unit tests that read dist/ (camera off, defaults)
+        run: npx vitest run tests/unit/postbuild.test.ts tests/unit/en-check.test.ts tests/unit/hwp-viewer.test.ts
+        env:
+          PUBLIC_ID_CAMERA: '0'
+      - name: Build (camera off, production flags as dist-bgcloud; check-dist in postbuild)
+        run: rm -rf dist && npm run build
+        env:
+          PUBLIC_ID_CAMERA: '0'
+          PUBLIC_BG_REMOVE: '1'
+          PUBLIC_BG_CLOUD: '1'
+          PUBLIC_PRIVACY_OFFICER: '이종림'
+          PUBLIC_CONTACT_EMAIL: 'robotncoding@kakao.com'
+          PUBLIC_USAGE_STATS: '1'
+          PUBLIC_GA_ID: 'G-TEST000000'
+          PUBLIC_AFF_COUPANG: '1'
+          PUBLIC_ADDR_EN: '1'
+          PUBLIC_ADSENSE_ON: '1'
+          PUBLIC_ADSENSE_CLIENT: 'ca-pub-0000000000000000'
+      - name: Unit tests that read dist/ (camera off, production flags)
+        run: npx vitest run tests/unit/en-check.test.ts tests/unit/hwp-viewer.test.ts
+        env:
+          PUBLIC_ID_CAMERA: '0'
+          PUBLIC_BG_REMOVE: '1'
+          PUBLIC_BG_CLOUD: '1'
+          PUBLIC_PRIVACY_OFFICER: '이종림'
+          PUBLIC_CONTACT_EMAIL: 'robotncoding@kakao.com'
+          PUBLIC_USAGE_STATS: '1'
+          PUBLIC_GA_ID: 'G-TEST000000'
+          PUBLIC_AFF_COUPANG: '1'
+          PUBLIC_ADDR_EN: '1'
+          PUBLIC_ADSENSE_ON: '1'
+          PUBLIC_ADSENSE_CLIENT: 'ca-pub-0000000000000000'
+
   # One job per Playwright project, run in parallel. The full 5-project suite in a
   # single job ran past the 30-minute limit.
   e2e:

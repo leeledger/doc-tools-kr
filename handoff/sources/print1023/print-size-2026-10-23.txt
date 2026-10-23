@@ -1,0 +1,9 @@
+PRINT1023 sources (Arch, 2026-10-23). Bob re-fetches each page in Step B0 and pastes the raw text lines below it (verbatim);
+the page copy may cite only lines found here verbatim.
+
+1. 찍스 (zzixx) home, https://www.zzixx.com/ , fetched 2026-10-23 (Arch, WebFetch digest, NOT yet a raw dump):
+   bestseller section lists 「4x6 (10.2cm x 15.1cm)」.
+   -> Bob: raw-dump the page (curl or chrome-cdp), confirm the exact string, paste the surrounding line here.
+2. Second print service listing a 4x6 size: Bob tries 2 more (e.g. a 사진 인화 price page of another Korean service);
+   paste verbatim or write "not found" with the URL and date.
+3. Not sourced (never stated on a page): kiosk (편의점) support, "fit/fill" print options, print accuracy.

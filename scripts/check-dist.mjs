@@ -686,6 +686,9 @@ if (!addrEn) {
       for (const p of [ID_CAMERA_PATH, ID_CAMERA_GUIDE_PATH]) if (text.includes(p)) errors.push(`${f}: names ${p} in a build with PUBLIC_ID_CAMERA off`);
     }
     for (const f of files) if (f.path.includes(ID_CAMERA_GUIDE_PATH.split('/')[2])) errors.push(`${f.path}: the 증명사진 촬영 guide in a build with PUBLIC_ID_CAMERA off`);
+    // PRINT1023 A: the 배경 지우기 tool note gates its 증명사진 촬영 hand-over passage (gateNoteHtml, src/data/tool-notes.ts).
+    const bg = pageHtml.get('remove-background/index.html') ?? '';
+    if (bg.includes('증명사진 촬영')) errors.push('remove-background/index.html: names 증명사진 촬영 in a build with PUBLIC_ID_CAMERA off');
   } else {
     const html = pageHtml.get('id-photo-camera/index.html');
     if (!html) errors.push('id-photo-camera/index.html: no file found');

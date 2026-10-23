@@ -4110,3 +4110,53 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   build + check-dist OK; guide-length self-id-photo 2,793; the guide's 15 quotes re-checked --exact: 0 changed.
   Commit df857a2 was cherry-picked onto idcam1022-d by the coordinator; E rebased (53d89b5).
 - Orchestrator 2026-10-23: local PUBLIC_ID_CAMERA=0 build of 11a9b56 (CI never builds it): check-dist OK, precache 423.9/450 KB; no dist/id-photo-camera or dist/guide/self-id-photo; 0 mentions in sitemap.xml, llms.txt, sw.js, _headers (no camera=(self)); /id-photo/ has no idp-camera link. One harmless trace: the IdPhotoTool chunk still holds the /id-photo-camera/ href template, guarded by a null element (dead code with the flag off). Known gap: CI has no flag-off build job.
+- Orchestrator 2026-10-23: IDCAM1022 D (#19, c8a2250) and E (#20, d927cb6) merged by the owner. The post-deploy run on c8a2250
+  failed smoke:assets with 2 x 404 (_astro/controller.Cn3O7YF3.js, _astro/limits.DPiqzkSO.js) while #20's deploy followed
+  right behind it; a manual `node scripts/smoke-assets.mjs https://docttak.com` on d927cb6 passed (2,555 URLs, manifest gen
+  101). Decision: treated as the overlap of two back-to-back deploys, not a product fault; watch the d927cb6 post-deploy run.
+  Live smoke on d927cb6: /guide/self-id-photo/ 200 (title OK, 2 figures 200, in sitemap.xml, guide/rss.xml, /guide/ and
+  llms.txt, no adsbygoogle, Permissions-Policy camera=()); /remove-background/?bg=white 200; /id-photo-camera/ 200 with the
+  #cam-bg 「배경을 흰색으로 바꾸기」 button in the HTML; /id-photo/ 200. Blog draft (reports/, untracked) placeholders filled:
+  guide links with each post's UTM campaign and the 이력서·반명함 background paragraph (passport and driver licence excluded).
+
+## PRINT1023 — design locked (Arch, 2026-10-23): 인화용 모아찍기 + CI flag-off job
+- Brief: handoff/ARCHITECT-BRIEF-PRINT1023.md (IDCAM1022 Step F). Sources: handoff/sources/print1023/print-size-2026-10-23.txt.
+- Steps: A = CI flag-off job (2 builds: PUBLIC_ID_CAMERA=0 default, and =0 with the production-like dist-bgcloud env) in a NEW
+  parallel job + closes the IDCAM1022 D gap (/remove-background/ tool note names 증명사진 촬영 with the camera off; gated on
+  __ID_CAMERA__ + check-dist rule). B = the sheet. C = /guide/self-id-photo/ section 「찍은 사진 종이로 뽑기」 + 1 own SVG.
+- Decisions (P1–P15): one sheet size 4×6 in at 300 ppi (1800×1200 / 1200×1800, JFIF 300, JPG); 4×6 cited to 찍스
+  「4x6 (10.2cm x 15.1cm)」 (B0 confirms verbatim); only presets with a sourced paper size (mm) get a sheet (no-mm presets and
+  custom: none, else we would invent a print size); tile rendered from the original at printPx(mm) (k = min ratio; gosi 411×531,
+  kuksiwon 413×530, hanja 350×472); margin 3 mm, gap 2 mm (our choices, never shown as rules) -> 35×45: 8 per sheet
+  (landscape 4×2), 30×40: 9 (portrait 3×3); 2 px #999 outline outside each tile, no text on the sheet; sheet only in the done
+  panel from the save snapshot (so D8c/lowres/outside blocks are honoured by construction); upscale note when st.s*k > 1;
+  encode worker reused (no limit); copy in SHEET_COPY (system font, stripped from the UI font); builder lazy-loaded; beacon
+  download o=sheet v=preset; no feature flag (revert = rollback); not in /embed/ or /en/; FAQ + tool note on /id-photo/,
+  keywords += 증명사진 출력/인쇄; no new guide (too few sourced print facts). Copy never names 편의점/키오스크 (unverified).
+- Owner-only: O1 print one passport sheet at any 4×6 service and measure a tile (3.5×4.5 cm expected); O2 optional kiosk try.
+- Known Gaps (PRINT1023): other sheet sizes (5×7, A4 home printer, L판), mixed presets on one sheet, copy-count picker, sheet in
+  /embed/ and /en/, PDF sheet; real print accuracy unverified (O1).
+
+## PRINT1023 A — CI flag-off job + /remove-background/ note gate (Bob, 2026-10-24) — DONE
+- Branch print1023-a. New parallel CI job `flag-off` (ubuntu-24.04, 25 min): PUBLIC_ID_CAMERA=0 default build + dist tests
+  (postbuild, en-check, hwp-viewer), then PUBLIC_ID_CAMERA=0 + the dist-bgcloud env + (en-check, hwp-viewer). Existing jobs
+  unchanged. Local wall time: each build ~42 s, postbuild+en-check+hwp-viewer ~220 s; CI wall time to be logged from the PR.
+- Gate mechanism (decision): Markdown cannot read __ID_CAMERA__, so the note marks the passage with
+  `<span data-requires="id-camera">`; NoteGate.astro renders the note through gateNoteHtml (src/data/tool-notes.ts):
+  unwrapped when on (HTML as before), dropped when off; unknown markers fail the build. Chosen over a remark plugin (the
+  content layer caches rendered Markdown across builds with different flags).
+- check-dist: camera off -> remove-background/index.html must not contain 증명사진 촬영 (verified it fires by injection).
+- Root cause found by the new job: postbuild.test.ts publishedGuides() ignored the camera flag (expected
+  /guide/self-id-photo/ in a camera-off dist, 9 failures); fixed by passing existsSync(dist/id-photo-camera).
+- Gates: check 0/0; default, camera-off and camera-off+production builds check-dist OK (precache 427.1 / 424.5 / 435.6 KB);
+  dist tests green on each as the job runs them; tool-notes+guides-schema 52/52. Full npm test not run (memory).
+- Known Gaps (PRINT1023 A): postbuild.test.ts assumes a GA-, AdSense- and usage-off dist: 5 tests fail on any
+  dist-bgcloud-like build, camera on or off (check-dist re-run after gen-headers vs AdSense detach x2, privacy 시행일,
+  a docttak string in ui-shared/utm-land chunks, example.kr contact line), so the job runs it after build 1 only.
+  check:quotes --exact: 1 Apple 미리보기 quote drifted at the source (unrelated).
+- Orchestrator 2026-10-24, PRINT1023 A review (handoff/REVIEW-FEEDBACK-PRINT1023-A.md): clear, 0 Must Fix. Should Fix 1 done:
+  gateNoteHtml throws when an id-camera passage holds its own <span> (+ unit test, tool-notes 8/8). Should Fix 2 (cmp of a
+  camera-on tool-note page against a df5b753 build) not run: two extra full builds while Step B builds in parallel on this
+  low-memory machine; the code path for idCamera=true returns inner+space for the only marker, so the HTML differs only by
+  the removed wrapper. Known Gap tracked: postbuild.test.ts assumes GA/AdSense/usage off, so the flag-off job runs it on
+  build 1 only (5 tests fail on a production-flag dist, older than this step).
