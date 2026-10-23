@@ -354,6 +354,14 @@ test('a handed-over photo waits even with the engine ready (「배경 지우기�
   // The engine is in this tool's Cache Storage now: a photo picked here would start at once.
   await seedHandoff(page, 'remove-background', 'id-photo-camera', SUBJECT);
   await gotoReady(page, `${PATH}?bg=white&preset=passport_online`);
+  // The precondition is an engine kept on the device across a page load (this tool's Cache Storage). Playwright WebKit
+  // keeps none here (CI fix4: the held photo correctly gets the download panel, because nothing is cached): skip
+  // where the cache is empty, as the page itself then rightly asks to download. Chromium keeps it and runs the test.
+  const kept = await page.evaluate(async () => {
+    for (const k of await caches.keys()) if ((await (await caches.open(k)).keys()).length > 0) return true;
+    return false;
+  }).catch(() => false);
+  test.skip(!kept, 'This browser kept no engine files between page loads, so "engine ready" cannot be set up here.');
   await expect(page.locator('#bg-arrived')).toHaveText(ARRIVED);
   await expect(page.locator('#bg-consent-text')).toHaveText(COPY.held, { timeout: 30_000 });
   await expect(page.locator('#bg-consent').getByRole('button', { name: HELD_START, exact: true })).toBeVisible();

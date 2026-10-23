@@ -4037,3 +4037,22 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   _headers errors, which come from running it a second time after gen-headers has already written _headers, not from
   this change); remove-background.cloud.spec cloud-chromium 1 worker 16/16. Not run: remove-background.spec (dist-bg not
   rebuilt) -> CI.
+
+## IDCAM1022 D fix4 — bg-mobile-safari / webkit: "held photo waits with the engine ready" (Bob, 2026-10-23) — DONE_WITH_CONCERNS
+- Symptom (PR #19 c861314, #20): remove-background.spec.ts:348 on bg-mobile-safari (and webkit on #20) shows the download
+  line 「배경을 지우는 프로그램 13.6 MB를 한 번 받아요」 instead of COPY.held, every run; chromium passes.
+- Root cause (from code + log; WebKit not runnable here): the test's precondition is an engine kept on the device
+  across a page load (this tool's Cache Storage: isCached). In Playwright WebKit nothing is kept between the two page
+  loads. 13.6 MB = the WASM runtime alone (the stand-in model's bytes are patched to KB size), so the panel asks for
+  the uncached runtime: that is the right panel for a device with nothing cached, and a held photo still waits for the
+  press. Not a product bug in Step D. The test only looked as if it should work on WebKit because the existing
+  "second photo needs no consent" test stays on one page (live engine / in-page model), which needs no Cache Storage.
+- Change: the test checks this tool's Cache Storage on the held page and skips when it is empty ("engine ready" cannot
+  be set up), with a comment; chromium still runs it. No product change, budgets untouched (controller 14,769 B).
+- ads.cloud.spec.ts:76 (#idp-confirm "did not change its state", once on cloud-mobile-safari): the known WebKit flake
+  class logged since round 1 (BUILD-LOG lines on id-photo :532, stamp-signature "modes", C2 CI round 3), on a plain
+  /id-photo/ pick where the Step B receiver code does not run (no handoff marker). Not related; it passed on #20.
+- Known Gap: whether real Safari keeps the 배경 지우기 engine in Cache Storage between visits is unverified (pre-existing
+  C2 behaviour; owner real-phone check). If it does not, a held photo there shows the download panel, which is still
+  correct and still waits for the press.
+- Gates: `npm run check` 0 errors (spec only). No vitest (no unit file touched); no e2e run (WebKit needs memory).
