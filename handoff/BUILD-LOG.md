@@ -4154,6 +4154,7 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   dist-bgcloud-like build, camera on or off (check-dist re-run after gen-headers vs AdSense detach x2, privacy 시행일,
   a docttak string in ui-shared/utm-land chunks, example.kr contact line), so the job runs it after build 1 only.
   check:quotes --exact: 1 Apple 미리보기 quote drifted at the source (unrelated).
+<<<<<<< HEAD
 
 ## PRINT1023 B — 인화용 모아찍기 on /id-photo/ (Bob, 2026-10-24) — DONE
 - Branch print1023-b (on print1023-a). B0: 찍스 raw dump (curl, CP949 -> UTF-8, sha256 in the source file) CONFIRMS
@@ -4222,3 +4223,11 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   margin 0, added to the system-font list); `.out-links` again marks link blocks only (affiliate/print checks). The test is
   unchanged. Local: build + check-dist OK, REV3 1/1 and the two 모아찍기 specs 2/2 on chromium. Firefox also had ~30 scattered
   timeouts on that run (slow runner pattern seen on PR #16/#18); judged by the rerun.
+=======
+- Orchestrator 2026-10-24, PRINT1023 A review (handoff/REVIEW-FEEDBACK-PRINT1023-A.md): clear, 0 Must Fix. Should Fix 1 done:
+  gateNoteHtml throws when an id-camera passage holds its own <span> (+ unit test, tool-notes 8/8). Should Fix 2 (cmp of a
+  camera-on tool-note page against a df5b753 build) not run: two extra full builds while Step B builds in parallel on this
+  low-memory machine; the code path for idCamera=true returns inner+space for the only marker, so the HTML differs only by
+  the removed wrapper. Known Gap tracked: postbuild.test.ts assumes GA/AdSense/usage off, so the flag-off job runs it on
+  build 1 only (5 tests fail on a production-flag dist, older than this step).
+>>>>>>> origin/main

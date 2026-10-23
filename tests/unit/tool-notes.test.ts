@@ -87,6 +87,7 @@ describe('tool notes (CONTENT1021 D8)', () => {
     expect(gateNoteHtml(html, false)).toBe('<ul><li>여권은 원본을 쓰세요.</li></ul>');
     expect(gateNoteHtml('<p>그대로</p>', false)).toBe('<p>그대로</p>');
     expect(() => gateNoteHtml('<span data-requires="bg-remove">x</span>', true)).toThrow(/data-requires/);
+    expect(() => gateNoteHtml('<span data-requires="id-camera">a <span>b</span> c</span>', false)).toThrow(/own <span>/);
   });
 
   it('PRINT1023 A: the 배경 지우기 note marks its 증명사진 촬영 passage, and only there', () => {
