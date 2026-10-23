@@ -4213,3 +4213,7 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   the 1 fail = char-count 100k-chars-under-50 ms timing (50.65 ms under load), passes alone 21/21; guide-check,
   guides-schema, guide-length, idphoto-guides, drop-links, guide-out, postbuild 160/160; ad-hoc axe on
   /guide/self-id-photo/ light + dark (390 px): 0 serious/critical. e2e suites not run (content-only change).
+- Orchestrator 2026-10-24, PRINT1023 C review (handoff/REVIEW-FEEDBACK-PRINT1023-C.md): clear, 0 Must Fix, 0 Should Fix.
+  Decision on the escalated point: with PUBLIC_ID_CAMERA=0 the whole /guide/self-id-photo/ is dropped (guide-schema.ts:91), so
+  the new 「찍은 사진 종이로 뽑기」 section goes with it. Accepted: the flag is an emergency kill switch, and /id-photo/ keeps the
+  sheet how-to (tool note bullet + FAQ) in every build.
