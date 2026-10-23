@@ -4110,6 +4110,14 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   build + check-dist OK; guide-length self-id-photo 2,793; the guide's 15 quotes re-checked --exact: 0 changed.
   Commit df857a2 was cherry-picked onto idcam1022-d by the coordinator; E rebased (53d89b5).
 - Orchestrator 2026-10-23: local PUBLIC_ID_CAMERA=0 build of 11a9b56 (CI never builds it): check-dist OK, precache 423.9/450 KB; no dist/id-photo-camera or dist/guide/self-id-photo; 0 mentions in sitemap.xml, llms.txt, sw.js, _headers (no camera=(self)); /id-photo/ has no idp-camera link. One harmless trace: the IdPhotoTool chunk still holds the /id-photo-camera/ href template, guarded by a null element (dead code with the flag off). Known gap: CI has no flag-off build job.
+- Orchestrator 2026-10-23: IDCAM1022 D (#19, c8a2250) and E (#20, d927cb6) merged by the owner. The post-deploy run on c8a2250
+  failed smoke:assets with 2 x 404 (_astro/controller.Cn3O7YF3.js, _astro/limits.DPiqzkSO.js) while #20's deploy followed
+  right behind it; a manual `node scripts/smoke-assets.mjs https://docttak.com` on d927cb6 passed (2,555 URLs, manifest gen
+  101). Decision: treated as the overlap of two back-to-back deploys, not a product fault; watch the d927cb6 post-deploy run.
+  Live smoke on d927cb6: /guide/self-id-photo/ 200 (title OK, 2 figures 200, in sitemap.xml, guide/rss.xml, /guide/ and
+  llms.txt, no adsbygoogle, Permissions-Policy camera=()); /remove-background/?bg=white 200; /id-photo-camera/ 200 with the
+  #cam-bg 「배경을 흰색으로 바꾸기」 button in the HTML; /id-photo/ 200. Blog draft (reports/, untracked) placeholders filled:
+  guide links with each post's UTM campaign and the 이력서·반명함 background paragraph (passport and driver licence excluded).
 
 ## PRINT1023 — design locked (Arch, 2026-10-23): 인화용 모아찍기 + CI flag-off job
 - Brief: handoff/ARCHITECT-BRIEF-PRINT1023.md (IDCAM1022 Step F). Sources: handoff/sources/print1023/print-size-2026-10-23.txt.
