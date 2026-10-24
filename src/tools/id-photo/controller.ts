@@ -2,6 +2,7 @@
 // → exporting → done, plus error. One photo at a time; it never leaves the page: the pixels are decoded here,
 // measured here (MediaPipe, main thread) and encoded in a module worker created on the save click.
 import { CUSTOM_BOUNDS, DEFAULT_PRESET, cmLabel, customPreset, getPreset, outputName, type IdPreset } from '../../data/id-photo-presets';
+import { SHEET_COPY } from '../../data/print-sheet';
 import { shouldTryAutoFrame, sessionStore } from '../../lib/face/guard';
 import { hasFace, type FaceMeasure } from '../../lib/face/types';
 import { decodeImage } from '../../lib/image/decode';
@@ -12,6 +13,7 @@ import { clampZoom, minZoom, pan, pinch, rotate, snapRotation, zoomAt, zoomTo, t
 import type { EncodeRequest, EncodeResponse } from '../../lib/idphoto/encode.worker';
 import { autoFrame, manualFrame } from '../../lib/idphoto/frame';
 import { drawCrop, renderOutput, renderPreview } from '../../lib/idphoto/render';
+import { sheetPlan, sheetUpscales, type SheetPlan } from '../../lib/idphoto/sheet';
 import { checklist, headReading, limitLabel, type Checklist } from '../../lib/idphoto/warnings';
 import { announce as live, clearAlert } from '../../lib/ui/announce';
 import { renderSource } from './source';
@@ -146,6 +148,20 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
   const newBtn = must<HTMLButtonElement>('idp-new');
   // 이어서 하기: absent in the embed widget (REV5), which hands no file to another tool.
   const nextSlot = document.getElementById('idp-next');
+  // PRINT1023 B: 인화용 모아찍기, absent in the embed widget (P13).
+  const sheet = document.getElementById('idp-sheet')
+    ? {
+        box: must<HTMLElement>('idp-sheet'),
+        count: must<HTMLElement>('idp-sheet-count'),
+        make: must<HTMLButtonElement>('idp-sheet-make'),
+        lowres: must<HTMLElement>('idp-sheet-lowres'),
+        error: must<HTMLElement>('idp-sheet-error'),
+        result: must<HTMLElement>('idp-sheet-result'),
+        download: must<HTMLAnchorElement>('idp-sheet-download'),
+        preview: must<HTMLImageElement>('idp-sheet-preview'),
+        howto: must<HTMLElement>('idp-sheet-howto'),
+      }
+    : null;
 
   let model: SaveModel = INITIAL;
   let preset: IdPreset = getPreset(DEFAULT_PRESET)!;
@@ -167,6 +183,11 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
   let note = '';
   /** Where the open photo came from (OpenOptions.from); a photo picked or dropped here has none. */
   let from: string | null = null;
+  /** PRINT1023 P6: the preset and crop state of the save on screen (null outside phase done); the sheet uses only these. */
+  let snap: { p: IdPreset; st: CropState; plan: SheetPlan } | null = null;
+  let sheetRun = 0;
+  let sheetAbort: AbortController | null = null;
+  let sheetUrl: string | null = null;
 
   const say = (msg: string): void => live('status', msg, root);
 
@@ -178,6 +199,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
     exporting.hidden = p !== 'exporting';
     done.hidden = p !== 'done';
     if (p !== 'done' && nextSlot) hideNextSteps(nextSlot);
+    if (p !== 'done') hideSheet();
     drop.hidden = p !== 'empty' && p !== 'error';
   }
 
@@ -433,6 +455,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
   // ---------- photo ----------
 
   function releasePhoto(): void {
+    hideSheet();
     run++;
     auto?.skip();
     auto = null;
@@ -633,7 +656,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
       w.terminate();
       worker = null;
       const m = ev.data;
-      if (m.type === 'done') showDone(p, m.bytes, m.fallback);
+      if (m.type === 'done') showDone(p, st, m.bytes, m.fallback);
       else if (m.code === 'unreachable') backToAdjust('unreachable', COPY.unreachable((p.limitBytes ?? 0) / 1000, p.outW, p.outH));
       else if (m.code === 'engine') void engineFailed();
       else backToAdjust('verify', COPY.verify);
@@ -658,7 +681,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
     showError(msg);
   }
 
-  function showDone(p: IdPreset, bytes: Uint8Array, fallback: boolean): void {
+  function showDone(p: IdPreset, st: CropState, bytes: Uint8Array, fallback: boolean): void {
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' });
     resultUrl = URL.createObjectURL(blob);
@@ -700,6 +723,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
       }
     }
     hideError();
+    showSheet(p, st);
     setPhase('done');
     if (nextSlot) showNextSteps(nextSlot, 'id-photo', [{ blob, name }]);
     say(COPY.exported(name));
@@ -707,6 +731,94 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
     // the html scroll-padding-top (global.css), then the headline takes focus without a second scroll.
     done.scrollIntoView({ block: 'start', behavior: 'instant' });
     headline.focus({ preventScroll: true });
+  }
+
+  // ---------- 인화용 모아찍기 (PRINT1023 B) ----------
+
+  /** Ends a sheet in flight and drops the built one (its URL revoked); the block keeps its snapshot. */
+  function resetSheet(): void {
+    if (!sheet) return;
+    sheetRun++;
+    sheetAbort?.abort();
+    sheetAbort = null;
+    if (sheetUrl) URL.revokeObjectURL(sheetUrl);
+    sheetUrl = null;
+    sheet.result.hidden = true;
+    sheet.download.removeAttribute('href');
+    sheet.preview.removeAttribute('src');
+    sheet.error.hidden = true;
+    sheet.make.disabled = false;
+  }
+
+  function hideSheet(): void {
+    if (!sheet) return;
+    resetSheet();
+    snap = null;
+    sheet.box.hidden = true;
+  }
+
+  /** The block for this save: only a preset with a stated paper size has a sheet (P2). */
+  function showSheet(p: IdPreset, st: CropState): void {
+    if (!sheet) return;
+    hideSheet();
+    const plan = sheetPlan(p);
+    if (!plan || !p.mm) return;
+    snap = { p, st: { ...st }, plan };
+    const cm = cmLabel(p.mm);
+    sheet.count.textContent = cm + SHEET_COPY.countA + plan.n + SHEET_COPY.countB;
+    sheet.howto.textContent = SHEET_COPY.howtoA + cm + SHEET_COPY.howtoB;
+    sheet.lowres.hidden = !sheetUpscales(st.s, plan);
+    sheet.box.hidden = false;
+  }
+
+  async function makeSheet(): Promise<void> {
+    // Defensive (P6): never without the snapshot of a save on screen and its photo.
+    if (!sheet || !snap || !photo) return;
+    resetSheet();
+    const my = sheetRun;
+    const { p, st, plan } = snap;
+    const bitmap = photo.bitmap;
+    const ac = new AbortController();
+    sheetAbort = ac;
+    sheet.make.disabled = true;
+    say(SHEET_COPY.making);
+    let bytes: Uint8Array | null = null;
+    try {
+      const { buildSheet, pageDeps } = await import('./sheet-build');
+      if (my !== sheetRun) return;
+      const r = await buildSheet(bitmap, st, p, pageDeps(createEncodeWorker, ac.signal));
+      if (r.ok) bytes = r.bytes;
+    } catch {
+      bytes = null;
+    }
+    if (my !== sheetRun) return;
+    sheetAbort = null;
+    sheet.make.disabled = false;
+    if (!bytes) {
+      sheet.error.hidden = false;
+      say(SHEET_COPY.error);
+      // Review B Should Fix 1: the disabled button dropped keyboard focus; give it back.
+      sheet.make.focus();
+      return;
+    }
+    sheetUrl = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }));
+    sheet.download.href = sheetUrl;
+    sheet.download.download = `print4x6_${p.fileTag}_${plan.n}.jpg`;
+    sheet.preview.src = sheetUrl;
+    sheet.preview.width = plan.W;
+    sheet.preview.height = plan.H;
+    sheet.preview.alt = SHEET_COPY.altA + plan.n + SHEET_COPY.altB;
+    sheet.result.hidden = false;
+    say(SHEET_COPY.made);
+    // Review B Should Fix 1: focus moves to the new download link instead of being lost with the disabled button.
+    sheet.download.focus();
+  }
+
+  if (sheet) {
+    sheet.make.addEventListener('click', () => void makeSheet());
+    sheet.download.addEventListener('click', () => {
+      if (snap) track({ e: 'download', t: 'id-photo', o: 'sheet', v: snap.p.id });
+    });
   }
 
   zoom2.addEventListener('change', () => {
@@ -731,6 +843,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
   window.addEventListener('pagehide', () => {
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     resultUrl = null;
+    resetSheet();
   });
   download.addEventListener('click', () => track({ e: 'download', t: 'id-photo' }));
   // 인화·사진관 링크 (REV2, REV3 trackOut): only the link kind is counted; the browser opens the new tab as usual.

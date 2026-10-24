@@ -677,6 +677,9 @@ if (!addrEn) {
   const idPhoto = pageHtml.get('id-photo/index.html') ?? '';
   const embed = pageHtml.get('embed/id-photo/index.html') ?? '';
   if (embed.includes('id="idp-camera"')) errors.push('embed/id-photo/index.html: has the 「카메라로 찍기」 link (not in the widget)');
+  // PRINT1023 B (P13): the 인화용 모아찍기 block is on /id-photo/ and in no embed widget.
+  if (!idPhoto.includes('id="idp-sheet"')) errors.push('id-photo/index.html: no 인화용 모아찍기 block (#idp-sheet)');
+  for (const [path, html] of pageHtml) if (path.startsWith('embed/') && html.includes('id="idp-sheet"')) errors.push(`${path}: has the 인화용 모아찍기 block (not in the widget)`);
   if (!USAGE_TOOLS.includes('id-photo-camera')) errors.push('scripts/lib/usage.mjs: TOOLS has no id-photo-camera');
   if (!idCamera) {
     for (const f of files) if (f.path.startsWith(ID_CAMERA_PATH.slice(1))) errors.push(`${f.path}: the 증명사진 촬영 page in a build with PUBLIC_ID_CAMERA off`);

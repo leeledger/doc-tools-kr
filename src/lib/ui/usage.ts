@@ -4,7 +4,7 @@
 // navigator.sendBeacon. The payload is built field by field from the whitelist in scripts/lib/usage.mjs; nothing
 // about the file (name, size, content) is ever part of it. Sampling is decided once per page load; at most 40 events
 // leave one page load.
-import { BUILD_RE, CAMPAIGN_RE, CODE_RE, MAX_EVENTS, USAGE_PATH, UTM_SOURCES, sampleWeight, utmOf } from '../../../scripts/lib/usage.mjs';
+import { BUILD_RE, CAMPAIGN_RE, CODE_RE, MAX_EVENTS, SHEET_PRESETS, USAGE_PATH, UTM_SOURCES, sampleWeight, utmOf } from '../../../scripts/lib/usage.mjs';
 import { parse as parseDeep } from './deeplink';
 import { detectDevice, type Device } from './device';
 
@@ -54,6 +54,8 @@ export type UsageEvent =
   | { e: 'download'; t: 'english-address'; o: 'field'; v: AddrField }
   /** 위임장 만들기 내려받기 (FORM1020 D9): HWP or PDF; never a value. */
   | { e: 'download'; t: FormToolId; o: 'format'; v: FormFormat }
+  /** 여권·증명사진 인화용 모아찍기 내려받기 (PRINT1023 P12): the preset id (SHEET_PRESETS); the plain download has no o / v. */
+  | { e: 'download'; t: 'id-photo'; o: 'sheet'; v: string }
   | ({ e: 'start'; t: UsageTool } & (UsageSetting | { o?: undefined; v?: undefined }))
   /** 이어서 하기 (CHAIN): the result of `t` was handed to the tool `v`. */
   | { e: 'next'; t: UsageTool; o: 'next'; v: UsageTool }
@@ -118,6 +120,9 @@ export function buildPayload(ev: UsageEvent | Arrive | Land, ctx: PayloadContext
     p.o = ev.o;
     p.v = ev.v;
   } else if (ev.e === 'download' && (ev.t === 'power-of-attorney' || ev.t === 'loan-note') && 'o' in ev && ev.o === 'format' && FORM_FORMATS.includes(ev.v)) {
+    p.o = ev.o;
+    p.v = ev.v;
+  } else if (ev.e === 'download' && ev.t === 'id-photo' && 'o' in ev && ev.o === 'sheet' && SHEET_PRESETS.includes(ev.v)) {
     p.o = ev.o;
     p.v = ev.v;
   } else if (ev.e === 'arrive') {
