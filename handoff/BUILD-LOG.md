@@ -4228,3 +4228,20 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   margin 0, added to the system-font list); `.out-links` again marks link blocks only (affiliate/print checks). The test is
   unchanged. Local: build + check-dist OK, REV3 1/1 and the two 모아찍기 specs 2/2 on chromium. Firefox also had ~30 scattered
   timeouts on that run (slow runner pattern seen on PR #16/#18); judged by the rerun.
+
+## PRINT1023 — merged and live (orchestrator, 2026-10-24) — DONE
+- PR #22 (Step A, c2f857a) and PR #23 (Steps B+C, 484c4a1) merged by the owner. #23 conflicted in BUILD-LOG after #22 (CRLF);
+  the first merge commit a376fc5 carried conflict markers (the resolve script looked for LF markers), fixed in c8f0d70 before
+  the merge; no markers anywhere in the tree. The owner merged #23 while its `checks` job (build + LHCI) was still pending;
+  its five e2e engines and flag-off were green on that head. main CI on 484c4a1 runs the same job; result checked below.
+- Post-deploy (Ops A-1 live check, A-2 IndexNow): success.
+- Live smoke (curl + headless Chromium on https://docttak.com, the portrait_pd fixture):
+  /id-photo/?preset=passport_online: 모아찍기 block shows 「3.5×4.5 cm 사진 8장」, file print4x6_passport_8.jpg 1800×1200,
+  focus on 「모아찍기 내려받기」; ?preset=police: 「3×4 cm 사진 9장」, print4x6_police_9.jpg 1200×1800; ?preset=saramin: no block.
+  POSTs only cloudflareinsights rum, /api/usage and GA collect (no file bytes). FAQ 「여러 장 인화하려면」 live.
+  /guide/self-id-photo/: section 「찍은 사진 종이로 뽑기」 and /img/guide/self-id-photo/3-print-sheet.svg (200, svg, 8,155 B);
+  sitemap.xml lastmod 2026-10-24. /remove-background/: the 증명사진 촬영 passage is shown (camera on in production).
+- Cleanup: worktrees print1023-b/c removed (node_modules junctions unlinked first, root node_modules intact); branches
+  print1023-a/b/c deleted locally and on origin. The empty folder wt/print1023-c was busy; delete it later.
+- Owner items (unchanged): O1 print a passport sheet at a 4×6 photo kiosk/lab and measure 3.5×4.5 cm; real iPhone/Galaxy
+  camera test incl. KakaoTalk/Naver in-app.
