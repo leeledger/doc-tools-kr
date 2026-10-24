@@ -1,6 +1,17 @@
-# 문서딱 — cloud handoff (2026-09-30)
+# 문서딱 — cloud handoff (updated 2026-10-24)
 
 Read this first in any new session (local or cloud). It supersedes `SESSION-CHECKPOINT.md`.
+
+## 0. Current state (2026-10-24) — read before the older sections below
+- Sections 1-5 below are from 2026-09-30 and mostly out of date (hwp-direct, growth-g and many later steps shipped).
+  The live tool list is in CLAUDE.md; the full history is in handoff/BUILD-LOG.md (newest entries at the end).
+- Last shipped: IDCAM1022 (증명사진 촬영 /id-photo-camera/, PRs #16-#20) and PRINT1023 (PRs #22-#23): CI flag-off job,
+  인화용 모아찍기 (4×6 sheet) on /id-photo/, guide section on /guide/self-id-photo/. Live smoke OK (BUILD-LOG).
+- Budget rule: production precache is 444.8 / 450 KB. The next feature that adds precached bytes must first move a page
+  or chunk to the runtime cache. Never raise the budget.
+- Deploy: open a PR, wait for green CI, the owner merges with `gh pr merge N --merge` (never --auto).
+- Owner-only: print a passport sheet at 4×6 and measure 3.5×4.5 cm; real-phone camera test (iPhone, Galaxy, KakaoTalk
+  and Naver in-app); Naver blog posts B/C are scheduled for 2026-10-26 and 2026-10-28 09:00.
 
 ## 1. What is live (main)
 - https://docttak.com, served from `main` via Cloudflare Pages project `doc-tools-kr`.
