@@ -4321,3 +4321,49 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   stricter); E3 any trademark line quotes the saved qrcode.com sentence verbatim. Review notes carried into Step B/C: copy
   states no Wi-Fi name length (the 32 cap counts characters, not bytes); Step C live smoke opens a contact-card URL that holds
   a comma.
+
+## CARD1026 B — /qr-code/ QR코드 만들기 (Bob, 2026-10-26) — DONE
+- Built (brief Step B, C9/C10/C12/C14–C16/C18): src/pages/qr-code/index.astro (6 kinds in the C10 order, ?tab= read once,
+  never written), src/tools/qr-code/{entry,controller}.ts + qr-code.css, the shared src/components/ContactFields.astro +
+  src/styles/contact-fields.css + src/lib/qr/contact.ts (`checkContact`, `contactEmpty`, messages; Step C reuses all
+  three), tool note src/content/tool-notes/qr-code.md (4 CONTENT1021 headings, 2,231 chars, 3 qrcode.com quotes, toolFacts
+  qr-code.maxBytes 2,331 / smsMax 300 / quietModules 4, the C16 line verbatim per E3), FAQ ×5, full registration.
+- Registration: tools.ts (right after stamp-maker; menu/home cards follow TOOLS order), site.ts HOME_DESC_ORDER (right
+  after stamp-maker), og.json image + page, JSON-LD WebApplication + Breadcrumb + FAQPage, sitemap/llms.txt (generated
+  from TOOLS; checked in dist), tool-facts.ts, usage TOOLS/label/UsageTool, gen-sw NOT_PRECACHED + sw.ts RUNTIME_PAGES,
+  bgcloud LOCAL_SCOPE_RE, lighthouserc, qa/visual, check-dist block, docs/COPY.md line, tests (site/polish lists, home card
+  count 22 → 23, postbuild OG/precache/og:image lists, polish HOME_DESC_ORDER + runtime-cache list, bgcloud scope,
+  tool-notes count 24 → 25, usage unit + cloud e2e). Not done here: tool-guide-order pin and NEXT_GUIDES (no QR guide
+  until Step D; nothing else fits), reverse RelatedTools links (Step C per the Build Order), CLAUDE.md line 3 (orchestrator).
+- Decisions (Bob): (a) kinds = a radio group of chips (fieldset + native radios: arrow keys and axe for free, no tablist
+  code). (b) Panel switching and ?tab= live in the tiny entry so they work before the controller loads; the controller
+  loads on focus/key/press/input in the tool or first signal + idle. (c) Errors: a wrong format shows while typing; a
+  missing required field (empty URL/text/phone, Wi-Fi name/password, 「이름이나 회사…」) only on a 받기 click, which also
+  focuses the first field in error and downloads nothing; outputs (the preview) stay empty while invalid, the two buttons
+  stay visible so the click can explain. (d) A 받기 press that triggers the controller load is replayed after init (e2e
+  caught the lost first click: root cause = the click fired before the controller's listener existed). (e) Wi-Fi password
+  is a plain text field (no password-manager save prompt = no storage), maxlength 100 (attribute only, no copy states a
+  length); SSID maxlength = SSID_MAX, never stated (Richard A note). (f) No hidden-network option (E1): payload hidden
+  false; e2e asserts no checkbox. (g) Usage: start (no setting) once at the first QR shown, download (no setting) per
+  file, fail c=engine on a failed controller load; DOWNLOAD_SETTING unchanged. (h) Preview = qrSvg via innerHTML (matrix
+  only, no typed text inside). (i) Title shortened to 38 chars: 「QR코드 만들기 — 무료, 가입 없이 와이파이·연락처 QR | 문서딱」
+  (the brief's was 45 > 40; kept head keyword + 가입 없이, dropped 인터넷 주소).
+- Glyphs (C15): 0 new core, 0 new late (diff of uiCharSets before/after; reworded 바뀝니다/나옵니다/모르겠다면/뽑아 that would
+  have added 뀝 옵 겠 뽑). gen-ui-font: core 615, late 82. Fonts default build: preloaded 92.1 / 92.66 KB (unchanged from
+  Step A), late 7.5 / 7.9 of 8 KB, total 107.5 / 190 KB; production-flag build: preloaded 92.2, total 107.6.
+- Budgets (C14): /qr-code/ initial JS 9.1 KB gzip default, 10.7 KB production flags (usage tracker) — budget 12.9 (10.7 +
+  20 %); controller (lazy: uqr + payload + render + vcard + contact) 7.6 KB — budget 9.2. Precache: default 437.2 / 450 KB
+  (28 URLs; Step A 432.9, +4.3 from the menu/home entries), production flags 444.7 / 450 (25 URLs) — under 450, so
+  /photo-compress/ stays precached (D10 fallback not needed). PRECACHE_LIMIT unchanged.
+- Gates (local, low-memory host, targeted per the orchestrator): npm run check 0 errors / 0 warnings. vitest: qr-* (5 files
+  incl. new qr-contact), postbuild, polish, usage, tool-notes, bgcloud, sw + 19 more registry-reading files (meta-length,
+  network-guard, next-steps, manifest, guides-schema, guide-check, indicators, deeplink, embed, en-check, idphoto-guides,
+  char-count, loan-note, power-of-attorney, english-name-data, id-photo-camera, print-sheet, addren-flag, adsense): all
+  green (471 + 307). Builds: production flags (`PUBLIC_SITE_URL=https://docttak.com` + the ci.yml dist-bgcloud flags) and
+  default, check-dist OK on both. e2e chromium (E2E_PORT=4273): qr-code.spec 10/10, site.spec + polish.spec all green
+  (after adding QR코드 만들기 to polish LIVE). Quotes: the 3 tool-note quotes checked verbatim against the live pages with
+  the source-watch exact helpers (pageTextExact/hasExactQuote), all found. check:licenses: FAILs in a worktree (junction;
+  as PRINT1023 B / CARD1026 A); no dependency change in this step. Not run locally: firefox/webkit/mobile projects, the
+  cloud usage spec (new test added), LHCI median of 5 — CI.
+- Known Gaps: Step D adds the qr-code guide pin + NEXT_GUIDES; O1 real-phone scans (Wi-Fi join with `;`, 홍길동 contact,
+  SMSTO on iPhone) still owner-only.

@@ -1,0 +1,27 @@
+/* QR코드 만들기 (/qr-code/, CARD1026 Step B). Inlined on that page only. */
+.qr { display: grid; gap: 14px; text-align: left; }
+.qr-kinds { border: 0; margin: 0; padding: 0; min-width: 0; }
+.qr-kinds legend { font-weight: 800; margin-bottom: 8px; padding: 0; }
+.qr-panel { display: grid; gap: 6px; }
+.qr-panel[hidden] { display: none; }
+.qr-panel > label, .qr-pw > label { font-weight: 800; }
+.qr-panel > label:not(:first-child) { margin-top: 8px; }
+.qr-input {
+  width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--muted); border-radius: 10px;
+  background: var(--bg); color: var(--text); font: inherit; font-size: 17px;
+}
+textarea.qr-input { resize: vertical; }
+.qr-input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.qr-input[aria-invalid="true"] { border-color: var(--danger); }
+.qr-sec { border: 0; margin: 8px 0 0; padding: 0; min-width: 0; display: grid; }
+.qr-sec legend { font-weight: 800; padding: 0; }
+.qr-pw { display: grid; gap: 6px; margin-top: 4px; }
+.qr-pw[hidden] { display: none; }
+.qr-out { display: grid; gap: 10px; justify-items: center; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.qr-preview { width: min(100%, 280px); aspect-ratio: 1; display: grid; place-items: center; border-radius: 8px; background: #fff; }
+.qr-preview svg { width: 100%; height: 100%; display: block; }
+.qr-preview.is-empty { border: 2px dashed var(--line); background: var(--bg); }
+.qr-empty { margin: 0; padding: 0 16px; text-align: center; color: var(--muted); font-size: 15px; }
+.qr-out .field-error, .qr-dense { text-align: center; }
+.qr-dense[hidden] { display: none; }
+.qr-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }

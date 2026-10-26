@@ -22,6 +22,7 @@
         "http://127.0.0.1:4173/id-copy/",
         "http://127.0.0.1:4173/pdf-edit/",
         "http://127.0.0.1:4173/stamp-maker/",
+        "http://127.0.0.1:4173/qr-code/",
         "http://127.0.0.1:4173/english-name/",
         "http://127.0.0.1:4173/power-of-attorney/",
         "http://127.0.0.1:4173/loan-note/",

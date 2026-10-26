@@ -1571,3 +1571,20 @@ describe('영문주소 변환기 (ADDREN1016 decision 17; acting-Arch: the DOWNL
     expect(validate(JSON.stringify(p))).not.toBeNull();
   });
 });
+
+describe('QR코드 만들기 (CARD1026 C12)', () => {
+  it('tool with start, download and the engine fail only; no setting on its events, so no typed value or payload has a field', () => {
+    expect(TOOLS).toContain('qr-code');
+    for (const e of ['start', 'download']) expect(validate(body({ ...BASE, t: 'qr-code', e })), e).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'qr-code', e: 'fail', c: 'engine', p: 'load' }))).not.toBeNull();
+    for (const [o, v] of [['form', 'joined'], ['field', 'line1'], ['format', 'pdf'], ['style', 'round']]) {
+      expect(validate(body({ ...BASE, t: 'qr-code', e: 'download', o, v })), o).toBeNull();
+    }
+    for (const v of ['https://docttak.com/', 'WIFI:T:WPA;S:a;P:b;;', 'tel:01012345678', '홍길동']) expect(validate(body({ ...BASE, t: 'qr-code', e: 'start', o: 'preset', v })), v).toBeNull();
+  });
+
+  it('admin label is Korean: QR코드 만들기', () => {
+    const [tools] = shapeUsage({ events: [{ tool: 'qr-code', event: 'download', via: 'direct', n: 2 }], settings: [] }).tables;
+    expect(tools!.rows[0]![0]).toBe('QR코드 만들기');
+  });
+});

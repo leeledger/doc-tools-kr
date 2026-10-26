@@ -23,6 +23,9 @@ import { KB_BYTES, RANGES } from '../tools/photo-compress/options';
 import { POWER_OF_ATTORNEY } from './forms/power-of-attorney';
 import { LOAN_NOTE } from './forms/loan-note';
 import { AMOUNT_MAX_DIGITS } from '../lib/form/values';
+import { QR_MAX_BYTES } from '../lib/qr/encode';
+import { SMS_MAX } from '../lib/qr/payload';
+import { QUIET } from '../lib/qr/render';
 
 /** A unit the fact check knows (a fact without one is a count or a word and is not number-checked). */
 export type FactUnit = 'KB' | 'MB';
@@ -85,6 +88,10 @@ export const TOOL_FACTS = {
   // LOAN1022: the 차용증 form (src/data/forms/loan-note.ts, src/lib/form/values.ts).
   'loan-note.termsMaxLines': { value: LOAN_NOTE.fields.find((f) => f.id === 'terms')?.maxLines ?? 0 },
   'loan-note.amountMaxDigits': { value: AMOUNT_MAX_DIGITS },
+  // CARD1026: QR코드 만들기 (src/lib/qr): the most bytes one QR holds (version 40-M), the 문자 message limit, the quiet zone.
+  'qr-code.maxBytes': { value: QR_MAX_BYTES },
+  'qr-code.smsMax': { value: SMS_MAX },
+  'qr-code.quietModules': { value: QUIET },
   'pdf-edit.maxFileMb.desktop': { value: PDF_EDIT_LIMITS.desktop.maxFileBytes / MB, unit: 'MB' },
   'pdf-edit.maxFileMb.mobile': { value: PDF_EDIT_LIMITS.mobile.maxFileBytes / MB, unit: 'MB' },
   'pdf-edit.maxItems': { value: PDF_EDIT_MAX_ITEMS },

@@ -37,6 +37,7 @@ export const HOME_DESC_ORDER: readonly string[] = [
   'image-to-jpg',
   'pdf-edit',
   'stamp-maker',
+  'qr-code',
   'hwp-to-pdf',
   'hwpx-to-hwp',
   'hwp-viewer',

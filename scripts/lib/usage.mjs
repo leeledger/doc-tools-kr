@@ -46,7 +46,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out', 'land'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address', 'power-of-attorney', 'loan-note', 'id-photo-camera'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address', 'power-of-attorney', 'loan-note', 'id-photo-camera', 'qr-code'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct', 'embed'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -386,6 +386,7 @@ export const TOOL_LABELS = {
   'power-of-attorney': '위임장 만들기',
   'loan-note': '차용증 만들기',
   'id-photo-camera': '증명사진 촬영',
+  'qr-code': 'QR코드 만들기',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**

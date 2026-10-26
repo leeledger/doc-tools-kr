@@ -44,6 +44,7 @@ const PAGES = [
   ['idcopy', '/id-copy/'],
   ['pdfedit', '/pdf-edit/'],
   ['stampmaker', '/stamp-maker/'],
+  ['qrcode', '/qr-code/'],
   ['englishname', '/english-name/'],
   ['powerofattorney', '/power-of-attorney/'],
   ['loannote', '/loan-note/'],

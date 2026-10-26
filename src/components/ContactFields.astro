@@ -1,0 +1,43 @@
+---
+// Contact fields (CARD1026 C9), shared by the /qr-code/ 연락처 tab and /business-card/: the same labels, limits and
+// error slots on both pages; src/lib/qr/contact.ts checks them. Every input has data-contact="<key>" and its own
+// error line (#<id>-error, aria-describedby); no name attribute and no form, so nothing is ever submitted. The
+// styles live in src/styles/contact-fields.css (inlined by each page).
+import { CONTACT_MAX, type ContactFields } from '../lib/qr/vcard';
+
+interface Props {
+  /** Id prefix of this page (qr → #qr-c-last …). */
+  prefix: string;
+}
+const { prefix } = Astro.props;
+
+type Key = keyof ContactFields;
+const fields: { key: Key; label: string; type?: 'tel' | 'email'; inputmode?: 'tel' | 'email' | 'url'; wide?: boolean; multi?: boolean; placeholder?: string }[] = [
+  { key: 'last', label: '성', placeholder: '예: 이' },
+  { key: 'first', label: '이름', placeholder: '예: 서연' },
+  { key: 'org', label: '회사', wide: true },
+  { key: 'dept', label: '부서' },
+  { key: 'title', label: '직함' },
+  { key: 'mobile', label: '휴대폰', type: 'tel', inputmode: 'tel', placeholder: '예: 010-1234-5678' },
+  { key: 'work', label: '회사 전화', type: 'tel', inputmode: 'tel' },
+  { key: 'fax', label: 'FAX', type: 'tel', inputmode: 'tel' },
+  { key: 'email', label: '이메일', type: 'email', inputmode: 'email' },
+  { key: 'url', label: '홈페이지', inputmode: 'url', wide: true },
+  { key: 'address', label: '주소', wide: true },
+  { key: 'note', label: '메모', wide: true, multi: true },
+];
+const id = (k: Key): string => `${prefix}-c-${k}`;
+---
+<div class="cf-grid" id={`${prefix}-contact`}>
+  {fields.map((f) => (
+    <div class={f.wide ? 'cf-field cf-wide' : 'cf-field'}>
+      <label for={id(f.key)}>{f.label}</label>
+      {f.multi ? (
+        <textarea id={id(f.key)} class="cf-input" data-contact={f.key} rows="2" maxlength={CONTACT_MAX[f.key]} autocomplete="off" spellcheck="false" aria-describedby={`${id(f.key)}-error`}></textarea>
+      ) : (
+        <input id={id(f.key)} class="cf-input" data-contact={f.key} type={f.type ?? 'text'} inputmode={f.inputmode} maxlength={CONTACT_MAX[f.key]} placeholder={f.placeholder} autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby={`${id(f.key)}-error`}>
+      )}
+      <p class="field-error" id={`${id(f.key)}-error`}></p>
+    </div>
+  ))}
+</div>
