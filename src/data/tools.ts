@@ -873,6 +873,42 @@ export const TOOLS: Tool[] = [
     keywords: ['도장 만들기', '도장 이미지 만들기', '인감도장 만들기', '전자도장 만들기', '직인 만들기', '회사 직인 만들기'],
   },
   {
+    // CARD1026 Step B. name = h1 (COPY.md). Right after 도장 만들기 (C18). Every visible string here is in the preloaded
+    // UI font (brief: 큐 팩 숨 김 톡 촘 틀 힐 랑 are not; 큐알코드 only in the keywords). Static QR only (C1).
+    slug: 'qr-code',
+    name: 'QR코드 만들기',
+    title: 'QR코드 만들기 — 무료, 가입 없이 와이파이·연락처 QR | 문서딱',
+    description: 'QR코드 만들기 무료: 인터넷 주소·와이파이·연락처·전화·문자를 PNG·SVG로 받아요. 기간이 지나도 QR이 멈추지 않아요.',
+    h1: 'QR코드 만들기',
+    summary: '인터넷 주소, 와이파이, 연락처, 전화, 문자, 글자를 QR코드로 만들어 PNG·SVG 그림으로 받습니다. 기간이 지나도 멈추지 않습니다.',
+    icon: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM21 14v2M14 21h3M20 19v2h1"/>',
+    status: 'live',
+    updated: '2026-10-26',
+    faq: [
+      {
+        q: 'QR코드는 어떻게 만드나요?',
+        a: '인터넷 주소, 글자, 연락처, 와이파이, 전화, 문자 가운데 담을 것을 고르고 칸을 채우면 바로 QR이 보입니다. 「QR 그림 받기 (PNG)」나 「SVG로 받기」를 누르면 그림 파일로 받을 수 있습니다. 가입 없이 무료입니다.',
+      },
+      {
+        q: '만든 QR코드는 언제까지 쓸 수 있나요?',
+        a: '기간 없이 계속 쓸 수 있습니다. 쓴 내용을 QR 안에 그대로 담아 다른 곳을 거치지 않고 바로 열리기 때문에, 기간이 지나도 QR이 멈추지 않습니다. 대신 담은 내용은 나중에 바꿀 수 없으니, 바꾸려면 새로 만들어 주세요.',
+      },
+      {
+        q: '와이파이 QR코드는 어떻게 쓰나요?',
+        a: '「와이파이」를 고르고 와이파이 이름과 비밀번호를 씁니다. 보안 방식을 모르면 대부분 쓰는 「WPA·WPA2·WPA3」를 그대로 두세요. 휴대폰 카메라로 QR을 찍으면 비밀번호를 치지 않고 연결할 수 있습니다. 기기마다 화면이 다를 수 있습니다.',
+      },
+      {
+        q: 'PNG와 SVG는 무엇이 다른가요?',
+        a: 'PNG는 문서, 메신저, 발표 자료에 바로 넣기 좋은 그림 파일입니다. SVG는 크게 키워도 칸이 흐려지지 않아 큰 인쇄물에 좋습니다. 어느 쪽인지 모르면 PNG를 받으세요.',
+      },
+      {
+        q: '쓴 내용이 어디로 보내지나요?',
+        a: '어디로도 보내지 않습니다. QR은 이 기기 안에서 만들고, 쓴 내용은 저장하지 않습니다.',
+      },
+    ],
+    keywords: ['QR코드 만들기', '큐알코드 만들기', 'QR코드 생성', '와이파이 QR코드', 'QR코드 만들기 무료', '연락처 QR코드'],
+  },
+  {
     // Sprint C, C1. name = h1 (COPY.md; the brief's shorter name "전자서명·도장 이미지" would break that rule).
     slug: 'stamp-signature',
     name: '전자서명·도장 이미지 만들기',

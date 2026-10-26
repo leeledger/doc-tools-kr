@@ -34,6 +34,9 @@ const KB = 1024;
 const STAMP_CONTROLLER_KB = 13.6;
 /** /english-name/ initial JS gzip (ROMANIZE1016 D7: measured + 20 %, < 30 KB; BUILD-LOG R2). */
 const ENGLISH_NAME_INITIAL_KB = 22.2;
+// CARD1026 B: /qr-code/ (measured + 20 %, BUILD-LOG CARD1026 B).
+const QR_INITIAL_KB = 12.9;
+const QR_CONTROLLER_KB = 9.2;
 /** /id-photo-camera/ (IDCAM1022 D11): initial JS at most 30 KB gzip; the camera controller (lazy) = measured + 20 % (5.1 KB at B, BUILD-LOG IDCAM1022 B). */
 const ID_CAMERA_INITIAL_KB = 30;
 const ID_CAMERA_LAZY_KB = 6.2;
@@ -1085,6 +1088,37 @@ for (const t of FORM_TOOLS) {
   for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`${t.slug}/index.html: off-site script ${m[2]}`);
   budget(`${t.slug} initial JS`, [...initial], t.initialKb * KB);
   budget(`${t.slug} controller (lazy)`, lazyOwn, t.lazyKb * KB);
+}
+// QR코드 만들기 (CARD1026 Step B; C12, C14): the controller (uqr, payloads, renderers: the controller*.js chunk the page's
+// own initial chunk imports dynamically, and its static closure) never loads with the page and is the QR controller (it
+// names #qr-preview); nothing typed is stored or put in the URL (no Web Storage, IndexedDB, cookie or history call in the
+// page's own chunks); no form, no action and no name on a text field; the six kinds in the brief's order; a tool page
+// (no AdSense tag, no off-site script besides the analytics beacon). jsQR is a test-only decoder: no dist file names it.
+// Budgets: measured + 20 % of the larger build (BUILD-LOG CARD1026 B).
+{
+  const html = pageHtml.get('qr-code/index.html');
+  if (!html) errors.push('qr-code/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const lazyImports = (f) => [...read(f).toString('utf8').matchAll(/import\([`"']\.\/(controller\.[\w-]{8}\.js)[`"']\)/g)].map((m) => posix.join(posix.dirname(f), m[1]));
+    const own = [...initial].filter((f) => lazyImports(f).length > 0 && read(f).includes('qr-tool'));
+    if (own.length !== 1) errors.push(`qr-code page script: ${own.length} initial chunk(s) start its controller, expected 1`);
+    const controller = [...new Set(own.flatMap(lazyImports))];
+    if (controller.length !== 1) errors.push(`qr-code controller: ${controller.length} lazy controller chunk(s), expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /qr-code/ controller loads with the page');
+    const lazyOwn = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
+    if (!lazyOwn.some((f) => read(f).includes('qr-preview'))) errors.push('qr-code controller: not the QR controller (no qr-preview)');
+    for (const f of [...own, ...lazyOwn]) if (/localStorage|sessionStorage|indexedDB|document\.cookie|history\.(push|replace)State/.test(read(f).toString('utf8'))) errors.push(`${f}: the /qr-code/ scripts use storage or the URL`);
+    if (/<form\b/.test(html)) errors.push('qr-code/index.html: has a form');
+    if (/<(input|textarea)\b(?![^>]*type="radio")[^>]*\bname=/.test(html)) errors.push('qr-code/index.html: a text field has a name');
+    const kinds = [...html.matchAll(/name="qr-kind" value="([a-z]+)"/g)].map((m) => m[1]).join(',');
+    if (kinds !== 'url,text,contact,wifi,tel,sms') errors.push(`qr-code/index.html: kinds ${kinds}, expected url,text,contact,wifi,tel,sms (brief C10)`);
+    if (/adsbygoogle|pagead2\.googlesyndication/.test(html)) errors.push('qr-code/index.html: carries the AdSense tag (a tool page, not a content page)');
+    for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`qr-code/index.html: off-site script ${m[2]}`);
+    budget('qr-code initial JS', [...initial], QR_INITIAL_KB * KB);
+    budget('qr-code controller (lazy)', lazyOwn, QR_CONTROLLER_KB * KB);
+  }
+  for (const f of match(/\.(m?js|html)$/)) if (/jsQR|jsqr/.test(read(f).toString('utf8'))) errors.push(`${f}: names jsQR (a test-only decoder, never shipped)`);
 }
 // 여권 영문 이름 정하는 법 (ROMANIZE1016 R4, brief Failure modes): every 「N%」 in the guide's visible text is a 비율 of
 // mofa.ts or stands in one of the guide's own source quotes (the 50% rule of 외교부 고시).

@@ -426,6 +426,22 @@ test('위임장 만들기 (FORM1020 D7, D9): start (o=build, filled|blank), succ
   for (const b of beacons) expect(b.body).not.toMatch(/홍길동|010-1234|5678|등본|위임장\.|\.hwp|\.pdf/);
 });
 
+test('QR코드 만들기 (CARD1026 C12): start once at the first QR, download per file; never a typed value, the payload or the file name', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/qr-code/?tab=wifi');
+  await page.locator('#qr-ssid').fill('문서딱손님');
+  await page.locator('#qr-pw').fill('secret;pw');
+  await expect(page.locator('#qr-preview svg')).toBeVisible();
+  await page.locator('#qr-pw').fill('secret;pw2');
+  await expect(page.locator('#qr-preview svg')).toBeVisible();
+  await Promise.all([page.waitForEvent('download'), page.locator('#qr-png').click()]);
+  await Promise.all([page.waitForEvent('download'), page.locator('#qr-svg').click()]);
+  const mine = () => beacons.filter((b) => b.ev.t === 'qr-code');
+  await expect.poll(() => mine().map((b) => [b.ev.e, b.ev.o ?? '', b.ev.v ?? ''].join(' '))).toEqual(['start  ', 'download  ', 'download  ']);
+  expectClean(beacons);
+  for (const b of beacons) expect(b.body).not.toMatch(/문서딱손님|secret|WIFI|QR코드\.|\.png|\.svg/);
+});
+
 test('차용증 만들기 (LOAN1022 L-D8): a blocked amount sends nothing; start, success, download format, next; never a typed value, an amount or the file name', async ({ page }) => {
   test.setTimeout(300_000);
   const beacons = await record(page);
