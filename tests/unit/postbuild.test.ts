@@ -931,7 +931,9 @@ describe('built output', () => {
     expect(urls).not.toContain('/business-card/');
     // CONTENT1021 D10: the tool notes pushed the precache over 450 KB; /stamp-signature/ leaves (stored when visited).
     expect(urls).not.toContain('/stamp-signature/');
-    for (const tool of ['/', '/pdf-merge/', '/pdf-compress/', '/photo-compress/', '/id-photo/']) expect(urls).toContain(tool);
+    // CARD1026 D (D10, second in the order): /photo-compress/ leaves too (stored when visited).
+    expect(urls).not.toContain('/photo-compress/');
+    for (const tool of ['/', '/pdf-merge/', '/pdf-compress/', '/id-photo/']) expect(urls).toContain(tool);
     // Round 2: the lazily imported /id-photo/ controller is precached too (offline first use).
     expect(urls.some((u: string) => /^\/_astro\/controller\.[\w-]+\.js$/.test(u))).toBe(true);
     expect(KILL_SWITCH).toContain('registration.unregister()');

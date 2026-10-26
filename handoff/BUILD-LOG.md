@@ -4457,3 +4457,8 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   (production-flag precache 447.9 / 450 KB after Step C). Gates: npm run check 0/0; business-card-layout unit 8/8; default
   build + check-dist OK (business-card controller 9.3 / 11.1 KB, initial 8.9 / 12.6 KB, precache 440.5 / 450 KB, preload
   92.1 / 92.66 KB); business-card.spec chromium + webkit 18/18.
+- Orchestrator 2026-10-26, PR #28 CI: every e2e job failed at build: gen-sw FAIL, precache 451.8 KB raw / 450 KB on the
+  production-flag (dist-bgcloud) build in CI (Bob measured 447.9 KB locally; CI's env differs). Fix: the /photo-compress/
+  runtime-cache move from Step D (a1573af: gen-sw NOT_PRECACHED, sw.ts RUNTIME_PAGES, sw.spec offline-after-one-use e2e,
+  pdf-password/polish/postbuild expectations) is applied here unchanged (its comments still say CARD1026 D, the step that
+  wrote it), so Step C stands alone under the budget. The limit stays 450 KB.

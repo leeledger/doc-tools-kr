@@ -196,6 +196,11 @@ describe('precache (deploy-gate ruling: the 450 KB limit is never raised)', () =
     expect(RUNTIME_PAGES).toContain('/stamp-signature/');
     expect(NOT_PRECACHED('/stamp-signature/')).toBe(true);
   });
+  it('CARD1026 D (D10, second in the order): /photo-compress/ left the precache and is stored when visited', async () => {
+    const { RUNTIME_PAGES } = await import('../../src/sw/sw');
+    expect(NOT_PRECACHED('/photo-compress/')).toBe(true);
+    expect(RUNTIME_PAGES).toContain('/photo-compress/');
+  });
 });
 
 describe('page copy (tools.ts)', () => {
