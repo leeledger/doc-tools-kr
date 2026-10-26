@@ -4315,3 +4315,9 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   from the root checkout with the worktree lock + manifest → 55 production packages (54 + uqr MIT), jsqr not shipped,
   0 problems. In the root checkout check:licenses itself is OK. Full vitest, e2e and LHCI not run (no page change; CI).
 - Known Gaps: none new (the CARD1026 list stands).
+- Orchestrator 2026-10-26, CARD1026 A review (handoff/REVIEW-FEEDBACK-CARD1026-A.md): clear, 0 Must Fix. Decisions on Bob's
+  escalations: E1 the hidden-network (이름이 안 보이는 와이파이) option is dropped from Step B (Apple's saved transcript: hidden SSIDs
+  are not supported); E2 no page copy cites a vCard fold length (the RFC says characters, we fold at 75 octets, which is
+  stricter); E3 any trademark line quotes the saved qrcode.com sentence verbatim. Review notes carried into Step B/C: copy
+  states no Wi-Fi name length (the 32 cap counts characters, not bytes); Step C live smoke opens a contact-card URL that holds
+  a comma.
