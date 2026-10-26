@@ -4508,3 +4508,5 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   business-card notes) use the shipped title. Gates: default build + check-dist OK (similarity max 0.093 / 0.45, precache 382.8
   / 450 KB, core 615 / late 82 unchanged); guide 3,488 chars; check:quotes --exact on the guide 17/17; vitest postbuild,
   guides-schema, guide-check, tool-notes, guide-length 155/155.
+- Orchestrator 2026-10-26: the /qr-code/ tool note had the same 「숫자만 골라 담습니다」 line as review D Should Fix 2;
+  reworded to say the + in front is kept (matches payload.ts). tool-notes 8/8.
