@@ -293,9 +293,11 @@ test('page: SEO, JSON-LD (WebApplication + FAQPage), related tools, privacy and 
   expect(data.find((d: { '@type': string }) => d['@type'] === 'WebApplication')).toMatchObject({ applicationCategory: 'UtilitiesApplication', offers: { price: 0 } });
   const faq = data.find((d: { '@type': string }) => d['@type'] === 'FAQPage');
   expect(faq.mainEntity.map((q: { name: string }) => q.name)).toEqual(['어떤 주소로 바꿔 주나요?', '해외직구 칸에는 어떻게 넣나요?', '상세주소는 어떻게 쓰나요?', '적은 주소를 저장하나요?']);
-  await expect(page.locator('.related a')).toHaveCount(2);
+  await expect(page.locator('.related a')).toHaveCount(3);
   await expect(page.locator('.related').getByRole('link', { name: '여권·증명사진 규격 맞추기' })).toHaveAttribute('href', '/id-photo/');
   await expect(page.locator('.related').getByRole('link', { name: 'PDF 합치기' })).toHaveAttribute('href', '/pdf-merge/');
+  // CARD1026 C19: 영문 명함.
+  await expect(page.locator('.related').getByRole('link', { name: '전자명함 만들기' })).toHaveAttribute('href', '/business-card/');
   await expect(page.locator('#ea-privacy')).toHaveText('찾는 주소는 행정안전부 주소 검색으로 보내 영문 주소를 받아 와요. 문서딱은 저장하지 않아요. 개인정보 처리방침');
   await expect(page.locator('#ea-privacy a')).toHaveAttribute('href', '/privacy/#addr');
   await expect(page.locator('.ea-source a')).toHaveAttribute('href', 'https://www.juso.go.kr/');

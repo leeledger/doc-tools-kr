@@ -4378,3 +4378,87 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   replayed across the lazy load (WebKit needs transient activation); it stays hidden until the controller has loaded and
   navigator.canShare is true. Gates: npm run check 0/0; default build + check-dist OK (controller 7.7 / 9.2 KB, initial
   9.1 / 12.9 KB, precache 437.2 / 450 KB, preload 92.1 / 92.66 KB); qr-code.spec chromium + webkit 22/22.
+
+## CARD1026 C — /business-card/ 전자명함 만들기 (Bob, 2026-10-26) — DONE
+- Built (brief Step C, C8/C9/C11/C12/C14/C15/C18/C19): src/pages/business-card/index.astro (the shared ContactFields +
+  three outputs: 명함 그림, 연락처 QR, 연락처 파일), src/tools/business-card/{entry,controller,layout,draw}.ts +
+  business-card.css, tool note src/content/tool-notes/business-card.md (4 CONTENT1021 headings, 2,161 chars rendered; Apple
+  iCloud 「vCard 포맷 3.0 및 이후 버전」 and two qrcode.com FAQ quotes incl. 「명함과 같이 QR코드 이미지만을 사용하는 경우에는
+  등록상표문을 기재하지 않으셔도 됩니다.」; the E3 trademark line verbatim; no toolFacts: the note states no tool limit), FAQ
+  ×5 (not copied into the note), full registration, unit + e2e.
+- Outputs: 연락처.vcf = vcard(fields, {fold: true}) as a text/vcard Blob (UTF-8, no BOM, CRLF, 75-octet folds); 연락처 QR =
+  the unfolded vCard → encodeQr → inline SVG, 연락처-QR.png / 연락처-QR.svg; 명함 그림 = layoutCard (pure, fake-measure unit
+  test) + drawCard on a canvas, 가로 1800×1000 (QR 600 px square at the right) and 세로 1080×1350 (QR 460 px square at the
+  bottom), colours 남색 / 초록 / 검정, system font stack only, QR from the same modules at an integer module size with the
+  4-module quiet zone (qrRgba + putImageData), 명함.png. 메모 is in the vCard, not drawn.
+- 보내기 (orchestrator decision after review B): hidden in the page HTML; only the controller shows it, after a redraw has
+  made the card file (canvas.toBlob → File 명함.png) and navigator.canShare({files}) is true. The entry never names
+  #bc-share, so a press is never replayed across the lazy load (check-dist asserts both: the page script has no
+  bc-share, the button ships hidden). A press after new typing (file older than the redraw) flushes the update and makes
+  the file synchronously (toDataURL → File) inside the press, so share still runs in the user gesture and never sends the
+  old card. AbortError: no message; any other error: 「이 기기에서는 바로 보내기가 안 돼요. 그림을 받아서 보내 주세요.」 and
+  명함 그림 받기 stays. Downloads (vcf, QR PNG/SVG, card PNG) are replayed after a late load like Step B.
+- URL with a comma (review A note): the vCard URL keeps decision A(d): `example.com/a,b` → `URL:https://example.com/a%2Cb`
+  in both the .vcf and the QR (e2e asserts the exact line, the fold and the unfold). The live smoke should open this
+  URL from a saved contact on a phone (owner/O1).
+- Decisions (Bob): (a) Errors as /qr-code/: a wrong format inline while typing; a missing 성/이름/회사 only on a 받기 press
+  (red line, aria-invalid, focus on the first field in error, nothing downloaded); while text is written but no name or
+  company, the previews say 「이름이나 회사를 쓰면 명함이 나와요.」 / 「…QR이 나와요.」. Previews and 보내기 hide while invalid;
+  the 받기 buttons stay so a press can explain (Step B decision c). (b) Card text: name (display name; 회사 when no name,
+  then no separate 회사 line), 직함 · 부서 in the accent colour, 회사, 휴대폰 / 전화 / FAX with a label, 이메일, 홈페이지 (as
+  typed), 주소; spaces folded. Fit: shrink by 2 px to a floor; 주소 that does not fit even at its floor breaks into two lines
+  at its normal size (at the last space that fits), each then fitted; past that 「…」. All-max fits both layouts (unit). (c)
+  Output order on the page: 명함 그림, 연락처 QR, 연락처 파일 (the picture is what most people send; the brief lists the
+  three without an order rule). (d) Usage: start once at the first card, download per file, and a successful 보내기 also
+  counts as download (it hands over the same picture; no new event, no setting). (e) Title 39 chars 「전자명함 만들기 —
+  모바일 명함·연락처 QR·명함 그림 무료 | 문서딱」: the brief's 「카톡용」 needs 톡 (not in the UI font) → 「메신저」 in visible
+  copy, 「카톡 명함」 only in keywords; description 71 chars. (f) 보내기 success status 「명함 그림 보내기를 했어요.」 (보냈 needs 냈,
+  a new late glyph). (g) The small saveBlob helper is copied from the qr-code controller (each tool keeps its own, repo
+  pattern) rather than moving Step B code.
+- Reverse related links (C19, deferred from Step B): /english-name/ and /english-address/ → /business-card/, /stamp-maker/ →
+  /qr-code/; /qr-code/'s list now shows /business-card/; /business-card/ lists qr-code, english-name, english-address
+  (flag-gated), stamp-maker. site.spec map and the english-address cloud spec updated.
+- Registration: tools.ts (right after qr-code), site.ts HOME_DESC_ORDER (right after qr-code), og.json image + page (og
+  image generated, 28.7 KB), JSON-LD WebApplication + Breadcrumb + FAQPage, sitemap/llms.txt (generated, checked in dist),
+  usage TOOLS/label/UsageTool, gen-sw NOT_PRECACHED + sw.ts RUNTIME_PAGES, bgcloud LOCAL_SCOPE_RE, lighthouserc, qa/visual,
+  check-dist block, docs/COPY.md line, tests (site/polish lists, home cards 23 → 24, postbuild OG/precache/og:image,
+  polish HOME_DESC_ORDER + runtime cache, bgcloud scope, tool-notes 25 → 26, usage unit + cloud e2e). Not done: tool-guide-
+  order / NEXT_GUIDES (Step D), CLAUDE.md line 3 (orchestrator).
+- Glyphs (C15): 0 new core, 0 new late (uiCharSets diff against HEAD; reworded 만듭니다 → 만들어요, 바뀝니다 → 달라져요,
+  보내듯 → 보낼 때처럼, 보냈어요 → 보내기를 했어요, which would have added 듭 뀝 듯 냈). Fonts default build: preloaded 92.1 /
+  92.66 KB, late 7.5 / 7.9 of 8 KB, total 107.5 / 190 KB (unchanged); production flags: preloaded 92.2, total 107.6.
+- Budgets (C14): /business-card/ initial JS 8.9 KB gzip default, 10.5 KB production flags → BC_INITIAL_KB 12.6 (10.5 + 20 %);
+  controller (lazy: uqr, vcard, contact, render, layout, draw) 9.2 KB → BC_CONTROLLER_KB 11.1. /qr-code/ controller 7.7 →
+  8.1 KB (the QR/vCard modules are now a chunk shared by two controllers; still under 9.2). Precache: default 440.5 / 450
+  KB (28 URLs; Step B 437.2, +3.3 from the menu/home entries), production flags 447.9 / 450 (25 URLs; Step B 444.7) — under
+  450, so /photo-compress/ stays precached (D10 fallback not needed). PRECACHE_LIMIT and every other limit unchanged.
+- Gates (local, low-memory host, targeted per the orchestrator): npm run check 0 errors / 0 warnings. vitest: business-card-
+  layout (new, 7), qr-* (5 files), postbuild, polish, usage, tool-notes, bgcloud, meta-length, network-guard, next-steps,
+  manifest, guides-schema, guide-check, deeplink, embed, en-check, indicators, adsense, affiliate, handoff, handoff-sweep,
+  check-licenses (26 files, 711) + 19 registry-reading files (533): all green. Builds: production flags (PUBLIC_SITE_URL
+  + the ci.yml camera-off production flags) and default, check-dist OK on both. e2e (E2E_PORT=4273): business-card.spec on
+  all 5 projects (chromium, firefox, webkit, mobile-chrome, mobile-safari) 45/45; site.spec + polish.spec chromium 191
+  passed / 1 skipped; qr-code + english-name + stamp-maker specs chromium 38/38. Quotes: the note's 3 quotes checked with
+  source-watch --exact (run on this note only): 3 verbatim. Not run locally: the cloud usage spec (new test added),
+  english-address cloud spec (related count 2 → 3), LHCI median of 5 — CI.
+- Known Gaps: none new (the CARD1026 list stands). O1 adds: 보내기 → KakaoTalk on iPhone and Galaxy; the contact URL with a
+  comma opens from a saved contact.
+- Orchestrator 2026-10-26, CARD1026 C review (handoff/REVIEW-FEEDBACK-CARD1026-C.md): 1 Must Fix, 1 Should Fix. (1) Must Fix,
+  done in [CARD1026 C fix]: the card QR could come out too small to scan after a messenger resamples the picture (all-max =
+  version 40 → 세로 2 px, 가로 3 px modules). layout.ts now exports `cardModulePx(layout, size)` (draw.ts uses it, so the two
+  cannot drift) and `CARD_MIN_MODULE_PX = 4` (an internal floor, never stated in copy). Under the floor, the new polite
+  `<p class="hint" id="bc-card-small" aria-live="polite">` under the card preview says 「글자가 많아 명함 그림 속 QR이 작아요.
+  메모나 주소를 줄이면 더 잘 찍혀요. 연락처 파일을 같이 보내도 돼요.」 (not an error; downloads and 보내기 stay); re-evaluated
+  on every redraw and layout change, cleared in clear(). Boundaries (unit): 세로 105 modules (v22) → 4 px, 109 (v23) → 3 px;
+  가로 141 (v31) → 4 px, 145 (v32) → 3 px; v40 → 2 / 3 px. e2e: the all-max card shows the hint in both layouts; the
+  sample contact shows none in 세로. The 세로 QR square was not enlarged (optional; the all-max text box is already tight).
+  Payload, ECC and the 연락처 QR are unchanged. 0 new core / late glyphs. (2) Should Fix, orchestrator decision: not in Step C.
+  Step D starts by moving /photo-compress/ to the runtime cache (CONTENT1021 D10) before it adds any precached bytes
+  (production-flag precache 447.9 / 450 KB after Step C). Gates: npm run check 0/0; business-card-layout unit 8/8; default
+  build + check-dist OK (business-card controller 9.3 / 11.1 KB, initial 8.9 / 12.6 KB, precache 440.5 / 450 KB, preload
+  92.1 / 92.66 KB); business-card.spec chromium + webkit 18/18.
+- Orchestrator 2026-10-26, PR #28 CI: every e2e job failed at build: gen-sw FAIL, precache 451.8 KB raw / 450 KB on the
+  production-flag (dist-bgcloud) build in CI (Bob measured 447.9 KB locally; CI's env differs). Fix: the /photo-compress/
+  runtime-cache move from Step D (a1573af: gen-sw NOT_PRECACHED, sw.ts RUNTIME_PAGES, sw.spec offline-after-one-use e2e,
+  pdf-password/polish/postbuild expectations) is applied here unchanged (its comments still say CARD1026 D, the step that
+  wrote it), so Step C stands alone under the budget. The limit stays 450 KB.

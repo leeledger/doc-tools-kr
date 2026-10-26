@@ -58,8 +58,11 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
  * CONTENT1021 D10 (pre-locked): the tool notes grew the precached tool pages; the default build measured 451.1 KB with
  * /stamp-signature/ precached, so it leaves (stored when visited, sw.ts RUNTIME_PAGES). Its photo controller was already
  * runtime-cached only. The limit is never raised.
+ * CARD1026 D (D10, second in the pre-locked order): /photo-compress/ leaves too, before the QR guide adds precached
+ * bytes (production-flag build 447.9 / 450 KB after CARD1026 C). Stored when visited (sw.ts RUNTIME_PAGES); its
+ * scripts are runtime-cached on first use like every /_astro/ file.
  */
-export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/about/', '/contact/', '/remove-background/', '/stamp-signature/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/qr-code/', '/english-name/', '/english-address/', '/power-of-attorney/', '/loan-note/', '/id-photo-camera/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/') || path.startsWith('/embed/') || path.startsWith('/en/');
+export const NOT_PRECACHED = (path) => ['/licenses/', '/terms/', '/privacy/', '/about/', '/contact/', '/remove-background/', '/stamp-signature/', '/photo-compress/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/hwp-to-pdf/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/qr-code/', '/business-card/', '/english-name/', '/english-address/', '/power-of-attorney/', '/loan-note/', '/id-photo-camera/'].includes(path) || path.startsWith('/guide/') || path.startsWith('/og/') || path.startsWith('/embed/') || path.startsWith('/en/');
 
 /** Page paths from dist/sitemap.xml (minus NOT_PRECACHED) plus the offline fallback page. */
 function pages(dist) {

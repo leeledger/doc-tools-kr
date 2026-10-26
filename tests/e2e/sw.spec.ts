@@ -5,13 +5,14 @@ import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { buildServiceWorker, KILL_SWITCH } from '../../scripts/gen-sw.mjs';
 import { expect, setBuildId, test } from './own-server';
-import { fixturePath } from './paths';
+import { fixturePath, photoFixture } from './paths';
 
 test.use({ serviceWorkers: 'allow' });
 
 const LAW = fixturePath('kr_law_form.pdf');
 const FW9 = fixturePath('irs_fw9.pdf');
 const HWP = join(process.cwd(), 'tests', 'corpus', 'hwp', 'law05.hwp');
+const PHOTO = photoFixture('scene_cc0.jpg');
 
 /** Waits until the SW controls the page; skips with the verbatim reason when this browser cannot register it. */
 async function controlled(page: Page): Promise<void> {
@@ -102,6 +103,32 @@ test('REV3 R3.0: /hwp-to-pdf/ is not precached, but after one online visit it op
   await convert();
   if (harnessOffline) await context.setOffline(false);
   else ownServer.setDown(false);
+});
+
+test('CARD1026 D (D10): /photo-compress/ is not precached, but after one online use it opens and compresses offline (runtime cache)', async ({ page, context, ownServer, browserName, isMobile }) => {
+  test.skip(browserName === 'webkit' && isMobile, 'mobile-safari runs the same WebKit service worker as the webkit project.');
+  test.skip(browserName === 'webkit', 'Playwright WebKit (Windows) cannot read a setInputFiles file while offline (polish.spec "compress: offline before the first file"); chromium, firefox and mobile-chrome cover it.');
+  test.setTimeout(240_000);
+  const root = ownServer.copyDist();
+  ownServer.setRoot(root);
+  const precache = JSON.parse(/__PRECACHE__\s*=\s*(\[[^\]]*\])/.exec(readFileSync(join(root, 'sw.js'), 'utf8'))?.[1] ?? 'null') as string[] | null;
+  if (precache) expect(precache).not.toContain('/photo-compress/');
+  await page.goto('/photo-compress/');
+  await controlled(page);
+  // One controlled load stores the page and its scripts; one use stores the lazily loaded controller.
+  await page.reload();
+  const compress = async (): Promise<void> => {
+    await page.setInputFiles('#ph-input', PHOTO);
+    await expect(page.locator('#ph-list .info', { hasText: '확인 중' })).toHaveCount(0);
+    await page.getByRole('button', { name: '사진 용량 줄이기', exact: true }).click();
+    await expect(page.locator('#photo-tool')).toHaveAttribute('data-state', 'done', { timeout: 110_000 });
+  };
+  await compress();
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('h1')).toHaveText('사진 용량 줄이기');
+  await compress();
+  await context.setOffline(false);
 });
 
 

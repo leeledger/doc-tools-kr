@@ -442,6 +442,22 @@ test('QR코드 만들기 (CARD1026 C12): start once at the first QR, download pe
   for (const b of beacons) expect(b.body).not.toMatch(/문서딱손님|secret|WIFI|QR코드\.|\.png|\.svg/);
 });
 
+test('전자명함 만들기 (CARD1026 C12): start once at the first card, download per file; never a typed value, the vCard or a file name', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/business-card/');
+  await page.locator('#bc-c-last').fill('홍');
+  await page.locator('#bc-c-first').fill('길동');
+  await page.locator('#bc-c-mobile').fill('010-1234-5678');
+  await expect(page.locator('#bc-card')).toBeVisible();
+  await page.locator('#bc-c-org').fill('예시상사');
+  await page.waitForTimeout(400);
+  for (const id of ['#bc-vcf', '#bc-qr-png', '#bc-qr-svg', '#bc-card-png']) await Promise.all([page.waitForEvent('download'), page.locator(id).click()]);
+  const mine = () => beacons.filter((b) => b.ev.t === 'business-card');
+  await expect.poll(() => mine().map((b) => [b.ev.e, b.ev.o ?? '', b.ev.v ?? ''].join(' '))).toEqual(['start  ', 'download  ', 'download  ', 'download  ', 'download  ']);
+  expectClean(beacons);
+  for (const b of beacons) expect(b.body).not.toMatch(/길동|010-1234|예시상사|VCARD|연락처|명함|\.vcf|\.png|\.svg/);
+});
+
 test('차용증 만들기 (LOAN1022 L-D8): a blocked amount sends nothing; start, success, download format, next; never a typed value, an amount or the file name', async ({ page }) => {
   test.setTimeout(300_000);
   const beacons = await record(page);

@@ -477,6 +477,9 @@ describe('live-only description (P.6)', () => {
     // CARD1026 C18: qr-code right after stamp-maker.
     expect(slugs.has('qr-code')).toBe(true);
     expect(HOME_DESC_ORDER.indexOf('qr-code')).toBe(HOME_DESC_ORDER.indexOf('stamp-maker') + 1);
+    // CARD1026 C18: business-card right after qr-code.
+    expect(slugs.has('business-card')).toBe(true);
+    expect(HOME_DESC_ORDER.indexOf('business-card')).toBe(HOME_DESC_ORDER.indexOf('qr-code') + 1);
     // ROMANIZE1016 D5: english-name right after id-photo (66k searches a month, Naver).
     expect(slugs.has('english-name')).toBe(true);
     expect(HOME_DESC_ORDER.indexOf('english-name')).toBe(HOME_DESC_ORDER.indexOf('id-photo') + 1);
@@ -673,7 +676,7 @@ describe('service worker (P.11)', () => {
 
   it('C2 round 2 + TOOLS4 T4 round 2: legal pages and the non-precached tool pages are stored when visited; offline they come from the cache', async () => {
     const cache = new FakeCache();
-    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/qr-code/', '/english-name/', '/power-of-attorney/']) {
+    for (const path of ['/terms/', '/privacy/', '/licenses/', '/jpg-to-pdf/', '/pdf-to-jpg/', '/pdf-password/', '/hwp-viewer/', '/image-to-jpg/', '/pdf-split/', '/pdf-sign/', '/hwpx-to-hwp/', '/char-count/', '/id-copy/', '/pdf-edit/', '/stamp-maker/', '/qr-code/', '/business-card/', '/english-name/', '/power-of-attorney/', '/photo-compress/']) {
       const ev = event(req(path, 'GET', 'navigate'));
       handleFetch(ev.e, envWith(async () => new Response(`page ${path}`), cache));
       await ev.responded;
