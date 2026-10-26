@@ -4245,3 +4245,23 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   print1023-a/b/c deleted locally and on origin. The empty folder wt/print1023-c was busy; delete it later.
 - Owner items (unchanged): O1 print a passport sheet at a 4×6 photo kiosk/lab and measure 3.5×4.5 cm; real iPhone/Galaxy
   camera test incl. KakaoTalk/Naver in-app.
+
+## CARD1026 — design locked (Arch, 2026-10-26): QR코드 만들기 + 전자명함 만들기
+- Owner 2026-10-26: 「전자명함 만들기 기능도 시장 조사를 하고 만들어봐」. Research: reports/growth/전자명함 시장 조사
+  2026-10-26.md (넥스트티 volumes, indicative: QR코드만들기 ~122,700/mo vs 모바일명함 ~1,020). Brief:
+  handoff/ARCHITECT-BRIEF-CARD1026.md (C1–C20, O1–O3).
+- Orchestrator decisions logged: D1 one in-page QR engine, two pages /qr-code/ + /business-card/, static QR only;
+  D2 no share link with card data in the URL this sprint (later step, owner decision); D3 permissive QR library.
+- Arch decisions: uqr 0.1.3 MIT pinned (Nayuki core, UTF-8 byte mode; defaults ecc L / border 1 overridden to M and
+  our own 4-module quiet zone; lone surrogates replaced before encodeURI); jsqr 1.4.0 Apache-2.0 dev-only for decode
+  round trips. vCard 3.0, CRLF, UTF-8 no BOM, RFC 2426 escaping; .vcf folded at 75 octets, QR payload unfolded.
+  /qr-code/ tabs: 인터넷 주소, 글자, 연락처, 와이파이, 전화, 문자 (SMSTO; sms: fallback only if O1 fails). No storage
+  (기억하기 = Known Gap), no env kill switch (no network/permission/header change; revert = rollback), both pages
+  runtime-cached (precache fallback: /photo-compress/ per CONTENT1021 D10), 0 new core glyphs target (probe: 큐 팩 숨
+  김 톡 촘 틀 힐 랑 are not in core → avoided; label 「FAX」), no 90×50 mm print PDF (no official size source), no /en/,
+  no terms change.
+- Steps: A sources + engine (PR 1) → B /qr-code/ (PR 2) → C /business-card/ (PR 3) → D /guide/qr-code/ (PR 4).
+- Known Gaps (opened): share link in the URL; QR colors/logo; MECARD; PHOTO and 영문 이름 in .vcf; opt-in 기억하기;
+  print PDF + 명함 사이즈 guide; 종이 명함 OCR; Wallet passes; mailto tab; 이어서 하기; /en/ twin; QR reader; batch QR.
+- Owner items: O1 real-phone scans (contact Hangul name, Wi-Fi join, tel, SMSTO, URL, .vcf open, KakaoTalk share);
+  O2 optional official Naver keyword check; O3 owner merges each PR.
