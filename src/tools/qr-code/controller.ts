@@ -24,6 +24,10 @@ const T = {
   tooLong: '글자가 너무 많아 QR에 다 들어가지 않아요. 조금 줄여 주세요.',
   dense: '담은 글자가 많아 QR의 칸이 작아요. 인쇄할 때는 크게 해 주세요.',
   saved: 'QR 그림을 받았어요.',
+  needName: '이름이나 회사를 쓰면 QR이 나와요.',
+  needSsid: '와이파이 이름을 쓰면 QR이 나와요.',
+  needPw: '비밀번호를 쓰면 QR이 나와요.',
+  needTo: '받는 전화번호를 쓰면 QR이 나와요.',
   saveFailed: '그림을 만들지 못했어요. 한 번 더 눌러 주세요.',
 };
 
@@ -64,6 +68,7 @@ export function initQrCode(): void {
   const contact = new Map(CONTACT_KEYS.map((k) => [k, field(`qr-c-${k}`)]));
   const preview = must<HTMLDivElement>('qr-preview');
   const empty = must<HTMLParagraphElement>('qr-empty');
+  const emptyDefault = empty.textContent ?? '';
   const over = must<HTMLParagraphElement>('qr-over');
   const dense = must<HTMLParagraphElement>('qr-dense');
   const status = must<HTMLParagraphElement>('qr-status');
@@ -108,6 +113,23 @@ export function initQrCode(): void {
     }
   }
 
+  /**
+   * The preview hint while the panel has text but a required field is still blank (review B, Should Fix 1): neutral, not
+   * an error (the red line and aria-invalid wait for a 받기 press). Null: the default text.
+   */
+  function missingHint(k: Kind): string | null {
+    if (k === 'sms') return smsText.value.trim() && !smsTo.value.trim() ? T.needTo : null;
+    if (k === 'wifi') {
+      if (pw.value && !ssid.value) return T.needSsid;
+      return ssid.value && !pw.value && security() !== 'nopass' ? T.needPw : null;
+    }
+    if (k === 'contact') {
+      const f = Object.fromEntries(CONTACT_KEYS.map((key) => [key, contact.get(key)!.value])) as unknown as ContactFields;
+      return !contactEmpty(f) && checkContact(f).last === 'need' ? T.needName : null;
+    }
+    return null;
+  }
+
   const panelFields = (k: Kind): (HTMLInputElement | HTMLTextAreaElement)[] =>
     Array.from(root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(`[data-panel="${k}"] input:not([type="radio"]), [data-panel="${k}"] textarea`));
 
@@ -128,7 +150,8 @@ export function initQrCode(): void {
   let svg = '';
   let started = false;
 
-  function clearPreview(): void {
+  function clearPreview(hint: string | null = null): void {
+    empty.textContent = hint ?? emptyDefault;
     modules = null;
     svg = '';
     preview.replaceChildren(empty);
@@ -144,7 +167,7 @@ export function initQrCode(): void {
     showErrors(k, b.ok ? [] : b.errors);
     over.textContent = '';
     if (!b.ok) {
-      clearPreview();
+      clearPreview(missingHint(k));
       return false;
     }
     const enc = encodeQr(b.payload);

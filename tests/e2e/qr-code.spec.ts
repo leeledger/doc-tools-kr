@@ -95,6 +95,7 @@ test('와이파이: a missing password shows only on a download click, with focu
   await page.locator('#qr-ssid').fill('home');
   await page.waitForTimeout(300);
   await expect(page.locator('#qr-pw-error')).toBeEmpty();
+  await expect(page.locator('#qr-empty')).toHaveText('비밀번호를 쓰면 QR이 나와요.');
   await expect(page.locator('#qr-preview svg')).toHaveCount(0);
   let downloads = 0;
   page.on('download', () => downloads++);
@@ -131,6 +132,8 @@ test('연락처: 홍길동 with a comma and a semicolon in 회사 decodes to the
   await page.locator('#qr-c-mobile').fill('010-1234-5678');
   await page.waitForTimeout(300);
   await expect(page.locator('#qr-c-last-error')).toBeEmpty();
+  // Review B Should Fix 1: a neutral hint in the preview while only a phone is filled.
+  await expect(page.locator('#qr-empty')).toHaveText('이름이나 회사를 쓰면 QR이 나와요.');
   await page.locator('#qr-png').click();
   await expect(page.locator('#qr-c-last-error')).toHaveText('이름이나 회사 중 하나는 써 주세요.');
   await expect(page.locator('#qr-c-last')).toBeFocused();
@@ -185,4 +188,18 @@ test('axe on every kind; the arrow keys move between kinds; 360 px has no sidewa
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('input[name="qr-kind"][value="text"]')).toBeChecked();
   await expect(page.locator('#qr-p-text')).toBeVisible();
+});
+
+test('the first interaction is a 받기 press: the controller loads, the press is replayed and the PNG downloads (review B, Should Fix 2)', async ({ page }) => {
+  await gotoReady(page, '/qr-code/');
+  // A value without an input event (as a restored or autofilled field): nothing has loaded the controller yet.
+  await page.locator('#qr-url').evaluate((el) => {
+    (el as HTMLInputElement).value = 'example.org/first-press';
+  });
+  await expect(page.locator('#qr-tool')).not.toHaveAttribute('data-ready', '1');
+  const [d] = await Promise.all([page.waitForEvent('download'), page.locator('#qr-png').click()]);
+  expect((d as Download).suggestedFilename()).toBe('QR코드.png');
+  const r = await decodePng(readFileSync((await (d as Download).path())!));
+  expect(r.text).toBe('https://example.org/first-press');
+  await expect(page.locator('#qr-tool')).toHaveAttribute('data-ready', '1');
 });

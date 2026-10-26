@@ -4367,3 +4367,14 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   cloud usage spec (new test added), LHCI median of 5 — CI.
 - Known Gaps: Step D adds the qr-code guide pin + NEXT_GUIDES; O1 real-phone scans (Wi-Fi join with `;`, 홍길동 contact,
   SMSTO on iPhone) still owner-only.
+- Orchestrator 2026-10-26, CARD1026 B review (handoff/REVIEW-FEEDBACK-CARD1026-B.md): clear, 0 Must Fix, 2 Should Fix, both
+  done in [CARD1026 B fix]. (1) While a panel has text but a required field is blank, the empty preview shows a neutral
+  hint for that kind instead of 「쓰는 대로 여기에 QR이 나와요.」: 「이름이나 회사를 쓰면 QR이 나와요.」 (연락처), 「와이파이 이름을 쓰면 QR이
+  나와요.」 / 「비밀번호를 쓰면 QR이 나와요.」 (와이파이), 「받는 전화번호를 쓰면 QR이 나와요.」 (문자); back to the default text when
+  the panel is empty; the red error and aria-invalid still wait for a 받기 press (controller.ts missingHint). 0 new core / late
+  glyphs (uiCharSets diff against the HEAD controller). e2e: 연락처 with only 휴대폰 and 와이파이 without a password assert the
+  hint. (2) New e2e: the first interaction is a 받기 press (value set without an input event, controller not loaded) → the
+  replayed press downloads QR코드.png that decodes to the href. Decision for Step C: 보내기 (navigator.share) is never
+  replayed across the lazy load (WebKit needs transient activation); it stays hidden until the controller has loaded and
+  navigator.canShare is true. Gates: npm run check 0/0; default build + check-dist OK (controller 7.7 / 9.2 KB, initial
+  9.1 / 12.9 KB, precache 437.2 / 450 KB, preload 92.1 / 92.66 KB); qr-code.spec chromium + webkit 22/22.
