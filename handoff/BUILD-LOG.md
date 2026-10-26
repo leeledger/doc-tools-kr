@@ -4510,3 +4510,6 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   guides-schema, guide-check, tool-notes, guide-length 155/155.
 - Orchestrator 2026-10-26: the /qr-code/ tool note had the same 「숫자만 골라 담습니다」 line as review D Should Fix 2;
   reworded to say the + in front is kept (matches payload.ts). tool-notes 8/8.
+
+### 2026-10-26 orchestrator: PR #29 CI fix (e2e race)
+- e2e (chromium, mobile-chrome) failed in business-card.spec.ts "보내기": the second share press was read before the async share finished (the status text does not change between presses, so nothing waited). Decision: the test now polls until the second shared file exists before decoding it. No product code changed. Local chromium x3 green.
