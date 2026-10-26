@@ -1,0 +1,6 @@
+Title: Apple iCloud 사용 설명서 — iCloud 연락처로 연락처 가져오기 / Import a contact into iCloud Contacts
+Fetched: 2026-10-26 (curl, server HTML; tags stripped, verbatim; CARD1026 Step A Q0, Bob)
+URL: https://help.apple.com/icloud/ko.lproj/mmfba7399f.html (sha256 2fdeae2d06fbf941a7fa196b702fac987835b650194f0c7e2e5604810e18db94)
+연락처는 vCard 포맷 3.0 및 이후 버전을 가져올 수 있습니다.
+URL: https://help.apple.com/icloud/en.lproj/mmfba7399f.html (sha256 65888c678aa62c2c81901f291cde339cd98e29a8feab96b7b6dfe801b6cbd0f7)
+Contacts can import vCard format version 3.0 and later.

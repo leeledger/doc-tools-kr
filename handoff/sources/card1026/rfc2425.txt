@@ -1,0 +1,48 @@
+Title: RFC 2425 — A MIME Content-Type for Directory Information, §5.8.1 Line delimiting and folding
+URL: https://www.rfc-editor.org/rfc/rfc2425.txt
+Fetched: 2026-10-26 (curl, plain text, 64428 bytes, sha256 64298fbb942e3ad944aca9380ca3be52a5fc5c0031f6331b917da8a2ad6548a9; CARD1026 Step A Q0, Bob)
+
+--- [lines 316,358] 5.8.1 ---
+5.8.1.  Line delimiting and folding
+
+   Individual lines within the MIME text/directory Content Type body are
+   delimited by the [RFC-822] line break, which is a CRLF sequence
+   (ASCII decimal 13, followed by ASCII decimal 10). Long logical lines
+   of text can be split into a multiple-physical-line representation
+   using the following folding technique.
+
+   A logical line MAY be continued on the next physical line anywhere
+   between two characters by inserting a CRLF immediately followed by a
+   single white space character (space, ASCII decimal 32, or horizontal
+   tab, ASCII decimal 9).  At least one character must be present on the
+   folded line. Any sequence of CRLF followed immediately by a single
+   white space character is ignored (removed) when processing the
+   content type.  For example the line:
+
+   DESCRIPTION:This is a long description that exists on a long line.
+
+   Can be represented as:
+
+
+
+Howes, et. al.              Standards Track                     [Page 6]
+
+RFC 2425      MIME Content-Type for Directory Information September 1998
+
+
+   DESCRIPTION:This is a long description
+     that exists on a long line.
+
+   It could also be represented as:
+
+   DESCRIPTION:This is a long descrip
+    tion that exists o
+    n a long line.
+
+   The process of moving from this folded multiple-line representation
+   of a type definition to its single line representation is called
+   unfolding.  Unfolding is accomplished by regarding CRLF immediately
+   followed by a white space character (namely HTAB ASCII decimal 9 or
+   SPACE ASCII decimal 32) as equivalent to no characters at all (i.e.,
+   the CRLF and single white space character are removed).
+

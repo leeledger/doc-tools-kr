@@ -1,0 +1,399 @@
+Title: RFC 2426 — vCard MIME Directory Profile (vCard 3.0)
+URL: https://www.rfc-editor.org/rfc/rfc2426.txt
+Fetched: 2026-10-26 (curl, plain text, 74646 bytes, sha256 0ba71155462f3456036c0cc8862be36198d3f138ecb8e42d876d3609bf9a6562; CARD1026 Step A Q0, Bob)
+Excerpts below are verbatim line ranges of the fetched file (line numbers of that file in brackets).
+
+--- [lines 298,307] 2.3 VALUE text escaping ---
+2.3 Predefined VALUE Type Usage
+
+   The predefined data type values specified in [MIME-DIR] MUST NOT be
+   repeated in COMMA separated value lists except within the N,
+   NICKNAME, ADR and CATEGORIES value types.
+
+   The text value type defined in [MIME-DIR] is further restricted such
+   that any SEMI-COLON character (ASCII decimal 59) in the value MUST be
+   escaped with the BACKSLASH character (ASCII decimal 92).
+
+
+--- [lines 383,406] 2.5 Structured values ---
+2.5 Structured Type Values
+
+   Compound type values are delimited by a field delimiter, specified by
+   the SEMI-COLON character (ASCII decimal 59). A SEMI-COLON in a
+   component of a compound property value MUST be escaped with a
+   BACKSLASH character (ASCII decimal 92).
+
+
+
+
+
+Dawson & Howes              Standards Track                     [Page 7]
+
+RFC 2426              vCard MIME Directory Profile        September 1998
+
+
+   Lists of values are delimited by a list delimiter, specified by the
+   COMMA character (ASCII decimal 44). A COMMA character in a value MUST
+   be escaped with a BACKSLASH character (ASCII decimal 92).
+
+   This profile supports the type grouping mechanism defined in [MIME-
+   DIR]. Grouping of related types is a useful technique to communicate
+   common semantics concerning the properties of a vCard.
+
+
+--- [lines 407,418] 2.6 Line delimiting and folding ---
+2.6 Line Delimiting and Folding
+
+   This profile supports the same line delimiting and folding methods
+   defined in [MIME-DIR]. Specifically, when parsing a content line,
+   folded lines must first be unfolded according to the unfolding
+   procedure described in [MIME-DIR]. After generating a content line,
+   lines longer than 75 characters SHOULD be folded according to the
+   folding procedure described in [MIME DIR].
+
+   Folding is done after any content encoding of a type value. Unfolding
+   is done before any decoding of a type value in a content line.
+
+
+--- [lines 436,466] 3.1.1 FN ---
+3.1.1 FN Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type FN
+
+   Type name:FN
+
+   Type purpose: To specify the formatted text corresponding to the name
+   of the object the vCard represents.
+
+
+
+
+Dawson & Howes              Standards Track                     [Page 8]
+
+RFC 2426              vCard MIME Directory Profile        September 1998
+
+
+   Type encoding: 8bit
+
+   Type value: A single text value.
+
+   Type special notes: This type is based on the semantics of the X.520
+   Common Name attribute. The property MUST be present in the vCard
+   object.
+
+   Type example:
+
+        FN:Mr. John Q. Public\, Esq.
+
+
+--- [lines 467,497] 3.1.2 N ---
+3.1.2 N Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type N
+
+   Type name: N
+
+   Type purpose: To specify the components of the name of the object the
+   vCard represents.
+
+   Type encoding: 8bit
+
+   Type value: A single structured text value. Each component can have
+   multiple values.
+
+   Type special note: The structured type value corresponds, in
+   sequence, to the Family Name, Given Name, Additional Names, Honorific
+   Prefixes, and Honorific Suffixes. The text components are separated
+   by the SEMI-COLON character (ASCII decimal 59). Individual text
+   components can include multiple text values (e.g., multiple
+   Additional Names) separated by the COMMA character (ASCII decimal
+   44). This type is based on the semantics of the X.520 individual name
+   attributes. The property MUST be present in the vCard object.
+
+   Type example:
+
+        N:Public;John;Quinlan;Mr.;Esq.
+
+        N:Stevenson;John;Philip,Paul;Dr.;Jr.,M.D.,A.C.P.
+
+
+--- [lines 607,640] 3.2.1 ADR ---
+3.2.1 ADR Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type ADR
+
+   Type name: ADR
+
+
+
+
+Dawson & Howes              Standards Track                    [Page 11]
+
+RFC 2426              vCard MIME Directory Profile        September 1998
+
+
+   Type purpose: To specify the components of the delivery address for
+   the vCard object.
+
+   Type encoding: 8bit
+
+   Type value: A single structured text value, separated by the
+   SEMI-COLON character (ASCII decimal 59).
+
+   Type special notes: The structured type value consists of a sequence
+   of address components. The component values MUST be specified in
+   their corresponding position. The structured type value corresponds,
+   in sequence, to the post office box; the extended address; the street
+   address; the locality (e.g., city); the region (e.g., state or
+   province); the postal code; the country name. When a component value
+   is missing, the associated component separator MUST still be
+   specified.
+
+   The text components are separated by the SEMI-COLON character (ASCII
+
+--- [lines 735,790] 3.3.1 TEL ---
+3.3.1 TEL Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type TEL
+
+   Type name: TEL
+
+   Type purpose: To specify the telephone number for telephony
+   communication with the object the vCard represents.
+
+   Type encoding: 8bit
+
+   Type value: A single phone-number value.
+
+   Type special notes: The value of this type is specified in a
+   canonical form in order to specify an unambiguous representation of
+   the globally unique telephone endpoint. This type is based on the
+   X.500 Telephone Number attribute.
+
+   The type can include the type parameter "TYPE" to specify intended
+   use for the telephone number. The TYPE parameter values can include:
+   "home" to indicate a telephone number associated with a residence,
+   "msg" to indicate the telephone number has voice messaging support,
+   "work" to indicate a telephone number associated with a place of
+   work, "pref" to indicate a preferred-use telephone number, "voice" to
+   indicate a voice telephone number, "fax" to indicate a facsimile
+   telephone number, "cell" to indicate a cellular telephone number,
+   "video" to indicate a video conferencing telephone number, "pager" to
+   indicate a paging device telephone number, "bbs" to indicate a
+   bulletin board system telephone number, "modem" to indicate a MODEM
+   connected telephone number, "car" to indicate a car-phone telephone
+   number, "isdn" to indicate an ISDN service telephone number, "pcs" to
+   indicate a personal communication services telephone number. The
+   default type is "voice". These type parameter values can be specified
+   as a parameter list (i.e., "TYPE=work;TYPE=voice") or as a value list
+   (i.e., "TYPE=work,voice"). The default can be overridden to another
+   set of values by specifying one or more alternate values. For
+   example, the default TYPE of "voice" can be reset to a WORK and HOME,
+   VOICE and FAX telephone number by the value list
+   "TYPE=work,home,voice,fax".
+
+   Type example:
+
+        TEL;TYPE=work,voice,pref,msg:+1-213-555-1234
+
+
+
+
+
+
+Dawson & Howes              Standards Track                    [Page 14]
+
+RFC 2426              vCard MIME Directory Profile        September 1998
+
+
+
+--- [lines 791,822] 3.3.2 EMAIL ---
+3.3.2 EMAIL Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type EMAIL
+
+   Type name: EMAIL
+
+   Type purpose: To specify the electronic mail address for
+   communication with the object the vCard represents.
+
+   Type encoding: 8bit
+
+   Type value: A single text value.
+
+   Type special notes: The type can include the type parameter "TYPE" to
+   specify the format or preference of the electronic mail address. The
+   TYPE parameter values can include: "internet" to indicate an Internet
+   addressing type, "x400" to indicate a X.400 addressing type or "pref"
+   to indicate a preferred-use email address when more than one is
+   specified. Another IANA registered address type can also be
+   specified. The default email type is "internet". A non-standard value
+   can also be specified.
+
+   Type example:
+
+        EMAIL;TYPE=internet:jqpublic@xyz.dom1.com
+
+        EMAIL;TYPE=internet:jdoe@isp.net
+
+        EMAIL;TYPE=internet,pref:jane_doe@abc.com
+
+
+--- [lines 937,964] 3.5.1 TITLE ---
+3.5.1 TITLE Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type TITLE
+
+   Type name: TITLE
+
+   Type purpose: To specify the job title, functional position or
+   function of the object the vCard represents.
+
+   Type encoding: 8bit
+
+   Type value: A single text value.
+
+
+
+Dawson & Howes              Standards Track                    [Page 17]
+
+RFC 2426              vCard MIME Directory Profile        September 1998
+
+
+   Type special notes: This type is based on the X.520 Title attribute.
+
+   Type example:
+
+        TITLE:Director\, Research and Development
+
+
+--- [lines 1074,1099] 3.5.5 ORG ---
+3.5.5 ORG Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type ORG
+
+   Type name: ORG
+
+   Type purpose: To specify the organizational name and units associated
+   with the vCard.
+
+   Type encoding: 8bit
+
+   Type value: A single structured text value consisting of components
+   separated the SEMI-COLON character (ASCII decimal 59).
+
+   Type special notes: The type is based on the X.520 Organization Name
+   and Organization Unit attributes. The type value is a structured type
+   consisting of the organization name, followed by one or more levels
+   of organizational unit names.
+
+   Type example: A type value consisting of an organizational name,
+   organizational unit #1 name and organizational unit #2 name.
+
+        ORG:ABC\, Inc.;North American Division;Marketing
+
+
+--- [lines 1136,1158] 3.6.2 NOTE ---
+3.6.2 NOTE Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type NOTE
+
+   Type name: NOTE
+
+   Type purpose: To specify supplemental information or a comment that
+   is associated with the vCard.
+
+   Type encoding: 8bit
+
+   Type value: A single text value.
+
+   Type special notes: The type is based on the X.520 Description
+   attribute.
+
+   Type example:
+
+        NOTE:This fax number is operational 0800 to 1715
+          EST\, Mon-Fri.
+
+
+--- [lines 1351,1369] 3.6.8 URL ---
+3.6.8 URL Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type URL
+
+   Type name: URL
+
+   Type purpose: To specify a uniform resource locator associated with
+   the object that the vCard refers to.
+
+   Type encoding: 8bit
+
+   Type value: A single uri value.
+
+   Type example:
+
+        URL:http://www.swbyps.restaurant.french/~chezchic.html
+
+
+--- [lines 1370,1392] 3.6.9 VERSION ---
+3.6.9 VERSION Type Definition
+
+   To: ietf-mime-directory@imc.org
+
+   Subject: Registration of text/directory MIME type VERSION
+
+   Type name: VERSION
+
+   Type purpose: To specify the version of the vCard specification used
+   to format this vCard.
+
+   Type encoding: 8bit
+
+   Type value: A single text value.
+
+   Type special notes: The property MUST be present in the vCard object.
+   The value MUST be "3.0" if the vCard corresponds to this
+   specification.
+
+   Type example:
+
+        VERSION:3.0
+
+
+--- [lines 1558,1563] 4 Formal grammar (required types) ---
+
+   vcard        = [group "."] "BEGIN" ":" "VCARD" 1*CRLF
+                  1*(contentline)
+        ;A vCard object MUST include the VERSION, FN and N types.
+                  [group "."] "END" ":" "VCARD" 1*CRLF
+
+
+--- [lines 2025,2034] 4 Formal grammar (text-value) ---
+   ;*******************************************
+
+   text-value-list      = 1*text-value *("," 1*text-value)
+
+   text-value   = *(SAFE-CHAR / ":" / DQUOTE / ESCAPED-CHAR)
+
+   ESCAPED-CHAR = "\\" / "\;" / "\," / "\n" / "\N")
+        ; \\ encodes \, \n or \N encodes newline
+        ; \; encodes ;, \, encodes ,
+
