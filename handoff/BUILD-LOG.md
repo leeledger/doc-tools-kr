@@ -4501,3 +4501,10 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   (guide length 49 ≥ 2,500; tools 24 / 25 ≥ 2,000; longest title 40 = the new guide). e2e: sw.spec chromium 5/5, the new test
   chromium + firefox 2/2. Not run locally: other e2e projects, LHCI median of 5, check:licenses (no dependency change) — CI.
 - Known Gaps (new): guide CTA deep links with ?tab= (parseHref has no tab rule); a 명함/QR guide topic.
+- Orchestrator 2026-10-26, CARD1026 D review: clear, Should Fix 1-3 done (handoff/REVIEW-FEEDBACK-CARD1026-D.md). (1) The iPhone
+  hidden-Wi-Fi line (body + FAQ) is scoped to the saved source: Apple's iOS 11 QR developer video, with a plain note that later
+  versions are not covered by it (no year written: 년 would need its own quote). (2) Phone numbers: 붙임표, 빈칸, 괄호, 마침표 are
+  dropped and a leading + is kept (payload.ts normalizePhone). (3) The three inbound link texts (stamp-image guide, qr-code and
+  business-card notes) use the shipped title. Gates: default build + check-dist OK (similarity max 0.093 / 0.45, precache 382.8
+  / 450 KB, core 615 / late 82 unchanged); guide 3,488 chars; check:quotes --exact on the guide 17/17; vitest postbuild,
+  guides-schema, guide-check, tool-notes, guide-length 155/155.
