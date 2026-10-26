@@ -425,6 +425,13 @@
         "licenses/third-party/noto-sans-cjk/LICENSE",
         "licenses/third-party/noto-fonts/OFL.txt"
       ]
+    },
+    {
+      "name": "uqr",
+      "use": "QR코드 만들기·전자명함 만들기: QR 그림",
+      "files": [
+        "LICENSE"
+      ]
     }
   ]
 }

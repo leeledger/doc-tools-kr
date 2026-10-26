@@ -1,0 +1,64 @@
+Title: ZXing wiki — Barcode Contents
+URL: https://github.com/zxing/zxing/wiki/Barcode-Contents (raw markdown fetched from https://raw.githubusercontent.com/wiki/zxing/zxing/Barcode-Contents.md)
+Fetched: 2026-10-26 (curl, markdown, 14077 bytes, sha256 91e99aaf904127fb30035b229653402e1681424b603d941ccb88977f86707a2f; CARD1026 Step A Q0, Bob)
+Excerpts below are verbatim line ranges of the fetched file.
+
+--- [lines 52,67] Telephone numbers ---
+## Telephone numbers
+
+A `tel` URI should be used to encode a telephone number, to ensure that the digits are understood as a telephone number. Further, you should generally use the most complete version of a telephone number possible (i.e., country code + area code + number). For example, to encode the US phone number 212-555-1212, one should encode `tel:+1-212-555-1212`. This tel URI includes a "+1" prefix that will make it usable outside the United States.
+
+Readers should invoke the device's dialer, if applicable, and pre-fill it with the given number, but not automatically initiate a call.
+
+```plain
+# NYC Directory assistance
+tel:+12125551212
+```
+
+See Also…
+
+* [CSS-Tricks: The Current State of Telephone Links](https://css-tricks.com/the-current-state-of-telephone-links/)
+* [Apple URL Scheme Reference: Phone Links](https://developer.apple.com/library/archive/featuredarticles/iPhoneURLScheme_Reference/PhoneLinks/PhoneLinks.html)
+* [Android: Common Intents](https://developer.android.com/guide/components/intents-common#Phone)
+
+--- [lines 110,126] SMS/MMS ---
+## SMS/MMS/FaceTime
+
+Much like an e-mail address, one can encode an SMS shortcode or number by creating an `sms` URI. For example to create a link to the number 12345 one would encode `sms:12345`. See [RFC 5724](https://tools.ietf.org/html/rfc5724) for details.
+
+Likewise `SMSTO:` URLs have been observed in the wild, though I am still looking for an official specification for it. Follow this with the number to SMS. We have heard of URIs of the form `sms:[number]:[subject]`, and likewise for other prefixes like `smsto:`.
+
+There appear to be "mms:" and "MMSTO:" URIs used like "sms:" URIs in practice. We assume the format is the same, and that the reader should react similarly to such a URI.
+
+Readers should open a new SMS message, ready for the user to compose and send it.
+
+```plain
+# Send an SMS/MMS to a number
+sms:+18005551212
+
+# Send an SMS/MMS to a number with pre-filled message.
+sms:+18005551212:This%20is%20my%20text%20message.
+
+
+--- [lines 166,186] Wi-Fi Network config ---
+## Wi-Fi Network config (Android, iOS 11+)
+
+We propose a syntax like "MECARD" for specifying Wi-Fi configuration. Scanning such a code would, after prompting the user, configure the device's Wi-Fi accordingly. Example:
+
+```
+WIFI:T:WPA;S:mynetwork;P:mypass;;
+```
+
+| Parameter | Example | Description
+| --------- | ------- | -----------
+| T   | `WPA` | Authentication type; can be `WEP` or `WPA` or `WPA2-EAP`, or `nopass` for no password. Or, omit for no password.
+| S   | `mynetwork` | Network SSID. Required. Enclose in double quotes if it is an ASCII name, but could be interpreted as hex (i.e. `"ABCD"`)
+| P   | `mypass` | Password, ignored if T is `nopass` (in which case it may be omitted). Enclose in double quotes if it is an ASCII name, but could be interpreted as hex (i.e. `"ABCD"`)
+| H   | `true` | Optional. True if the network SSID is hidden. Note this was mistakenly also used to specify phase 2 method in releases up to 4.7.8 / Barcode Scanner 3.4.0. If not a boolean, it will be interpreted as phase 2 method (see below) for backwards-compatibility
+| E   | `TTLS` | (WPA2-EAP only) EAP method, like `TTLS` or `PWD`
+| A   | `anon`| (WPA2-EAP only) Anonymous identity
+| I   | `myidentity` | (WPA2-EAP only) Identity
+| PH2 | `MSCHAPV2` | (WPA2-EAP only) Phase 2 method, like `MSCHAPV2`
+
+Order of fields does not matter. Special characters `\`, `;`, `,`, `"` and `:` should be escaped with a backslash (`\`) as in MECARD encoding. For example, if an SSID was literally `"foo;bar\baz"` (with double quotes part of the SSID name itself) then it would be encoded like: `WIFI:S:\"foo\;bar\\baz\";;`
+

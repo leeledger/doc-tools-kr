@@ -1,0 +1,57 @@
+Title: Apple Developer — QR Code Recognition on iOS 11 (Tech Talks, fall 2017, session 206), transcript
+URL: https://developer.apple.com/videos/play/fall2017/206/
+Fetched: 2026-10-26 (curl, server HTML transcript, sha256 1ec662b1a1ca36fb0bde615e22a22d2ebcf6cd027ae708345f7526eede373453; tags stripped, one transcript cue per line, verbatim; CARD1026 Step A Q0, Bob)
+
+iOS supports many data types for QR codes. 
+Next, I'll go through each type in detail. 
+Feel free to grab your iOS device and scan these codes. 
+Here's an example of a location QR code 
+that uses the geo scheme 
+that lets you encode a point on the Earth. 
+Tapping on the notification takes you to the Maps app 
+with a pin dropped at that location.
+You can accomplish the same thing with an Apple Maps URL, 
+which gives you more flexibility in describing the location. 
+For example, you can specify the actual address this way.
+For text message QR codes, you can encode an SMS URI. 
+Tapping on the notification brings you 
+to the message compose window for this phone number 
+in the Messages app.
+The SMSTO format is also supported 
+for describing a text message action. 
+This format allows you to prepopulate 
+the text message content.
+For email addresses, 
+you could just encode the address directly. 
+But to ensure it's treated as an email address, 
+it is recommended that you create a mailto URI for it. 
+Tapping on this notification takes you 
+to the new message window in Mail 
+with the recipient's email prefilled.
+Similarly for phone numbers, 
+a tel URI should be used to ensure it's recognized 
+as a phone number properly. 
+Tapping on the notification will initiate a call to that number 
+in the Phone app.
+For contact QR codes, iOS supports the vCard format. 
+These codes could be useful on business cards. 
+Tapping on this notification shows you a preview 
+of the contact card with options to save to your contacts list. 
+You can also encode contact information 
+with the MeCard format, 
+which is usually less verbose than the vCard format.
+iOS supports event QR codes 
+encoded with the iCalendar format. 
+Tapping on this notification adds the event to your calendar 
+and shows you the event details.
+Lastly, iOS supports QR codes 
+containing Wi-Fi configuration information, 
+such as the authentication type, the network SSID, 
+and the password. 
+Hidden SSIDs are not supported. 
+This type of QR code is useful for quickly connecting 
+to a Wi-Fi network in an Internet cafe, for example, 
+where the user no longer needs to type in 
+all the information themselves. 
+When the user taps on the Wi-Fi QR code banner, 
+they'll be prompted to connect to the Wi-Fi network.

@@ -4245,3 +4245,79 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   print1023-a/b/c deleted locally and on origin. The empty folder wt/print1023-c was busy; delete it later.
 - Owner items (unchanged): O1 print a passport sheet at a 4×6 photo kiosk/lab and measure 3.5×4.5 cm; real iPhone/Galaxy
   camera test incl. KakaoTalk/Naver in-app.
+
+## CARD1026 — design locked (Arch, 2026-10-26): QR코드 만들기 + 전자명함 만들기
+- Owner 2026-10-26: 「전자명함 만들기 기능도 시장 조사를 하고 만들어봐」. Research: reports/growth/전자명함 시장 조사
+  2026-10-26.md (넥스트티 volumes, indicative: QR코드만들기 ~122,700/mo vs 모바일명함 ~1,020). Brief:
+  handoff/ARCHITECT-BRIEF-CARD1026.md (C1–C20, O1–O3).
+- Orchestrator decisions logged: D1 one in-page QR engine, two pages /qr-code/ + /business-card/, static QR only;
+  D2 no share link with card data in the URL this sprint (later step, owner decision); D3 permissive QR library.
+- Arch decisions: uqr 0.1.3 MIT pinned (Nayuki core, UTF-8 byte mode; defaults ecc L / border 1 overridden to M and
+  our own 4-module quiet zone; lone surrogates replaced before encodeURI); jsqr 1.4.0 Apache-2.0 dev-only for decode
+  round trips. vCard 3.0, CRLF, UTF-8 no BOM, RFC 2426 escaping; .vcf folded at 75 octets, QR payload unfolded.
+  /qr-code/ tabs: 인터넷 주소, 글자, 연락처, 와이파이, 전화, 문자 (SMSTO; sms: fallback only if O1 fails). No storage
+  (기억하기 = Known Gap), no env kill switch (no network/permission/header change; revert = rollback), both pages
+  runtime-cached (precache fallback: /photo-compress/ per CONTENT1021 D10), 0 new core glyphs target (probe: 큐 팩 숨
+  김 톡 촘 틀 힐 랑 are not in core → avoided; label 「FAX」), no 90×50 mm print PDF (no official size source), no /en/,
+  no terms change.
+- Steps: A sources + engine (PR 1) → B /qr-code/ (PR 2) → C /business-card/ (PR 3) → D /guide/qr-code/ (PR 4).
+- Known Gaps (opened): share link in the URL; QR colors/logo; MECARD; PHOTO and 영문 이름 in .vcf; opt-in 기억하기;
+  print PDF + 명함 사이즈 guide; 종이 명함 OCR; Wallet passes; mailto tab; 이어서 하기; /en/ twin; QR reader; batch QR.
+- Owner items: O1 real-phone scans (contact Hangul name, Wi-Fi join, tel, SMSTO, URL, .vcf open, KakaoTalk share);
+  O2 optional official Naver keyword check; O3 owner merges each PR.
+
+## CARD1026 A — sources + QR engine (Bob, 2026-10-26) — DONE
+- Branch card1026-a. No page imports the engine yet: dist differs from main only in /licenses/ (uqr entry; no chunk
+  contains uqr code, no jsQR in any HTML/JS).
+- Q0 sources (handoff/sources/card1026/, all fetched 2026-10-26 with curl, verbatim, sha256 per file in each header):
+  rfc2426.txt (2.3, 2.5, 2.6, 3.1.1 FN, 3.1.2 N, 3.2.1 ADR, 3.3.1 TEL, 3.3.2 EMAIL, 3.5.1 TITLE, 3.5.5 ORG, 3.6.2 NOTE,
+  3.6.8 URL, 3.6.9 VERSION, grammar text-value), rfc2425.txt (§5.8.1), qrcode-com.txt (ko + en: version 40 row → binary
+  M 2,331; v1 M 14; v15 M 412; v16 M 450; quiet zone 「상하좌우 4cell 이상」 / "four-module wide margin"; trademark
+  sentence 「"QR코드는 일본 및 여러 나라에서 DENSO WAVE INCORPORATED의 등록상표입니다"」 + 「명함과 같이 QR코드 이미지만을
+  사용하는 경우에는 등록상표문을 기재하지 않으셔도 됩니다」), zxing-barcode-contents.txt (tel, SMS/SMSTO, WIFI + escaping),
+  apple-wwdc17-206.txt (transcript: sms, SMSTO, tel, vCard, MeCard, Wi-Fi), apple-icloud-vcard.txt (ko + en 「vCard 포맷
+  3.0 및 이후 버전」). Nothing failed to fetch. The capacity table is loaded by script into version.html, so the
+  versionPage*.html fragments are the cited URLs.
+- **For Arch (Step B/D copy):** (1) the Apple transcript says 「Hidden SSIDs are not supported.」 → the 「이름이 안 보이는
+  와이파이」 option may not work on iPhone; Step B should say so plainly or Arch drops the checkbox. (2) RFC 2426 §2.6
+  says "lines longer than 75 characters SHOULD be folded"; the brief's 75 octets is stricter (octets ≥ characters), so it
+  meets the RFC; no RFC in Q0 says "75 octets" (that wording is RFC 6350, not saved) → copy must not cite an octet rule.
+  (3) C16 wording: the saved trademark sentence names DENSO WAVE INCORPORATED, not 「(주)덴소웨이브」.
+- Deps: uqr 0.1.3 (dependencies, exact), jsqr 1.4.0 (devDependencies, exact). Installed with `npm install
+  --package-lock-only` in the worktree (lock diff = the 2 entries only) and the 2 package folders copied into the root
+  node_modules (additive; the junction stays). licenses.manifest.json: uqr entry 「QR코드 만들기·전자명함 만들기: QR 그림」,
+  files [LICENSE] (MIT, Project Nayuki + Anthony Fu).
+- Engine (src/lib/qr/): encode.ts `encodeQr` (ecc M, border 0, boostEcc false; `fixSurrogates` loop; UTF-8 bytes >
+  2,331 → tooLong; dense = version > 15); render.ts `qrSvg` / `qrRgba` / `pngModulePx` / `qrPng` (QUIET 4, #000 on #fff);
+  payload.ts (url/text/tel/sms/wifi + `normalizeUrl` / `normalizePhone` for C9); vcard.ts (`vcard(fields, {fold})`,
+  `escapeText`, `foldLine`, `unfold`, `displayName`, `CONTACT_MAX` = the C9 maxLengths, `FOLD_OCTETS` 75).
+- Decisions (Bob): (a) SVG path draws each horizontal dark run as one 1-module-high rectangle instead of n 1×1 squares
+  (same geometry, far fewer path commands, no hairline seams); the unit test rebuilds the matrix from the path. (b)
+  qrPng draws qrRgba with putImageData (exact integer pixels, so no smoothing applies) instead of fillRect per module;
+  one pixel path shared with the jsQR tests. (c) URL: a scheme is `letters:` not followed by a digit, so
+  「example.com:8080」 keeps its port and gets https://; the host must contain a dot (「localhost」, 「안녕하세요」 → url
+  error). (d) vCard URL value: `;` `,` `\` are percent-encoded in the href instead of text-escaped (URL is a uri value in
+  RFC 2426 3.6.8; this reads the same with or without unescaping). (e) vcard() trims every value and throws RangeError
+  on a non-empty url that fails normalizeUrl (the C9 validator runs first; never reachable from the UI). (f) TEL values
+  stay as typed (e.g. 010-1234-5678, readable in 연락처); only the QR 전화/문자 payloads use the digits. (g) 글자 and
+  phone/URL inputs that are only spaces count as empty. (h) SSID ≤ 32 and SMS ≤ 300 are counted in UTF-16 units (what a
+  textarea maxLength counts).
+- All-max contact (C9 maxLengths, Hangul in every free-text field incl. email, a Hangul URL path at 9 bytes per
+  character, digit phones): 2,300 UTF-8 bytes unfolded → version 40, fits (31 bytes spare); decodes with jsQR. Maximal
+  escapes (all `;`) also fit. No maxLength cut needed.
+- Gates (local, low-memory host, targeted per the orchestrator): vitest tests/unit/qr-*.test.ts 4 files 35/35 + the
+  manifest/handoff/postbuild-related files (adsense, bgremove, check-licenses, drop-links, hwp-notice,
+  idphoto-landmarker, polish, postbuild, handoff, handoff-sweep): 14 files 341/341. `PUBLIC_SITE_URL=https://docttak.com
+  npm run build` + check-dist OK (2,635 files, 0 WARNINGs; UI fonts preloaded 92.1 / 92.66 KB, total 107.5 / 190 KB;
+  precache 432.9 / 450 KB, 28 URLs). npm run check (after the build generated src/generated/*): 0 errors / 0 warnings.
+  check:licenses: FAILs in a worktree as logged in PRINT1023 B (junction → every package read as a link with its
+  devDependencies); equivalence run instead: the script's own `allowed()`/`componentProblems()` over `npm ls --omit=dev`
+  from the root checkout with the worktree lock + manifest → 55 production packages (54 + uqr MIT), jsqr not shipped,
+  0 problems. In the root checkout check:licenses itself is OK. Full vitest, e2e and LHCI not run (no page change; CI).
+- Known Gaps: none new (the CARD1026 list stands).
+- Orchestrator 2026-10-26, CARD1026 A review (handoff/REVIEW-FEEDBACK-CARD1026-A.md): clear, 0 Must Fix. Decisions on Bob's
+  escalations: E1 the hidden-network (이름이 안 보이는 와이파이) option is dropped from Step B (Apple's saved transcript: hidden SSIDs
+  are not supported); E2 no page copy cites a vCard fold length (the RFC says characters, we fold at 75 octets, which is
+  stricter); E3 any trademark line quotes the saved qrcode.com sentence verbatim. Review notes carried into Step B/C: copy
+  states no Wi-Fi name length (the 32 cap counts characters, not bytes); Step C live smoke opens a contact-card URL that holds
+  a comma.

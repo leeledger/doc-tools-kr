@@ -1,0 +1,57 @@
+Title: QRcode.com (DENSO WAVE) — QR코드의 정보량과 버전 / 마진 / 등록상표 (Korean pages, English twins for cross-check)
+Fetched: 2026-10-26 (curl, server HTML, UTF-8; tags stripped (inline <a> removed without a space), text verbatim; CARD1026 Step A Q0, Bob)
+
+URL: https://www.qrcode.com/ko/about/version.html (sha256 09a5255f13ffe50f64bcd7d7f98e9946569e8799aef1281cd4edb8d7bbe40417)
+	QR코드의 버전은 1~40으로 구성되어 있으며 각 버전마다 셀 구성(셀 수)이 정해져 있습니다. ?(셀은 QR코드를 구성하고 있는 사각의 흑백의 점입니다.)
+	"셀 구성"은 코드 내부의 셀의 수입니다. 버전1(21×21cell)로 시작하여 가로/세로 각각 4cell씩 늘어,버전40(177×177cell)로 설정되어 있습니다. 
+	QR코드의 버전은 데이터량/문자 종류 또한 오류복원 레벨에 대응하여 최대 입력문자수가 설정됩니다. 즉, 데이터 량이 증가하면 QR코드를 구성하는 셀(cell)이 많이 필요하며, 그만큼 QR코드는 커집니다.
+
+URL: https://www.qrcode.com/ko/about/versionPage/versionPage31_40.html (sha256 412f4febcf48d844848e28fc3b22164347dd3d813b94076f64adbc9290cf05e7) — loaded into version.html by script
+Table header and the version 40 row, verbatim cells in page order (columns: 버전 | 셀 수 | 오류 복원 레벨 L M Q H | 데이터 bit수(혼합) L,M,Q,H | 숫자 L,M,Q,H | 영숫자 L,M,Q,H | binary L,M,Q,H | 한자 L,M,Q,H):
+	표의 "숫자", "영숫자", "binary", "한자"는 각각 문자수를 표시하며, 데이터 비트수를 포함한 최대수입니다. 
+	예를 들면, 버전1, 오류 복원 레벨 L의 경우: 데이터 비트수 152, 숫자 25, binary 17, 한자 10자까지가 최대수가 됩니다.
+ 40 | 177x177 | L M Q H |23,648 |18,672 |13,328 |10,208|7,089 |5,596 |3,993 |3,057|4,296 |3,391 |2,420 |1,852|2,953 |2,331 |1,663 |1,273|1,817 |1,435 |1,024 |784|
+-> binary at level M, version 40 = 2,331 (4th group, 2nd cell).
+
+URL: https://www.qrcode.com/ko/about/versionPage/versionPage1_10.html (sha256 1bea29f1628dc4e6077225f87f65ed816e767a77338fc6754589b09bec53dd12)
+Version 1 row, verbatim cells (same column order):
+| 1 | 21x21 | L M Q H |152 |128 |104 |72|41 |34 |27 |17|25 |20 |16 |10|17 |14 |11 |7|10 |8 |7 |4|
+-> binary at level M: version 1 = 14.
+
+URL: https://www.qrcode.com/ko/about/versionPage/versionPage11_20.html (sha256 911357e1170d540b101c42038a07b27705c3779fb08bfe2a5b0c1c19cb8c63f2)
+Version 15 and 16 rows, verbatim cells (same column order):
+| 15 | 77x77 | L M Q H |4,184 |3,320 |2,360 |1,784|1,250 |991 |703 |530|758 |600 |426 |321|520 |412 |292 |220|320 |254 |180 |136| 16 | 81x81 | L M Q H |4,712 |3,624 |2,600 |2,024|1,408 |1,082 |775 |602|854 |656 |470 |365|586 |450 |322 |250|361 |277 |198 |154
+
+-> binary at level M: version 15 = 412, version 16 = 450.
+
+URL: https://www.qrcode.com/en/about/versionPage/versionPage31_40.html (sha256 d8c766b386cbcf0567738db2e4b4166d5a12dbf0749c1ed337379be1fad1454f) — English twin; version 40 row:
+ 40 | 177x177 | L M Q H |23,648 |18,672 |13,328 |10,208|7,089 |5,596 |3,993 |3,057|4,296 |3,391 |2,420 |1,852|2,953 |2,331 |1,663 |1,273|1,817 |1,435 |1,024 |784|
+
+URL: https://www.qrcode.com/ko/howto/code.html (sha256 b88d7a36ff45ba4679f06abbf9f1e82cb7a1ff2ec18827ebc2fb96e47b8c203f)
+	 마진(여백) 확보 
+	버전 및 cell 크기를 결정하면 QR코드 자체의 크기는 정해집니다. 실제로 운용하기 위하여 코드 영역은 코드 주위에 마진(여백)을 확보해야 합니다. 
+ 마진과 심볼의 4면을 감싸는 아무것도 표시되지 않는 영역입니다. 상하좌우 4cell 이상 확보해야 합니다. 
+	마진까지 포함한 최종 코드 영역을 구하는 법의 예를 보여줍니다.
+	 마진을 4cell분 확보합니다. 7.366mm +0.254 mm/cell × 8cell = 9.398mm 
+
+URL: https://www.qrcode.com/en/howto/code.html (sha256 3358d8b619f3b0e9c25c40d7d316f7d4f8bf35836a7be09ae0687807742868d8) — English twin
+	When the symbol version and module size are determined, the size of the QR Code symbol is determined. The QR Code symbol area requires a margin or "quiet zone" around it to be used.
+	The margin is a clear area around a symbol where nothing is printed. QR Code requires a four-module wide margin at all sides of a symbol.
+	 Secure a four-module wide margin. 7.366mm + 0.254mm/module × 8 modules = 9.398mm 
+
+URL: https://www.qrcode.com/ko/faq.html (sha256 aaec51ec67a6bef9c9e6b51a7a58ce7bcb6dd442a5bf00d556625af2aeedcf17)
+	JIS 규격이나 ISO 규격으로 제정되어 있는 QR코드의 사용에 대한 라이센스 등은 필요하지 않으며, 누구나 자유롭게 사용하실 수 있습니다. 
+ 또한, "QR코드" 라는 명칭은 DENSO WAVE INCORPORATED의 등록상표입니다. 출판물이나 홈페이지 등에 "QR코드"라는 단어를 사용할 경우, "QR코드는 일본 및 여러 나라에서 DENSO WAVE INCORPORATED의 등록상표입니다"라는 문장(이하 등록상표문)을 기재해 주시길 권해 드립니다. 
+ 등록상표는 "QR코드"라는 명칭에만 적용되며, QR코드 패턴(이미지)는 등록상표가 아닙니다.
+ 또한 라이센스 계약 등도 필요하지 않습니다.	
+	 명함에 QR코드를 넣고싶은데 등록상표문이 필요한가요? 
+	명함과 같이 QR코드 이미지만을 사용하는 경우에는 등록상표문을 기재하지 않으셔도 됩니다.	
+	 등록상표문은 어디에 게재해야 하나요? 
+ 하지만 오해나 문제를 피하기 위해, "QR Code"를 포함한 경우는 등록상표문 기재를 권해 드립니다.	
+
+URL: https://www.qrcode.com/en/faq.html (sha256 ed9872bdccde37ce1efc6fce5cd85e63f47190510589f51a4220aaf0cd009ad3) — English twin
+ The word “QR Code” is registered trademark of DENSO WAVE INCORPORATED in Japan and other countries. 
+ To use the word “ QR Code” in your publications or web site, etc, please indicate a sentence QR Code is registered trademark of DENSO WAVE INCORPORATED. 
+ This registered trademark applies only for the word “QR Code”, and not for the QR Code pattern (image).
+	To avoid confusion, etc, we recommend the use the word “QR Code” correctly as registered trademark. 
+ If "QR Code" is included in the merchandise name, however, we recommend adding a comment stating that this is a registered trademark of DENSO WAVE in order to avoid any misunderstanding or trouble.	 
