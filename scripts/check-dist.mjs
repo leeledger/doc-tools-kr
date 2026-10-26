@@ -37,6 +37,9 @@ const ENGLISH_NAME_INITIAL_KB = 22.2;
 // CARD1026 B: /qr-code/ (measured + 20 %, BUILD-LOG CARD1026 B).
 const QR_INITIAL_KB = 12.9;
 const QR_CONTROLLER_KB = 9.2;
+// CARD1026 C: /business-card/ (measured + 20 %, BUILD-LOG CARD1026 C).
+const BC_INITIAL_KB = 12.6;
+const BC_CONTROLLER_KB = 11.1;
 /** /id-photo-camera/ (IDCAM1022 D11): initial JS at most 30 KB gzip; the camera controller (lazy) = measured + 20 % (5.1 KB at B, BUILD-LOG IDCAM1022 B). */
 const ID_CAMERA_INITIAL_KB = 30;
 const ID_CAMERA_LAZY_KB = 6.2;
@@ -1119,6 +1122,42 @@ for (const t of FORM_TOOLS) {
     budget('qr-code controller (lazy)', lazyOwn, QR_CONTROLLER_KB * KB);
   }
   for (const f of match(/\.(m?js|html)$/)) if (/jsQR|jsqr/.test(read(f).toString('utf8'))) errors.push(`${f}: names jsQR (a test-only decoder, never shipped)`);
+}
+// 전자명함 만들기 (CARD1026 Step C; C11, C12, C14): the controller (uqr, vCard, renderers, card layout: the controller*.js
+// chunk the page's own initial chunk imports dynamically, and its static closure) never loads with the page and is the card
+// controller (it names #bc-card and the fixed file names); the page script never names 보내기 (#bc-share), so a press on it
+// is never replayed after a late load (WebKit shares only inside the press itself), and the page ships it hidden (only the
+// controller shows it); nothing typed is stored or put in the URL; no form, no name on a text field; the two layouts and
+// three colours; a tool page (no AdSense tag, no off-site script besides the analytics beacon). Budgets: measured + 20 % of
+// the larger build (BUILD-LOG CARD1026 C).
+{
+  const html = pageHtml.get('business-card/index.html');
+  if (!html) errors.push('business-card/index.html: no file found');
+  else {
+    const initial = new Set(initialJs(html));
+    const lazyImports = (f) => [...read(f).toString('utf8').matchAll(/import\([`"']\.\/(controller\.[\w-]{8}\.js)[`"']\)/g)].map((m) => posix.join(posix.dirname(f), m[1]));
+    const own = [...initial].filter((f) => lazyImports(f).length > 0 && read(f).includes('bc-tool'));
+    if (own.length !== 1) errors.push(`business-card page script: ${own.length} initial chunk(s) start its controller, expected 1`);
+    for (const f of own) if (read(f).includes('bc-share')) errors.push(`${f}: the /business-card/ page script names #bc-share (보내기 is never replayed after the controller loads)`);
+    const controller = [...new Set(own.flatMap(lazyImports))];
+    if (controller.length !== 1) errors.push(`business-card controller: ${controller.length} lazy controller chunk(s), expected 1`);
+    if (controller.some((f) => initial.has(f))) errors.push('the /business-card/ controller loads with the page');
+    const lazyOwn = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
+    const code = lazyOwn.map((f) => read(f).toString('utf8')).join('\n');
+    if (!code.includes('bc-card')) errors.push('business-card controller: not the card controller (no bc-card)');
+    for (const name of ['연락처.vcf', '연락처-QR.png', '연락처-QR.svg', '명함.png', 'text/vcard']) if (!code.includes(name)) errors.push(`business-card controller: no ${name} (fixed file names, brief C8/C11)`);
+    for (const f of [...own, ...lazyOwn]) if (/localStorage|sessionStorage|indexedDB|document\.cookie|history\.(push|replace)State/.test(read(f).toString('utf8'))) errors.push(`${f}: the /business-card/ scripts use storage or the URL`);
+    if (/<form\b/.test(html)) errors.push('business-card/index.html: has a form');
+    if (/<(input|textarea)\b(?![^>]*type="radio")[^>]*\bname=/.test(html)) errors.push('business-card/index.html: a text field has a name');
+    if (!/<button\b[^>]*id="bc-share"[^>]*\bhidden\b/.test(html)) errors.push('business-card/index.html: 보내기 (#bc-share) is not hidden in the page (only the controller shows it)');
+    const pick = (n) => [...html.matchAll(new RegExp(`name="${n}" value="([a-z]+)"`, 'g'))].map((m) => m[1]).join(',');
+    if (pick('bc-layout') !== 'wide,tall') errors.push(`business-card/index.html: layouts ${pick('bc-layout')}, expected wide,tall (brief C11)`);
+    if (pick('bc-color') !== 'navy,green,black') errors.push(`business-card/index.html: colours ${pick('bc-color')}, expected navy,green,black`);
+    if (/adsbygoogle|pagead2\.googlesyndication/.test(html)) errors.push('business-card/index.html: carries the AdSense tag (a tool page, not a content page)');
+    for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`business-card/index.html: off-site script ${m[2]}`);
+    budget('business-card initial JS', [...initial], BC_INITIAL_KB * KB);
+    budget('business-card controller (lazy)', lazyOwn, BC_CONTROLLER_KB * KB);
+  }
 }
 // 여권 영문 이름 정하는 법 (ROMANIZE1016 R4, brief Failure modes): every 「N%」 in the guide's visible text is a 비율 of
 // mofa.ts or stands in one of the guide's own source quotes (the 50% rule of 외교부 고시).

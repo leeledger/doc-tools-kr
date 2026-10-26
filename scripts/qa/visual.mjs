@@ -45,6 +45,7 @@ const PAGES = [
   ['pdfedit', '/pdf-edit/'],
   ['stampmaker', '/stamp-maker/'],
   ['qrcode', '/qr-code/'],
+  ['businesscard', '/business-card/'],
   ['englishname', '/english-name/'],
   ['powerofattorney', '/power-of-attorney/'],
   ['loannote', '/loan-note/'],

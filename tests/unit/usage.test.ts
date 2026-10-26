@@ -1588,3 +1588,20 @@ describe('QR코드 만들기 (CARD1026 C12)', () => {
     expect(tools!.rows[0]![0]).toBe('QR코드 만들기');
   });
 });
+
+describe('전자명함 만들기 (CARD1026 C12)', () => {
+  it('tool with start, download and the engine fail only; no setting on its events, so no typed value or vCard has a field', () => {
+    expect(TOOLS).toContain('business-card');
+    for (const e of ['start', 'download']) expect(validate(body({ ...BASE, t: 'business-card', e })), e).not.toBeNull();
+    expect(validate(body({ ...BASE, t: 'business-card', e: 'fail', c: 'engine', p: 'load' }))).not.toBeNull();
+    for (const [o, v] of [['form', 'joined'], ['field', 'line1'], ['format', 'pdf'], ['style', 'round']]) {
+      expect(validate(body({ ...BASE, t: 'business-card', e: 'download', o, v })), o).toBeNull();
+    }
+    for (const v of ['BEGIN:VCARD', '홍길동', '010-1234-5678', 'hong@example.com']) expect(validate(body({ ...BASE, t: 'business-card', e: 'start', o: 'preset', v })), v).toBeNull();
+  });
+
+  it('admin label is Korean: 전자명함 만들기', () => {
+    const [tools] = shapeUsage({ events: [{ tool: 'business-card', event: 'download', via: 'direct', n: 2 }], settings: [] }).tables;
+    expect(tools!.rows[0]![0]).toBe('전자명함 만들기');
+  });
+});

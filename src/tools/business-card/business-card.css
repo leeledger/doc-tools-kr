@@ -1,0 +1,17 @@
+/* 전자명함 만들기 (/business-card/, CARD1026 Step C). Inlined on that page only. */
+.bc { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; text-align: left; }
+.bc-out { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; justify-items: center; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.bc-out > h2 { margin: 0; font-size: 19px; justify-self: start; }
+.bc-out .hint, .bc-out .field-error { text-align: center; }
+.bc-pick { border: 0; margin: 0; padding: 0; min-width: 0; justify-self: stretch; }
+.bc-pick legend { font-weight: 800; margin-bottom: 8px; padding: 0; }
+.bc-card-box { min-width: 0; grid-template-columns: minmax(0, 1fr); width: 100%; aspect-ratio: 1800 / 1000; display: grid; place-items: center; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .18); }
+.bc-card-box[data-layout="tall"] { width: min(100%, 360px); aspect-ratio: 1080 / 1350; }
+.bc-card-box canvas { max-width: 100%; width: 100%; height: 100%; display: block; border-radius: 8px; }
+.bc-card-box canvas[hidden] { display: none; }
+.bc-qr { width: min(100%, 240px); aspect-ratio: 1; display: grid; place-items: center; border-radius: 8px; background: #fff; }
+.bc-qr svg { width: 100%; height: 100%; display: block; }
+.bc-card-box.is-empty, .bc-qr.is-empty { border: 2px dashed var(--line); background: var(--bg); box-shadow: none; }
+.bc-empty { margin: 0; padding: 0 16px; text-align: center; color: var(--muted); font-size: 15px; }
+.bc-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.bc-actions [hidden] { display: none; }
