@@ -1,7 +1,7 @@
 // CARD1026 C11: the 명함 그림 layout (src/tools/business-card/layout.ts) with a fake measure: every line inside the text
 // box and clear of the QR in both layouts, the all-max card included; shrink, then a 2-line 주소, then 「…」.
 import { describe, expect, it } from 'vitest';
-import { CARD_LAYOUTS, SPECS, layoutCard, type CardPlan, type Measure } from '../../src/tools/business-card/layout';
+import { CARD_LAYOUTS, CARD_MIN_MODULE_PX, SPECS, cardModulePx, layoutCard, type CardPlan, type Measure } from '../../src/tools/business-card/layout';
 import { CONTACT_MAX, type ContactFields } from '../../src/lib/qr/vcard';
 
 /** Hangul and other wide letters 1 em, ASCII 0.6 em; bold a little wider. */
@@ -107,5 +107,21 @@ describe('layoutCard', () => {
 
   it('several spaces in a value read as one', () => {
     expect(layoutCard(f({ org: '예시   회사' }), 'wide', measure).lines[0]!.text).toBe('예시 회사');
+  });
+});
+
+describe('cardModulePx (review C: the card QR module floor)', () => {
+  it('is the largest whole pixel size that fits the QR square with the 4-module quiet zone', () => {
+    // 세로 460 px: version 22 (105 modules) still 4 px, version 23 (109) 3 px → the hint.
+    expect(cardModulePx('tall', 105)).toBe(4);
+    expect(cardModulePx('tall', 109)).toBe(3);
+    // 가로 600 px: version 31 (141 modules) 4 px, version 32 (145) 3 px.
+    expect(cardModulePx('wide', 141)).toBe(4);
+    expect(cardModulePx('wide', 145)).toBe(3);
+    // Version 40 (177 modules, the all-max contact): under the floor in both layouts.
+    expect(cardModulePx('tall', 177)).toBe(2);
+    expect(cardModulePx('wide', 177)).toBe(3);
+    expect(CARD_MIN_MODULE_PX).toBe(4);
+    for (const layout of CARD_LAYOUTS) for (const n of [21, 105, 177]) expect(cardModulePx(layout, n) * (n + 8)).toBeLessThanOrEqual(SPECS[layout].qr.w);
   });
 });

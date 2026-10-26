@@ -4443,3 +4443,17 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   english-address cloud spec (related count 2 → 3), LHCI median of 5 — CI.
 - Known Gaps: none new (the CARD1026 list stands). O1 adds: 보내기 → KakaoTalk on iPhone and Galaxy; the contact URL with a
   comma opens from a saved contact.
+- Orchestrator 2026-10-26, CARD1026 C review (handoff/REVIEW-FEEDBACK-CARD1026-C.md): 1 Must Fix, 1 Should Fix. (1) Must Fix,
+  done in [CARD1026 C fix]: the card QR could come out too small to scan after a messenger resamples the picture (all-max =
+  version 40 → 세로 2 px, 가로 3 px modules). layout.ts now exports `cardModulePx(layout, size)` (draw.ts uses it, so the two
+  cannot drift) and `CARD_MIN_MODULE_PX = 4` (an internal floor, never stated in copy). Under the floor, the new polite
+  `<p class="hint" id="bc-card-small" aria-live="polite">` under the card preview says 「글자가 많아 명함 그림 속 QR이 작아요.
+  메모나 주소를 줄이면 더 잘 찍혀요. 연락처 파일을 같이 보내도 돼요.」 (not an error; downloads and 보내기 stay); re-evaluated
+  on every redraw and layout change, cleared in clear(). Boundaries (unit): 세로 105 modules (v22) → 4 px, 109 (v23) → 3 px;
+  가로 141 (v31) → 4 px, 145 (v32) → 3 px; v40 → 2 / 3 px. e2e: the all-max card shows the hint in both layouts; the
+  sample contact shows none in 세로. The 세로 QR square was not enlarged (optional; the all-max text box is already tight).
+  Payload, ECC and the 연락처 QR are unchanged. 0 new core / late glyphs. (2) Should Fix, orchestrator decision: not in Step C.
+  Step D starts by moving /photo-compress/ to the runtime cache (CONTENT1021 D10) before it adds any precached bytes
+  (production-flag precache 447.9 / 450 KB after Step C). Gates: npm run check 0/0; business-card-layout unit 8/8; default
+  build + check-dist OK (business-card controller 9.3 / 11.1 KB, initial 8.9 / 12.6 KB, precache 440.5 / 450 KB, preload
+  92.1 / 92.66 KB); business-card.spec chromium + webkit 18/18.

@@ -2,8 +2,8 @@
 // the system font (no font download; typed names may use letters the site's UI font does not carry) and the contact QR
 // with its 4-module quiet zone, drawn from the same modules as the QR preview at an integer module size.
 import type { QrModules } from '../../lib/qr/encode';
-import { QUIET, qrRgba } from '../../lib/qr/render';
-import { layoutCard, type CardLayout, type CardPlan } from './layout';
+import { qrRgba } from '../../lib/qr/render';
+import { cardModulePx, layoutCard, type CardLayout, type CardPlan } from './layout';
 import type { ContactFields } from '../../lib/qr/vcard';
 
 export type CardColor = 'navy' | 'green' | 'black';
@@ -39,7 +39,7 @@ export function drawCard(canvas: HTMLCanvasElement, f: ContactFields, modules: Q
     ctx.fillText(l.text, l.x, l.y + l.h / 2, l.w);
   }
   // The QR: the largest integer module size that fits the square, centred; putImageData keeps the pixels exact.
-  const px = Math.floor(plan.qr.w / (modules.length + QUIET * 2));
+  const px = cardModulePx(layout, modules.length);
   const { data, width, height } = qrRgba(modules, px);
   const off = Math.floor((plan.qr.w - width) / 2);
   ctx.putImageData(new ImageData(data, width, height), plan.qr.x + off, plan.qr.y + off);

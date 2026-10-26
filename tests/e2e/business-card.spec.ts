@@ -29,6 +29,8 @@ async function decodePng(png: Buffer): Promise<{ text: string | null; w: number;
 const serious = async (page: Page): Promise<string[]> =>
   (await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 
+const SMALL_QR = '글자가 많아 명함 그림 속 QR이 작아요. 메모나 주소를 줄이면 더 잘 찍혀요. 연락처 파일을 같이 보내도 돼요.';
+
 const SAMPLE: Record<string, string> = {
   last: '홍',
   first: '길동',
@@ -127,6 +129,8 @@ test('sample card: 연락처.vcf is vCard 3.0 (CRLF, UTF-8, no BOM, folded at 75
   const tall = await download(page, '#bc-card-png');
   expect(await decodePng(tall.bytes)).toEqual({ text: VCARD, w: 1080, h: 1350 });
   await expect(page.locator('#bc-status')).toHaveText('명함 그림을 받았어요.');
+  // An ordinary contact keeps 4 px or more modules even in 세로: no hint.
+  await expect(page.locator('#bc-card-small')).toBeEmpty();
 
   expect(page.url()).toBe(url);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie])).toEqual(before);
@@ -164,6 +168,8 @@ test('the all-max card (every field at its limit) still gives a card in both lay
   expect(qr.text).toMatch(/^BEGIN:VCARD\r\nVERSION:3\.0\r\nN:가{10};가{20};;;\r\n/);
   for (const layout of ['가로', '세로']) {
     await page.locator('.bc-pick label.chip').filter({ hasText: new RegExp(`^${layout}$`) }).click();
+    // Review C: version 40 gives modules under the 4 px floor in both layouts → the polite hint; downloads stay.
+    await expect(page.locator('#bc-card-small'), layout).toHaveText(SMALL_QR);
     const card = await decodePng((await download(page, '#bc-card-png')).bytes);
     expect(card.text, layout).toBe(qr.text);
   }

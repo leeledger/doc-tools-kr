@@ -2,6 +2,7 @@
 // `measure` the caller supplies (canvas measureText on the page, a fake one in the unit tests). Every line shrinks to fit
 // its box down to a floor; 주소 may take two lines; past that a line ends in 「…」. Sizes are fixed per layout, so the
 // all-max card (every field at its maxLength) still fits its text box (tests/unit/business-card-layout.test.ts).
+import { QUIET } from '../../lib/qr/render';
 import { displayName, type ContactFields } from '../../lib/qr/vcard';
 
 export type CardLayout = 'wide' | 'tall';
@@ -84,6 +85,15 @@ export const SPECS: Readonly<Record<CardLayout, Spec>> = {
     },
   },
 };
+
+/**
+ * Smallest QR module size in card pixels that we treat as easy to scan from a re-sent picture (review C: messengers
+ * resample and compress the image). An engineering floor, never stated in page copy; below it the page shows a hint.
+ */
+export const CARD_MIN_MODULE_PX = 4;
+
+/** Pixels per QR module on a card of `layout` for a QR of `size` modules: the largest integer that fits the QR square with the quiet zone. */
+export const cardModulePx = (layout: CardLayout, size: number): number => Math.floor(SPECS[layout].qr.w / (size + QUIET * 2));
 
 const ELLIPSIS = '…';
 const STEP = 2;

@@ -11,7 +11,7 @@ import { qrPng, qrSvg } from '../../lib/qr/render';
 import { vcard, type ContactFields } from '../../lib/qr/vcard';
 import { track } from '../../lib/ui/usage';
 import { drawCard, type CardColor } from './draw';
-import type { CardLayout } from './layout';
+import { CARD_MIN_MODULE_PX, cardModulePx, type CardLayout } from './layout';
 
 const T = {
   needName: '이름이나 회사를 쓰면 명함이 나와요.',
@@ -21,6 +21,7 @@ const T = {
   savedQr: 'QR 그림을 받았어요.',
   savedVcf: '연락처 파일을 받았어요.',
   shared: '명함 그림 보내기를 했어요.',
+  smallQr: '글자가 많아 명함 그림 속 QR이 작아요. 메모나 주소를 줄이면 더 잘 찍혀요. 연락처 파일을 같이 보내도 돼요.',
   shareFailed: '이 기기에서는 바로 보내기가 안 돼요. 그림을 받아서 보내 주세요.',
   saveFailed: '그림을 만들지 못했어요. 한 번 더 눌러 주세요.',
 };
@@ -78,6 +79,7 @@ export function initBusinessCard(): void {
   const qrEmpty = must<HTMLParagraphElement>('bc-qr-empty');
   const shareBtn = must<HTMLButtonElement>('bc-share');
   const shareError = must<HTMLParagraphElement>('bc-share-error');
+  const smallQr = must<HTMLParagraphElement>('bc-card-small');
   const defaults = { card: cardEmpty.textContent ?? '', qr: qrEmpty.textContent ?? '' };
 
   const values = (): ContactFields => Object.fromEntries(CONTACT_KEYS.map((k) => [k, fields.get(k)!.value])) as unknown as ContactFields;
@@ -115,6 +117,7 @@ export function initBusinessCard(): void {
     qrBox.replaceChildren(qrEmpty);
     qrBox.classList.add('is-empty');
     shareBtn.hidden = true;
+    smallQr.textContent = '';
   }
 
   /** Redraws the card for the current layout and colour, then makes its file (async) for 보내기. */
@@ -122,6 +125,9 @@ export function initBusinessCard(): void {
     if (!current) return;
     cardBox.dataset.layout = layout();
     drawCard(canvas, current.f, current.modules, layout(), color());
+    // A polite hint, not an error: the QR modules of this layout fall under the scan floor (review C); downloads stay.
+    const small = cardModulePx(layout(), current.modules.length) < CARD_MIN_MODULE_PX;
+    if (smallQr.textContent !== (small ? T.smallQr : '')) smallQr.textContent = small ? T.smallQr : '';
     canvas.hidden = false;
     cardEmpty.hidden = true;
     cardBox.classList.remove('is-empty');
