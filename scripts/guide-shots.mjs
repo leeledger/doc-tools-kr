@@ -17,7 +17,10 @@ const CLIP = { width: 720, height: 560 };
 const QUALITY = 0.8;
 const MAX_BYTES = 80 * 1024;
 
-/** Each shot: the page, what to do before the shot, the element whose top starts the clip, and where it goes. */
+/**
+ * Each shot: the page, what to do before the shot, the element whose top starts the clip, and where it goes. Optional
+ * `bottom`: the clip ends 16 px below that element instead of at CLIP.height (a taller fixed layout, e.g. a preview).
+ */
 const SHOTS = [
   {
     out: 'photo-kb/1-compress-screen.webp',
@@ -78,6 +81,18 @@ const SHOTS = [
     },
   },
   {
+    out: 'qr-code/1-wifi-tab.webp',
+    path: '/qr-code/?tab=wifi',
+    top: '#qr-tool',
+    bottom: '#qr-png',
+    async prepare(page) {
+      // A made-up network name and password (never a real network); the preview QR is drawn from them.
+      await page.locator('#qr-ssid').fill('우리가게 손님용');
+      await page.locator('#qr-pw').fill('example-1234');
+      await page.locator('#qr-preview svg').waitFor();
+    },
+  },
+  {
     out: 'resignation-letter/1-form-shot.webp',
     path: '/resignation-letter/',
     top: '#rs-group-work',
@@ -131,7 +146,8 @@ try {
     await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
     // Page coordinates (a full-page clip), whatever the scroll position is after prepare().
     const y = await page.locator(shot.top).evaluate((el) => Math.round(el.getBoundingClientRect().top + window.scrollY));
-    const png = await page.screenshot({ clip: { x: 0, y, ...CLIP }, fullPage: true, animations: 'disabled', caret: 'hide' });
+    const height = shot.bottom ? (await page.locator(shot.bottom).evaluate((el) => Math.round(el.getBoundingClientRect().bottom + window.scrollY))) + 16 - y : CLIP.height;
+    const png = await page.screenshot({ clip: { x: 0, y, width: CLIP.width, height }, fullPage: true, animations: 'disabled', caret: 'hide' });
     await page.close();
     const webp = await toWebp(context, png);
     const file = join(ROOT, 'public', 'img', 'guide', shot.out);
@@ -139,7 +155,7 @@ try {
     writeFileSync(file, webp);
     const over = webp.length > MAX_BYTES;
     if (over) failed = true;
-    console.log(`guide-shots: ${shot.out} ${CLIP.width}×${CLIP.height} ${(webp.length / 1024).toFixed(1)} KB${over ? ' — OVER 80 KB' : ''}`);
+    console.log(`guide-shots: ${shot.out} ${CLIP.width}×${height} ${(webp.length / 1024).toFixed(1)} KB${over ? ' — OVER 80 KB' : ''}`);
   }
 } finally {
   await browser.close();

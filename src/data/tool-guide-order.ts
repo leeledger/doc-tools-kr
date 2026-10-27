@@ -26,6 +26,9 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   'power-of-attorney': ['power-of-attorney'],
   // LOAN1022 L5: 차용증 만들기 pins its guide (slug loan-note).
   'loan-note': ['loan-note'],
+  // CARD1026 D: QR코드 만들기 and 전자명함 만들기 pin the QR guide (slug qr-code), which names both.
+  'qr-code': ['qr-code'],
+  'business-card': ['qr-code'],
   // RESIGN1027 C: 사직서 만들기 pins its guide (slug resignation-letter).
   'resignation-letter': ['resignation-letter'],
   // IDCAM1022 E: 증명사진 촬영 pins its guide (slug self-id-photo; both ship only with PUBLIC_ID_CAMERA on).
