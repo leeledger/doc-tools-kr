@@ -4462,3 +4462,53 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   runtime-cache move from Step D (a1573af: gen-sw NOT_PRECACHED, sw.ts RUNTIME_PAGES, sw.spec offline-after-one-use e2e,
   pdf-password/polish/postbuild expectations) is applied here unchanged (its comments still say CARD1026 D, the step that
   wrote it), so Step C stands alone under the budget. The limit stays 450 KB.
+
+## RESIGN1027 — 사직서 만들기 + 안내 글 「사직서 쓰는 법」 (brief written 2026-10-27, Arch) — status BRIEFED
+- Brief: handoff/ARCHITECT-BRIEF-RESIGN1027.md (R1–R16, O1–O3). Worktree wt/resign1027, branch resign1027 (from main
+  d6fa44b). Research: reports/growth/사직서 시장 조사 2026-10-27.md (사직서양식 23,280/mo, 사직서 9,970).
+- Arch probes saved in handoff/sources/resign1027/ (2026-10-27): 민법 660·661 (284415/20260317); 고용보험법 58
+  (284449/20260918); 근로기준법 36 (285279/20261008); 1350 고객상담센터 home line; 고용24 home (link only). No 고용24
+  prose page on 권고사직 vs 자진 퇴사 was fetchable → no such statement beyond the 제58조 quote.
+- Locked: general 사직서 only (R1); /resignation-letter/ + /guide/resignation-letter/, prefix rs, 사직서.hwp/.pdf,
+  RESIGN_HWP, after loan-note (R2); fields 인적 사항 (부서·직위·이름·생년월일·연락처; no 주민번호/주소) + 재직 사항
+  (입사일·퇴사 예정일·사직 사유 100/3 lines) + 「…자로 사직하고자 하오니 처리하여 주시기 바랍니다」 (처리, not 허락) +
+  내는 날 (today) + 성명 sign line + 「{받는 사람} 귀하」 (R3); engine adds FormField presets {chip, fill} rendered as
+  chips, filled by the entry with a bubbling input event; POA/loan HTML unchanged but hashes (R5); 권고사직 preset YES,
+  no 실업급여 claim, quotes + 1350/고용24 pointer only (R6, R8); no DOCX (R7); privacy = LOAN L-D8 (R9); glyph budgets
+  win, `fill` stripped from the UI glyph scan, chips fall back to system font if needed (R10); chain pdf-sign/pdf-edit/
+  pdf-compress + stamp-maker/stamp-signature (R11); registration = LOAN L-D11, tool page runtime-cached (R12); real-한글
+  = owner O1 (R13); note ≥2,000 (R14); guide ≥2,500 with form shot + parts SVG, no date timeline (R15); steps A (engine
+  + spec, no deploy) → B (page, Deploy A) → C (guide, Deploy B) (R16).
+- Known Gaps (pre-logged): DOCX/HWPX, 주민번호/주소 칸, 퇴직금·실업급여·연차 계산, date-order checks, 권고사직 합의서·
+  사직 철회서·인수인계서·이직확인서, logo/도장 image, saved drafts, /en/ twin, reason advice.
+- Escalations: none.
+
+### RESIGN1027 Step A — engine presets + 사직서 spec (Bob, 2026-10-27) — status DONE (review: handoff/REVIEW-REQUEST-RESIGN1027-A.md)
+- A1 sources: handoff/sources/resign1027/* present with Title/URL/Fetched headers (all fetched 2026-10-27 by Arch; the
+  quoted lines are in the files). No page quotes them in A; re-fetch + check:quotes --exact in B/C when a page quotes.
+- A2 engine (R5): FormField.presets {chip, fill}[] + lint (text/multiline only, 1–8, non-empty, fill ≤ maxLength code
+  points and ≤ maxLines lines); FormTool.astro renders div.pa-presets (role group, 「자주 쓰는 이유」) of
+  button.pa-preset[data-fill-for][data-fill] + hint 「고르면 칸에 들어가요. 고쳐 써도 돼요.」; startFormTool delegates
+  the click (value, bubbling input, focus, caret at end) so it works before the controller loads; `fill` added to the
+  ui-font-chars doc-text strip (+ unit).
+- Decision (engine, beyond R5's letter): lintSpec counts a field with no table row / date line as placed when exactly one
+  paragraph slot holds it. R3 puts 받는 사람 only in 「{to} 귀하」, and the lint required one home per field. Unit: 1 slot
+  ok, 2 slots / none fail, table + slot counts once.
+- Decision: the chip CSS is its own file src/tools/form-tool/form-presets.css (for B's page to inline), not form-tool.css:
+  that file is inlined on /power-of-attorney/ and /loan-note/, and adding the rules there changed their HTML beyond
+  hashes (first build showed it). After the move: both pages' dist HTML equal the baseline after hash normalisation; the
+  only change is the entry chunk (power-of-attorney DjufwTGz → CesXfjbg, loan-note CbeyJqln → BTHFg7lc).
+- A3 spec src/data/forms/resignation-letter.ts (R3, RESIGN_HWP = true), registered in src/data/forms/index.ts (so
+  forms:hancom lists it), sample in tests/helpers/form-samples.ts, tests/unit/resignation-letter.test.ts: blank / sample /
+  all-max 1 page, loss 0, reload 1 page; all-max with 사유 wrapped at 15–40 per line 1 page; each preset fill 1 page.
+  No maxLength/rowLines cut needed (R3 numbers as briefed: 30/20/20/20/20, 사유 100 / 3 lines / rowLines 3, 받는 사람 30).
+- R10 glyphs: 0 new core, 0 new late (uiCharSets diff vs a baseline with the same generated files). Wording for that:
+  page label 「그만두는 날」 (not 퇴사 예정일; docLabel keeps it), chip 「식구 돌보기」 (fill 「가족 돌봄」), 받는 사람
+  hint 「예: 한빛 주식회사 대표이사」 (○ is not core). Chips stay in the UI font (no system-font fallback needed).
+- Budgets (production URL build): preload 92.1 / 92.66 KB, late-800 7.9 / 8 KB, font file hashes identical; precache
+  382.8 / 450 KB (unchanged); POA/loan initial JS 9.3 → 9.4 KB gzip (limit 12.8).
+- Gates: npm run check 0 errors / 0 warnings; vitest form files 96/96; vitest full 2308 passed, 1 failed (postbuild
+  「usage statistics … fail check-dist」 120 s timeout; identical timeout at baseline with the changes stashed → host
+  speed on this low-memory PC; compress/merge failed to load only in the full run, alone 48/48); e2e power-of-attorney +
+  loan-note chromium 1 worker 17/17. forms:hancom not run (한글 COM = owner O1).
+- Escalations: none (the lint decision above is logged for Richard).

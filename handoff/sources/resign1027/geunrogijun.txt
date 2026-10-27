@@ -1,0 +1,6 @@
+Title: 근로기준법
+URL: https://www.law.go.kr/LSW/lsInfoR.do?lsiSeq=285279&chrClsCd=010202&urlMode=lsInfoP&efYd=20261008&ancYnChk=0
+Fetched: 2026-10-27 (curl, server HTML, UTF-8; lsiSeq/efYd from DRF lawSearch OC=test; Arch probe, tags stripped, whitespace folded)
+[시행 2026. 10. 8.] [법률 제21533호, 2026. 4. 7., 일부개정]
+
+제36조(금품 청산) 사용자는 근로자가 사망 또는 퇴직한 경우에는 그 지급 사유가 발생한 때부터 14일 이내에 임금, 보상금, 그 밖의 모든 금품을 지급하여야 한다. 다만, 특별한 사정이 있을 경우에는 당사자 사이의 합의에 의하여 기일을 연장할 수 있다. <개정 2020. 5. 26.>

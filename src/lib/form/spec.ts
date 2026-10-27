@@ -34,7 +34,22 @@ export interface FormField {
   docBlank?: string;
   /** number only: the document text of the value 0 (「없음」). */
   docZero?: string;
+  /**
+   * text or multiline only (RESIGN1027 R5): one-tap fills shown as buttons under the input; a press replaces the
+   * field's text with `fill` (document text and input text, so `fill` is left out of the UI glyph sets).
+   */
+  presets?: FormPreset[];
 }
+
+export interface FormPreset {
+  /** The button's words. */
+  chip: string;
+  /** The text a press puts in the field. */
+  fill: string;
+}
+
+/** RESIGN1027 R5: presets per field. */
+export const PRESETS_MAX = 8;
 
 export type Align = 'left' | 'center' | 'right' | 'justify';
 
@@ -86,11 +101,14 @@ export function referredFields(block: FormBlock): string[] {
 }
 
 /**
- * Spec rules (FORM1020 test map "spec lint"): ids unique; every field has exactly one home; table fields have a
+ * Spec rules (FORM1020 test map "spec lint"): ids unique; every field has exactly one home (a table row or a date
+ * line; a field with neither may sit in exactly one paragraph slot instead, RESIGN1027 「{to} 귀하」); table fields have a
  * docLabel; every reference names a field; maxLength set; multiline has maxLines; table widths match its columns;
  * after the first table (and right before it) only body text (./build: rhwp breaks pages on a char format there);
  * a dateLine names a date field (a date may also sit in a table row, LOAN1022); docTemplate has `{v}`; docTemplate and
- * docZero only on number fields, docBlank only on amount, number and date fields.
+ * docZero only on number fields, docBlank only on amount, number and date fields; presets (RESIGN1027 R5) only on text
+ * and multiline fields, 1–PRESETS_MAX of them, each chip and fill non-empty, each fill within maxLength (code points)
+ * and maxLines (a text field: one line).
  * Returns the problems (empty = valid).
  */
 export function lintSpec(spec: FormSpec): string[] {
@@ -105,8 +123,19 @@ export function lintSpec(spec: FormSpec): string[] {
     if (f.docTemplate !== undefined && !f.docTemplate.includes('{v}')) out.push(`${f.id}: docTemplate needs {v}`);
     if ((f.docTemplate !== undefined || f.docZero !== undefined) && f.kind !== 'number') out.push(`${f.id}: docTemplate and docZero are for number fields`);
     if (f.docBlank !== undefined && !['amount', 'number', 'date'].includes(f.kind)) out.push(`${f.id}: docBlank is for amount, number and date fields`);
+    if (f.presets !== undefined) {
+      if (f.kind !== 'text' && f.kind !== 'multiline') out.push(`${f.id}: presets are for text and multiline fields`);
+      if (f.presets.length < 1 || f.presets.length > PRESETS_MAX) out.push(`${f.id}: 1–${PRESETS_MAX} presets`);
+      const lines = f.kind === 'multiline' ? (f.maxLines ?? 1) : 1;
+      for (const x of f.presets) {
+        if (!x.chip.trim() || !x.fill.trim()) out.push(`${f.id}: preset chip and fill must not be empty`);
+        if ([...x.fill].length > f.maxLength) out.push(`${f.id}: preset ${x.chip} is longer than maxLength`);
+        if (x.fill.split('\n').length > lines) out.push(`${f.id}: preset ${x.chip} has more than ${lines} lines`);
+      }
+    }
   }
   const homes = new Map<string, number>();
+  const slotted = new Map<string, number>();
   const firstTable = spec.blocks.findIndex((b) => b.type === 'table');
   const body = (b: FormBlock | undefined): boolean => !b || (b.type === 'gap' ? b.size === BODY_PT : b.type === 'para' ? (b.size ?? BODY_PT) === BODY_PT && !b.bold : b.type !== 'title');
   if (firstTable >= 0) {
@@ -117,6 +146,7 @@ export function lintSpec(spec: FormSpec): string[] {
   }
   spec.blocks.forEach((b) => {
     for (const id of homeFields(b)) homes.set(id, (homes.get(id) ?? 0) + 1);
+    if (b.type === 'para') for (const id of slotIds(b.doc)) slotted.set(id, (slotted.get(id) ?? 0) + 1);
     for (const id of [...homeFields(b), ...referredFields(b)]) if (!ids.has(id)) out.push(`unknown field ${id}`);
     if (b.type === 'table') {
       const cols = b.docSection ? 3 : 2;
@@ -126,7 +156,7 @@ export function lintSpec(spec: FormSpec): string[] {
     if (b.type === 'dateLine' && ids.get(b.field) && ids.get(b.field)!.kind !== 'date') out.push(`${b.field}: dateLine needs a date field`);
   });
   for (const f of spec.fields) {
-    const n = homes.get(f.id) ?? 0;
+    const n = homes.get(f.id) ?? slotted.get(f.id) ?? 0;
     if (n !== 1) out.push(`${f.id}: placed ${n} times`);
   }
   return out;
