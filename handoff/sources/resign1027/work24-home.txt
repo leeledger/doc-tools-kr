@@ -1,0 +1,5 @@
+Title: 고용24 (메인)
+URL: https://www.work24.go.kr/cm/main.do
+Fetched: 2026-10-27 (curl 200; Arch probe)
+
+Link target only (the menu lists 「실업급여」「수급자격」「이직확인서」). No sentence from this page is quoted: the page is a menu.

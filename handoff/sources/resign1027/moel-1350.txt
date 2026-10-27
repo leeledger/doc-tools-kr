@@ -1,0 +1,5 @@
+Title: 1350 고용노동부 고객상담센터 (홈)
+URL: https://1350.moel.go.kr/home/
+Fetched: 2026-10-27 (curl, server HTML, UTF-8; Arch probe, tags stripped)
+
+1350과 함께하는 고용 노동 상담 국번없이 1350(유료) (이용시간 : 평일 09:00 ~ 18:00) 통합검색 F A Q 동영상 --> 웹툰 홍보자료 공지사

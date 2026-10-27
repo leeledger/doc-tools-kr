@@ -1,5 +1,6 @@
 // LOAN1022 L-D3: the form engine's amount and number kinds — amountHangul, normalize, fieldProblem, docText — the lint
-// rules for the new keys, and the UI glyph scan leaving the new document keys out.
+// rules for the new keys, and the UI glyph scan leaving the new document keys out. RESIGN1027 R5: the presets lint, a
+// field placed only by a paragraph slot, and `fill` left out of the glyph scan.
 import { describe, expect, it } from 'vitest';
 import { amountHangul, groupDigits } from '../../src/lib/form/amount';
 import { lintSpec, type FormField, type FormSpec } from '../../src/lib/form/spec';
@@ -159,5 +160,62 @@ describe('UI font', () => {
   it('the 금액 한글 module is document text only: in neither UI glyph set', () => {
     expect(DOC_TEXT_PATHS).toContain('lib/form/amount.ts');
     for (const p of DOC_TEXT_PATHS) expect(existsSync(`src/${p}`)).toBe(true);
+  });
+});
+
+describe('spec lint (RESIGN1027 presets and a slot-only field)', () => {
+  const spec = (fields: FormField[], doc = 'x'): FormSpec => ({
+    id: 'x',
+    fileBase: 'x',
+    title: 'x',
+    fields,
+    blocks: [
+      { type: 'table', rows: fields.filter((f) => f.docLabel).map((f) => f.id), colWidths: [1, 2], rowHeight: 1 },
+      { type: 'para', doc },
+    ],
+  });
+  const reason = (presets: FormField['presets']): FormField => ({ id: 'r', label: 'r', docLabel: 'r', kind: 'multiline', maxLength: 10, maxLines: 2, presets });
+  it('presets within maxLength and maxLines on a text or multiline field are fine', () => {
+    expect(lintSpec(spec([reason([{ chip: 'a', fill: '가나다' }, { chip: 'b', fill: '가\n나' }]), { id: 't', label: 't', docLabel: 't', kind: 'text', maxLength: 3, presets: [{ chip: 'c', fill: '가나다' }] }]))).toEqual([]);
+  });
+  it('names each presets problem', () => {
+    const many = Array.from({ length: 9 }, (_, i) => ({ chip: `c${i}`, fill: 'f' }));
+    const p = lintSpec(
+      spec([
+        { ...reason([{ chip: 'long', fill: '가'.repeat(11) }, { chip: 'lines', fill: 'a\nb\nc' }, { chip: ' ', fill: 'x' }]), id: 'r1' },
+        { ...reason([]), id: 'r2' },
+        { ...reason(many), id: 'r3' },
+        { id: 'd', label: 'd', docLabel: 'd', kind: 'date', maxLength: 10, presets: [{ chip: 'c', fill: '2026-10-27' }] },
+        { id: 't', label: 't', docLabel: 't', kind: 'text', maxLength: 5, presets: [{ chip: 'two', fill: 'a\nb' }, { chip: 'empty', fill: '' }] },
+      ]),
+    ).join('\n');
+    for (const s of [
+      'r1: preset long is longer than maxLength',
+      'r1: preset lines has more than 2 lines',
+      'r1: preset chip and fill must not be empty',
+      'r2: 1–8 presets',
+      'r3: 1–8 presets',
+      'd: presets are for text and multiline fields',
+      't: preset two has more than 1 lines',
+      't: preset chip and fill must not be empty',
+    ])
+      expect(p).toContain(s);
+  });
+  it('a field with no table row or date line is placed by exactly one paragraph slot; two slots or none fail', () => {
+    const to: FormField = { id: 'to', label: 'to', kind: 'text', maxLength: 5 };
+    const t: FormField = { id: 't', label: 't', docLabel: 't', kind: 'text', maxLength: 5 };
+    expect(lintSpec(spec([t, to], '{to} 귀하'))).toEqual([]);
+    expect(lintSpec(spec([t, to], '{to} {to}'))).toContain('to: placed 2 times');
+    expect(lintSpec(spec([t, to], 'x'))).toContain('to: placed 0 times');
+    // A table field also in a slot stays placed once (사직서 「{leaveDate}자로」).
+    expect(lintSpec(spec([t, to], '{t} {to}'))).toEqual([]);
+  });
+});
+
+describe('UI font (RESIGN1027 R10)', () => {
+  it('a preset fill is document and input text, left out of the glyph sets; its chip stays', () => {
+    const kept = stripComments("{ chip: '건강', fill: '회복(치료)' }");
+    expect(kept).toContain('건강');
+    for (const s of ['회복', '치료']) expect(kept).not.toContain(s);
   });
 });

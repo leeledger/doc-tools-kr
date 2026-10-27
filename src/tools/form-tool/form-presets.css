@@ -1,0 +1,10 @@
+/* RESIGN1027 R5: preset buttons under an input (src/components/FormTool.astro; a press fills the field). Its own file,
+   inlined only on pages whose form has presets, so the other form pages' HTML stays as it was. */
+.pa-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.pa-preset {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--text); font: inherit;
+  font-size: 15px; font-weight: 800; cursor: pointer;
+}
+.pa-preset:hover { border-color: var(--brand); color: var(--brand); }
+.pa-preset:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }

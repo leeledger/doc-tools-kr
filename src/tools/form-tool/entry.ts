@@ -5,7 +5,9 @@
 // never lost: the form never submits (no action, prevented here), and the pressed action runs once the controller
 // starts. A controller that cannot load shows the shared engine panel. Usage: nothing here but the page view (the
 // controller reports start/download/next). Each tool's own entry.ts calls startFormTool with its id, prefix and its
-// controller module (a dynamic import, so the controller stays a lazy chunk).
+// controller module (a dynamic import, so the controller stays a lazy chunk). RESIGN1027 R5: a preset button
+// (src/components/FormTool.astro) fills its field here, before or after the controller loads: the value, then a bubbling
+// `input` event (the controller marks a built document stale as for typing), focus and the caret at the end.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { isRestingMove, preloadSkipped, SIGNALS } from '../../lib/ui/preload';
@@ -52,6 +54,15 @@ export function startFormTool(cfg: FormEntry): void {
         void showEngineError();
       },
     ));
+  root.addEventListener('click', (ev) => {
+    const btn = (ev.target as Element | null)?.closest<HTMLButtonElement>('button[data-fill-for]');
+    const input = btn ? (document.getElementById(btn.dataset.fillFor ?? '') as HTMLInputElement | HTMLTextAreaElement | null) : null;
+    if (!btn || !input) return;
+    input.value = btn.dataset.fill ?? '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
   const onNow = (): void => void load();
   for (const ev of NOW) root.addEventListener(ev, onNow, { passive: true });
   // Before the controller: never submit; remember the action. After: the controller's own handlers act.

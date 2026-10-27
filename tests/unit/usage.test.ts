@@ -974,7 +974,7 @@ describe('영문 이름 변환기 (ROMANIZE1016 D6)', () => {
   it('start (no o/v), download with o=form, next to id-photo pass; the name, its parts and other settings never do', () => {
     expect(TOOLS).toContain('english-name');
     expect([...NAME_FORMS]).toEqual([...SHAPES]);
-    expect(DOWNLOAD_SETTING).toEqual({ 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format', 'id-photo': 'sheet' });
+    expect(DOWNLOAD_SETTING).toEqual({ 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format', 'resignation-letter': 'format', 'id-photo': 'sheet' });
     expect(validate(body({ ...BASE, t: 'english-name', e: 'start' }))).not.toBeNull();
     for (const v of NAME_FORMS) expect(validate(body({ ...BASE, t: 'english-name', e: 'download', o: 'form', v })), v).toMatchObject({ e: 'download', o: 'form', v });
     expect(validate(body({ ...BASE, t: 'english-name', e: 'download' }))).not.toBeNull();

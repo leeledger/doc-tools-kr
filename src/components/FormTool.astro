@@ -6,6 +6,8 @@
 // action: nothing typed is stored, sent or put in the URL (FORM1020 D7). Slot "caution": a notice above the buttons.
 // LOAN1022 L-D6: a date may sit in a fieldset; an amount is a numeric text input with a live 「10,000,000원」 echo
 // (filled by the controller) and an error line; a number is a decimal text input with a 「%」 unit and an error line.
+// RESIGN1027 R5: a field's presets are buttons under its input (data-fill-for, data-fill); the entry fills on a press;
+// their styles are src/tools/form-tool/form-presets.css, which a page with presets inlines next to form-tool.css.
 import EngineError from './EngineError.astro';
 import type { FormField, FormSpec } from '../lib/form/spec';
 
@@ -53,12 +55,18 @@ const loose = after.map(field);
                 <span aria-hidden="true">%</span>
               </span>
             ) : (
-              <input id={`${p}-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next">
+              <input id={`${p}-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={f.hint ? `${p}-${f.id}-hint` : undefined}>
             )}
             {f.kind === 'multiline' && <p class="hint" id={`${p}-${f.id}-hint`}>{f.maxLines}줄까지 쓸 수 있습니다.</p>}
             {f.kind !== 'multiline' && f.hint && <p class="hint" id={`${p}-${f.id}-hint`}>{f.hint}</p>}
             {f.kind === 'amount' && <p class="pa-echo" id={`${p}-${f.id}-echo`} aria-live="polite"></p>}
             {(f.kind === 'amount' || f.kind === 'number') && <p class="field-error" id={`${p}-${f.id}-error`}></p>}
+            {f.presets && (
+              <div class="pa-presets" role="group" aria-label="자주 쓰는 이유" aria-describedby={`${p}-${f.id}-presets-hint`}>
+                {f.presets.map((x) => <button type="button" class="pa-preset" data-fill-for={`${p}-${f.id}`} data-fill={x.fill}>{x.chip}</button>)}
+              </div>
+            )}
+            {f.presets && <p class="hint" id={`${p}-${f.id}-presets-hint`}>고르면 칸에 들어가요. 고쳐 써도 돼요.</p>}
           </div>
         ))}
       </fieldset>

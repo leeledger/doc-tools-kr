@@ -486,6 +486,32 @@ test('차용증 만들기 (LOAN1022 L-D8): a blocked amount sends nothing; start
   for (const b of beacons) expect(b.body).not.toMatch(/홍길동|010-1234|5678|12345000|12,345,000|1천만|4\.5|차용증\.|\.hwp|\.pdf/);
 });
 
+test('사직서 만들기 (RESIGN1027 R9): a preset press sends nothing; start, success, download format, next; never a typed value, a preset text or the file name', async ({ page }) => {
+  test.setTimeout(300_000);
+  const beacons = await record(page);
+  await gotoReady(page, '/resignation-letter/');
+  await page.locator('[data-field="name"]').fill('홍길동');
+  await page.locator('[data-field="phone"]').fill('010-1234-5678');
+  await page.locator('[data-field="leaveDate"]').fill('2026-11-30');
+  await page.locator('#rs-tool .pa-preset', { hasText: '회사 권고' }).click();
+  await expect(page.locator('#rs-reason')).toHaveValue('회사의 권고에 따른 퇴사(권고사직)');
+  await page.locator('#rs-make').click();
+  await expect(page.locator('#rs-tool')).toHaveAttribute('data-state', 'ready', { timeout: 180_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#rs-hwp').click()]);
+  await Promise.all([page.waitForEvent('download', { timeout: 90_000 }), page.locator('#rs-pdf').click()]);
+  await Promise.all([page.waitForURL('**/pdf-sign/'), page.locator('#rs-next').getByRole('button', { name: 'PDF 서명·도장 넣기' }).click()]);
+  const mine = () => beacons.filter((b) => b.ev.t === 'resignation-letter');
+  await expect.poll(() => mine().map((b) => [b.ev.e, b.ev.o ?? '', b.ev.v ?? ''].join(' '))).toEqual([
+    'start build filled',
+    'success  ',
+    'download format hwp',
+    'download format pdf',
+    'next next pdf-sign',
+  ]);
+  expectClean(beacons);
+  for (const b of beacons) expect(b.body).not.toMatch(/홍길동|010-1234|5678|2026-11-30|권고|회사의|사직서\.|\.hwp|\.pdf/);
+});
+
 test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

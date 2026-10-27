@@ -36,6 +36,18 @@ export const SAMPLE_VALUES: Readonly<Record<string, FormValues>> = {
     borrowerPhone: '010-3333-4444',
     date: '2026-10-22',
   },
+  'resignation-letter': {
+    dept: '영업팀',
+    position: '대리',
+    name: '홍길동',
+    birth: '1990년 3월 1일',
+    phone: '010-1234-5678',
+    joinDate: '2022-03-02',
+    leaveDate: '2026-11-30',
+    reason: '다른 회사로 옮기게 되어서',
+    date: '2026-10-27',
+    to: '○○ 주식회사 대표이사',
+  },
 };
 
 const WIDE = '가';
