@@ -4556,3 +4556,7 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   /resignation-letter/; FormTool change does not apply to them).
 - Known Gaps (new): presetsLabel (above). The R1/Out-of-Scope list stands.
 - Escalations: none.
+
+### 2026-10-27 orchestrator: RESIGN1027 Step B review fixes
+- Review B SF1: check-dist budgets for /resignation-letter/ set to the shared POA/loan limits 12.8 / 8.4 KB (were measured + 20 % = 13.2 / 9.4); measured 11.0 / 7.8 passes. Decision: tighter shared limit, since it is the same code.
+- Review B SF2: tool note 다목 wording outside the quote now keeps 「그 밖에」 as in the law (밖 is an existing glyph).

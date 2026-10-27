@@ -1058,9 +1058,9 @@ const FORM_TOOLS = [
   { slug: 'power-of-attorney', prefix: 'pa', initialKb: 12.8, lazyKb: 8.4 },
   // LOAN1022 L-D11: the same rules and budgets.
   { slug: 'loan-note', prefix: 'ln', initialKb: 12.8, lazyKb: 8.4 },
-  // RESIGN1027 R12: the same rules; budgets = measured + 20 % of the larger build (CARD1026 C14): initial 11.0 KB
+  // RESIGN1027 R12: the same rules and the same shared budgets as POA/loan (review B SF1); measured initial 11.0 KB
   // (production flags; 9.4 default), controller 7.8 KB (BUILD-LOG RESIGN1027 Step B).
-  { slug: 'resignation-letter', prefix: 'rs', initialKb: 13.2, lazyKb: 9.4 },
+  { slug: 'resignation-letter', prefix: 'rs', initialKb: 12.8, lazyKb: 8.4 },
 ];
 for (const t of FORM_TOOLS) {
   const html = pageHtml.get(`${t.slug}/index.html`);
