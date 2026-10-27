@@ -4640,3 +4640,14 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 
 ### 2026-10-27 orchestrator: RESIGN1027 Step C review fix
 - Review C SF1: the 「계약 끝」 sentence no longer follows the 민법 제661조 quote directly; it is its own paragraph and says it is a different case from 661조 (which covers quitting during the term). Merge of resign1027 (with main/CARD1026 D) kept both sides in 6 files and regenerated guide-titles.
+
+### 2026-10-27 orchestrator: CARD1026 + RESIGN1027 live smoke
+- Merged: #26 (/qr-code/), #28 (/business-card/), #29 (/guide/qr-code/), #30 (/resignation-letter/), #31 (/guide/resignation-letter/). Post-deploy and main CI green on 31a4ebd.
+- /qr-code/ live: Wi-Fi tab PNG decodes to WIFI:T:WPA;S:우리가게 손님용;P:example-1234;; ; SVG 3,972 bytes.
+- /business-card/ live: 연락처.vcf is vCard 3.0 CRLF (N, FN, TEL CELL, EMAIL); contact QR and 명함.png decode to FN:홍길동.
+- /resignation-letter/ live: 7 chips (이직 fills 다른 회사로 옮기게 되어서), one-page preview, 사직서.hwp 13,824 bytes (OLE header d0cf11e0), 사직서.pdf 28,024 bytes (%PDF-1.7), 빈 양식 ok. Title, sitemap, links from loan-note/power-of-attorney/stamp-maker present.
+- /guide/qr-code/ and /guide/resignation-letter/ live with both figures each; sitemap and llms.txt list the new pages.
+- Only non-GET requests on all three tools: cloudflareinsights, GA collect, /api/usage (all allowed).
+- Decision: CLAUDE.md tool list now names QR코드 만들기, 전자명함 만들기, 사직서 만들기 (architect suggestion, applied by the orchestrator after shipping).
+- Flake noted: PR #31 webkit sw.spec /hwp-to-pdf/ offline test timed out at 150 s once; passed on rerun (unrelated code).
+- Owner-only still open: RESIGN O1 `npm run forms:hancom` on the 한글 PC; O2 phone tests (chips, date pickers, HWP/PDF open); CARD O1 real-phone QR/vcf scans.
