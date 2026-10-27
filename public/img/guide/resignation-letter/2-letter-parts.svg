@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 560" width="640" height="560" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">사직서 한 장을 위에서 아래로 제목, 인적 사항, 재직 사항, 사직 사유, 날짜, 서명, 받는 사람으로 나누어 이름을 붙인 그림</title>
+<rect x="0.5" y="0.5" width="639" height="559" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<rect x="32" y="24" width="300" height="512" rx="4" fill="#fbfcfb" stroke="#1c2321" stroke-width="1.5"/>
+<text x="182" y="66" font-size="22" fill="#1c2321" text-anchor="middle" font-weight="bold">사 직 서</text>
+<rect x="52" y="90" width="260" height="110" fill="#ffffff" stroke="#1c2321"/>
+<line x1="98" y1="90" x2="98" y2="200" stroke="#1c2321"/>
+<line x1="174" y1="90" x2="174" y2="200" stroke="#1c2321"/>
+<line x1="98" y1="112" x2="312" y2="112" stroke="#9aa5a2"/>
+<line x1="98" y1="134" x2="312" y2="134" stroke="#9aa5a2"/>
+<line x1="98" y1="156" x2="312" y2="156" stroke="#9aa5a2"/>
+<line x1="98" y1="178" x2="312" y2="178" stroke="#9aa5a2"/>
+<text x="75" y="150" font-size="12" fill="#1c2321" text-anchor="middle">인적</text>
+<text x="75" y="165" font-size="12" fill="#1c2321" text-anchor="middle">사항</text>
+<text x="104" y="106" font-size="11" fill="#5b6663">소속</text>
+<text x="104" y="128" font-size="11" fill="#5b6663">직위</text>
+<text x="104" y="150" font-size="11" fill="#5b6663">성명</text>
+<text x="104" y="172" font-size="11" fill="#5b6663">생년월일</text>
+<text x="104" y="194" font-size="11" fill="#5b6663">연락처</text>
+<rect x="52" y="214" width="260" height="110" fill="#ffffff" stroke="#1c2321"/>
+<line x1="98" y1="214" x2="98" y2="324" stroke="#1c2321"/>
+<line x1="174" y1="214" x2="174" y2="324" stroke="#1c2321"/>
+<line x1="98" y1="236" x2="312" y2="236" stroke="#9aa5a2"/>
+<line x1="98" y1="258" x2="312" y2="258" stroke="#9aa5a2"/>
+<text x="75" y="264" font-size="12" fill="#1c2321" text-anchor="middle">재직</text>
+<text x="75" y="279" font-size="12" fill="#1c2321" text-anchor="middle">사항</text>
+<text x="104" y="230" font-size="11" fill="#5b6663">입사일</text>
+<text x="104" y="252" font-size="11" fill="#5b6663">퇴사 예정일</text>
+<rect x="175" y="259" width="136" height="64" fill="#e6f3f1"/>
+<text x="104" y="294" font-size="11" fill="#5b6663">사직 사유</text>
+<rect x="72" y="344" width="220" height="7" rx="3" fill="#c9d1cf"/>
+<rect x="92" y="358" width="180" height="7" rx="3" fill="#c9d1cf"/>
+<g font-size="13" fill="#1c2321"><text x="150" y="400">년</text><text x="190" y="400">월</text><text x="230" y="400">일</text></g>
+<text x="196" y="446" font-size="13" fill="#1c2321">성명</text>
+<line x1="228" y1="448" x2="292" y2="448" stroke="#1c2321"/>
+<text x="296" y="446" font-size="11" fill="#5b6663">(서명)</text>
+<text x="56" y="496" font-size="13" fill="#1c2321">○○ 주식회사 대표이사 귀하</text>
+<g font-size="15" fill="#0f766e" font-weight="bold">
+<text x="392" y="66">제목</text>
+<text x="392" y="150">인적 사항</text>
+<text x="392" y="232">재직 사항</text>
+<text x="392" y="296">사직 사유</text>
+<text x="392" y="404">날짜</text>
+<text x="392" y="450">서명</text>
+<text x="392" y="500">받는 사람</text>
+</g>
+<g font-size="12" fill="#5b6663">
+<text x="392" y="168">누가 내는지</text>
+<text x="392" y="250">언제 들어와 언제 그만두는지</text>
+<text x="392" y="314">그만두는 이유</text>
+<text x="392" y="370">사직하겠다는 문장</text>
+<text x="392" y="422">사직서를 내는 날</text>
+<text x="392" y="468">이름 옆에 서명이나 도장</text>
+<text x="392" y="518">회사 이름과 직함 뒤에 귀하</text>
+</g>
+<g stroke="#0f766e" stroke-width="1.5" fill="none">
+<line x1="250" y1="60" x2="384" y2="60"/>
+<line x1="316" y1="145" x2="384" y2="145"/>
+<line x1="316" y1="227" x2="384" y2="227"/>
+<line x1="316" y1="291" x2="384" y2="291"/>
+<line x1="296" y1="354" x2="384" y2="365"/>
+<line x1="250" y1="396" x2="384" y2="399"/>
+<line x1="336" y1="445" x2="384" y2="445"/>
+<line x1="246" y1="492" x2="384" y2="495"/>
+</g>
+</svg>

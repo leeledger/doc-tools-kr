@@ -41,6 +41,7 @@ export default {
   "qnet-photo": "큐넷 사진 등록 규격과 안 될 때 확인할 점",
   "qr-code": "QR코드 만들기 전에: 와이파이·연락처 QR, 잘 찍히는 QR",
   "remove-background": "누끼 따기 쉽게 하는 법, 사진 배경 지우기",
+  "resignation-letter": "사직서 쓰는 법: 들어갈 내용, 날짜, 퇴직 사유",
   "resume-photo": "이력서 사진 규격, 사람인·잡코리아 크기와 용량",
   "self-id-photo": "집에서 증명사진 찍는 법: 휴대폰 세우기, 배경, 빛",
   "stamp-image": "도장·서명 이미지 만들기 (배경 없는 PNG)",

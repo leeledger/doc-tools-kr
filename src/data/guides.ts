@@ -63,6 +63,7 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
  * 차용증 만들기 → 위임장 쓰는 법, 도장·서명 이미지 만들기, PDF 서명 넣는 법 (LOAN1022; its own guide comes with L5);
  * QR코드 만들기 → 카톡 사진 용량 (QR 그림을 메신저로 보낼 때), 도장·서명 이미지 만들기 (CARD1026 D; its own guide qr-code first);
  * 전자명함 만들기 → 여권 영문 이름 (명함의 영문 이름), 카톡 사진 용량 (명함 그림 보내기), 도장·서명 이미지 만들기 (CARD1026 D).
+ * 사직서 만들기 → PDF 서명 넣는 법, 도장·서명 이미지 만들기, 전자서명법 (서명해 내는 사직서; RESIGN1027 C, its own guide pinned first).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
@@ -85,6 +86,7 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'loan-note': ['power-of-attorney', 'stamp-image', 'pdf-sign'],
   'qr-code': ['kakao-photo', 'stamp-image'],
   'business-card': ['passport-english-name', 'kakao-photo', 'stamp-image'],
+  'resignation-letter': ['pdf-sign', 'stamp-image', 'e-signature-law'],
   // IDCAM1022: after its own guide (self-id-photo, pinned), the photo guides of the presets people shoot for most.
   'id-photo-camera': ['passport-photo', 'resume-photo', 'id-card-photo'],
 };

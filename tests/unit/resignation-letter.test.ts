@@ -240,3 +240,53 @@ describe('사직서 만들기: the HWP kill switch (R13 RESIGN_HWP) and the pres
     for (const other of ['loan-note', 'power-of-attorney']) expect(readFileSync(`src/pages/${other}/index.astro`, 'utf8'), other).not.toContain('form-presets.css');
   });
 });
+
+describe('사직서 쓰는 법 (RESIGN1027 C, R8 / R15): every law sentence is the saved excerpt, quoted whole', () => {
+  // Each source URL → the excerpt Arch saved from it (handoff/sources/resign1027, fetched 2026-10-27).
+  const EXCERPTS: Record<string, string> = { 'lsiSeq=284415': 'minbeop.txt', 'lsiSeq=284449': 'goyongboheom.txt', 'lsiSeq=285279': 'geunrogijun.txt', '1350.moel.go.kr': 'moel-1350.txt' };
+  const load = async () => {
+    const { readFileSync } = await import('node:fs');
+    const { readGuides } = await import('../../scripts/ops/lib/guides.mjs');
+    const guide = readGuides().find((g: { slug: string }) => g.slug === 'resignation-letter');
+    const md = readFileSync('src/content/guides/resignation-letter.md', 'utf8').replace(/\r\n/g, '\n');
+    const body = md.slice(md.indexOf('\n---\n', 4) + 5);
+    return { readFileSync, guide, md, body };
+  };
+
+  it('each source quote stands verbatim in its saved excerpt and in the body; retrieved = the fetch date', async () => {
+    const { readFileSync, guide, body } = await load();
+    const sources = (guide?.sources ?? []) as { url: string; quote: string; retrieved: string }[];
+    expect(sources.length).toBeGreaterThanOrEqual(3);
+    for (const s of sources) {
+      const key = Object.keys(EXCERPTS).find((k) => s.url.includes(k));
+      expect(key, s.url).toBeDefined();
+      const excerpt = readFileSync(`handoff/sources/resign1027/${EXCERPTS[key!]}`, 'utf8').replace(/\s+/g, ' ');
+      expect(excerpt, s.quote).toContain(s.quote);
+      // Statute text is shown verbatim (postbuild Growth T9 exception); the 1350 page line stays the audit trail only.
+      if (s.url.includes('law.go.kr')) expect(body, s.quote).toContain(`「${s.quote}」`);
+      else expect(body, s.quote).not.toContain(s.quote);
+      expect(s.retrieved).toBe('2026-10-27');
+    }
+  });
+
+  it('민법 제660조 ② is always with the heading; R8 line, 1350 and 고용24 pointers; no 실업급여, legal-effect or official claim', async () => {
+    const { md, body } = await load();
+    const para = body.split('\n\n').find((p) => p.includes('1월이 경과하면'))!;
+    expect(para).toContain('제660조(기간의 약정이 없는 고용의 해지통고)');
+    expect(body).toContain('이 글은 일반적인 안내이고 법률 상담이 아니에요.');
+    expect(body).toContain('국번 없이 1350번');
+    expect(body).toContain('(https://www.work24.go.kr/cm/main.do)');
+    expect(md).not.toMatch(/실업급여|구직급여|법적 효력|공식 (양식|서식)|법정 서식/);
+    // No date or amount is computed for the reader: no number of days or months outside a quote.
+    expect(body.replace(/「[^」]*」/g, '')).not.toMatch(/\d+\s*(일|개월|달|주)(?![가-힣])/);
+  });
+
+  it('pins and inbound links: the tool pins the guide; the 차용증 and 위임장 guides and the tool note link it', async () => {
+    const { readFileSync } = await load();
+    const { TOOL_GUIDE_PINS } = await import('../../src/data/tool-guide-order');
+    expect(TOOL_GUIDE_PINS['resignation-letter']).toEqual(['resignation-letter']);
+    for (const f of ['src/content/guides/loan-note.md', 'src/content/guides/power-of-attorney.md', 'src/content/tool-notes/resignation-letter.md']) {
+      expect(readFileSync(f, 'utf8'), f).toContain('[사직서 쓰는 법](/guide/resignation-letter/)');
+    }
+  });
+});

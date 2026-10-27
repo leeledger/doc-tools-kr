@@ -29,6 +29,8 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   // CARD1026 D: QR코드 만들기 and 전자명함 만들기 pin the QR guide (slug qr-code), which names both.
   'qr-code': ['qr-code'],
   'business-card': ['qr-code'],
+  // RESIGN1027 C: 사직서 만들기 pins its guide (slug resignation-letter).
+  'resignation-letter': ['resignation-letter'],
   // IDCAM1022 E: 증명사진 촬영 pins its guide (slug self-id-photo; both ship only with PUBLIC_ID_CAMERA on).
   'id-photo-camera': ['self-id-photo'],
   // Part B: shown only in builds with PUBLIC_BG_REMOVE on (the guide requires bg-remove; the tool page exists only then).

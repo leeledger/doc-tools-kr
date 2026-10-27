@@ -92,6 +92,21 @@ const SHOTS = [
       await page.locator('#qr-preview svg').waitFor();
     },
   },
+  {
+    out: 'resignation-letter/1-form-shot.webp',
+    path: '/resignation-letter/',
+    top: '#rs-group-work',
+    async prepare(page) {
+      // Made-up example values (the e2e sample: 홍길동, ○○ 주식회사), never a real person's data. Every date is fixed so
+      // the shot does not change with the day it is taken (내는 날 defaults to today). The 이직 chip fills the reason, as
+      // a visitor would, so the shot shows the chips under a filled field.
+      const values = { dept: '영업팀', position: '대리', name: '홍길동', birth: '1990년 3월 1일', phone: '010-1234-5678', joinDate: '2022-03-02', leaveDate: '2026-11-30', date: '2026-10-27', to: '○○ 주식회사 대표이사' };
+      for (const [field, value] of Object.entries(values)) {
+        await page.locator(`[data-field="${field}"]`).fill(value);
+      }
+      await page.locator('#rs-group-work .pa-preset', { hasText: '이직' }).click();
+    },
+  },
 ];
 
 async function toWebp(context, png) {

@@ -4610,3 +4610,33 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
 
 ### 2026-10-26 orchestrator: PR #29 CI fix (e2e race)
 - e2e (chromium, mobile-chrome) failed in business-card.spec.ts "보내기": the second share press was read before the async share finished (the status text does not change between presses, so nothing waited). Decision: the test now polls until the second shared file exists before decoding it. No product code changed. Local chromium x3 green.
+
+## RESIGN1027 C — /guide/resignation-letter/ 사직서 쓰는 법 (Bob, 2026-10-27) — DONE
+- Guide src/content/guides/resignation-letter.md: title 「사직서 쓰는 법: 들어갈 내용, 날짜, 퇴직 사유」 (31 with suffix), query
+  사직서 쓰는법, topic 취업·이력서 (decision: 사직서 is a job-change document; loan-note/POA sit in 세금·민원), related
+  pdf-sign / stamp-image / loan-note. Rendered body 3,330 (guide-length ≥ 2,500). H2s as R15. FAQ ×4, none from tools.ts.
+- Sources (all retrieved 2026-10-27 = handoff/sources/resign1027): 민법 660 heading, ①, ② (② always with the heading),
+  661; 고용보험법 58 heading, lead, 2호, 가·나·다 (다 after 「고용노동부령으로」, the link-artifact space avoided); 근로기준법
+  36 + 단서; 1350 home line. 660 ③ not quoted (R8 lists ①②); the text only points to it. No date, amount or 실업급여 claim.
+- Decision: the 1350 line is paraphrased in the body (「국번 없이 1350번 … 평일 09:00부터 18:00까지 받는 유료 전화」):
+  postbuild Growth T9 forbids a verbatim non-statute quote on a guide (law.go.kr only is exempt). Caught by the full suite.
+- Figures: 1-form-shot.webp (guide-shots, 720×560, 12.9 KB; 「일한 기간과 이유」, e2e sample, fixed dates, 이직 chip
+  pressed; the other four shots re-ran byte-identical), 2-letter-parts.svg (640×560; the parts labelled; no numbers).
+- Links: TOOL_GUIDE_PINS resignation-letter; NEXT_GUIDES resignation-letter → pdf-sign, stamp-image, e-signature-law
+  (decision: what you do after the form is sign and hand it in); inbound from /guide/loan-note/, /guide/power-of-attorney/
+  (updated → 2026-10-27) and the tool note; guide-titles regenerated; lighthouserc /guide/resignation-letter/. Sitemap and
+  llms.txt list it (generated).
+- check-dist: a guide block (R8 line, 1350 + 고용24 pointers, the tool page's banned-claim list). Unit: each quote in its
+  saved excerpt + verbatim in the body (law.go.kr), 1350 not rendered, ② with heading, no day/month count outside quotes,
+  pins + inbound links; guide-check webp size; guides-schema OWN_COUNT.
+- Gates: check 0/0; vitest full 2320/2322 under load (postbuild T9 → fixed; postbuild usage-statistics 120 s timeout,
+  alone 111 s pass — host speed, untouched); after the fix postbuild 77/77, resignation-letter 23/23. Build default:
+  check-dist OK, preload 92.1 / 92.66 KB, late-800 7.9 / 8, glyphs 615 / 82 unchanged, precache 385.4 / 450 unchanged.
+  check:quotes --exact: this guide 13/13; e2e chromium 1 worker growth + hubs + site + resignation-letter 152/152.
+- Known Gaps (new): source-watch --exact has 18 pre-existing problems elsewhere (17 × jlpt.or.kr unreachable, Apple
+  pdf-split quote not verbatim). CARD1026 D (/guide/qr-code/) is not in this base: guides-schema partial/OWN_COUNT,
+  guide-titles, guide-check, lighthouserc, tool-guide-order, guides.ts need a trivial union when both merge.
+- Not run: production-flag build, 4 other browsers, LHCI (CI / Deploy B). Escalations: none.
+
+### 2026-10-27 orchestrator: RESIGN1027 Step C review fix
+- Review C SF1: the 「계약 끝」 sentence no longer follows the 민법 제661조 quote directly; it is its own paragraph and says it is a different case from 661조 (which covers quitting during the term). Merge of resign1027 (with main/CARD1026 D) kept both sides in 6 files and regenerated guide-titles.
