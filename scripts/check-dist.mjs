@@ -1058,6 +1058,9 @@ const FORM_TOOLS = [
   { slug: 'power-of-attorney', prefix: 'pa', initialKb: 12.8, lazyKb: 8.4 },
   // LOAN1022 L-D11: the same rules and budgets.
   { slug: 'loan-note', prefix: 'ln', initialKb: 12.8, lazyKb: 8.4 },
+  // RESIGN1027 R12: the same rules; budgets = measured + 20 % of the larger build (CARD1026 C14): initial 11.0 KB
+  // (production flags; 9.4 default), controller 7.8 KB (BUILD-LOG RESIGN1027 Step B).
+  { slug: 'resignation-letter', prefix: 'rs', initialKb: 13.2, lazyKb: 9.4 },
 ];
 for (const t of FORM_TOOLS) {
   const html = pageHtml.get(`${t.slug}/index.html`);
@@ -1086,6 +1089,16 @@ for (const t of FORM_TOOLS) {
     const outside = html.replace(/<div class="notice pa-caution" id="pa-caution">[\s\S]*?<\/div>/, '');
     if (outside === html) errors.push('power-of-attorney/index.html: no #pa-caution');
     if (outside.includes('인감')) errors.push('power-of-attorney/index.html: 「인감」 outside the caution');
+  }
+  // RESIGN1027 R5, R6, R8: the seven 그만두는 이유 presets fill #rs-reason (회사 권고 among them); the general-information
+  // line is there; the page makes no 실업급여 or legal-effect claim and never calls the form official.
+  if (t.slug === 'resignation-letter') {
+    const presets = [...html.matchAll(/<button type="button" class="pa-preset" data-fill-for="([^"]*)" data-fill="([^"]*)"[^>]*>([^<]*)</g)];
+    if (presets.length !== 7 || presets.some((m) => m[1] !== 'rs-reason')) errors.push(`resignation-letter/index.html: ${presets.length} preset button(s) for #rs-reason, expected 7`);
+    if (!presets.some((m) => m[3] === '회사 권고' && m[2].includes('권고사직'))) errors.push('resignation-letter/index.html: no 「회사 권고」 preset');
+    if (!html.includes('id="rs-general"')) errors.push('resignation-letter/index.html: no #rs-general line (R8)');
+    const text = html.replace(/<(style|script)\b[\s\S]*?<\/\1>/g, '').replace(/<[^>]+>/g, '');
+    for (const bad of ['실업급여를 받', '실업급여를 못', '법적 효력', '공식 양식', '공식 서식', '법정 서식']) if (text.includes(bad)) errors.push(`resignation-letter/index.html: says 「${bad}」`);
   }
   if (/adsbygoogle|pagead2\.googlesyndication/.test(html)) errors.push(`${t.slug}/index.html: carries the AdSense tag (a tool page, not a content page)`);
   for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`${t.slug}/index.html: off-site script ${m[2]}`);

@@ -12,6 +12,13 @@ import { exportHwp } from '../../src/lib/hwp/export-hwp';
 import { glyphText } from '../../src/lib/hwp/svg-string';
 import { loadRhwp } from '../helpers/rhwp-node';
 import { LINE_LENGTHS, SAMPLE_VALUES, allMaxLines, allMaxValues } from '../helpers/form-samples';
+import { DESC_MAX, DESC_MIN, HOME_DESC_ORDER, TITLE_MAX, TITLE_SUFFIX } from '../../src/data/site';
+import { LIVE_TOOLS, TOOLS, getTool } from '../../src/data/tools';
+import { faqJsonLd } from '../../src/data/jsonld';
+import { FLOW } from '../../src/lib/ui/next-steps';
+import { RS_COPY } from '../../src/tools/resignation-letter/copy';
+import { RS_TODAY } from '../../src/tools/resignation-letter/config';
+import { DOWNLOAD_SETTING, TOOLS as USAGE_TOOLS, TOOL_LABELS, validate } from '../../scripts/lib/usage.mjs';
 
 const SPEC = RESIGNATION_LETTER;
 const SAMPLE = SAMPLE_VALUES['resignation-letter']!;
@@ -132,5 +139,104 @@ describe('사직서 with the real rhwp', () => {
       expect(pages, p.chip).toBe(1);
       expect(t, p.chip).toContain(flat(p.fill));
     }
+  });
+});
+
+describe('사직서 만들기: tools.ts entry and registration (R2, R4, R12)', () => {
+  const t = getTool('resignation-letter');
+  const len = (s: string): number => [...s].length;
+  it('is live, right after 차용증 만들기; name = h1; SEO lengths; the 사직서 양식 keyword; no privacy lead', () => {
+    expect(t.status).toBe('live');
+    const slugs = TOOLS.map((x) => x.slug);
+    expect(slugs.indexOf('resignation-letter')).toBe(slugs.indexOf('loan-note') + 1);
+    expect(LIVE_TOOLS.map((x) => x.slug)).toContain('resignation-letter');
+    expect(t.h1).toBe(t.name);
+    expect(t.name).toBe('사직서 만들기');
+    expect(t.title.endsWith(TITLE_SUFFIX)).toBe(true);
+    expect(len(t.title)).toBeLessThanOrEqual(TITLE_MAX);
+    expect(len(t.description)).toBeGreaterThanOrEqual(DESC_MIN);
+    expect(len(t.description)).toBeLessThanOrEqual(DESC_MAX);
+    expect(t.description).toContain('사직서 양식');
+    expect(t.description).not.toMatch(/밖으로|보내지 않/);
+    expect(t.keywords).toEqual(expect.arrayContaining(['사직서 양식', '사직서 양식 hwp', '권고사직서', '사직서 쓰는법']));
+    expect(t.faq).toHaveLength(5);
+    expect((faqJsonLd(t) as { mainEntity: unknown[] }).mainEntity).toHaveLength(5);
+  });
+  it('R6/R8: 권고사직 FAQ = the preset + the 고용24 / 1350 pointer; no 실업급여, legal-effect or official claim in the core-font copy', () => {
+    const faq = t.faq.find((f) => f.q.includes('권고사직서'))!;
+    expect(faq.a).toContain('「회사 권고」를 고르면 됩니다.');
+    expect(faq.a).toContain('고용24');
+    expect(faq.a).toContain('1350');
+    expect(JSON.stringify({ ...t, keywords: [] })).not.toMatch(/실업급여|구직급여|법적|효력|공식|법정 서식/);
+  });
+  it('R7: the 워드 FAQ says what we make, no claim about Word opening HWP', () => {
+    const faq = t.faq.find((f) => f.q.includes('워드'))!;
+    expect(faq.a).toContain('워드 파일은 만들지 않습니다.');
+    expect(faq.a).not.toMatch(/워드에서 (열|HWP)/);
+  });
+  it('home description order after 차용증 만들기; the service worker stores it when visited', async () => {
+    expect(HOME_DESC_ORDER.indexOf('resignation-letter')).toBe(HOME_DESC_ORDER.indexOf('loan-note') + 1);
+    const { NOT_PRECACHED } = await import('../../scripts/gen-sw.mjs');
+    const { RUNTIME_PAGES } = await import('../../src/sw/sw');
+    expect(NOT_PRECACHED('/resignation-letter/')).toBe(true);
+    expect(RUNTIME_PAGES).toContain('/resignation-letter/');
+  });
+  it('이어서 하기 (R11): 도장·서명 first, then 글자 넣기 and 용량 줄이기', () => {
+    expect(FLOW['resignation-letter']).toEqual(['pdf-sign', 'pdf-edit', 'pdf-compress']);
+  });
+  it('R3 defaults: only 내는 날 starts at today', () => {
+    expect(RS_TODAY).toEqual(['date']);
+  });
+});
+
+describe('사직서 만들기: usage whitelist (R9)', () => {
+  const BASE = { t: 'resignation-letter', via: 'direct', d: 'desktop', b: 'dev', w: 1 };
+  const body = (o: Record<string, unknown>): string => JSON.stringify(o);
+  it('a tool with its label; start carries build blank|filled only; download format hwp|pdf only; never a typed value or a preset', () => {
+    expect(USAGE_TOOLS).toContain('resignation-letter');
+    expect(TOOL_LABELS['resignation-letter' as keyof typeof TOOL_LABELS]).toBe('사직서 만들기');
+    expect(DOWNLOAD_SETTING['resignation-letter' as keyof typeof DOWNLOAD_SETTING]).toBe('format');
+    for (const v of ['blank', 'filled']) expect(validate(body({ ...BASE, e: 'start', o: 'build', v })), v).not.toBeNull();
+    for (const v of ['홍길동', '회사 권고', '회사의 권고에 따른 퇴사(권고사직)', '2026-11-30']) {
+      expect(validate(body({ ...BASE, e: 'start', o: 'build', v })), v).toBeNull();
+      expect(validate(body({ ...BASE, e: 'start', o: 'preset', v })), v).toBeNull();
+    }
+    for (const v of ['hwp', 'pdf']) expect(validate(body({ ...BASE, e: 'download', o: 'format', v })), v).not.toBeNull();
+    for (const v of ['pdf-sign', 'pdf-edit', 'pdf-compress']) expect(validate(body({ ...BASE, e: 'next', o: 'next', v })), v).not.toBeNull();
+  });
+});
+
+describe('사직서 만들기: in-tool lines', () => {
+  it('plain words, the right particle, fixed file names', () => {
+    const all: string[] = [...Object.values(RS_COPY as unknown as Record<string, unknown>).filter((v): v is string => typeof v === 'string'), RS_COPY.engine(50), RS_COPY.downloaded('사직서.pdf')];
+    for (const s of all) expect(s).not.toMatch(/업로드|서버|브라우저|네트워크|메모리|사직서을/);
+    expect(RS_COPY.building).toBe('사직서를 만드는 중');
+    expect(RS_COPY.stale).toBe('고친 내용으로 다시 만들어 주세요. 「사직서 만들기」를 누르면 새로 만들어요.');
+    expect(RS_COPY.downloaded('사직서.hwp')).toBe('「사직서.hwp」를 내려받았어요. 「다운로드」 폴더를 확인하세요.');
+  });
+});
+
+describe('사직서 만들기: the tool note quotes are in the source watch (check:quotes)', () => {
+  it('readToolNotes lists the note with its 고용보험법 and 1350 sources, path = the tool page; no 실업급여 claim', async () => {
+    const { readToolNotes } = await import('../../scripts/ops/lib/guides.mjs');
+    const note = readToolNotes().find((n: { slug: string }) => n.slug === 'resignation-letter');
+    expect(note?.path).toBe('/resignation-letter/');
+    const urls = (note?.sources ?? []).map((s: { url?: string }) => s.url);
+    for (const seq of ['lsiSeq=284449', '1350.moel.go.kr']) expect(urls.some((u: string | undefined) => u?.includes(seq)), seq).toBe(true);
+    const { readFileSync } = await import('node:fs');
+    const md = readFileSync('src/content/tool-notes/resignation-letter.md', 'utf8');
+    expect(md).not.toMatch(/실업급여를 (받|못)|법적 효력|공식 (양식|서식)/);
+  });
+});
+
+describe('사직서 만들기: the HWP kill switch (R13 RESIGN_HWP) and the presets are wired through', () => {
+  it('page → FormTool hwp prop; the page inlines form-presets.css (POA / loan-note do not); controller → cfg.hwp', async () => {
+    const { readFileSync } = await import('node:fs');
+    const page = readFileSync('src/pages/resignation-letter/index.astro', 'utf8');
+    expect(page).toMatch(/<FormTool [^>]*hwp=\{RESIGN_HWP\}/);
+    expect(page).toContain('form-presets.css?inline');
+    expect(page).toContain('set:html={formCss + presetsCss}');
+    expect(readFileSync('src/tools/resignation-letter/controller.ts', 'utf8')).toContain('hwp: RESIGN_HWP');
+    for (const other of ['loan-note', 'power-of-attorney']) expect(readFileSync(`src/pages/${other}/index.astro`, 'utf8'), other).not.toContain('form-presets.css');
   });
 });

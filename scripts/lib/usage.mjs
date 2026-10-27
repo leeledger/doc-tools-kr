@@ -46,7 +46,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out', 'land'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address', 'power-of-attorney', 'loan-note', 'id-photo-camera', 'qr-code', 'business-card'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address', 'power-of-attorney', 'loan-note', 'id-photo-camera', 'qr-code', 'business-card', 'resignation-letter'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct', 'embed'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -89,7 +89,7 @@ export const FORM_FORMATS = ['hwp', 'pdf'];
 /** 여권·증명사진 인화용 모아찍기 (PRINT1023 P12), on download only: the preset of the sheet. Equal to the presets with a paper size (`mm`, src/data/id-photo-presets.ts; unit test). */
 export const SHEET_PRESETS = ['passport_online', 'id_card', 'driver_license', 'gosi', 'kuksiwon', 'police', 'hanja', 'jlpt', 'half_card'];
 /** Tool -> the one setting its download event may carry (every other download has no o / v). */
-export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format', 'id-photo': 'sheet' };
+export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format', 'resignation-letter': 'format', 'id-photo': 'sheet' };
 /** Setting key -> its allowed values. */
 export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS, field: ADDR_FIELDS, build: FORM_BUILDS, format: FORM_FORMATS, sheet: SHEET_PRESETS };
 
@@ -388,6 +388,7 @@ export const TOOL_LABELS = {
   'id-photo-camera': '증명사진 촬영',
   'qr-code': 'QR코드 만들기',
   'business-card': '전자명함 만들기',
+  'resignation-letter': '사직서 만들기',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**

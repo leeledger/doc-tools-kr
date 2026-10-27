@@ -4512,3 +4512,47 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   speed on this low-memory PC; compress/merge failed to load only in the full run, alone 48/48); e2e power-of-attorney +
   loan-note chromium 1 worker 17/17. forms:hancom not run (한글 COM = owner O1).
 - Escalations: none (the lint decision above is logged for Richard).
+
+### RESIGN1027 Step B — /resignation-letter/ 사직서 만들기 page (Bob, 2026-10-27) — status DONE (review: handoff/REVIEW-REQUEST-RESIGN1027-B.md)
+- Step A review (handoff/REVIEW-FEEDBACK-RESIGN1027-A.md): cleared, no Must Fix. Should Fix logged here as a Known Gap
+  (no code change, per orchestrator): the presets group name 「자주 쓰는 이유」 and its hint are engine-wide constants in
+  FormTool.astro; when a second form uses presets on a non-reason field, add an optional `presetsLabel` on the field
+  (lint: required when presets are set).
+- Built (R2–R12, R14): src/pages/resignation-letter/index.astro (FormTool with groups 내 정보 / 일한 기간과 이유 / 내는
+  날과 받는 사람 — 받는 사람 is a text field, so it sits in a fieldset with 내는 날 and `after` is empty; form-tool.css +
+  form-presets.css inlined together; #rs-general R8 line with the 고용24 link and 「국번없이 1350」; 함께 준비하는 것 →
+  /stamp-maker/, /stamp-signature/; related stamp-maker, stamp-signature, pdf-sign, loan-note, power-of-attorney),
+  src/tools/resignation-letter/{config,copy,controller,entry}.ts (loan-note pattern; RS_TODAY = ['date']; no field
+  problems), tool note src/content/tool-notes/resignation-letter.md (합니다체, CONTENT1021 C headings, toolFacts
+  reasonMaxLines 3 / reasonMaxLength 100, 7 sourced quotes), tools.ts entry after loan-note (FAQ ×5: 쓰는 법, 빈 양식,
+  권고사직서 = preset + 고용24/1350 pointer only, 그만두는 날, 워드 = "we make HWP and PDF"), og.json + OG image,
+  HOME_DESC_ORDER, usage TOOLS/label/DOWNLOAD_SETTING format + FormToolId + buildPayload, FLOW, tool-facts,
+  NOT_PRECACHED + RUNTIME_PAGES, bgcloud LOCAL_SCOPE_RE, lighthouserc (tool page), qa:visual, docs/COPY.md line, reverse
+  related links from /loan-note/, /power-of-attorney/, /stamp-maker/.
+- Decision: title 「사직서 만들기 — 사직서 양식 무료, HWP·PDF 저장 | 문서딱」 (37); the brief's 「한글(HWP)·PDF」 wording is
+  41 > TITLE_MAX 40 (meta-length decides, R4). Description 62.
+- Decision (engine, 1 line): FormTool's plain text input now gets aria-describedby = its hint when the field has a hint
+  (받는 사람 「예: 한빛 주식회사 대표이사」 was not tied to its input). No POA / loan text field has a hint, so their HTML
+  is unchanged by it.
+- check-dist FORM_TOOLS resignation-letter (prefix rs): the shared rules + a page block: exactly 7 preset buttons for
+  #rs-reason, the 회사 권고 → 권고사직 preset, #rs-general present, no 「실업급여를 받/못」, 「법적 효력」, 「공식 양식/서식」,
+  「법정 서식」 in the page text. Budgets measured + 20 % of the larger build (C14): initial 11.0 KB production flags (9.4
+  default) → 13.2; controller 7.8 KB → 9.4. POA (11.0 / 7.6) and loan (11.0 / 7.9) still under their unchanged 12.8 / 8.4.
+- R10 glyphs: 0 new core, 0 new late (uiCharSets diff vs the Step A src). Page words chosen from the core set (「그만두는
+  날/이유」, 「일한 기간과 이유」, 「내는 날과 받는 사람」; 퇴·근·랍 avoided on the page, used only in the note, the
+  document text and the fills). The 1350 line on the page costs 0 glyphs, so it is on the page (R8 allows it then).
+  Preload 92.1 / 92.66 KB default (92.2 production flags, as before this step), late-800 7.9 / 8 KB, font hashes unchanged.
+- Precache: default 382.8 → 385.4 KB, production flags 393.1 KB / 450 (tool page runtime-cached; the growth is the menu
+  and home entries).
+- check:quotes --exact on the note only (source-watch run with the note as its list): 7 quotes verbatim (law.go.kr
+  284449 고용보험법 제58조 heading, lead, 2호, 가·나·다 [다 quoted after 「고용노동부령 으로」, the link-artifact space
+  avoided], 1350.moel.go.kr home line). All match handoff/sources/resign1027/ (fetched 2026-10-27).
+- Gates: npm run check 0 errors / 0 warnings; vitest related 11 files 583/583; vitest full 2318 passed, 1 failed
+  (char-count 「100,000 characters under 50 ms」 240 ms under full-suite load; alone 21/21 — host speed, untouched code);
+  build default (PUBLIC_SITE_URL) check-dist OK, and production flags (CI env) check-dist OK; e2e chromium 1 worker:
+  resignation-letter 8/8, power-of-attorney + loan-note 17/17, site + polish 187 passed / 1 skipped.
+- Not run here (heavy / owner): usage.spec.ts cloud test (needs dist-bgcloud; CI), the other 4 browsers (CI), LHCI,
+  forms:hancom (한글 COM = owner O1), POA/loan dist HTML diff (their only HTML change is the intended related link to
+  /resignation-letter/; FormTool change does not apply to them).
+- Known Gaps (new): presetsLabel (above). The R1/Out-of-Scope list stands.
+- Escalations: none.

@@ -10,7 +10,7 @@ const one = (size = 10) => [{ blob: new Blob([new Uint8Array(size)], { type: 'ap
 describe('flow table', () => {
   it('never offers the sender itself', () => {
     for (const from of Object.keys(FLOW) as NextSource[]) expect(FLOW[from], from).not.toContain(sourceTool(from));
-    expect(Object.keys(FLOW)).toHaveLength(15);
+    expect(Object.keys(FLOW)).toHaveLength(16);
   });
 
   it('the brief table, in button order', () => {
@@ -28,6 +28,8 @@ describe('flow table', () => {
     expect(FLOW['power-of-attorney']).toEqual(['pdf-sign', 'pdf-edit', 'pdf-compress']);
     // LOAN1022 L-D10: the 차용증 PDF, the same row.
     expect(FLOW['loan-note']).toEqual(['pdf-sign', 'pdf-edit', 'pdf-compress']);
+    // RESIGN1027 R11: the 사직서 PDF, the same row.
+    expect(FLOW['resignation-letter']).toEqual(['pdf-sign', 'pdf-edit', 'pdf-compress']);
     // 배경 지우기 is off in unit tests (vitest define), as in a default build: no row, no buttons.
     expect(FLOW['remove-background']).toBeUndefined();
     expect(nextTargets('remove-background', one())).toEqual([]);

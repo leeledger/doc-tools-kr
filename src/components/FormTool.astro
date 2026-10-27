@@ -55,7 +55,7 @@ const loose = after.map(field);
                 <span aria-hidden="true">%</span>
               </span>
             ) : (
-              <input id={`${p}-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next">
+              <input id={`${p}-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={f.hint ? `${p}-${f.id}-hint` : undefined}>
             )}
             {f.kind === 'multiline' && <p class="hint" id={`${p}-${f.id}-hint`}>{f.maxLines}줄까지 쓸 수 있습니다.</p>}
             {f.kind !== 'multiline' && f.hint && <p class="hint" id={`${p}-${f.id}-hint`}>{f.hint}</p>}
