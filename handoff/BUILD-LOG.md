@@ -4462,3 +4462,54 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   runtime-cache move from Step D (a1573af: gen-sw NOT_PRECACHED, sw.ts RUNTIME_PAGES, sw.spec offline-after-one-use e2e,
   pdf-password/polish/postbuild expectations) is applied here unchanged (its comments still say CARD1026 D, the step that
   wrote it), so Step C stands alone under the budget. The limit stays 450 KB.
+
+## CARD1026 D — /guide/qr-code/ + /photo-compress/ runtime-cached (Bob, 2026-10-26) — DONE
+- First (orchestrator decision, CARD1026 C review): /photo-compress/ left the precache per CONTENT1021 D10 (second in the pre-locked
+  order after /stamp-signature/): gen-sw NOT_PRECACHED + sw.ts RUNTIME_PAGES, like /qr-code/ and /business-card/. Offline stays
+  coherent: the page is stored on a successful visit and its scripts are runtime-cached on first use; a new sw.spec e2e proves a
+  visited-and-used /photo-compress/ reloads and compresses offline (chromium + firefox; WebKit skipped for the known
+  setInputFiles-offline limit). Unit tests (postbuild, pdf-password, polish) follow the move. PRECACHE_LIMIT unchanged.
+  Precache before → after: default 440.5 KB / 28 URLs → 382.8 KB / 25 URLs; production flags (camera off + the ci.yml
+  dist-bgcloud flags) 447.9 KB / 25 URLs → 390.4 KB / 22 URLs (limit 450). The guide adds 0 precached bytes (/guide/ is never
+  precached).
+- Guide src/content/guides/qr-code.md: title 「QR코드 만들기 전에: 와이파이·연락처 QR, 잘 찍히는 QR」 (the brief's title is 45 with
+  the suffix > 40; kept the head keyword, 와이파이·연락처, 잘 찍히는), query 와이파이 QR코드 만들기, tools [qr-code, business-card],
+  cta /qr-code/ (parseHref has no ?tab= rule), related stamp-image, passport-english-name, kakao-photo; category 서류, topic
+  서명·도장 (no closer topic; a new topic for one page would change /guide/ — Arch may move it). H2s per the brief; FAQ ×4 not
+  from tools.ts. Rendered body 3,434 chars (bar 2,500); max guide similarity unchanged (photo-sizes ~ upload-limits 0.093 / 0.45).
+- Sources: 17 quotes, all saved in handoff/sources/card1026/ (Q0) and retrieved 2026-10-26: qrcode.com version.html ×3, the
+  version rows 1, 15, 16, 40 (full rows through binary, so 21x21 / 77x77 / 81x81 / 177x177 and M = 14 / 412 / 450 / 2,331 are
+  each quoted), 마진 4cell, FAQ license + trademark scope; ZXing Wi-Fi prompt + backslash escaping; Apple hidden SSIDs + vCard
+  (WWDC transcript) and iCloud vCard 3.0; RFC 2426 N order + VERSION 3.0. check:quotes --exact on this guide (source-watch
+  run() with only this guide): 17 quotes verbatim. Growth T9 forbids rendering a non-statute quote on a guide page, so the body
+  paraphrases every source; the E3 trademark line stays verbatim and its sentence is therefore not used as a source quote.
+  Locked copy rules kept: no Wi-Fi name length, no vCard fold length (E2), no hidden-network option (E1), no competitor names.
+- Figures: 1-wifi-tab.webp (guide-shots: /qr-code/?tab=wifi, made-up 「우리가게 손님용」/「example-1234」, 720×866 so the QR and
+  the 받기 buttons show; guide-shots gained an optional per-shot `bottom` selector; the 3 existing shots re-ran byte-identical) and
+  2-quiet-zone.svg (hand-made around a real version-1 M QR of docttak.com generated with uqr, decoded with jsQR; numbers 4 /
+  21×21 / 4 per version / 177×177 from the quoted rows; 4.3 KB).
+- Links (deferred from Step B): TOOL_GUIDE_PINS qr-code → [qr-code], business-card → [qr-code]; NEXT_GUIDES qr-code → kakao-photo,
+  stamp-image; business-card → passport-english-name, kakao-photo, stamp-image. Inbound: /guide/stamp-image/ (one bullet, updated
+  2026-10-26) and one line in each tool note (LOAN1022 precedent; notes 2,535 / 2,464 chars). guide-titles regenerated;
+  lighthouserc /guide/qr-code/; guides-schema G0 partial list + guide-check shot size updated.
+- Glyphs: 0 new core, 0 new late (gen-ui-font core 615 / late 82, as Step C; the guide renders in the system font). Fonts
+  default: preloaded 92.1 / 92.66 KB, late 7.5 / 7.9 of 8 KB, total 107.5 / 190 KB; production flags preloaded 92.2, total 107.6.
+- Gates (local, low-memory host, targeted per the orchestrator): npm run check 0 errors / 0 warnings. vitest (default build):
+  postbuild, guides-schema, guide-check, guide-length, polish, pdf-password, tool-notes, meta-length, network-guard, next-steps,
+  bgremove, en-check, embed, hwpx-to-hwp, loan-note, indicators, deeplink, handoff, handoff-sweep, adsense, ga: 21 files 510/510;
+  production-flag dist: en-check + hwp-viewer 44/44 (the ci.yml set). Builds: default and production flags, check-dist OK on both
+  (guide length 49 ≥ 2,500; tools 24 / 25 ≥ 2,000; longest title 40 = the new guide). e2e: sw.spec chromium 5/5, the new test
+  chromium + firefox 2/2. Not run locally: other e2e projects, LHCI median of 5, check:licenses (no dependency change) — CI.
+- Known Gaps (new): guide CTA deep links with ?tab= (parseHref has no tab rule); a 명함/QR guide topic.
+- Orchestrator 2026-10-26, CARD1026 D review: clear, Should Fix 1-3 done (handoff/REVIEW-FEEDBACK-CARD1026-D.md). (1) The iPhone
+  hidden-Wi-Fi line (body + FAQ) is scoped to the saved source: Apple's iOS 11 QR developer video, with a plain note that later
+  versions are not covered by it (no year written: 년 would need its own quote). (2) Phone numbers: 붙임표, 빈칸, 괄호, 마침표 are
+  dropped and a leading + is kept (payload.ts normalizePhone). (3) The three inbound link texts (stamp-image guide, qr-code and
+  business-card notes) use the shipped title. Gates: default build + check-dist OK (similarity max 0.093 / 0.45, precache 382.8
+  / 450 KB, core 615 / late 82 unchanged); guide 3,488 chars; check:quotes --exact on the guide 17/17; vitest postbuild,
+  guides-schema, guide-check, tool-notes, guide-length 155/155.
+- Orchestrator 2026-10-26: the /qr-code/ tool note had the same 「숫자만 골라 담습니다」 line as review D Should Fix 2;
+  reworded to say the + in front is kept (matches payload.ts). tool-notes 8/8.
+
+### 2026-10-26 orchestrator: PR #29 CI fix (e2e race)
+- e2e (chromium, mobile-chrome) failed in business-card.spec.ts "보내기": the second share press was read before the async share finished (the status text does not change between presses, so nothing waited). Decision: the test now polls until the second shared file exists before decoding it. No product code changed. Local chromium x3 green.

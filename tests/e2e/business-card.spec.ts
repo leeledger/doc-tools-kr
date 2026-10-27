@@ -192,6 +192,8 @@ test('보내기: hidden before the controller has loaded; shown when the device 
   // Typing after the picture was made: the press shares the new card (made in the press), never the old one.
   await page.locator('#bc-c-first').fill('길순');
   await page.locator('#bc-share').click();
+  // The second share is async and the status text is unchanged, so wait for the second file itself.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: unknown[] }).__shared.length)).toBe(2);
   const again = await page.evaluate(() => (window as unknown as { __shared: { b64: string }[] }).__shared);
   expect((await decodePng(Buffer.from(again[1]!.b64, 'base64'))).text).toContain('FN:홍길순');
   // The empty card hides it again.
