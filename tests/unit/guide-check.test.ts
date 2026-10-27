@@ -105,7 +105,7 @@ describe('D5.3 figures', () => {
     vp8x.writeUIntLE(719, 24, 3);
     vp8x.writeUIntLE(559, 27, 3);
     expect(imageSize(vp8x, 'webp')).toEqual({ w: 720, h: 560 });
-    for (const f of ['photo-kb/1-compress-screen.webp', 'power-of-attorney/1-form-screen.webp', 'loan-note/1-form-shot.webp']) {
+    for (const f of ['photo-kb/1-compress-screen.webp', 'power-of-attorney/1-form-screen.webp', 'loan-note/1-form-shot.webp', 'resignation-letter/1-form-shot.webp']) {
       expect(imageSize(readFileSync(join(IMG, f)), 'webp'), f).toEqual({ w: 720, h: 560 });
     }
     expect(imageSize(Buffer.from('nope'), 'webp')).toBeNull();

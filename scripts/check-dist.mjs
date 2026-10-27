@@ -1105,6 +1105,18 @@ for (const t of FORM_TOOLS) {
   budget(`${t.slug} initial JS`, [...initial], t.initialKb * KB);
   budget(`${t.slug} controller (lazy)`, lazyOwn, t.lazyKb * KB);
 }
+// RESIGN1027 C (R8, R15): the 사직서 guide says it is general information (not legal advice) and points to 1350 and
+// 고용24; like the tool page, it makes no 실업급여 or legal-effect claim and never calls the form official.
+{
+  const html = pageHtml.get('guide/resignation-letter/index.html');
+  if (!html) errors.push('guide/resignation-letter/index.html: no file found');
+  else {
+    const text = html.replace(/<(style|script)\b[\s\S]*?<\/\1>/g, '').replace(/<[^>]+>/g, '');
+    if (!text.includes('이 글은 일반적인 안내이고 법률 상담이 아니에요.')) errors.push('guide/resignation-letter/index.html: no general-information line (R8)');
+    if (!text.includes('국번 없이 1350번') || !html.includes('href="https://www.work24.go.kr/cm/main.do"')) errors.push('guide/resignation-letter/index.html: no 1350 / 고용24 pointer (R8)');
+    for (const bad of ['실업급여를 받', '실업급여를 못', '법적 효력', '공식 양식', '공식 서식', '법정 서식']) if (text.includes(bad)) errors.push(`guide/resignation-letter/index.html: says 「${bad}」`);
+  }
+}
 // QR코드 만들기 (CARD1026 Step B; C12, C14): the controller (uqr, payloads, renderers: the controller*.js chunk the page's
 // own initial chunk imports dynamically, and its static closure) never loads with the page and is the QR controller (it
 // names #qr-preview); nothing typed is stored or put in the URL (no Web Storage, IndexedDB, cookie or history call in the

@@ -26,6 +26,8 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   'power-of-attorney': ['power-of-attorney'],
   // LOAN1022 L5: 차용증 만들기 pins its guide (slug loan-note).
   'loan-note': ['loan-note'],
+  // RESIGN1027 C: 사직서 만들기 pins its guide (slug resignation-letter).
+  'resignation-letter': ['resignation-letter'],
   // IDCAM1022 E: 증명사진 촬영 pins its guide (slug self-id-photo; both ship only with PUBLIC_ID_CAMERA on).
   'id-photo-camera': ['self-id-photo'],
   // Part B: shown only in builds with PUBLIC_BG_REMOVE on (the guide requires bg-remove; the tool page exists only then).
