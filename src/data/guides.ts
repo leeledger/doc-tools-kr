@@ -60,7 +60,9 @@ export async function guidesBySlug(slugs: readonly string[], from: string): Prom
  * 도장 만들기 → 도장·서명 이미지 만들기, 전자서명법 (그림 도장을 받는지), PDF 서명 넣는 법 (STAMP1015);
  * 영문 이름 변환기 → 여권 사진, 여권 재발급 사진, 국제운전면허 (영문 이름을 쓰는 서류; ROMANIZE1016 D5);
  * 위임장 만들기 → 신분증 사본 만드는 법, 도장·서명 이미지 만들기, PDF 서명 넣는 법 (함께 내는 것; FORM1020 D8);
- * 차용증 만들기 → 위임장 쓰는 법, 도장·서명 이미지 만들기, PDF 서명 넣는 법 (LOAN1022; its own guide comes with L5).
+ * 차용증 만들기 → 위임장 쓰는 법, 도장·서명 이미지 만들기, PDF 서명 넣는 법 (LOAN1022; its own guide comes with L5);
+ * QR코드 만들기 → 카톡 사진 용량 (QR 그림을 메신저로 보낼 때), 도장·서명 이미지 만들기 (CARD1026 D; its own guide qr-code first);
+ * 전자명함 만들기 → 여권 영문 이름 (명함의 영문 이름), 카톡 사진 용량 (명함 그림 보내기), 도장·서명 이미지 만들기 (CARD1026 D).
  */
 const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'hwp-to-pdf': ['pdf-compress', 'pdf-merge', 'email-attachment-limit'],
@@ -81,6 +83,8 @@ const NEXT_GUIDES: Readonly<Record<string, readonly string[]>> = {
   'english-name': ['passport-english-name', 'passport-photo', 'passport-reissue-photo', 'intl-driving-license'],
   'power-of-attorney': ['id-card-copy', 'stamp-image', 'pdf-sign'],
   'loan-note': ['power-of-attorney', 'stamp-image', 'pdf-sign'],
+  'qr-code': ['kakao-photo', 'stamp-image'],
+  'business-card': ['passport-english-name', 'kakao-photo', 'stamp-image'],
   // IDCAM1022: after its own guide (self-id-photo, pinned), the photo guides of the presets people shoot for most.
   'id-photo-camera': ['passport-photo', 'resume-photo', 'id-card-photo'],
 };

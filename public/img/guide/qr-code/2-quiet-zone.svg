@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">QR 둘레에 상하좌우 4칸의 흰 여백을 둔 모습과, 버전 1의 21×21칸에서 버전 40의 177×177칸까지 버전마다 가로·세로 4칸씩 늘어난다는 설명 그림</title>
+<rect x="0.5" y="0.5" width="639" height="479" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="32" y="46" font-size="20" fill="#1c2321" font-weight="bold">QR 둘레의 여백과 칸 수</text>
+<rect x="40" y="78" width="290" height="290" fill="#e6f3f1" stroke="#0f766e" stroke-width="2" stroke-dasharray="6 5"/>
+<rect x="80" y="118" width="210" height="210" fill="#ffffff"/>
+<path d="M80 118h70v10h-70zM160 118h10v10h-10zM190 118h20v10h-20zM220 118h70v10h-70zM80 128h10v10h-10zM140 128h10v10h-10zM160 128h10v10h-10zM180 128h10v10h-10zM200 128h10v10h-10zM220 128h10v10h-10zM280 128h10v10h-10zM80 138h10v10h-10zM100 138h30v10h-30zM140 138h10v10h-10zM180 138h30v10h-30zM220 138h10v10h-10zM240 138h30v10h-30zM280 138h10v10h-10zM80 148h10v10h-10zM100 148h30v10h-30zM140 148h10v10h-10zM160 148h50v10h-50zM220 148h10v10h-10zM240 148h30v10h-30zM280 148h10v10h-10zM80 158h10v10h-10zM100 158h30v10h-30zM140 158h10v10h-10zM180 158h20v10h-20zM220 158h10v10h-10zM240 158h30v10h-30zM280 158h10v10h-10zM80 168h10v10h-10zM140 168h10v10h-10zM190 168h20v10h-20zM220 168h10v10h-10zM280 168h10v10h-10zM80 178h70v10h-70zM160 178h10v10h-10zM180 178h10v10h-10zM200 178h10v10h-10zM220 178h70v10h-70zM160 188h50v10h-50zM80 198h10v10h-10zM100 198h20v10h-20zM130 198h30v10h-30zM190 198h20v10h-20zM220 198h10v10h-10zM250 198h10v10h-10zM270 198h20v10h-20zM110 208h20v10h-20zM160 208h100v10h-100zM280 208h10v10h-10zM90 218h70v10h-70zM170 218h30v10h-30zM260 218h30v10h-30zM80 228h10v10h-10zM110 228h20v10h-20zM150 228h20v10h-20zM180 228h20v10h-20zM230 228h10v10h-10zM250 228h10v10h-10zM270 228h10v10h-10zM90 238h20v10h-20zM120 238h10v10h-10zM140 238h10v10h-10zM170 238h20v10h-20zM200 238h10v10h-10zM220 238h30v10h-30zM270 238h10v10h-10zM160 248h10v10h-10zM190 248h10v10h-10zM220 248h10v10h-10zM240 248h20v10h-20zM80 258h70v10h-70zM160 258h10v10h-10zM180 258h30v10h-30zM220 258h50v10h-50zM80 268h10v10h-10zM140 268h10v10h-10zM160 268h20v10h-20zM210 268h10v10h-10zM250 268h40v10h-40zM80 278h10v10h-10zM100 278h30v10h-30zM140 278h10v10h-10zM170 278h10v10h-10zM200 278h10v10h-10zM260 278h10v10h-10zM80 288h10v10h-10zM100 288h30v10h-30zM140 288h10v10h-10zM160 288h20v10h-20zM220 288h10v10h-10zM250 288h10v10h-10zM270 288h10v10h-10zM80 298h10v10h-10zM100 298h30v10h-30zM140 298h10v10h-10zM160 298h20v10h-20zM200 298h30v10h-30zM260 298h10v10h-10zM80 308h10v10h-10zM140 308h10v10h-10zM180 308h10v10h-10zM210 308h20v10h-20zM280 308h10v10h-10zM80 318h70v10h-70zM160 318h110v10h-110z" fill="#000000" shape-rendering="crispEdges"/>
+<line x1="40" y1="382" x2="80" y2="382" stroke="#0f766e" stroke-width="2"/>
+<text x="40" y="404" font-size="14" fill="#0f766e" font-weight="bold">여백 4칸</text>
+<text x="185" y="404" font-size="14" fill="#1c2321" text-anchor="middle">버전 1: 21×21칸</text>
+<text x="370" y="110" font-size="16" fill="#1c2321" font-weight="bold">여백(초록 칸)</text>
+<text x="370" y="134" font-size="15" fill="#1c2321">아무것도 없는 흰 테두리예요.</text>
+<text x="370" y="158" font-size="15" fill="#1c2321">상하좌우 4칸 이상 둬요.</text>
+<text x="370" y="210" font-size="16" fill="#1c2321" font-weight="bold">칸 수</text>
+<text x="370" y="234" font-size="15" fill="#1c2321">버전 1은 21×21칸이에요.</text>
+<text x="370" y="258" font-size="15" fill="#1c2321">버전이 오를 때마다</text>
+<text x="370" y="282" font-size="15" fill="#1c2321">가로·세로 4칸씩 늘어요.</text>
+<text x="370" y="306" font-size="15" fill="#1c2321">버전 40은 177×177칸이에요.</text>
+<text x="32" y="440" font-size="13" fill="#5b6663">출처: QRcode.com (DENSO WAVE) 「마진(여백) 확보」와 「QR코드의 정보량과 버전」 안내.</text>
+<text x="32" y="462" font-size="13" fill="#5b6663">그림 속 QR에는 「docttak.com」을 담아 버전 1, 오류 복원 레벨 M으로 그렸어요.</text>
+</svg>

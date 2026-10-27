@@ -108,6 +108,8 @@ describe('D5.3 figures', () => {
     for (const f of ['photo-kb/1-compress-screen.webp', 'power-of-attorney/1-form-screen.webp', 'loan-note/1-form-shot.webp']) {
       expect(imageSize(readFileSync(join(IMG, f)), 'webp'), f).toEqual({ w: 720, h: 560 });
     }
+    // CARD1026 D: the Wi-Fi shot ends under the 받기 buttons (guide-shots `bottom`), so it is taller.
+    expect(imageSize(readFileSync(join(IMG, 'qr-code/1-wifi-tab.webp')), 'webp')).toEqual({ w: 720, h: 866 });
     expect(imageSize(Buffer.from('nope'), 'webp')).toBeNull();
   });
 
