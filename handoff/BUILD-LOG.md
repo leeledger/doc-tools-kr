@@ -4637,3 +4637,6 @@ Every URL tried (fetched 2026-10-15 with curl, no login):
   pdf-split quote not verbatim). CARD1026 D (/guide/qr-code/) is not in this base: guides-schema partial/OWN_COUNT,
   guide-titles, guide-check, lighthouserc, tool-guide-order, guides.ts need a trivial union when both merge.
 - Not run: production-flag build, 4 other browsers, LHCI (CI / Deploy B). Escalations: none.
+
+### 2026-10-27 orchestrator: RESIGN1027 Step C review fix
+- Review C SF1: the 「계약 끝」 sentence no longer follows the 민법 제661조 quote directly; it is its own paragraph and says it is a different case from 661조 (which covers quitting during the term). Merge of resign1027 (with main/CARD1026 D) kept both sides in 6 files and regenerated guide-titles.
