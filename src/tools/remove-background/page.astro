@@ -21,7 +21,7 @@ import { aboutMB, CLOUD, COPY, FIT_LINE, HELD_START, NOT_FOR_ID, NOT_FOR_ID_SOUR
 import bgCss from './bg.css?inline';
 
 const tool = getTool('remove-background');
-// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+// 제휴 링크 (REV3): the result screen's block, Coupang unless PUBLIC_AFF_COUPANG=0 (src/data/affiliate.ts TOOL_AFF).
 const aff = affBlock('tool', 'remove-background', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const stamp = getTool('stamp-signature');
 const jsonLd = toolJsonLd(tool, Astro.site);

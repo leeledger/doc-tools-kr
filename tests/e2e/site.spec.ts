@@ -360,13 +360,31 @@ test.describe('mobile layout', () => {
   });
 });
 
-test('REV3: the default build (PUBLIC_AFF_COUPANG off) has no affiliate block, sponsored link or first-part line on any tool page or guide', async ({ page }) => {
-  for (const path of [...PAGES, '/hwp-to-pdf/', '/hwp-viewer/', '/hwpx-to-hwp/', '/guide/passport-photo/', '/guide/pdf-merge/', '/guide/hwp-on-phone/']) {
+// LP1028 (owner 2026-10-28): the default build has Coupang and LinkPrice on (as production): each result screen has one
+// network's links (both on /id-photo/, one shown per preset), none visible before a result; guides and content pages none.
+const AFF_SCREENS: Record<string, [coupang: number, linkprice: number]> = {
+  '/id-photo/': [3, 2],
+  '/pdf-merge/': [1, 0],
+  '/pdf-split/': [1, 0],
+  '/jpg-to-pdf/': [2, 0],
+  '/hwp-to-pdf/': [1, 0],
+  '/hwp-viewer/': [1, 0],
+  '/hwpx-to-hwp/': [1, 0],
+  '/pdf-sign/': [0, 1],
+  '/stamp-signature/': [0, 1],
+  '/stamp-maker/': [0, 1],
+  '/char-count/': [0, 1],
+  '/resignation-letter/': [0, 1],
+};
+test('LP1028: Coupang and LinkPrice links only on their result screens (none visible on load); none on guides, home and the other tools', async ({ page }) => {
+  for (const path of [...new Set([...PAGES, ...Object.keys(AFF_SCREENS), '/guide/passport-photo/', '/guide/pdf-merge/', '/guide/hwp-on-phone/', '/guide/stamp-image/', '/', '/loan-note/', '/power-of-attorney/'])]) {
     await page.goto(path);
-    await expect(page.locator('a[rel~="sponsored"]'), path).toHaveCount(0);
-    await expect(page.locator('a[href^="https://link.coupang.com/"]'), path).toHaveCount(0);
-    await expect(page.locator('.guide-aff-top, .out-links .out-links, [data-guide]'), path).toHaveCount(0);
-    await expect(page.locator('.out-links'), path).toHaveCount(path === '/id-photo/' ? 1 : 0);
+    const [cp, lp] = AFF_SCREENS[path] ?? [0, 0];
+    await expect(page.locator('a[href^="https://link.coupang.com/"]'), path).toHaveCount(cp);
+    await expect(page.locator('a[href^="https://click.linkprice.com/"]'), path).toHaveCount(lp);
+    await expect(page.locator('a[rel~="sponsored"]'), path).toHaveCount(cp + lp);
+    await expect(page.locator('a[rel~="sponsored"]:visible'), path).toHaveCount(0);
+    await expect(page.locator('.guide-aff-top, [data-guide]'), path).toHaveCount(0);
   }
 });
 

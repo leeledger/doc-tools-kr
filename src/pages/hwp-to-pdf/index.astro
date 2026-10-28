@@ -17,7 +17,7 @@ import { COPY, HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/me
 import hwpCss from '../../tools/hwp-shared/hwp.css?inline';
 
 const tool = getTool('hwp-to-pdf');
-// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+// 제휴 링크 (REV3): the result screen's block, Coupang unless PUBLIC_AFF_COUPANG=0 (src/data/affiliate.ts TOOL_AFF).
 const aff = affBlock('tool', 'hwp-to-pdf', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
 const accept = '.hwp,.hwpx,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx';

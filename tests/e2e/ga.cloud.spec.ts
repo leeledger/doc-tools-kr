@@ -12,8 +12,7 @@ const ID = 'G-TEST000000';
 const GA_CSP = /Content-Security-Policy: ([^\r\n]*)/.exec(withGaCsp(readFileSync('public/_headers', 'utf8')))![1]!;
 /** legal.ts reads build-time constants, so the date is read from its source here. */
 const PRIVACY_GA = /PRIVACY_GA = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
-const PRIVACY_ADS = /PRIVACY_ADS = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
-const PRIVACY_AFF_OFF = /PRIVACY_AFF_OFF = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
+const PRIVACY_LP = /PRIVACY_LP = '([^']+)'/.exec(readFileSync('src/data/legal.ts', 'utf8'))![1]!;
 const SECRET = '비밀-파일명.pdf';
 /** ADS1020: the cloud build has PUBLIC_ADSENSE_ON=1 (CI), so the home page carries the AdSense pair and CONTENT_CSP. */
 const ADS_BUILD = existsSync('dist-bgcloud/ads-cfg.js');
@@ -108,8 +107,9 @@ test('/privacy/ in this build (cloud + usage + GA): section 1 names the cookies,
   await expect(page.locator('#usage')).toHaveText(`${s(7)}. 익명 사용 통계`);
   await expect(page.locator('h2')).toHaveText([/^1\. /, /^2\. /, /^3\. /, ...(k ? [/^4\. 영문주소/] : []), new RegExp(`^${s(4)}\\. 사이트를 여는 기록$`), new RegExp(`^${s(5)}\\. Google`), new RegExp(`^${s(6)}\\. 광고$`), new RegExp(`^${s(7)}\\. 익명`), new RegExp(`^${s(8)}\\. 개인정보 보호책임자$`), new RegExp(`^${s(9)}\\. 변경 이력$`)]);
   // The 인화·사진관 link count (REV2, 2026-10-12, usage-stats builds such as this one) is the newest section (or 영문주소).
-  // ADS1020: AdSense (#ads, on in the CI cloud build) is the newest change, else the product links taken out of the count.
-  await expect(main).toContainText(`시행일: ${(await page.locator('#ads').count()) ? PRIVACY_ADS : PRIVACY_AFF_OFF}`);
+  // ADS1020: AdSense (#ads, on in the CI cloud build) was the newest change, else the product links taken out of the count.
+  // LP1028: the result screens' affiliate links (PRIVACY_LP) are the newest change, newer than AdSense.
+  await expect(main).toContainText(`시행일: ${PRIVACY_LP}`);
   await expect(main).toContainText(`${PRIVACY_GA}: Google 애널리틱스(방문 분석, 쿠키)와 국외 이전 내용을 더함`);
   await expect(main.locator('a[href="https://tools.google.com/dlpage/gaoptout?hl=ko"]')).toHaveCount(1);
 });

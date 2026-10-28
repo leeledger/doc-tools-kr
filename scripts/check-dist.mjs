@@ -21,7 +21,7 @@ import { CF_MAX_FILES, MAX_FILE, MAX_FILES, WARN_FILES } from './lib/capacity.mj
 import { headMeta, metaLen, metaProblems } from './lib/meta-length.mjs';
 import { DUP_LIMIT, articleText, duplicatePairs } from './lib/shingles.mjs';
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from './lib/fontcover.mjs';
-import { AFF_TEXT_RE, affEnabled, coupangOffProblems, coupangProblems, disclosureStrings, sponsoredProblems } from './lib/out-links-check.mjs';
+import { AFF_TEXT_RE, affEnabled, affTextProblems, coupangOffProblems, coupangProblems, disclosureStrings, linkpriceProblems, lpEnabled, lpLinks, sponsoredProblems } from './lib/out-links-check.mjs';
 import { EMBED_PAGE_RE, embedHeaderProblems, embedPageProblems } from './lib/embed-check.mjs';
 import { EN_PAGE_RE, enProblems } from './lib/en-check.mjs';
 import { buildServiceWorker, precacheList } from './gen-sw.mjs';
@@ -744,20 +744,31 @@ else {
   const age = Math.floor((Date.now() - Date.parse(`${retrieved}T00:00:00Z`)) / 86_400_000);
   if (age > 180) warnings.push(`id-photo presets were last checked ${retrieved} (${age} days ago): re-verify every source`);
 }
-// Link blocks (REV2, REV3 R3.6): sponsored links only on the screens of the placement map, inside .out-links after their
-// disclosure, new tab, labelled 광고; a guide with one shows AFF_COPY.top first; none at all while PUBLIC_AFF_COUPANG is off.
-// ADS1020 D1: while AFF_ENABLED is false in src/data/affiliate.ts, the flag counts as off whatever PUBLIC_AFF_COUPANG says,
-// and no dist text file carries a Coupang link or a disclosure line (rule f).
+// Link blocks (REV2, REV3 R3.6, LP1028 Build Order 7): sponsored links only on the screens of the placement map, inside
+// .out-links after the disclosure of their network, new tab, labelled 광고; Coupang (on unless PUBLIC_AFF_COUPANG=0, LP1028
+// owner 2026-10-28) exactly on its result screens and on no guide or content page; LinkPrice (on unless
+// PUBLIC_AFF_LINKPRICE=0) exactly on its six result screens, inside hidden wrappers, hrefs byte-for-byte.
+// ADS1020 D1: while AFF_ENABLED is false in src/data/affiliate.ts, Coupang counts as off whatever PUBLIC_AFF_COUPANG says,
+// and no dist text file carries a Coupang link or a disclosure line (rule f); LP_ENABLED likewise for LinkPrice.
 const affiliateSource = readFileSync(join(import.meta.dirname, '..', 'src', 'data', 'affiliate.ts'), 'utf8');
 const disclosures = disclosureStrings(affiliateSource);
 const affCode = affEnabled(affiliateSource);
+const lpCode = lpEnabled(affiliateSource);
+const lpHrefs = lpLinks(affiliateSource);
 if (affCode === null) errors.push('src/data/affiliate.ts: `export const AFF_ENABLED = true|false;` not found');
-if (!disclosures) errors.push('src/data/affiliate.ts: AFF_COPY.ad, AFF_COPY.top, AFF_COPY.heading or COUPANG_DISCLOSURE not found');
+if (lpCode === null) errors.push('src/data/affiliate.ts: `export const LP_ENABLED = true|false;` not found');
+if (!lpHrefs) errors.push('src/data/affiliate.ts: LP_LINKS entries not found');
+const coupangOn = affCode === true && env.PUBLIC_AFF_COUPANG?.trim() !== '0';
+const linkpriceOn = lpCode === true && env.PUBLIC_AFF_LINKPRICE?.trim() !== '0';
+if (!disclosures) errors.push('src/data/affiliate.ts: AFF_COPY.ad, AFF_COPY.top, AFF_COPY.heading, COUPANG_DISCLOSURE or LP_COPY.ad not found');
 else {
+  const texts = match(AFF_TEXT_RE).map((f) => [f, read(f).toString('utf8')]);
   errors.push(...sponsoredProblems(pageHtml, disclosures, { TOOL_OUT, GUIDE_OUT }));
-  if (affCode === false) errors.push(...coupangOffProblems(match(AFF_TEXT_RE).map((f) => [f, read(f).toString('utf8')]), disclosures));
+  if (affCode === false) errors.push(...coupangOffProblems(texts, disclosures));
+  errors.push(...coupangProblems(pageHtml, coupangOn, disclosures, linkpriceOn));
+  errors.push(...affTextProblems(texts, { lpOn: linkpriceOn, coupangOn, lpAd: disclosures.lp }));
+  if (lpHrefs) errors.push(...linkpriceProblems(pageHtml, linkpriceOn, lpHrefs));
 }
-errors.push(...coupangProblems(pageHtml, affCode === true && env.PUBLIC_AFF_COUPANG?.trim() === '1'));
 
 // UI fonts (Polish P.12; 600 dropped in G2 ci-green; core + late split in the LCP fix after TOOLS4; 700 retired in
 // LCP round 2): two static core instances (400, 800), ≤ 50 KB each; up to two late instances (controller-only

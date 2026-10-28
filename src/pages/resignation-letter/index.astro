@@ -17,6 +17,7 @@ import { getTool } from '../../data/tools';
 import { RESIGN_HWP, RESIGNATION_LETTER as SPEC } from '../../data/forms/resignation-letter';
 import { RS_PREFIX } from '../../tools/resignation-letter/config';
 import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
+import { resultBlock } from '../../data/affiliate';
 // Page-only styles, inlined (the /english-name/ pattern): only the form tool pages carry them; the preset buttons'
 // rules (form-presets.css) only on a page whose form has presets.
 import formCss from '../../tools/form-tool/form-tool.css?inline';
@@ -25,6 +26,8 @@ import presetsCss from '../../tools/form-tool/form-presets.css?inline';
 /** 고용24 home (handoff/sources/resign1027/work24-home.txt, 2026-10-27): a link target only. */
 const WORK24_URL = 'https://www.work24.go.kr/cm/main.do';
 const tool = getTool('resignation-letter');
+// 제휴 링크 (LP1028 L1): the LinkPrice 숨고 group, last in the result (FormTool `aff`).
+const aff = resultBlock('resignation-letter', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
 const groups = [
   { id: 'me', legend: '내 정보', fields: ['dept', 'position', 'name', 'birth', 'phone'] },
@@ -45,7 +48,7 @@ const groups = [
 
   <section class="tool" aria-label={`${tool.name} 도구`}>
     <div class="wrap narrow">
-      <FormTool spec={SPEC} prefix={RS_PREFIX} groups={groups} after={[]} hwp={RESIGN_HWP} />
+      <FormTool spec={SPEC} prefix={RS_PREFIX} groups={groups} after={[]} hwp={RESIGN_HWP} aff={aff} />
 
       <section class="pa-with" id="rs-with" aria-labelledby="rs-with-title">
         <h2 id="rs-with-title">함께 준비하는 것</h2>

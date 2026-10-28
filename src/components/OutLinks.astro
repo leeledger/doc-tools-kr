@@ -1,10 +1,10 @@
 ---
-// 제휴 링크 묶음 (brief handoff/ARCHITECT-BRIEF-REV3.md Decision 3): one static, disclosed group of Coupang Partners
-// text links. The disclosure (AFF_DISCLOSURE) comes first, then the lead line, then the links: rel="sponsored noopener",
+// 제휴 링크 묶음 (brief handoff/ARCHITECT-BRIEF-REV3.md Decision 3, LP1028 L6): one static, disclosed group of Coupang
+// Partners or LinkPrice text links. The block's disclosure (block.ad) comes first, then the lead line, then the links: rel="sponsored noopener",
 // new tab, data-out = the link kind (counted by trackOut in src/lib/ui/usage.ts). No image, script or iframe.
 // guide, tool: on a guide page, its slug and tools[0] (the heading, and data-guide/data-tool for GuideOutTracker).
 // Renders nothing without links.
-import { AFF_COPY, AFF_DISCLOSURE, type AffBlock } from '../data/affiliate';
+import { AFF_COPY, type AffBlock } from '../data/affiliate';
 
 interface Props {
   block: AffBlock | null;
@@ -16,7 +16,7 @@ const { block, guide, tool } = Astro.props;
 {block && (
   <div class="out-links" data-guide={guide} data-tool={guide && tool}>
     {guide && <h2 id="guide-out-title">{AFF_COPY.heading}</h2>}
-    <p>{AFF_DISCLOSURE}</p>
+    <p>{block.ad}</p>
     <p>{block.lead}</p>
     <ul>
       {block.links.map((l) => <li><a href={l.href} rel="sponsored noopener" target="_blank" data-out={l.dest}>{l.label}</a></li>)}

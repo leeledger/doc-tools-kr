@@ -12,7 +12,7 @@ export const USAGE_ON: boolean = __USAGE_STATS__;
 
 export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name' | 'english-address' | 'power-of-attorney' | 'loan-note' | 'id-photo-camera' | 'qr-code' | 'business-card' | 'resignation-letter';
 /** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/affiliate.test.ts keeps the links' dests equal to it). */
-export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod';
+export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod' | 'lp-signgate' | 'lp-dosirak' | 'lp-usimsa' | 'lp-soomgo';
 /** STAMP_STYLES in scripts/lib/usage.mjs (= the 도장 만들기 style ids). */
 export type StampStyle = 'round' | 'round-double' | 'oval' | 'square-seal' | 'square-round' | 'square-inverse' | 'rect-v' | 'rect-h' | 'plain' | 'corp-round' | 'corp-square' | 'date-round';
 /** NAME_FORMS in scripts/lib/usage.mjs (= the /english-name/ row shapes). */

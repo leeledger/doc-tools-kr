@@ -676,7 +676,7 @@ test('axe: empty, adjust (overlay and checklist) and done', async ({ page }) => 
 const STUDIO_URL = 'https://map.naver.com/p/search/%EC%82%AC%EC%A7%84%EA%B4%80';
 const STUDIO_HOST = /^https:\/\/map\.naver\.com\//;
 
-test('인화·사진관 링크 (REV2): the info link on every result, no sponsored link in this build; a click opens a new tab (stubbed host)', async ({ page, context, network }) => {
+test('인화·사진관 링크 (REV2): the info link on every result (LP1028: the passport result shows the eSIM group, not Coupang); a click opens a new tab (stubbed host)', async ({ page, context, network }) => {
   // The external site is a stub: no test reaches Naver.
   await context.route(STUDIO_HOST, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' }));
   await open(page);
@@ -687,7 +687,7 @@ test('인화·사진관 링크 (REV2): the info link on every result, no sponsor
   await save(page);
   await expect(block).toBeVisible();
   await expect(block.locator('> p')).toHaveText('종이 사진이 필요하면 사진관에서 뽑을 수 있습니다.');
-  const link = block.locator('a[data-out]');
+  const link = block.locator('> ul a[data-out]');
   await expect(link).toHaveCount(1);
   await expect(link).toHaveText('가까운 사진관 찾기 (네이버 지도, 새 창)');
   await expect(link).toHaveAttribute('href', STUDIO_URL);
@@ -696,8 +696,8 @@ test('인화·사진관 링크 (REV2): the info link on every result, no sponsor
   await expect(link).toHaveAttribute('data-out', 'photo-studio');
   // The block renders in the system font (the copy is not in the UI font subset).
   expect(await block.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^-apple-system/);
-  await expect(page.locator('a[rel^="sponsored"]')).toHaveCount(0);
-  await expect(page.getByText('광고:')).toHaveCount(0);
+  await expect(page.locator('#idp-cp')).toBeHidden();
+  await expect(page.locator('#idp-lp a[rel="sponsored noopener"]:visible')).toHaveCount(2);
   const [popup] = await Promise.all([page.waitForEvent('popup'), link.click()]);
   await popup.waitForLoadState();
   expect(popup.url()).toBe(STUDIO_URL);

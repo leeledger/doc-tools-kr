@@ -1156,12 +1156,13 @@ describe('링크 누름 out event (REV2 decision 7, REV3 decision 6)', () => {
   it('a result screen: each TOOL_OUT pair is accepted, without g', () => {
     expect(EVENTS).toContain('out');
     expect(OUT_KEY).toBe('out');
-    expect(OUT_DESTS).toEqual(['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'cp-stamp', 'cp-hancom', 'cp-mfp', 'cp-scanner', 'cp-tripod']);
+    expect(OUT_DESTS).toEqual(['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'cp-stamp', 'cp-hancom', 'cp-mfp', 'cp-scanner', 'cp-tripod', 'lp-signgate', 'lp-dosirak', 'lp-usimsa', 'lp-soomgo']);
     for (const [t, dests] of Object.entries(TOOL_OUT)) for (const v of dests) expect(validate(body({ ...OUT, t, v })), `${t} ${v}`).toMatchObject({ e: 'out', t, o: 'out', v, g: '' });
     // REV2 id-photo outs stay valid.
     for (const v of ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop']) expect(validate(body({ ...OUT, v }))).not.toBeNull();
     expect(toDataPoint(validate(body({ ...OUT, v: 'cp-backdrop' }))!).blobs.slice(0, 7)).toEqual(['out', 'id-photo', '', '', 'out', 'cp-backdrop', '']);
-    for (const [t, v] of [['stamp-signature', 'cp-stamp'], ['pdf-sign', 'cp-stamp'], ['hwp-to-pdf', 'cp-hancom'], ['pdf-merge', 'cp-mfp'], ['jpg-to-pdf', 'cp-scanner'], ['remove-background', 'cp-backdrop']]) {
+    // LP1028 L11: the LinkPrice dests on their screens.
+    for (const [t, v] of [['stamp-signature', 'cp-stamp'], ['pdf-sign', 'cp-stamp'], ['hwp-to-pdf', 'cp-hancom'], ['pdf-merge', 'cp-mfp'], ['jpg-to-pdf', 'cp-scanner'], ['remove-background', 'cp-backdrop'], ['pdf-sign', 'lp-signgate'], ['stamp-signature', 'lp-signgate'], ['stamp-maker', 'lp-signgate'], ['id-photo', 'lp-dosirak'], ['id-photo', 'lp-usimsa'], ['char-count', 'lp-soomgo'], ['resignation-letter', 'lp-soomgo']]) {
       expect(validate(body({ ...OUT, t, v })), `${t} ${v}`).not.toBeNull();
     }
   });
@@ -1180,6 +1181,10 @@ describe('링크 누름 out event (REV2 decision 7, REV3 decision 6)', () => {
       ['a guide of a tool without a block', body({ ...OUT, t: 'photo-compress', v: 'cp-backdrop', g: 'kakao-photo' })],
       ['a dest of another screen', body({ ...OUT, t: 'pdf-merge', v: 'cp-stamp' })],
       ['scanner on pdf-merge', body({ ...OUT, t: 'pdf-merge', v: 'cp-scanner' })],
+      ['a LinkPrice dest of another screen', body({ ...OUT, t: 'pdf-merge', v: 'lp-signgate' })],
+      ['soomgo on loan-note', body({ ...OUT, t: 'loan-note', v: 'lp-soomgo' })],
+      ['eSIM on char-count', body({ ...OUT, t: 'char-count', v: 'lp-dosirak' })],
+      ['a LinkPrice dest from a guide', body({ ...OUT, t: 'pdf-sign', v: 'lp-signgate', g: 'pdf-sign-guide' })],
       ['a prototype key as tool', body({ ...OUT, t: 'constructor', v: 'cp-mfp' })],
       ['no o/v', body({ ...BASE, t: 'id-photo', e: 'out' })],
       ['o without v', body({ ...BASE, t: 'id-photo', e: 'out', o: 'out' })],

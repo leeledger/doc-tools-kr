@@ -8,7 +8,10 @@
 // (filled by the controller) and an error line; a number is a decimal text input with a 「%」 unit and an error line.
 // RESIGN1027 R5: a field's presets are buttons under its input (data-fill-for, data-fill); the entry fills on a press;
 // their styles are src/tools/form-tool/form-presets.css, which a page with presets inlines next to form-tool.css.
+// LP1028 L1: `aff`, the result screen's affiliate group (src/data/affiliate.ts resultBlock), last in the result.
 import EngineError from './EngineError.astro';
+import OutLinks from './OutLinks.astro';
+import type { AffBlock } from '../data/affiliate';
 import type { FormField, FormSpec } from '../lib/form/spec';
 
 interface Group {
@@ -24,9 +27,11 @@ interface Props {
   after: string[];
   /** The HWP download button (the spec module's kill switch). */
   hwp: boolean;
+  /** The result's affiliate group (none: no group). */
+  aff?: AffBlock | null;
 }
 
-const { spec, prefix: p, groups, after, hwp } = Astro.props;
+const { spec, prefix: p, groups, after, hwp, aff = null } = Astro.props;
 const field = (id: string): FormField => {
   const f = spec.fields.find((x) => x.id === id);
   if (!f) throw new Error(`${spec.id}: no field ${id}`);
@@ -109,6 +114,7 @@ const loose = after.map(field);
     <p class="pa-done" id={`${p}-done`}></p>
     <div class="next-steps" id={`${p}-next`} role="group" aria-labelledby={`${p}-next-label`} hidden></div>
     <div class="hw-preview pa-preview" id={`${p}-preview`} tabindex="0" aria-label="미리 보기"></div>
+    <OutLinks block={aff} />
   </div>
   <p class="visually-hidden" id={`${p}-status`} aria-live="polite" data-live="status"></p>
 </div>
