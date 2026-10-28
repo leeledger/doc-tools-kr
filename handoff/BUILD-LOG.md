@@ -4673,3 +4673,8 @@ Status: DONE (gates below; Richard review pending)
 - Docs: OPS-RUNBOOK §10 rewritten (자리 표 for both networks, 끄기 = `PUBLIC_AFF_COUPANG`/`PUBLIC_AFF_LINKPRICE` = `0` + 재배포, 링크 바꾸기 = one AFF_LINKS/LP_LINKS line, LinkPrice owner items); §11 intro and item 5 (= scripts/ops/monetize.mjs checklist, word for word); COPY.md exception paragraph gains the LP1028 strings.
 - Known Gaps: LinkPrice and Coupang on guides (after the AdSense decision, AFF_GUIDES); 바로빌 (no fitting tool); 도시락 Japan deep link; CLAUDE.md still says "Coupang Partners links are off in code … check-dist asserts 0 Coupang links" (project instructions; not edited by the builder — Arch/owner to update to the LP1028 state).
 - Owner-only: O1 LinkPrice 실명인증·계좌·세금; O2 merchant approvals (signgate, dosirak1, usimsa, soomgo) + one test click each after deploy; O3 screenshot if a merchant asks; Coupang: re-submit the result-screen capture only if Partners asks.
+
+### 2026-10-28 orchestrator: LP1028 review + CLAUDE.md
+- Richard: clear, 0 Must Fix. SF (Coupang hidden-wrapper assertion in check-dist) logged as Known Gap; today every Coupang group already sits in a hidden result wrapper.
+- Decision: Coupang default-on (off only with PUBLIC_AFF_COUPANG=0) accepted: owner wants every revenue channel on.
+- Decision: CLAUDE.md affiliate sentence updated by the orchestrator to the LP1028 state (owner instruction changed the rule; not because an agent asked).
