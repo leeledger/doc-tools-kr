@@ -135,8 +135,11 @@ describe('limits (brief 5.4)', () => {
     expect(soft.level).toBe('soft');
     expect(soft.level !== 'ok' && soft.message).toContain('20 MB');
     expect(checkRun(1, 301, false, 'mobile', KO.limits).level).toBe('soft');
+    // FAIL1030 B: a file PDF 나누기 still opens gets that next step; over its limit too, the reason and 컴퓨터에서.
     const hard = checkFileBytes(50 * MB + 1, 'mobile', KO.limits);
-    expect(hard.level !== 'ok' && hard.message).toBe('휴대폰에서는 50 MB까지 줄일 수 있습니다. 이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다.');
+    expect(hard.level !== 'ok' && hard.message).toBe('휴대폰에서는 50 MB까지 줄일 수 있습니다. 쪽을 나눠 작은 파일 몇 개로 만든 뒤 하나씩 줄여 보세요.');
+    const over = checkFileBytes(100 * MB + 1, 'mobile', KO.limits);
+    expect(over.level !== 'ok' && over.message).toBe('휴대폰에서는 50 MB까지 줄일 수 있습니다. 이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다. 컴퓨터에서 해 보세요.');
   });
 
   it('이미지로 변환: desktop confirm above 200쪽, block above 500쪽; mobile 30쪽 / 100쪽', () => {

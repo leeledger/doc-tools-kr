@@ -1,11 +1,12 @@
 // 배경 지우기 cloud client (C2-cloud, brief handoff/ARCHITECT-BRIEF-C2-CLOUD.md §3, §4, §6). Loaded by the page
 // controller after a photo is picked, and only in a build with the cloud path on (__BG_CLOUD__).
 //
-// work copy -> copy at long edge <= 1024 (the model's own size), JPEG q0.9 through a canvas (EXIF/GPS never survive a
-// canvas; checked again before sending) -> one POST /api/remove-bg (same origin, no cookies) per call; the page retries
+// work copy -> copy at long edge <= 1024 (the model's own size), JPEG q0.9 through a canvas (the photo's EXIF/GPS never
+// survive a canvas; an encoder's own APP1/APP13/COM is stripped, then the bytes are checked again before sending) -> one POST /api/remove-bg (same origin, no cookies) per call; the page retries
 // a failure once when its kind can pass (REQ1014-B D13, bg.ts sendCloud) -> RGBA WebP (lossless, 256 alpha levels: spike-2) -> its alpha only, as a float mask; the page scales it up
 // and runs its own blur-fusion on the full-size work copy, so the colours always come from the device.
 import { capSize } from '../image/decode';
+import { stripJpegMetadata } from '../image/jpeg-strip';
 import { sniffImage } from '../image/sniff';
 
 export const API_PATH = '/api/remove-bg';
@@ -58,13 +59,20 @@ export interface Copy {
 }
 
 /**
- * The copy that is sent: the work picture at long edge <= 1024 on white (a transparent PNG has no colour behind it),
- * as JPEG q0.9. Null when the canvas cannot make it, when it is too big, or when it would carry an APP1 segment.
+ * Why no copy could be made (FAIL1030 A; the usage code is cloud-<this>): no 2D canvas, the canvas gave no JPEG, the
+ * JPEG was empty or over 2 MB, or its metadata could not be stripped / it still carries an APP1 after stripping.
  */
-export async function makeCopy(src: CanvasImageSource & { width: number; height: number }, create: (w: number, h: number) => Canvas2d | null): Promise<Copy | null> {
+export type CopyFail = 'copy-canvas' | 'copy-blob' | 'copy-size' | 'copy-meta';
+
+/**
+ * The copy that is sent: the work picture at long edge <= 1024 on white (a transparent PNG has no colour behind it),
+ * as JPEG q0.9, with every segment the decoder does not need stripped (some encoders write their own APP1). The
+ * stripped bytes must pass isCleanJpeg; they are exactly the bytes that are sent.
+ */
+export async function makeCopy(src: CanvasImageSource & { width: number; height: number }, create: (w: number, h: number) => Canvas2d | null): Promise<Copy | CopyFail> {
   const { width, height } = capSize(src.width, src.height, SEND_EDGE);
   const k = create(width, height);
-  if (!k) return null;
+  if (!k) return 'copy-canvas';
   k.g.fillStyle = '#FFFFFF';
   k.g.fillRect(0, 0, width, height);
   k.g.imageSmoothingEnabled = true;
@@ -79,9 +87,15 @@ export async function makeCopy(src: CanvasImageSource & { width: number; height:
   });
   k.canvas.width = 0;
   k.canvas.height = 0;
-  if (!blob || blob.size === 0 || blob.size > MAX_SEND_BYTES) return null;
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  if (!isCleanJpeg(bytes)) return null;
+  if (!blob) return 'copy-blob';
+  if (blob.size === 0 || blob.size > MAX_SEND_BYTES) return 'copy-size';
+  let bytes: Uint8Array<ArrayBuffer>;
+  try {
+    bytes = new Uint8Array(stripJpegMetadata(new Uint8Array(await blob.arrayBuffer())));
+  } catch {
+    return 'copy-meta';
+  }
+  if (!isCleanJpeg(bytes)) return 'copy-meta';
   return { bytes, width, height };
 }
 
@@ -187,10 +201,10 @@ export async function cutoutOnce(
   signal: AbortSignal,
   alive: () => boolean,
   answered: () => void,
-): Promise<{ mask: Mask } | { fail: CloudKind | 'busy' | 'quota' | 'copy' | 'answer' } | null> {
+): Promise<{ mask: Mask } | { fail: CloudKind | 'busy' | 'quota' | CopyFail | 'answer' } | null> {
   const copy = await makeCopy(src, create);
   if (!alive()) return null;
-  if (!copy) return { fail: 'copy' };
+  if (typeof copy === 'string') return { fail: copy };
   const r = await requestCutout(copy.bytes, signal);
   if (!alive()) return null;
   if (!r.ok) return r.why === 'aborted' ? null : { fail: r.why === 'failed' ? r.kind : r.why };

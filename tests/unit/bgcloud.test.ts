@@ -29,6 +29,38 @@ function exifJpeg(): Uint8Array {
   return Uint8Array.from([0xff, 0xd8, 0xff, 0xe1, len >> 8, len & 0xff, ...body, 0xff, 0xdb, 0x00, 0x04, 0x00, 0x00, 0xff, 0xd9]);
 }
 
+/** A segment: FF <marker> <length> <body>. */
+const seg = (m: number, body: number[]): number[] => [0xff, m, (body.length + 2) >> 8, (body.length + 2) & 0xff, ...body];
+const ascii = (t: string): number[] => [...t].map((c) => c.charCodeAt(0));
+
+/**
+ * What a canvas encoder writes: SOI, JFIF APP0, DQT, SOF0 (16 x 16), SOS, zero scan data up to `n` bytes, EOI.
+ * `extra` goes after APP0 (an encoder's own APP1/APP13/COM, FAIL1030 A).
+ */
+function canvasJpeg(n = 256, extra: number[] = []): Uint8Array {
+  const head = [
+    0xff, 0xd8,
+    ...seg(0xe0, [...ascii('JFIF'), 0, 1, 1, 0, 0, 1, 0, 1, 0, 0]),
+    ...extra,
+    ...seg(0xdb, [0, ...new Array<number>(64).fill(1)]),
+    ...seg(0xc0, [8, 0, 16, 0, 16, 1, 1, 0x11, 0]),
+    ...seg(0xda, [1, 1, 0, 0, 0x3f, 0]),
+  ];
+  const out = new Uint8Array(Math.max(n, head.length + 2));
+  out.set(head);
+  out.set([0xff, 0xd9], out.length - 2);
+  return out;
+}
+const encoderApp1 = seg(0xe1, [...ascii('Exif'), 0, 0, 0x4d, 0x4d, 0, 0x2a, 0, 0, 0, 8, 0, 0]);
+const markers = (b: Uint8Array): number[] => {
+  const out: number[] = [];
+  for (let i = 2; i + 3 < b.length && b[i] === 0xff; i += 2 + ((b[i + 2]! << 8) | b[i + 3]!)) {
+    out.push(b[i + 1]!);
+    if (b[i + 1] === 0xda) break;
+  }
+  return out;
+};
+
 function req(init: { method?: string; site?: string | null; type?: string; len?: number | null; body?: Uint8Array } = {}): Request {
   const body = init.body ?? jpeg();
   const headers = new Headers();
@@ -248,24 +280,43 @@ describe('cloud client (src/lib/bgremove/cloud.ts)', () => {
   const src = (width: number, height: number) => ({ width, height }) as unknown as ImageBitmap;
 
   it('the copy: long edge 1024 (never larger than the work copy), on white, JPEG q0.9', async () => {
-    const { create, seen } = fakeCanvas(jpeg(4000));
+    const { create, seen } = fakeCanvas(canvasJpeg(4000));
     const c = await makeCopy(src(4096, 3072), create);
-    expect(c && { w: c.width, h: c.height }).toEqual({ w: 1024, h: 768 });
+    expect(typeof c !== 'string' && { w: c.width, h: c.height }).toEqual({ w: 1024, h: 768 });
     expect(seen).toMatchObject({ w: 1024, h: 768, draw: [0, 0, 1024, 768], type: 'image/jpeg', q: 0.9, fill: '#FFFFFF' });
-    const small = await makeCopy(src(600, 400), fakeCanvas(jpeg()).create);
-    expect(small && [small.width, small.height]).toEqual([600, 400]);
-    const tall = await makeCopy(src(2048, 4000), fakeCanvas(jpeg()).create);
-    expect(tall && Math.max(tall.width, tall.height)).toBe(SEND_EDGE);
+    const small = await makeCopy(src(600, 400), fakeCanvas(canvasJpeg()).create);
+    expect(typeof small !== 'string' && [small.width, small.height]).toEqual([600, 400]);
+    const tall = await makeCopy(src(2048, 4000), fakeCanvas(canvasJpeg()).create);
+    expect(typeof tall !== 'string' && Math.max(tall.width, tall.height)).toBe(SEND_EDGE);
   });
 
-  it('never sends a copy with EXIF/GPS (APP1), an empty one or one over 2 MB', async () => {
+  it('never sends a copy with EXIF/GPS (APP1): an encoder APP1/APP13/COM is stripped and the sent bytes pass isCleanJpeg (FAIL1030 A)', async () => {
     expect(isCleanJpeg(jpeg())).toBe(true);
     expect(isCleanJpeg(exifJpeg())).toBe(false);
     expect(isCleanJpeg(Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(false);
-    expect(await makeCopy(src(800, 600), fakeCanvas(exifJpeg()).create)).toBeNull();
-    expect(await makeCopy(src(800, 600), fakeCanvas(null).create)).toBeNull();
-    expect(await makeCopy(src(800, 600), fakeCanvas(jpeg(2_000_001)).create)).toBeNull();
-    expect(await makeCopy(src(800, 600), () => null)).toBeNull();
+    const raw = canvasJpeg(600, [...encoderApp1, ...seg(0xed, ascii('Photoshop 3.0\0')), ...seg(0xfe, ascii('encoder'))]);
+    expect(isCleanJpeg(raw)).toBe(false);
+    const c = await makeCopy(src(800, 600), fakeCanvas(raw).create);
+    if (typeof c === 'string') throw new Error(c);
+    expect(markers(c.bytes)).toEqual([0xe0, 0xdb, 0xc0, 0xda]);
+    expect(isCleanJpeg(c.bytes)).toBe(true);
+    // The intent of the old test: a camera EXIF/GPS segment never goes out, whatever the canvas returned.
+    const gps = await makeCopy(src(800, 600), fakeCanvas(canvasJpeg(600, [...exifJpeg().subarray(2, exifJpeg().length - 8)])).create);
+    // Review FAIL1030 Should Fix 1: the copy is cleaned and sent (not refused), and the cleaned bytes carry no APP1.
+    expect(typeof gps).not.toBe('string');
+    if (typeof gps === 'string') return;
+    expect(markers(gps.bytes).includes(0xe1)).toBe(false);
+    expect(isCleanJpeg(gps.bytes)).toBe(true);
+  });
+
+  it('a copy that cannot be made says why: copy-canvas, copy-blob, copy-size, copy-meta', async () => {
+    expect(await makeCopy(src(800, 600), () => null)).toBe('copy-canvas');
+    expect(await makeCopy(src(800, 600), fakeCanvas(null).create)).toBe('copy-blob');
+    expect(await makeCopy(src(800, 600), fakeCanvas(new Uint8Array(0)).create)).toBe('copy-size');
+    expect(await makeCopy(src(800, 600), fakeCanvas(canvasJpeg(2_000_001)).create)).toBe('copy-size');
+    // stripJpegMetadata throws (no scan, no EOI): nothing is sent.
+    expect(await makeCopy(src(800, 600), fakeCanvas(jpeg()).create)).toBe('copy-meta');
+    expect(await makeCopy(src(800, 600), fakeCanvas(exifJpeg()).create)).toBe('copy-meta');
   });
 
   it('the GPS-tagged photo fixture is what isCleanJpeg refuses (tests/fixtures/photo/exif6_gps.jpg)', () => {
@@ -494,7 +545,7 @@ describe('no-upload allowlist (tests/e2e/upload-guard.ts)', () => {
 
 describe('REQ1014-B D13: one automatic retry', () => {
   it('network, 5xx, a broken answer and a cloud chunk that did not load are retried once; nothing else, never twice', () => {
-    const all: CloudFail[] = ['timeout', 'network', 'server', 'refused', 'answer', 'copy', 'load', 'busy', 'quota'];
+    const all: CloudFail[] = ['timeout', 'network', 'server', 'refused', 'answer', 'copy-canvas', 'copy-blob', 'copy-size', 'copy-meta', 'load', 'busy', 'quota'];
     expect(all.filter((f) => cloudRetry(f, 1))).toEqual(['network', 'server', 'answer', 'load']);
     expect(all.filter((f) => cloudRetry(f, 2))).toEqual([]);
   });

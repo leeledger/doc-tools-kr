@@ -249,7 +249,10 @@ const shape = (v: unknown): unknown =>
 describe('English catalogs', () => {
   it('have the keys of the Korean catalogs (runtime; the type is checked by satisfies Messages)', () => {
     expect(shape(MERGE_EN)).toEqual(shape(MERGE_KO));
-    expect(shape(CMP_EN)).toEqual(shape(CMP_KO));
+    // FAIL1030 B: limits.split (「PDF 나누기로 열기」) is Korean only: there is no English PDF 나누기 page to hand to.
+    const { split, ...cmpLimits } = CMP_KO.limits;
+    expect(split).toBeDefined();
+    expect(shape(CMP_EN)).toEqual(shape({ ...CMP_KO, limits: cmpLimits }));
     // The Korean photo catalog reuses the whole shared ERRORS table (two keys more than Messages types); compare the rest.
     expect(shape({ ...IJ_EN, errors: null })).toEqual(shape({ ...IJ_KO, errors: null }));
     expect(Object.keys(IJ_EN.errors).sort()).toEqual(['corrupt', 'empty', 'heic', 'not-image', 'oom', 'truncated', 'unknown', 'zip']);

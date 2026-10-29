@@ -14,7 +14,9 @@ import { cfbNotHwp, docxLikeZip, hwpFixture, plainZip, xlsxLikeZip } from '../he
 const fixture = (...p: string[]): Uint8Array => new Uint8Array(readFileSync(join(process.cwd(), 'tests', 'fixtures', ...p)));
 const file = (bytes: Uint8Array, name: string): File => new File([bytes as Uint8Array<ArrayBuffer>], name);
 const TOOLS: NotHwpTool[] = ['hwp-viewer', 'hwp-to-pdf', 'hwpx-to-hwp'];
-const FAMILIES: Family[] = ['pdf', 'docx', 'xlsx', 'pptx', 'office-old', 'zip', 'image', 'text', 'other'];
+const FAMILIES: Family[] = ['pdf', 'docx', 'xlsx', 'pptx', 'office-old', 'zip', 'image', 'text', 'empty', 'unread', 'other'];
+const SECURE = '한글 문서로 읽을 수 없는 파일입니다. 회사·기관에서 받은 보안 문서라면 보낸 곳에 PDF로 요청해 주세요.';
+const SECURE_HX = '한글 문서로 읽을 수 없는 파일이에요. 회사·기관에서 받은 보안 문서라면 보낸 곳에 PDF로 요청해 주세요.';
 const JARGON = /업로드|서버|브라우저|네트워크|메모리|(?<![A-Za-z])(?:px|dpi|exif)(?![A-Za-z])/i;
 
 /** A .pptx whose central directory sits past the first 64 KB: a stored `front`-byte entry first (only the tail names it). */
@@ -33,6 +35,9 @@ describe('notHwpHelp: what the file is, per tool', () => {
     ['old-office.hwp', cfbNotHwp(), 'cfb', 'office-old', 'not-hwp-cfb', null],
     ['notes.txt', strToU8('회의 메모: 한글 문서가 아닙니다.\n'), null, 'text', 'not-hwp-text', null],
     ['noise.hwp', Uint8Array.from({ length: 4096 }, (_, i) => (i * 7919) & 255), null, 'other', 'not-hwp-other', null],
+    ['empty.hwp', new Uint8Array(0), null, 'empty', 'not-hwp-empty', null],
+    ['three.hwp', Uint8Array.from([0x48, 0x57, 0x50]), null, 'empty', 'not-hwp-empty', null],
+    ['old.hwp', strToU8('HWP Document File V3.00 \x1a\x01\x02\x03\x04\x05'), null, 'other', 'not-hwp-old', null],
   ];
   for (const tool of TOOLS) {
     it.each(cases)(`${tool}: %s`, async (name, bytes, said, family, code, action) => {
@@ -44,17 +49,18 @@ describe('notHwpHelp: what the file is, per tool', () => {
   }
 
   it('a CFB the page sniff never sent to the worker is not called old Office; HWPX the worker refused is the generic line', async () => {
-    expect((await notHwpHelp(file(hwpFixture('law05.hwp'), 'x.hwp'), 'hwp-viewer', null)).text).toBe(ERRORS['not-hwp']);
+    expect((await notHwpHelp(file(hwpFixture('law05.hwp'), 'x.hwp'), 'hwp-viewer', null)).text).toBe(SECURE);
     const hwpx = await notHwpHelp(file(hwpFixture('adm14.hwpx'), 'x.hwpx'), 'hwp-viewer', 'zip');
-    expect([hwpx.code, hwpx.text, hwpx.action]).toEqual(['not-hwp-hwpx', ERRORS['not-hwp'], null]);
+    expect([hwpx.code, hwpx.text, hwpx.action]).toEqual(['not-hwp-hwpx', SECURE, null]);
   });
 
-  it('a file that cannot be read: the generic line, not-hwp-other', async () => {
+  it('a file that cannot be read: the 손상 line, not-hwp-unread (FAIL1030 D)', async () => {
     const gone = { size: 10, name: 'x.hwp', slice: () => ({ arrayBuffer: () => Promise.reject(new DOMException('gone', 'NotReadableError')) }) } as unknown as File;
     for (const tool of TOOLS) {
       const h = await notHwpHelp(gone, tool, null);
-      expect(h).toMatchObject({ code: 'not-hwp-other', action: null, text: tool === 'hwpx-to-hwp' ? HX_COPY.notHwpx : ERRORS['not-hwp'] });
+      expect(h).toMatchObject({ code: 'not-hwp-unread', action: null, text: helpText('unread', tool) });
     }
+    expect(helpText('unread', 'hwp-viewer')).toBe(ERRORS.corrupt);
   });
 });
 
@@ -71,7 +77,8 @@ describe('the lines (brief D3, word for word)', () => {
       expect(helpText('zip', tool)).toBe('압축 파일(ZIP)입니다. 압축을 푼 뒤 안에 있는 .hwp 또는 .hwpx 파일을 골라 주세요.');
       expect(helpText('image', tool)).toBe('사진 파일입니다. 사진을 PDF로 만들려면 아래 버튼을 누르세요.');
       expect(helpText('text', tool)).toBe(`글자만 있는 파일입니다. ${pick}`);
-      expect(helpText('other', tool)).toBe(ERRORS['not-hwp']);
+      expect(helpText('empty', tool)).toBe('빈 파일입니다. 파일을 다시 내려받은 뒤 시도해 주세요.');
+      expect(helpText('other', tool)).toBe(SECURE);
     }
   });
   it('/hwpx-to-hwp/ (해요체)', () => {
@@ -84,7 +91,9 @@ describe('the lines (brief D3, word for word)', () => {
     expect(helpText('zip', 'hwpx-to-hwp')).toBe('압축 파일(ZIP)이에요. 압축을 푼 뒤 안에 있는 .hwpx 파일을 골라 주세요.');
     expect(helpText('image', 'hwpx-to-hwp')).toBe('사진 파일이에요. 사진을 PDF로 만들려면 아래 버튼을 누르세요.');
     expect(helpText('text', 'hwpx-to-hwp')).toBe(HX_COPY.notHwpx);
-    expect(helpText('other', 'hwpx-to-hwp')).toBe(HX_COPY.notHwpx);
+    expect(helpText('empty', 'hwpx-to-hwp')).toBe('빈 파일이에요. 파일을 다시 내려받은 뒤 시도해 주세요.');
+    expect(helpText('unread', 'hwpx-to-hwp')).toBe('문서가 손상되었거나 끝까지 내려받아지지 않았어요. 파일을 다시 내려받은 뒤 시도해 주세요.');
+    expect(helpText('other', 'hwpx-to-hwp')).toBe(SECURE_HX);
   });
   it('every line: two sentences, plain language', () => {
     for (const tool of TOOLS)

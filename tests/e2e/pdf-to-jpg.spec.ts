@@ -172,8 +172,9 @@ test('range "9" on three pages and a reversed range get messages and start nothi
 });
 
 test('a file that is not a PDF: message, back to the picker', async ({ page }) => {
+  // not_a_pdf.pdf holds PNG bytes: FAIL1030 E names it a photo (with 「사진 PDF 변환으로 열기」).
   await open(page, runtimePath('not_a_pdf'));
-  await expect(page.locator('#pj-error')).toHaveText('PDF 파일이 아닙니다. PDF 파일을 골라 주세요.');
+  await expect(page.locator('#pj-error')).toContainText('사진 파일입니다. 먼저 PDF로 만들어 주세요.');
   await expect(page.locator('#pj-tool')).toHaveAttribute('data-state', 'empty');
 });
 
@@ -247,4 +248,17 @@ test('the controller and pdf.js load only after the first interaction, not with 
   await gotoReady(page, '/pdf-to-jpg/');
   await page.waitForTimeout(500);
   expect(scripts.filter((s) => /\/pdf\.[\w-]{8}\.js$|inspect|pdfjs|pdf\.worker|controller/.test(s))).toEqual([]);
+});
+
+// FAIL1030 E: a photo is named and handed to 사진 PDF 변환; a text file keeps the line.
+test('a photo: 「사진 PDF 변환으로 열기」 opens /jpg-to-pdf/ with it; a text file: the not-PDF line, no button', async ({ page }) => {
+  await open(page, join(RUNTIME_DIR, 'notes.txt'));
+  const error = page.locator('#pj-error');
+  await expect(error).toHaveText('PDF 파일이 아닙니다. PDF 파일을 골라 주세요.');
+  await expect(error.getByRole('button')).toHaveCount(0);
+  await page.setInputFiles('#pj-input', fixturePath('photo/scene_cc0.jpg'));
+  await expect(error).toContainText('사진 파일입니다. 먼저 PDF로 만들어 주세요.');
+  await error.getByRole('button', { name: '사진 PDF 변환으로 열기' }).click();
+  await expect(page).toHaveURL(/\/jpg-to-pdf\/$/);
+  await expect(page.locator('#jp-list > li .name')).toHaveText(['scene_cc0.jpg']);
 });
