@@ -379,13 +379,13 @@ describe('capacity guard (T6)', () => {
 
 describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
   it('pins move to the front in pin order; the rest keep their order; unknown tools are unchanged', () => {
-    const list = [{ id: 'a' }, { id: 'photo-kb' }, { id: 'b' }, { id: 'passport-photo' }];
-    expect(orderToolGuides('id-photo', list).map((g) => g.id)).toEqual(['passport-photo', 'photo-kb', 'a', 'b']);
-    expect(orderToolGuides('hwp-viewer', list).map((g) => g.id)).toEqual(['a', 'photo-kb', 'b', 'passport-photo']);
-    expect(orderToolGuides('id-photo', [{ id: 'a' }, { id: 'photo-kb' }]).map((g) => g.id)).toEqual(['photo-kb', 'a']);
+    const list = [{ id: 'a' }, { id: 'driver-license-photo' }, { id: 'b' }, { id: 'passport-photo' }];
+    expect(orderToolGuides('id-photo', list).map((g) => g.id)).toEqual(['passport-photo', 'driver-license-photo', 'a', 'b']);
+    expect(orderToolGuides('hwp-viewer', list).map((g) => g.id)).toEqual(['a', 'driver-license-photo', 'b', 'passport-photo']);
+    expect(orderToolGuides('id-photo', [{ id: 'a' }, { id: 'driver-license-photo' }]).map((g) => g.id)).toEqual(['driver-license-photo', 'a']);
   });
 
-  it('/id-photo/ lists passport-photo, then photo-kb, then the other guides naming the tool; every pin is a published guide naming its tool', () => {
+  it('/id-photo/ lists passport-photo, then driver-license-photo (SEO1030 D8), then the other guides naming the tool; every pin is a published guide naming its tool', () => {
     for (const [tool, pins] of Object.entries(TOOL_GUIDE_PINS)) {
       for (const id of pins) expect(published.find((g) => g.slug === id)?.parsed.tools, `${tool}: ${id}`).toContain(tool);
     }
@@ -394,12 +394,12 @@ describe('G2 A2: tool-page 관련 안내 order (Arch ruling 1)', () => {
       .filter((g) => g.parsed.tools.includes('id-photo'))
       .sort((a, b) => a.parsed.category.localeCompare(b.parsed.category, 'ko') || a.parsed.title.localeCompare(b.parsed.title, 'ko'))
       .map((g) => ({ id: g.slug }));
-    expect(orderToolGuides('id-photo', own).map((g) => g.id).slice(0, 2)).toEqual(['passport-photo', 'photo-kb']);
+    expect(orderToolGuides('id-photo', own).map((g) => g.id).slice(0, 2)).toEqual(['passport-photo', 'driver-license-photo']);
   });
 
   it('GROWTH3 G0: the tools new guides name show exactly their frozen 4 (tool pages stay byte-identical)', () => {
     const FROZEN: Record<string, string[]> = {
-      'id-photo': ['passport-photo', 'photo-kb', 'kuksiwon-photo', 'police-exam-photo'],
+      'id-photo': ['passport-photo', 'driver-license-photo', 'kuksiwon-photo', 'id-card-photo'],
       'photo-compress': ['gosi-photo', 'admission-photo', 'photo-kb', 'passport-photo'],
       'pdf-merge': ['pdf-merge', 'univ-docs-upload', 'yearend-tax-pdf', 'ecfs-pdf-limit'],
       'pdf-compress': ['pdf-compress', 'univ-docs-upload', 'hwp-to-pdf', 'email-attachment-limit'],
@@ -601,5 +601,37 @@ describe('REQ1014-C: deep links, passport guides, 10/10 bodies', () => {
     expect(hrefs).toContain('/guide/ecfs-pdf-limit/');
     expect(hrefs).toContain('/pdf-compress/?target=20');
     for (const f of pdf.faq.filter((x) => x.links)) expect(numberUnits(f.a), f.q).toEqual([]);
+  });
+});
+
+describe('SEO1030 D9: the photo-spec pages carry the searched words', () => {
+  const bySlug = (s: string) => published.find((g) => g.slug === s)!;
+  const hub = read(join('..', 'hubs', 'photo-sizes.md'));
+
+  it('each title keeps the words people search (GSC 2026-09-29..10-27)', () => {
+    const WORDS: Record<string, string[]> = {
+      'driver-license-photo': ['규정', '몇 장', '2026'],
+      'admission-photo': ['규정'],
+      'id-card-photo': ['크기'],
+      'resume-photo': ['크기'],
+      'history-exam-photo': ['크기'],
+      'youth-card-photo': ['크기'],
+      'kakao-photo': ['용량'],
+      'intl-driving-license': ['여권용'],
+    };
+    for (const [slug, words] of Object.entries(WORDS)) for (const w of words) expect(bySlug(slug).parsed.title, slug).toContain(w);
+    expect(hub.data.title, 'photo-sizes hub').toContain('크기');
+  });
+
+  it('the driver FAQ asks 몇 장 and 적성검사 in the searcher wording', () => {
+    const qs = bySlug('driver-license-photo').parsed.faq.map((f) => f.q);
+    expect(qs.some((q) => q.includes('몇 장'))).toBe(true);
+    expect(qs.some((q) => q.includes('적성검사'))).toBe(true);
+  });
+
+  it('all 8 guides link the photo-sizes hub in their body', () => {
+    for (const slug of ['driver-license-photo', 'id-card-photo', 'admission-photo', 'resume-photo', 'kakao-photo', 'history-exam-photo', 'youth-card-photo', 'intl-driving-license']) {
+      expect(bySlug(slug).body, slug).toContain('](/guide/photo-sizes/)');
+    }
   });
 });
