@@ -142,7 +142,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
   const printNote = must<HTMLElement>('idp-print');
   // ROMANIZE1016 D5: the passport preset's result points to 영문 이름 변환기 (late copy; not in the embed widget).
   const englishNote = document.getElementById('idp-english');
-  // LP1028 L10: the result's one affiliate group: LinkPrice eSIM for passport_online, Coupang for every other preset.
+  // LP1028 L10, AFF1029 A1: the result's one affiliate group: the LinkPrice group of the preset (a [data-presets] child
+  // of #idp-lp) if it has one, else Coupang.
   const lpLinks = document.getElementById('idp-lp');
   const cpLinks = document.getElementById('idp-cp');
   const result = must<HTMLImageElement>('idp-result');
@@ -726,8 +727,15 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
         englishNote.append(COPY.english, a);
       }
     }
-    if (lpLinks) lpLinks.hidden = p.id !== 'passport_online';
-    if (cpLinks) cpLinks.hidden = Boolean(lpLinks) && p.id === 'passport_online';
+    if (lpLinks) {
+      let shown = false;
+      for (const g of lpLinks.querySelectorAll<HTMLElement>('[data-presets]')) {
+        g.hidden = !(g.dataset.presets ?? '').split(' ').includes(p.id);
+        shown ||= !g.hidden;
+      }
+      lpLinks.hidden = !shown;
+    }
+    if (cpLinks) cpLinks.hidden = lpLinks !== null && !lpLinks.hidden;
     hideError();
     showSheet(p, st);
     setPhase('done');

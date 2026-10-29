@@ -1,10 +1,11 @@
 // 제휴 링크 (briefs handoff/ARCHITECT-BRIEF-REV2.md Decisions 3-4, handoff/ARCHITECT-BRIEF-REV3.md Decisions 1-3 and
-// handoff/ARCHITECT-BRIEF-LP1028.md L1-L10): two networks, one group per result screen.
+// handoff/ARCHITECT-BRIEF-LP1028.md L1-L10, handoff/ARCHITECT-BRIEF-AFF1029.md A1-A13): two networks, one group per
+// result screen.
 // - Coupang Partners: the owner's short links (public, not secrets) and where each shows (TOOL_AFF a tool's result
 //   screen, GUIDE_AFF a guide keyed by its tools[0]). LP1028 (owner 2026-10-28): on again, result screens only
 //   (AFF_GUIDES = false keeps the guides free of them until the AdSense re-review); kill switch PUBLIC_AFF_COUPANG=0.
 // - LinkPrice: text links whose hrefs are kept verbatim (LP_LINKS; never rebuilt, reformatted or given params);
-//   TOOL_LP places them; kill switch PUBLIC_AFF_LINKPRICE=0.
+//   TOOL_LP places them, ID_PHOTO_LP on /id-photo/ by preset (AFF1029 A1); kill switch PUBLIC_AFF_LINKPRICE=0.
 // resultBlock picks the one group of a result screen: LinkPrice if the screen has one, else Coupang (/id-photo/ renders
 // both and shows one, by preset). Plain <a> links only, rel="sponsored noopener", new tab, the block's disclosure (ad)
 // first, 「광고」 in every name; no script, iframe or image of either network.
@@ -14,6 +15,9 @@
 // the system font (.out-links). check-dist reads AFF_COPY.ad, AFF_COPY.top, COUPANG_DISCLOSURE, LP_COPY.ad and LP_LINKS
 // from this file (keep them one-line strings).
 import type { UsageTool } from '../lib/ui/usage';
+import type { PRESET_IDS } from './preset-ids';
+
+type PresetId = (typeof PRESET_IDS)[number];
 
 /** 쿠팡 파트너스 지정 문구, verbatim from the Partners link page (confirmed 2026-10-12). */
 export const COUPANG_DISCLOSURE = '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
@@ -38,7 +42,10 @@ export const AFF_COPY = {
 export type AffLead = Exclude<keyof typeof AFF_COPY, 'ad' | 'top' | 'heading'>;
 export type AffDest = 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod';
 
-export type LpDest = 'lp-signgate' | 'lp-dosirak' | 'lp-usimsa' | 'lp-soomgo';
+export type LpDest =
+  | 'lp-signgate' | 'lp-dosirak' | 'lp-usimsa' | 'lp-soomgo'
+  | 'lp-kb-gosi' | 'lp-kb-qnet' | 'lp-kb-history' | 'lp-kb-korcham' | 'lp-kb-teps' | 'lp-kb-kuksiwon' | 'lp-kb-police' | 'lp-kb-hanja' | 'lp-kb-jlpt'
+  | 'lp-nice' | 'lp-allcredit' | 'lp-agoda' | 'lp-klook';
 
 /** A link of either network. */
 export interface OutLink {
@@ -56,7 +63,8 @@ export const AFF_LINKS: readonly AffLink[] = [
   { dest: 'cp-printer', label: '포토프린터 (쿠팡, 광고, 새 창)', href: 'https://link.coupang.com/a/hM1VvrGKdg' },
   { dest: 'cp-paper', label: '포토프린터 인화지 (쿠팡, 광고, 새 창)', href: 'https://link.coupang.com/a/hM1W2wjBpA' },
   { dest: 'cp-backdrop', label: '흰색 촬영 배경천 (쿠팡, 광고, 새 창)', href: 'https://link.coupang.com/a/hM1XIN1hgO' },
-  { dest: 'cp-stamp', label: '인감도장 (쿠팡, 광고, 새 창)', href: 'https://link.coupang.com/a/hM11MC94jA' },
+  // AFF1029: a generic name; /power-of-attorney/ never says 인감 outside its caution (FORM1020 D10, check-dist).
+  { dest: 'cp-stamp', label: '도장 (쿠팡, 광고, 새 창)', href: 'https://link.coupang.com/a/hM11MC94jA' },
   // LP1028: a generic name; the HWP pages never print 한컴오피스 / 한컴뷰어 (A0 legal rule, tests/unit/hwp-viewer.test.ts).
   { dest: 'cp-hancom', label: '한글 문서 프로그램(가정·학생용) (쿠팡, 광고, 새 창)', href: 'https://link.coupang.com/a/hM106o2KC4' },
   { dest: 'cp-mfp', label: '가정용 복합기(인쇄·스캔) (쿠팡, 광고, 새 창)', href: 'https://link.coupang.com/a/hM4wFTvnPw' },
@@ -80,6 +88,11 @@ export const TOOL_AFF: Partial<Record<UsageTool, readonly AffDest[]>> = {
   'pdf-merge': ['cp-mfp'],
   'pdf-split': ['cp-mfp'],
   'jpg-to-pdf': ['cp-mfp', 'cp-scanner'],
+  // AFF1029 A2/A3/A6 (loan-note: the fallback while LinkPrice is off).
+  'loan-note': ['cp-stamp'],
+  'power-of-attorney': ['cp-stamp'],
+  'id-copy': ['cp-mfp'],
+  'pdf-edit': ['cp-mfp'],
 };
 
 /** Guides with a block, keyed by the guide's tools[0]. A guide whose tools[0] is not here has none. */
@@ -110,8 +123,15 @@ export const TOOL_LEAD: Partial<Record<UsageTool, AffLead>> = {
   'pdf-merge': 'pdf',
   'pdf-split': 'pdf',
   'jpg-to-pdf': 'scan',
+  'loan-note': 'stamp-signature',
+  'power-of-attorney': 'stamp-signature',
+  'id-copy': 'pdf',
+  'pdf-edit': 'pdf',
 };
-export const GUIDE_LEAD: Partial<Record<UsageTool, AffLead>> = { ...TOOL_LEAD, 'id-photo': 'photo-guide' };
+/** AFF1029: built from the GUIDE_AFF keys (the result-only screens added to TOOL_LEAD get no guide lead). */
+export const GUIDE_LEAD: Partial<Record<UsageTool, AffLead>> = Object.fromEntries(
+  (Object.keys(GUIDE_AFF) as UsageTool[]).map((t) => [t, t === 'id-photo' ? 'photo-guide' : TOOL_LEAD[t]]),
+);
 
 /**
  * ADS1020 D1 turned the Coupang links off in code (2026-10-20); LP1028 (owner 2026-10-28) turns them back on for result
@@ -167,6 +187,10 @@ export const LP_COPY = {
   esim: '해외에 나간다면 휴대폰 데이터도 미리 준비하세요. eSIM은 지원하는 휴대폰에서만 쓸 수 있으니 사기 전에 확인하세요.',
   careerCc: '자소서를 다른 사람에게 봐 달라고 하고 싶다면',
   careerRs: '다음 직장을 준비한다면 이력서·자소서도 함께 봐 달라고 할 수 있어요.',
+  exam: '시험을 준비한다면 교보문고에서 수험서를 찾아볼 수 있어요.',
+  careerIdp: '이력서 사진을 만들었다면 이력서·자소서도 다른 사람에게 봐 달라고 할 수 있어요.',
+  credit: '돈을 빌리는 쪽이라면 내 신용점수를 미리 확인해 볼 수 있어요.',
+  travel: '항공권·숙소를 예약할 때는 여권과 똑같은 영문 이름을 쓰세요.',
 } as const;
 
 export type LpLead = Exclude<keyof typeof LP_COPY, 'ad'>;
@@ -181,6 +205,19 @@ export const LP_LINKS: readonly LpLink[] = [
   { dest: 'lp-dosirak', label: '도시락eSIM (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=dosirak1&a=A100709304&l=0000' },
   { dest: 'lp-usimsa', label: '유심사 eSIM (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=usimsa&a=A100709304&l=0000' },
   { dest: 'lp-soomgo', label: '숨고 이력서·자소서 컨설팅 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=soomgo&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsoomgo.com%2Fhire%2F%25EC%259D%25B4%25EB%25A0%25A5%25EC%2584%259C-%25EC%259E%2590%25EC%2586%258C%25EC%2584%259C-%25EC%25BB%25A8%25EC%2584%25A4%25ED%258C%2585' },
+  { dest: 'lp-kb-gosi', label: '교보문고 검색: 공무원 수험서 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EA%25B3%25B5%25EB%25AC%25B4%25EC%259B%2590%2520%25EC%2588%2598%25ED%2597%2598%25EC%2584%259C' },
+  { dest: 'lp-kb-qnet', label: '교보문고 검색: 기사 자격증 필기 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EA%25B8%25B0%25EC%2582%25AC%2520%25EC%259E%2590%25EA%25B2%25A9%25EC%25A6%259D%2520%25ED%2595%2584%25EA%25B8%25B0' },
+  { dest: 'lp-kb-history', label: '교보문고 검색: 한국사능력검정시험 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25ED%2595%259C%25EA%25B5%25AD%25EC%2582%25AC%25EB%258A%25A5%25EB%25A0%25A5%25EA%25B2%2580%25EC%25A0%2595%25EC%258B%259C%25ED%2597%2598' },
+  { dest: 'lp-kb-korcham', label: '교보문고 검색: 컴퓨터활용능력 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EC%25BB%25B4%25ED%2593%25A8%25ED%2584%25B0%25ED%2599%259C%25EC%259A%25A9%25EB%258A%25A5%25EB%25A0%25A5' },
+  { dest: 'lp-kb-teps', label: '교보문고 검색: TEPS (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3DTEPS' },
+  { dest: 'lp-kb-kuksiwon', label: '교보문고 검색: 국가고시 문제집 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EA%25B5%25AD%25EA%25B0%2580%25EA%25B3%25A0%25EC%258B%259C%2520%25EB%25AC%25B8%25EC%25A0%259C%25EC%25A7%2591' },
+  { dest: 'lp-kb-police', label: '교보문고 검색: 경찰공무원 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EA%25B2%25BD%25EC%25B0%25B0%25EA%25B3%25B5%25EB%25AC%25B4%25EC%259B%2590' },
+  { dest: 'lp-kb-hanja', label: '교보문고 검색: 한자능력검정시험 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25ED%2595%259C%25EC%259E%2590%25EB%258A%25A5%25EB%25A0%25A5%25EA%25B2%2580%25EC%25A0%2595%25EC%258B%259C%25ED%2597%2598' },
+  { dest: 'lp-kb-jlpt', label: '교보문고 검색: JLPT (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3DJLPT' },
+  { dest: 'lp-nice', label: 'NICE지키미 신용정보 조회 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=mycredit1&a=A100709304&l=0000' },
+  { dest: 'lp-allcredit', label: '올크레딧 신용정보 조회 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=allcredit&a=A100709304&l=0000' },
+  { dest: 'lp-agoda', label: '아고다 숙소 예약 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=agoda&a=A100709304&l=0000' },
+  { dest: 'lp-klook', label: '클룩 투어·입장권 (광고, 새 창)', href: 'https://click.linkprice.com/click.php?m=klook&a=A100709304&l=0000' },
 ];
 
 /** L1: the result screens with a LinkPrice block, their lead line and dests in display order. */
@@ -188,10 +225,38 @@ export const TOOL_LP: Partial<Record<UsageTool, { lead: LpLead; dests: readonly 
   'pdf-sign': { lead: 'signgate', dests: ['lp-signgate'] },
   'stamp-signature': { lead: 'signgate', dests: ['lp-signgate'] },
   'stamp-maker': { lead: 'signgate', dests: ['lp-signgate'] },
-  'id-photo': { lead: 'esim', dests: ['lp-dosirak', 'lp-usimsa'] },
   'char-count': { lead: 'careerCc', dests: ['lp-soomgo'] },
   'resignation-letter': { lead: 'careerRs', dests: ['lp-soomgo'] },
+  'loan-note': { lead: 'credit', dests: ['lp-nice', 'lp-allcredit'] },
+  'english-name': { lead: 'travel', dests: ['lp-agoda', 'lp-klook'] },
 };
+
+/**
+ * AFF1029 A1: the /id-photo/ result group by preset (its own map: TOOL_LP has no id-photo entry). The controller shows the
+ * entry whose presets hold the result's preset and hides the Coupang group then; any other preset shows Coupang.
+ */
+export const ID_PHOTO_LP: readonly { presets: readonly PresetId[]; lead: LpLead; dests: readonly LpDest[] }[] = [
+  { presets: ['passport_online'], lead: 'esim', dests: ['lp-dosirak', 'lp-usimsa'] },
+  { presets: ['gosi'], lead: 'exam', dests: ['lp-kb-gosi'] },
+  { presets: ['qnet'], lead: 'exam', dests: ['lp-kb-qnet'] },
+  { presets: ['history'], lead: 'exam', dests: ['lp-kb-history'] },
+  { presets: ['korcham'], lead: 'exam', dests: ['lp-kb-korcham'] },
+  { presets: ['teps'], lead: 'exam', dests: ['lp-kb-teps'] },
+  { presets: ['kuksiwon'], lead: 'exam', dests: ['lp-kb-kuksiwon'] },
+  { presets: ['police'], lead: 'exam', dests: ['lp-kb-police'] },
+  { presets: ['hanja'], lead: 'exam', dests: ['lp-kb-hanja'] },
+  { presets: ['jlpt'], lead: 'exam', dests: ['lp-kb-jlpt'] },
+  { presets: ['saramin', 'jobkorea'], lead: 'careerIdp', dests: ['lp-soomgo'] },
+];
+
+/** The /id-photo/ LinkPrice groups with their presets ([] while off; an entry without a link left is dropped). */
+export function idPhotoLpBlocks(on: boolean, pool: readonly LpLink[] = LP_LINKS): { presets: readonly PresetId[]; block: AffBlock }[] {
+  if (!on) return [];
+  return ID_PHOTO_LP.flatMap((e) => {
+    const links = e.dests.flatMap((d) => pool.filter((l) => l.dest === d));
+    return links.length > 0 ? [{ presets: e.presets, block: { ad: LP_COPY.ad, lead: LP_COPY[e.lead], links } }] : [];
+  });
+}
 
 /** The LinkPrice block of a tool's result screen, or null (flag off, no block, no link left). `pool`: tests pass their own. */
 export function lpBlock(tool: string, on: boolean, pool: readonly LpLink[] = LP_LINKS): AffBlock | null {

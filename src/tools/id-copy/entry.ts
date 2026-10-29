@@ -5,11 +5,13 @@
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { sweepIfDue } from '../../lib/ui/handoff-marker';
-import { startUsage, track } from '../../lib/ui/usage';
+import { startUsage, track, trackOut } from '../../lib/ui/usage';
 
 type Api = { open(file: File): void } | null;
 
 startUsage('id-copy');
+// AFF1029 A10: presses of the result's affiliate group (link kind only).
+trackOut(document.getElementById('ic-result'), 'id-copy');
 const root = document.getElementById('ic-tool');
 if (root) {
   let loading: Promise<Api> | null = null;

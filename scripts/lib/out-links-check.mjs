@@ -1,6 +1,6 @@
 // check-dist rules for the link blocks (briefs handoff/ARCHITECT-BRIEF-REV2.md Build Order H,
-// handoff/ARCHITECT-BRIEF-REV3.md R3.6 and handoff/ARCHITECT-BRIEF-LP1028.md Build Order 7). Pure: tests/unit/postbuild.test.ts
-// feeds fixtures.
+// handoff/ARCHITECT-BRIEF-REV3.md R3.6, handoff/ARCHITECT-BRIEF-LP1028.md Build Order 7 and
+// handoff/ARCHITECT-BRIEF-AFF1029.md Build Order 6). Pure: tests/unit/postbuild.test.ts feeds fixtures.
 // (a) a sponsored link (rel contains the word sponsored) only on a screen of the placement map: a tool page whose slug is
 //     a key of TOOL_OUT, or a /guide/ page whose first tool (its 바로 쓰는 도구 list) is a key of GUIDE_OUT, and only with
 //     a dest of that key. Every page of the No-block list (home, 404, offline, privacy, terms, licenses, the guide index,
@@ -13,7 +13,8 @@
 //     description, og, JSON-LD).
 // (e) LP1028 (owner 2026-10-28, Coupang on result screens only): PUBLIC_AFF_COUPANG on, each page of COUPANG_PAGES has
 //     exactly its Coupang links and every other page (guides, home, content, /en/, /embed/) none and no Coupang
-//     disclosure line (COUPANG_DISCLOSURE, AFF_COPY.top, AFF_COPY.heading); off, none anywhere.
+//     disclosure line (COUPANG_DISCLOSURE, AFF_COPY.top, AFF_COPY.heading); off, none anywhere. AFF1029 A13: every Coupang
+//     link sits inside a div carrying the hidden attribute in the HTML (shown only once there is a result).
 // (e2) PUBLIC_AFF_COUPANG off: no sponsored link anywhere except a LinkPrice one.
 //     Never a Coupang script (src or inline), iframe, image, link, source, object or embed.
 // (f) ADS1020 D1: while AFF_ENABLED is false in src/data/affiliate.ts, no dist text file (html, js, json, xml, txt) names
@@ -40,6 +41,10 @@ export const COUPANG_PAGES = {
   'pdf-merge/index.html': 1,
   'pdf-split/index.html': 1,
   'jpg-to-pdf/index.html': 2,
+  // AFF1029 A3, A6.
+  'power-of-attorney/index.html': 1,
+  'id-copy/index.html': 1,
+  'pdf-edit/index.html': 1,
 };
 
 /** (e) LP1028 L10: with LinkPrice off these screens fall back to their Coupang block (resultBlock). */
@@ -47,6 +52,7 @@ export const COUPANG_LP_OFF_PAGES = {
   'pdf-sign/index.html': 1,
   'stamp-signature/index.html': 1,
   'stamp-maker/index.html': 1,
+  'loan-note/index.html': 1,
 };
 
 /** (h) LP1028 L1: the LinkPrice links of each result screen while PUBLIC_AFF_LINKPRICE is on. */
@@ -54,9 +60,12 @@ export const LP_PAGES = {
   'pdf-sign/index.html': 1,
   'stamp-signature/index.html': 1,
   'stamp-maker/index.html': 1,
-  'id-photo/index.html': 2,
+  // AFF1029 A1: eSIM 2 + 교보문고 9 + 숨고 1, one group shown per preset.
+  'id-photo/index.html': 12,
   'char-count/index.html': 1,
   'resignation-letter/index.html': 1,
+  'loan-note/index.html': 2,
+  'english-name/index.html': 2,
 };
 
 /** The disclosure strings of src/data/affiliate.ts (one-line literals), or null when one is missing. */
@@ -235,7 +244,8 @@ export function sponsoredProblems(pages, { generic, top, coupang, lp }, { TOOL_O
  * (e), (e2) PUBLIC_AFF_COUPANG `on`: each page of COUPANG_PAGES has exactly its Coupang links (/id-photo/ must exist),
  * every other page none and no Coupang disclosure line (`strings`: { top, heading, coupang }); with LinkPrice off
  * (`lpOn` false) the screens of COUPANG_LP_OFF_PAGES have their Coupang links too; off: no Coupang link and no sponsored
- * link but a LinkPrice one. Never a Coupang script (src or inline), iframe, image, link, source, object or embed.
+ * link but a LinkPrice one. Every Coupang link inside a hidden div (AFF1029 A13). Never a Coupang script (src or inline),
+ * iframe, image, link, source, object or embed.
  */
 export function coupangProblems(pages, on, { top, heading, coupang }, lpOn = true) {
   const problems = [];
@@ -253,6 +263,12 @@ export function coupangProblems(pages, on, { top, heading, coupang }, lpOn = tru
       ]) if (html.includes(needle) || body.includes(needle)) problems.push(`${path}: ${name} on a page without Coupang links`);
     }
     if (!on && [...anchors(html)].some((m) => isSponsored(m[1]) && !LP_HREF.test(hrefOf(m[1])))) problems.push(`${path}: a sponsored link other than LinkPrice while PUBLIC_AFF_COUPANG is off`);
+    if (coupangLinks) {
+      const hidden = hiddenSpans(html);
+      for (const m of anchors(html)) {
+        if (COUPANG_HREF.test(hrefOf(m[1])) && !hidden.some(([s, e]) => m.index >= s && m.index < e)) problems.push(`${path}: the Coupang link "${attr(m[1], 'data-out') || 'link'}" is not inside a hidden div`);
+      }
+    }
     const embed = /<(?:script|iframe|img|link|source|object|embed)\b[^>]*coupang/i.test(html) || [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].some((s) => /coupang/i.test(s[1]));
     if (embed) problems.push(`${path}: a Coupang script, iframe, image or other embed`);
   }

@@ -9,6 +9,8 @@ import JsonLd from '../../components/JsonLd.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
 import ToolNotes from '../../components/ToolNotes.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { resultBlock } from '../../data/affiliate';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { guidePath, publishedGuides } from '../../data/guides';
@@ -18,6 +20,8 @@ import { GIVEN_MAX, SURNAME_MAX } from '../../tools/english-name/romanize';
 import enCss from '../../tools/english-name/english-name.css?inline';
 
 const tool = getTool('english-name');
+// 제휴 링크 (AFF1029 A4: the LinkPrice 아고다·클룩 group, last in the result): in the result (hidden until there is one).
+const aff = resultBlock('english-name', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
 const rows = [
   { shape: 'joined', label: '붙여 쓰기' },
@@ -84,6 +88,7 @@ const chainGuides = ['passport-english-name', 'passport-photo', 'passport-reissu
         </fieldset>
         <div class="en-syl" id="en-syl"></div>
         <div class="en-note" id="en-note"></div>
+        <OutLinks block={aff} />
       </div>
 
       <section class="en-chain" id="en-chain" aria-labelledby="en-chain-title">

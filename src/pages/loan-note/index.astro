@@ -17,10 +17,13 @@ import { getTool } from '../../data/tools';
 import { LOAN_HWP, LOAN_NOTE as SPEC } from '../../data/forms/loan-note';
 import { LN_PREFIX } from '../../tools/loan-note/config';
 import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
+import { resultBlock } from '../../data/affiliate';
 // Page-only styles, inlined (the /english-name/ pattern): only the form tool pages carry them.
 import formCss from '../../tools/form-tool/form-tool.css?inline';
 
 const tool = getTool('loan-note');
+// 제휴 링크 (AFF1029 A2: the LinkPrice 신용정보 group; Coupang 도장 while LinkPrice is off): last in the result (FormTool `aff`).
+const aff = resultBlock('loan-note', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
 const groups = [
   { id: 'loan', legend: '빌린 내용', fields: ['amount', 'loanDate', 'dueDate', 'rate', 'interestDay', 'repayHow', 'terms'] },
@@ -41,7 +44,7 @@ const groups = [
 
   <section class="tool" aria-label={`${tool.name} 도구`}>
     <div class="wrap narrow">
-      <FormTool spec={SPEC} prefix={LN_PREFIX} groups={groups} after={['date']} hwp={LOAN_HWP} />
+      <FormTool spec={SPEC} prefix={LN_PREFIX} groups={groups} after={['date']} hwp={LOAN_HWP} aff={aff} />
 
       <section class="pa-with" id="ln-with" aria-labelledby="ln-with-title">
         <h2 id="ln-with-title">함께 준비하는 것</h2>

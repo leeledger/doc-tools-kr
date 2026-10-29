@@ -1,9 +1,10 @@
 // 인화·사진관 링크 and 제휴 링크 (briefs handoff/ARCHITECT-BRIEF-REV2.md "Test map" and handoff/ARCHITECT-BRIEF-REV3.md
-// "Test map", LP1028 "Test map"): the id-photo info link, the link data, the placement maps, affBlock (flag, missing dests,
+// "Test map", LP1028 and AFF1029 "Test map"): the id-photo info link, the link data, the placement maps, affBlock (flag, missing dests,
 // max 3), the LinkPrice links (verbatim hrefs, lpBlock, resultBlock) and the drift guard between src/data/affiliate.ts and
 // the server whitelist in scripts/lib/usage.mjs.
 import { describe, expect, it } from 'vitest';
-import { AFF_COPY, AFF_DISCLOSURE, AFF_GUIDES, AFF_LINKS, AFF_MAX, COUPANG_DISCLOSURE, GUIDE_AFF, GUIDE_LEAD, LP_COPY, LP_ENABLED, LP_LINKS, TOOL_AFF, TOOL_LEAD, TOOL_LP, AFF_ENABLED, affBlock, affOn, lpBlock, lpOn, resultBlock, type AffLink, type LpLink } from '../../src/data/affiliate';
+import { AFF_COPY, AFF_DISCLOSURE, AFF_GUIDES, AFF_LINKS, AFF_MAX, COUPANG_DISCLOSURE, GUIDE_AFF, GUIDE_LEAD, ID_PHOTO_LP, LP_COPY, LP_ENABLED, LP_LINKS, TOOL_AFF, TOOL_LEAD, TOOL_LP, AFF_ENABLED, affBlock, affOn, idPhotoLpBlocks, lpBlock, lpOn, resultBlock, type AffLink, type LpLink } from '../../src/data/affiliate';
+import { PRESET_IDS } from '../../src/data/preset-ids';
 import { PHOTO_STUDIO_URL, printLinks } from '../../src/data/print-links';
 import { GUIDE_OUT, OUT_DESTS, OUT_LABELS, TOOLS, TOOL_OUT } from '../../scripts/lib/usage.mjs';
 
@@ -53,7 +54,16 @@ describe('affiliate link data (src/data/affiliate.ts)', () => {
       'pdf-merge': ['cp-mfp'],
       'pdf-split': ['cp-mfp'],
       'jpg-to-pdf': ['cp-mfp', 'cp-scanner'],
+      // AFF1029 A2/A3/A6: result screens only (no guide block, no guide lead).
+      'loan-note': ['cp-stamp'],
+      'power-of-attorney': ['cp-stamp'],
+      'id-copy': ['cp-mfp'],
+      'pdf-edit': ['cp-mfp'],
     });
+    for (const t of ['loan-note', 'power-of-attorney', 'id-copy', 'pdf-edit'] as const) {
+      expect(GUIDE_AFF[t], t).toBeUndefined();
+      expect(GUIDE_LEAD[t], t).toBeUndefined();
+    }
     expect(GUIDE_AFF['id-photo']).toEqual(['cp-tripod', 'cp-backdrop', 'cp-printer']);
     // The No-block screens (Decision 1): the upload-size tools have neither a result block nor guide blocks.
     for (const t of ['pdf-compress', 'photo-compress', 'image-to-jpg', 'pdf-to-jpg', 'pdf-password'] as const) {
@@ -120,7 +130,27 @@ describe('LinkPrice links (LP1028, src/data/affiliate.ts)', () => {
       ['lp-dosirak', 'https://click.linkprice.com/click.php?m=dosirak1&a=A100709304&l=0000'],
       ['lp-usimsa', 'https://click.linkprice.com/click.php?m=usimsa&a=A100709304&l=0000'],
       ['lp-soomgo', 'https://click.linkprice.com/click.php?m=soomgo&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsoomgo.com%2Fhire%2F%25EC%259D%25B4%25EB%25A0%25A5%25EC%2584%259C-%25EC%259E%2590%25EC%2586%258C%25EC%2584%259C-%25EC%25BB%25A8%25EC%2584%25A4%25ED%258C%2585'],
+      // AFF1029 A8: copied from reports/linkprice/사이트 링크 2026-10-29.md (issued 2026-10-29), byte for byte.
+      ['lp-kb-gosi', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EA%25B3%25B5%25EB%25AC%25B4%25EC%259B%2590%2520%25EC%2588%2598%25ED%2597%2598%25EC%2584%259C'],
+      ['lp-kb-qnet', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EA%25B8%25B0%25EC%2582%25AC%2520%25EC%259E%2590%25EA%25B2%25A9%25EC%25A6%259D%2520%25ED%2595%2584%25EA%25B8%25B0'],
+      ['lp-kb-history', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25ED%2595%259C%25EA%25B5%25AD%25EC%2582%25AC%25EB%258A%25A5%25EB%25A0%25A5%25EA%25B2%2580%25EC%25A0%2595%25EC%258B%259C%25ED%2597%2598'],
+      ['lp-kb-korcham', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EC%25BB%25B4%25ED%2593%25A8%25ED%2584%25B0%25ED%2599%259C%25EC%259A%25A9%25EB%258A%25A5%25EB%25A0%25A5'],
+      ['lp-kb-teps', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3DTEPS'],
+      ['lp-kb-kuksiwon', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EA%25B5%25AD%25EA%25B0%2580%25EA%25B3%25A0%25EC%258B%259C%2520%25EB%25AC%25B8%25EC%25A0%259C%25EC%25A7%2591'],
+      ['lp-kb-police', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25EA%25B2%25BD%25EC%25B0%25B0%25EA%25B3%25B5%25EB%25AC%25B4%25EC%259B%2590'],
+      ['lp-kb-hanja', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3D%25ED%2595%259C%25EC%259E%2590%25EB%258A%25A5%25EB%25A0%25A5%25EA%25B2%2580%25EC%25A0%2595%25EC%258B%259C%25ED%2597%2598'],
+      ['lp-kb-jlpt', 'https://click.linkprice.com/click.php?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch.kyobobook.co.kr%2Fsearch%3Fkeyword%3DJLPT'],
+      ['lp-nice', 'https://click.linkprice.com/click.php?m=mycredit1&a=A100709304&l=0000'],
+      ['lp-allcredit', 'https://click.linkprice.com/click.php?m=allcredit&a=A100709304&l=0000'],
+      ['lp-agoda', 'https://click.linkprice.com/click.php?m=agoda&a=A100709304&l=0000'],
+      ['lp-klook', 'https://click.linkprice.com/click.php?m=klook&a=A100709304&l=0000'],
     ]);
+    // Each href once (check-dist (g) maps an href to one dest); the kbbook deep links keep LinkPrice's double encoding.
+    expect(new Set(LP_LINKS.map((l) => l.href)).size).toBe(LP_LINKS.length);
+    for (const l of LP_LINKS.filter((x) => x.dest.startsWith('lp-kb-'))) {
+      expect(l.href, l.dest).toMatch(/^https:\/\/click\.linkprice\.com\/click\.php\?m=kbbook&a=A100709304&l=9999&l_cd1=3&l_cd2=0&tu=https%3A%2F%2Fsearch\.kyobobook\.co\.kr%2Fsearch%3Fkeyword%3D/);
+      expect(l.href, l.dest).not.toContain('%2525');
+    }
   });
 
   it('L6/L7: the disclosure and the lines; labels say 광고 and 새 창; no price, 공식 or Coupang words', () => {
@@ -130,7 +160,19 @@ describe('LinkPrice links (LP1028, src/data/affiliate.ts)', () => {
     expect(LP_COPY.esim).toBe('해외에 나간다면 휴대폰 데이터도 미리 준비하세요. eSIM은 지원하는 휴대폰에서만 쓸 수 있으니 사기 전에 확인하세요.');
     expect(LP_COPY.careerCc).toBe('자소서를 다른 사람에게 봐 달라고 하고 싶다면');
     expect(LP_COPY.careerRs).toBe('다음 직장을 준비한다면 이력서·자소서도 함께 봐 달라고 할 수 있어요.');
-    expect(LP_LINKS.map((l) => l.label)).toEqual(['한국정보인증 공동인증서 (광고, 새 창)', '도시락eSIM (광고, 새 창)', '유심사 eSIM (광고, 새 창)', '숨고 이력서·자소서 컨설팅 (광고, 새 창)']);
+    // AFF1029 A2, A4, A9.
+    expect(LP_COPY.exam).toBe('시험을 준비한다면 교보문고에서 수험서를 찾아볼 수 있어요.');
+    expect(LP_COPY.careerIdp).toBe('이력서 사진을 만들었다면 이력서·자소서도 다른 사람에게 봐 달라고 할 수 있어요.');
+    expect(LP_COPY.credit).toBe('돈을 빌리는 쪽이라면 내 신용점수를 미리 확인해 볼 수 있어요.');
+    expect(LP_COPY.travel).toBe('항공권·숙소를 예약할 때는 여권과 똑같은 영문 이름을 쓰세요.');
+    for (const w of ['대출', '연체', '무료']) expect(LP_COPY.credit).not.toContain(w);
+    expect(LP_LINKS.map((l) => l.label)).toEqual([
+      '한국정보인증 공동인증서 (광고, 새 창)', '도시락eSIM (광고, 새 창)', '유심사 eSIM (광고, 새 창)', '숨고 이력서·자소서 컨설팅 (광고, 새 창)',
+      '교보문고 검색: 공무원 수험서 (광고, 새 창)', '교보문고 검색: 기사 자격증 필기 (광고, 새 창)', '교보문고 검색: 한국사능력검정시험 (광고, 새 창)',
+      '교보문고 검색: 컴퓨터활용능력 (광고, 새 창)', '교보문고 검색: TEPS (광고, 새 창)', '교보문고 검색: 국가고시 문제집 (광고, 새 창)',
+      '교보문고 검색: 경찰공무원 (광고, 새 창)', '교보문고 검색: 한자능력검정시험 (광고, 새 창)', '교보문고 검색: JLPT (광고, 새 창)',
+      'NICE지키미 신용정보 조회 (광고, 새 창)', '올크레딧 신용정보 조회 (광고, 새 창)', '아고다 숙소 예약 (광고, 새 창)', '클룩 투어·입장권 (광고, 새 창)',
+    ]);
     for (const t of [...Object.values(LP_COPY), ...LP_LINKS.map((l) => l.label)]) expect(t).not.toMatch(/[0-9,]+원|₩|공식|최고|최저|1위/);
   });
 
@@ -140,22 +182,54 @@ describe('LinkPrice links (LP1028, src/data/affiliate.ts)', () => {
     for (const v of ['0', ' 0\n']) expect(lpOn(v), String(v)).toBe(false);
   });
 
-  it('L1 lpBlock: the six screens with their lead and links; off, unknown tool or no link left: null', () => {
-    expect(Object.keys(TOOL_LP).sort()).toEqual(['char-count', 'id-photo', 'pdf-sign', 'resignation-letter', 'stamp-maker', 'stamp-signature']);
+  it('L1 lpBlock: the seven screens with their lead and links (id-photo: ID_PHOTO_LP); off, unknown tool or no link left: null', () => {
+    expect(Object.keys(TOOL_LP).sort()).toEqual(['char-count', 'english-name', 'loan-note', 'pdf-sign', 'resignation-letter', 'stamp-maker', 'stamp-signature']);
     const dests = (t: string) => lpBlock(t, true)!.links.map((l) => l.dest);
     for (const t of ['pdf-sign', 'stamp-signature', 'stamp-maker']) {
       expect(lpBlock(t, true), t).toMatchObject({ ad: LP_COPY.ad, lead: LP_COPY.signgate });
       expect(dests(t), t).toEqual(['lp-signgate']);
     }
-    expect(lpBlock('id-photo', true)).toMatchObject({ ad: LP_COPY.ad, lead: LP_COPY.esim });
-    expect(dests('id-photo')).toEqual(['lp-dosirak', 'lp-usimsa']);
+    expect(lpBlock('loan-note', true)).toMatchObject({ ad: LP_COPY.ad, lead: LP_COPY.credit });
+    expect(dests('loan-note')).toEqual(['lp-nice', 'lp-allcredit']);
+    expect(lpBlock('english-name', true)).toMatchObject({ ad: LP_COPY.ad, lead: LP_COPY.travel });
+    expect(dests('english-name')).toEqual(['lp-agoda', 'lp-klook']);
     expect(lpBlock('char-count', true)).toMatchObject({ lead: LP_COPY.careerCc, links: [{ dest: 'lp-soomgo' }] });
     expect(lpBlock('resignation-letter', true)).toMatchObject({ lead: LP_COPY.careerRs, links: [{ dest: 'lp-soomgo' }] });
     for (const t of Object.keys(TOOL_LP)) expect(lpBlock(t, false), t).toBeNull();
-    for (const t of ['id-photo-camera', 'loan-note', 'power-of-attorney', 'business-card', 'qr-code', 'pdf-merge', 'nope']) expect(lpBlock(t, true), t).toBeNull();
+    for (const t of ['id-photo', 'id-photo-camera', 'power-of-attorney', 'english-address', 'id-copy', 'pdf-edit', 'business-card', 'qr-code', 'pdf-merge', 'nope']) expect(lpBlock(t, true), t).toBeNull();
     const only = (...d: string[]): LpLink[] => LP_LINKS.filter((l) => d.includes(l.dest));
-    expect(lpBlock('id-photo', true, only('lp-usimsa'))!.links.map((l) => l.dest)).toEqual(['lp-usimsa']);
+    expect(lpBlock('loan-note', true, only('lp-allcredit'))!.links.map((l) => l.dest)).toEqual(['lp-allcredit']);
     expect(lpBlock('char-count', true, [])).toBeNull();
+  });
+
+  it('AFF1029 A1 idPhotoLpBlocks: one group per preset entry; exam presets → their 교보문고 search, 사람인/잡코리아 → 숨고, off → []', () => {
+    const of = (id: string) => idPhotoLpBlocks(true).filter((e) => e.presets.includes(id as never));
+    const dests = (id: string) => of(id).flatMap((e) => e.block.links.map((l) => l.dest));
+    expect(of('passport_online')).toHaveLength(1);
+    expect(of('passport_online')[0]!.block).toMatchObject({ ad: LP_COPY.ad, lead: LP_COPY.esim });
+    expect(dests('passport_online')).toEqual(['lp-dosirak', 'lp-usimsa']);
+    for (const id of ['gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', 'jlpt']) {
+      expect(of(id), id).toHaveLength(1);
+      expect(of(id)[0]!.block, id).toMatchObject({ ad: LP_COPY.ad, lead: LP_COPY.exam });
+      expect(dests(id), id).toEqual([`lp-kb-${id}`]);
+    }
+    for (const id of ['saramin', 'jobkorea']) {
+      expect(of(id)[0]!.block, id).toMatchObject({ lead: LP_COPY.careerIdp });
+      expect(dests(id), id).toEqual(['lp-soomgo']);
+    }
+    for (const id of ['id_card', 'driver_license', 'half_card', 'custom']) expect(of(id), id).toEqual([]);
+    expect(idPhotoLpBlocks(false)).toEqual([]);
+    // An entry without a link left is dropped; the others stay.
+    const only = (...d: string[]): LpLink[] => LP_LINKS.filter((l) => d.includes(l.dest));
+    expect(idPhotoLpBlocks(true, only('lp-kb-gosi', 'lp-usimsa')).map((e) => [e.presets, e.block.links.map((l) => l.dest)])).toEqual([
+      [['passport_online'], ['lp-usimsa']],
+      [['gosi'], ['lp-kb-gosi']],
+    ]);
+    expect(idPhotoLpBlocks(true, [])).toEqual([]);
+    // Every preset id is a real one and appears once.
+    const ids = ID_PHOTO_LP.flatMap((e) => e.presets);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) expect(PRESET_IDS).toContain(id);
   });
 
   it('L10 resultBlock: LinkPrice first, else Coupang, else null', () => {
@@ -168,14 +242,28 @@ describe('LinkPrice links (LP1028, src/data/affiliate.ts)', () => {
     expect(resultBlock('char-count', '0', undefined)).toBeNull();
     expect(resultBlock('resignation-letter', '1', '1')!.lead).toBe(LP_COPY.careerRs);
     expect(resultBlock('pdf-compress', undefined, undefined)).toBeNull();
+    // AFF1029 A2-A6.
+    expect(resultBlock('loan-note', undefined, undefined)).toMatchObject({ ad: LP_COPY.ad, lead: LP_COPY.credit, links: [{ dest: 'lp-nice' }, { dest: 'lp-allcredit' }] });
+    expect(resultBlock('loan-note', '0', undefined)).toMatchObject({ ad: AFF_DISCLOSURE, lead: AFF_COPY['stamp-signature'], links: [{ dest: 'cp-stamp' }] });
+    expect(resultBlock('loan-note', '0', '0')).toBeNull();
+    expect(resultBlock('power-of-attorney', undefined, undefined)).toMatchObject({ ad: AFF_DISCLOSURE, lead: AFF_COPY['stamp-signature'], links: [{ dest: 'cp-stamp' }] });
+    expect(resultBlock('english-name', undefined, undefined)).toMatchObject({ lead: LP_COPY.travel, links: [{ dest: 'lp-agoda' }, { dest: 'lp-klook' }] });
+    expect(resultBlock('english-name', '0', undefined)).toBeNull();
+    for (const t of ['id-copy', 'pdf-edit']) expect(resultBlock(t, undefined, undefined), t).toMatchObject({ ad: AFF_DISCLOSURE, lead: AFF_COPY.pdf, links: [{ dest: 'cp-mfp' }] });
+    expect(resultBlock('english-address', undefined, undefined)).toBeNull();
   });
 });
 
 describe('placement maps == the server whitelist (scripts/lib/usage.mjs)', () => {
-  it('TOOL_OUT is 사진관 찾기 (id-photo) + TOOL_AFF + TOOL_LP per tool; GUIDE_OUT is GUIDE_AFF', () => {
+  it('TOOL_OUT is 사진관 찾기 (id-photo) + TOOL_AFF + TOOL_LP (+ ID_PHOTO_LP on id-photo) per tool; GUIDE_OUT is GUIDE_AFF', () => {
     const expected: Record<string, readonly string[]> = {};
     for (const t of new Set([...Object.keys(TOOL_AFF), ...Object.keys(TOOL_LP)]) as Set<keyof typeof TOOL_AFF>) {
-      expected[t] = [...(t === 'id-photo' ? ['photo-studio'] : []), ...(TOOL_AFF[t] ?? []), ...(TOOL_LP[t]?.dests ?? [])];
+      expected[t] = [
+        ...(t === 'id-photo' ? ['photo-studio'] : []),
+        ...(TOOL_AFF[t] ?? []),
+        ...(TOOL_LP[t]?.dests ?? []),
+        ...(t === 'id-photo' ? ID_PHOTO_LP.flatMap((e) => e.dests) : []),
+      ];
     }
     expect(TOOL_OUT).toEqual(expected);
     expect(GUIDE_OUT).toEqual(GUIDE_AFF);
@@ -184,6 +272,12 @@ describe('placement maps == the server whitelist (scripts/lib/usage.mjs)', () =>
   it('OUT_DESTS: 사진관 찾기 and every link kind, each labelled for the admin page', () => {
     expect([...OUT_DESTS].sort()).toEqual(['photo-studio', ...AFF_LINKS.map((l) => l.dest), ...LP_LINKS.map((l) => l.dest)].sort());
     expect(OUT_LABELS).toMatchObject({ 'lp-signgate': '공동인증서(한국정보인증)', 'lp-dosirak': '도시락eSIM', 'lp-usimsa': '유심사', 'lp-soomgo': '숨고 이력서 컨설팅' });
+    expect(OUT_LABELS).toMatchObject({
+      'lp-kb-gosi': '교보문고 수험서(공무원)', 'lp-kb-qnet': '교보문고 수험서(기사 필기)', 'lp-kb-history': '교보문고 수험서(한국사)',
+      'lp-kb-korcham': '교보문고 수험서(컴활)', 'lp-kb-teps': '교보문고 수험서(TEPS)', 'lp-kb-kuksiwon': '교보문고 수험서(국가고시)',
+      'lp-kb-police': '교보문고 수험서(경찰)', 'lp-kb-hanja': '교보문고 수험서(한자)', 'lp-kb-jlpt': '교보문고 수험서(JLPT)',
+      'lp-nice': 'NICE지키미', 'lp-allcredit': '올크레딧', 'lp-agoda': '아고다', 'lp-klook': '클룩',
+    });
     for (const d of OUT_DESTS) expect(OUT_LABELS[d as keyof typeof OUT_LABELS], d).toBeTruthy();
     for (const dests of [...Object.values(TOOL_OUT), ...Object.values(GUIDE_OUT)]) for (const d of dests) expect(OUT_DESTS).toContain(d);
   });
