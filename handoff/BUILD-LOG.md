@@ -4712,3 +4712,8 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
 
 ### 2026-10-29 orchestrator: AFF1029 review
 - Richard: clear, 0 Must Fix. Bob's deviation (cp-stamp label generic 「도장 (쿠팡, 광고, 새 창)」 because of the FORM1020 D10 rule on /power-of-attorney/; href unchanged) accepted: honest (인감도장 is a 도장); it also shows on /pdf-sign/, /stamp-signature/, /stamp-maker/ in LinkPrice-off builds.
+
+### 2026-10-29 AFF1029 shipped (PR #35, merge b7b4792) — live smoke
+- CI: the first `checks` run failed on a Lighthouse NO_NAVSTART trace error (runner flake, no code cause); re-ran the failed job only, all green. Owner merged.
+- Live smoke on docttak.com (read-only script, counts taken from scripts/lib/out-links-check.mjs COUPANG_PAGES + LP_PAGES): 85/85 OK. Every result screen has exactly its LinkPrice and Coupang link counts (id-photo 12 + 3, loan-note 2, english-name 2, power-of-attorney / id-copy / pdf-edit 1 Coupang each, the LP1028 pages unchanged); every link rel sponsored, new tab, 「광고」 in the name, the disclosure first, hidden before a result; CSP script-src 'self' with no affiliate host on all 19 pages. 0 links on home, /guide/, about, contact, privacy, pdf-compress, qr-code, business-card, id-photo-camera, english-address, /en/, /embed/id-photo/, and on all 51 guides (taken from /guide/). Non-GET requests: only the Cloudflare beacon and GA collect.
+- Owner-only (unchanged): O2 one test click per new merchant (kbbook, mycredit1, allcredit, agoda, klook) in LinkPrice 실시간 리포트.
