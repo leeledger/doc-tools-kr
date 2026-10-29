@@ -27,11 +27,11 @@ import { CLAIM_FILE_RE, LOCAL_SCOPE_RE, QUALIFIER_RE, claimText, unqualifiedClai
 import { rangeSet, systemFontSelectors, uncovered, visibleText } from '../../scripts/lib/fontcover.mjs';
 import { toolNotes } from '../../scripts/lib/guide-check.mjs';
 import { CORE_PATHS, stripComments, uiCharSets } from '../../scripts/lib/ui-font-chars.mjs';
-import { ID_PHOTO_PAGE, coupangProblems, disclosureStrings, placement, sponsoredProblems } from '../../scripts/lib/out-links-check.mjs';
+import { COUPANG_LP_OFF_PAGES, COUPANG_PAGES, ID_PHOTO_PAGE, LP_PAGES, affTextProblems, coupangProblems, disclosureStrings, linkpriceProblems, lpEnabled, lpLinks, placement, sponsoredProblems } from '../../scripts/lib/out-links-check.mjs';
 import { GUIDE_OUT, TOOL_OUT } from '../../scripts/lib/usage.mjs';
 import { PRINT_COPY } from '../../src/data/print-links';
 import { JARGON, plainWordProblems, userText } from '../../scripts/lib/plain-words.mjs';
-import { AFF_COPY, COUPANG_DISCLOSURE, affOn } from '../../src/data/affiliate';
+import { AFF_COPY, COUPANG_DISCLOSURE, LP_COPY, LP_LINKS, affOn, lpOn } from '../../src/data/affiliate';
 
 const ROOT = join(__dirname, '..', '..');
 const DIST = join(ROOT, 'dist');
@@ -540,9 +540,13 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
   const maps = { TOOL_OUT, GUIDE_OUT };
   const full = `${AFF_COPY.ad} ${COUPANG_DISCLOSURE}`;
   const info = '<a href="https://map.naver.com/p/search/x" rel="noopener noreferrer" target="_blank" data-out="photo-studio">가까운 사진관 찾기 (네이버 지도, 새 창)</a>';
-  const print = '<a href="https://example.com/print" rel="sponsored noopener" target="_blank" data-out="cp-paper">사진 인화 주문하기 (광고, 새 창)</a>';
+  const print = '<a href="https://link.coupang.com/a/print" rel="sponsored noopener" target="_blank" data-out="cp-paper">사진 인화 주문하기 (광고, 새 창)</a>';
   const coupang = '<a href="https://link.coupang.com/a/abc" rel="sponsored noopener" target="_blank" data-out="cp-printer">포토프린터 (쿠팡, 광고, 새 창)</a>';
-  const link = (dest: string) => `<a href="https://example.com/${dest}" rel="sponsored noopener" target="_blank" data-out="${dest}">물건 (광고, 새 창)</a>`;
+  const link = (dest: string) => `<a href="https://link.coupang.com/a/${dest}" rel="sponsored noopener" target="_blank" data-out="${dest}">물건 (광고, 새 창)</a>`;
+  /** LP1028: a LinkPrice link (entity-encoded as Astro writes it) and its block, hidden as on a result screen. */
+  const lpA = (dest = 'lp-signgate', extra = '') => `<a href="${LP_LINKS.find((l) => l.dest === dest)!.href.replace(/&/g, '&amp;')}" rel="sponsored noopener" target="_blank" data-out="${dest}"${extra}>공동인증서 (광고, 새 창)</a>`;
+  const lpBlockHtml = (links: string, text: string = LP_COPY.ad) => `<div class="out-links"><p>${text}</p><p>줄</p><ul><li>${links}</li></ul></div>`;
+  const hiddenDiv = (inner: string) => `<div class="result" id="sg-result" hidden>${inner}</div>`;
   /** The id-photo result: the outer .out-links with the info link, the OutLinks group nested in it. */
   const block = (inner: string) => `<div class="idp-done"><div class="out-links" id="idp-print-links"><p>${PRINT_COPY.lead}</p>${inner}</div><p>뒤</p></div>`;
   const ad = (text: string, links: string) => `<div class="out-links"><p>${text}</p><p>집에서 인화하려면</p><ul><li>${links}</li></ul></div>`;
@@ -553,7 +557,7 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
   const page = (path: string, html: string) => sponsoredProblems(new Map([[path, html]]), d, maps);
 
   it('reads the disclosure strings from src/data/affiliate.ts', () => {
-    expect(d).toEqual({ generic: AFF_COPY.ad, top: AFF_COPY.top, heading: AFF_COPY.heading, coupang: COUPANG_DISCLOSURE });
+    expect(d).toEqual({ generic: AFF_COPY.ad, top: AFF_COPY.top, heading: AFF_COPY.heading, coupang: COUPANG_DISCLOSURE, lp: LP_COPY.ad });
     expect(disclosureStrings('const x = 1;')).toBeNull();
     expect(placement('pdf-merge/index.html', '')).toEqual({ kind: 'tool', key: 'pdf-merge' });
     expect(placement('guide/passport-photo/index.html', guide('id-photo'))).toEqual({ kind: 'guide', key: 'id-photo' });
@@ -564,8 +568,10 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
   it('passes: info link only; info + affiliate links after the full disclosure; a tool page block; a guide with the line and block', () => {
     expect(check(block(`<ul><li>${info}</li></ul>`))).toEqual([]);
     expect(check(block(`<ul><li>${info}</li></ul>${ad(full, print + coupang)}`))).toEqual([]);
-    expect(check(block(ad(AFF_COPY.ad, print)))).toEqual([]);
+    expect(check(block(ad(full, print)))).toEqual([]);
     expect(check('<p>no block</p>')).toEqual([]);
+    // LP1028: a LinkPrice block after LP_COPY.ad.
+    expect(page('pdf-sign/index.html', hiddenDiv(lpBlockHtml(lpA())))).toEqual([]);
     expect(page('pdf-merge/index.html', `<div class="result">${ad(full, link('cp-mfp'))}</div>`)).toEqual([]);
     expect(page('jpg-to-pdf/index.html', ad(full, link('cp-mfp') + link('cp-scanner')))).toEqual([]);
     expect(page('guide/passport-photo/index.html', guide('id-photo'))).toEqual([]);
@@ -589,18 +595,34 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
   });
 
   it('(b) disclosure missing, after the link, coupang sentence missing, link outside the block, info link under the disclosure', () => {
-    expect(check(block(ad('', print)))).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" is not preceded by the disclosure`]);
-    expect(check(block(`<ul><li>${print}</li></ul><p>${AFF_COPY.ad}</p>`))).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" is not preceded by the disclosure`]);
+    const both = [`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" is not preceded by the disclosure`, `${ID_PHOTO_PAGE}: the Coupang link "cp-paper" is not preceded by COUPANG_DISCLOSURE`];
+    expect(check(block(ad('', print)))).toEqual(both);
+    expect(check(block(`<ul><li>${print}</li></ul><p>${full}</p>`))).toEqual(both);
     expect(check(block(ad(AFF_COPY.ad, coupang)))).toEqual([`${ID_PHOTO_PAGE}: the Coupang link "cp-printer" is not preceded by COUPANG_DISCLOSURE`]);
     expect(check(`${block(ad(AFF_COPY.ad, ''))}<p>${print}</p>`)).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" is outside .out-links`]);
-    expect(check(block(ad(AFF_COPY.ad, print + info)))).toEqual([`${ID_PHOTO_PAGE}: the link "photo-studio" follows the affiliate disclosure`]);
+    expect(check(block(ad(full, print + info)))).toEqual([`${ID_PHOTO_PAGE}: the link "photo-studio" follows the affiliate disclosure`]);
+    expect(page('pdf-sign/index.html', lpBlockHtml(lpA() + '<a href="/x/" data-out="photo-studio">x</a>'))).toEqual(['pdf-sign/index.html: the link "photo-studio" follows the affiliate disclosure']);
     // the disclosure must be in the link's own (innermost) block: one in an earlier sibling block does not count
-    expect(page('jpg-to-pdf/index.html', `${ad(full, '')}<div class="out-links"><ul><li>${link('cp-mfp')}</li></ul></div>`)).toEqual(['jpg-to-pdf/index.html: the sponsored link "cp-mfp" is not preceded by the disclosure']);
+    expect(page('jpg-to-pdf/index.html', `${ad(full, '')}<div class="out-links"><ul><li>${link('cp-mfp')}</li></ul></div>`)).toEqual(['jpg-to-pdf/index.html: the sponsored link "cp-mfp" is not preceded by the disclosure', 'jpg-to-pdf/index.html: the Coupang link "cp-mfp" is not preceded by COUPANG_DISCLOSURE']);
+  });
+
+  it('(b2) LP1028: each network needs its own disclosure; any other sponsored host fails; a LinkPrice link must be sponsored', () => {
+    // LinkPrice after the Coupang disclosure only, or after nothing
+    expect(page('pdf-sign/index.html', lpBlockHtml(lpA(), full))).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-signgate" is not preceded by LP_COPY.ad']);
+    expect(page('pdf-sign/index.html', `<div class="out-links"><ul><li>${lpA()}</li></ul><p>${LP_COPY.ad}</p></div>`)).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-signgate" is not preceded by LP_COPY.ad']);
+    // Coupang after the LinkPrice disclosure only
+    expect(page('pdf-merge/index.html', ad(LP_COPY.ad, link('cp-mfp')))).toEqual(['pdf-merge/index.html: the sponsored link "cp-mfp" is not preceded by the disclosure', 'pdf-merge/index.html: the Coupang link "cp-mfp" is not preceded by COUPANG_DISCLOSURE']);
+    // another sponsored host
+    expect(page('pdf-merge/index.html', ad(full, '<a href="https://example.com/x" rel="sponsored noopener" target="_blank" data-out="cp-mfp">x (광고)</a>'))).toEqual(['pdf-merge/index.html: the sponsored link "cp-mfp" is neither a Coupang nor a LinkPrice link']);
+    // LinkPrice without sponsored
+    expect(page('pdf-sign/index.html', lpBlockHtml(lpA().replace('sponsored noopener', 'noopener')))).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-signgate" is not rel=sponsored']);
+    // a LinkPrice dest of another screen
+    expect(page('pdf-merge/index.html', lpBlockHtml(lpA()))).toEqual(['pdf-merge/index.html: the sponsored link "lp-signgate" is not a dest of this page\'s block']);
   });
 
   it('(c) a sponsored link without a new tab or without 광고 in its label fails', () => {
-    expect(check(block(ad(AFF_COPY.ad, print.replace(' target="_blank"', ''))))).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" does not open a new tab`]);
-    expect(check(block(ad(AFF_COPY.ad, print.replace('광고, ', ''))))).toEqual([`${ID_PHOTO_PAGE}: the label of the sponsored link "cp-paper" does not say 광고`]);
+    expect(check(block(ad(full, print.replace(' target="_blank"', ''))))).toEqual([`${ID_PHOTO_PAGE}: the sponsored link "cp-paper" does not open a new tab`]);
+    expect(check(block(ad(full, print.replace('광고, ', ''))))).toEqual([`${ID_PHOTO_PAGE}: the label of the sponsored link "cp-paper" does not say 광고`]);
   });
 
   it('(c) Review R2: a Coupang link without sponsored fails (and gets every sponsored check); "noopener sponsored" counts as sponsored', () => {
@@ -627,16 +649,36 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
     expect(page('guide/passport-photo/index.html', guide('id-photo', { head: AFF_COPY.top }))).toEqual(['guide/passport-photo/index.html: the first-part line (AFF_COPY.top) in <head>']);
   });
 
-  it('(e) PUBLIC_AFF_COUPANG: off, no Coupang or sponsored link anywhere; on, /id-photo/ keeps its three; never embedded', () => {
+  it('(e) LP1028: Coupang on, exactly its links on each result screen and none (no disclosure line either) on guides and content pages; off, none', () => {
     const three = block(ad(full, coupang + coupang.replace('/abc', '/def') + coupang.replace('/abc', '/ghi')));
     const off = block(`<ul><li>${info}</li></ul>`);
-    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three]]), true)).toEqual([]);
-    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, off]]), false)).toEqual([]);
-    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, off]]), true)).toEqual([`${ID_PHOTO_PAGE}: 0 Coupang link(s) although PUBLIC_AFF_COUPANG is on (expected 3)`]);
-    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, block(ad(full, coupang))]]), true)).toEqual([`${ID_PHOTO_PAGE}: 1 Coupang link(s) although PUBLIC_AFF_COUPANG is on (expected 3)`]);
-    expect(coupangProblems(new Map([['index.html', '<p>홈</p>']]), true)).toEqual([`${ID_PHOTO_PAGE}: missing although PUBLIC_AFF_COUPANG is on`]);
-    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three]]), false)).toEqual([`${ID_PHOTO_PAGE}: a Coupang link while PUBLIC_AFF_COUPANG is off`, `${ID_PHOTO_PAGE}: a sponsored link while PUBLIC_AFF_COUPANG is off`]);
-    expect(coupangProblems(new Map([['pdf-merge/index.html', ad(full, link('cp-mfp'))]]), false)).toEqual(['pdf-merge/index.html: a sponsored link while PUBLIC_AFF_COUPANG is off']);
+    const one = (p: string, html: string, on: boolean) => coupangProblems(new Map([[ID_PHOTO_PAGE, three], [p, html]]), on, d);
+    expect(COUPANG_PAGES).toEqual({ 'id-photo/index.html': 3, 'remove-background/index.html': 1, 'hwp-viewer/index.html': 1, 'hwp-to-pdf/index.html': 1, 'hwpx-to-hwp/index.html': 1, 'pdf-merge/index.html': 1, 'pdf-split/index.html': 1, 'jpg-to-pdf/index.html': 2 });
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three]]), true, d)).toEqual([]);
+    expect(one('pdf-merge/index.html', ad(full, coupang.replace('cp-printer', 'cp-mfp')), true)).toEqual([]);
+    expect(one('pdf-sign/index.html', hiddenDiv(lpBlockHtml(lpA())), true)).toEqual([]);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, off]]), false, d)).toEqual([]);
+    // counts
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, off]]), true, d)).toEqual([`${ID_PHOTO_PAGE}: 0 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 3)`]);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, block(ad(full, coupang))]]), true, d)).toEqual([`${ID_PHOTO_PAGE}: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 3)`]);
+    expect(one('jpg-to-pdf/index.html', ad(full, coupang), true)).toEqual(['jpg-to-pdf/index.html: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 2)']);
+    expect(coupangProblems(new Map([['index.html', '<p>홈</p>']]), true, d)).toEqual([`${ID_PHOTO_PAGE}: missing although PUBLIC_AFF_COUPANG is on`]);
+    // a guide, the home page, /en/, /embed/ or a LinkPrice screen with a Coupang link or a Coupang line
+    for (const p of ['guide/passport-photo/index.html', 'index.html', 'about/index.html', 'en/index.html', 'embed/id-photo/index.html', 'pdf-sign/index.html', 'stamp-maker/index.html']) {
+      expect(one(p, ad(full, coupang), true), p).toEqual([`${p}: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 0)`, `${p}: COUPANG_DISCLOSURE on a page without Coupang links`]);
+    }
+    // LinkPrice off: the 공동인증서 screens fall back to their Coupang 인감도장 link (resultBlock), and only then.
+    expect(COUPANG_LP_OFF_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1 });
+    const stamp = ad(full, coupang.replace('cp-printer', 'cp-stamp'));
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['pdf-sign/index.html', stamp]]), true, d, false)).toEqual([]);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['pdf-sign/index.html', '<p>x</p>']]), true, d, false)).toEqual(['pdf-sign/index.html: 0 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 1)']);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['char-count/index.html', stamp]]), true, d, false)).toEqual(['char-count/index.html: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 0)', 'char-count/index.html: COUPANG_DISCLOSURE on a page without Coupang links']);
+    expect(one('guide/passport-photo/index.html', `<p class="guide-aff-top">${AFF_COPY.top}</p>`, true)).toEqual(['guide/passport-photo/index.html: AFF_COPY.top on a page without Coupang links']);
+    expect(one('guide/hwp-on-phone/index.html', `<h2>${AFF_COPY.heading}</h2>`, true)).toEqual(['guide/hwp-on-phone/index.html: AFF_COPY.heading on a page without Coupang links']);
+    // off: none anywhere, and (e2) no sponsored link but a LinkPrice one
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three]]), false, d)).toEqual([`${ID_PHOTO_PAGE}: 3 Coupang link(s) while PUBLIC_AFF_COUPANG is off (expected 0)`, `${ID_PHOTO_PAGE}: COUPANG_DISCLOSURE on a page without Coupang links`, `${ID_PHOTO_PAGE}: a sponsored link other than LinkPrice while PUBLIC_AFF_COUPANG is off`]);
+    expect(coupangProblems(new Map([['pdf-merge/index.html', ad(AFF_COPY.ad, '<a href="https://example.com/x" rel="sponsored" target="_blank">광고</a>')]]), false, d)).toEqual(['pdf-merge/index.html: a sponsored link other than LinkPrice while PUBLIC_AFF_COUPANG is off']);
+    expect(coupangProblems(new Map([['pdf-sign/index.html', hiddenDiv(lpBlockHtml(lpA()))]]), false, d)).toEqual([]);
     for (const tag of [
       '<img src="https://ads-partners.coupang.com/banner.png" alt="">',
       '<script src="https://ads-partners.coupang.com/g.js"></script>',
@@ -646,8 +688,77 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
       '<object data="https://ads-partners.coupang.com/a.swf"></object>',
       '<embed src="https://ads-partners.coupang.com/a">',
       '<script>new PartnersCoupang.G({ id: 1 });</script>',
-    ]) expect(coupangProblems(new Map([['index.html', tag]]), false), tag).toEqual(['index.html: a Coupang script, iframe, image or other embed']);
-    expect(coupangProblems(new Map([['index.html', '<script>console.log(1)</script>']]), false)).toEqual([]);
+    ]) expect(coupangProblems(new Map([['index.html', tag]]), false, d), tag).toEqual(['index.html: a Coupang script, iframe, image or other embed']);
+    expect(coupangProblems(new Map([['index.html', '<script>console.log(1)</script>']]), false, d)).toEqual([]);
+  });
+
+  describe('LinkPrice (LP1028 g, h, i, j)', () => {
+    const source = readFileSync(join(ROOT, 'src', 'data', 'affiliate.ts'), 'utf8');
+    const links = lpLinks(source)!;
+    /** Every LP page with its expected links inside a hidden wrapper. */
+    const good = () => {
+      const m = new Map<string, string>();
+      for (const p of Object.keys(LP_PAGES)) m.set(p, hiddenDiv(lpBlockHtml(p === ID_PHOTO_PAGE ? lpA('lp-dosirak') + lpA('lp-usimsa') : lpA(p.startsWith('char-count') || p.startsWith('resignation') ? 'lp-soomgo' : 'lp-signgate'))));
+      expect([...m.keys()].length).toBe(Object.keys(LP_PAGES).length);
+      expect(Object.values(LP_PAGES).reduce((a, b) => a + b, 0)).toBe(7);
+      return m;
+    };
+
+    it('reads LP_ENABLED and the LP_LINKS hrefs verbatim from src/data/affiliate.ts', () => {
+      expect(lpEnabled(source)).toBe(true);
+      expect(lpEnabled('const LP_ENABLED = true;')).toBeNull();
+      expect(links).toEqual(LP_LINKS.map((l) => ({ dest: l.dest, href: l.href })));
+      expect(lpLinks('const x = 1;')).toBeNull();
+      expect(LP_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1, 'id-photo/index.html': 2, 'char-count/index.html': 1, 'resignation-letter/index.html': 1 });
+    });
+
+    it('passes: the six screens with their links inside hidden wrappers; off, none', () => {
+      expect(linkpriceProblems(good(), true, links)).toEqual([]);
+      expect(linkpriceProblems(new Map([['index.html', '<p>홈</p>']]), false, links)).toEqual([]);
+    });
+
+    it('(g) an href not byte-for-byte an LP_LINKS href, a wrong data-out, no sponsored, no new tab, no 광고 fail', () => {
+      const one = (html: string) => linkpriceProblems(new Map([...good(), ['pdf-sign/index.html', hiddenDiv(lpBlockHtml(html))]]), true, links);
+      expect(one(lpA().replace('l=0000', 'l=0000&u=x'))).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-signgate" is not exactly an LP_LINKS href']);
+      expect(one(lpA().replace('m=signgate&amp;a=', 'a=A100709304&amp;m=signgate&amp;x='))).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-signgate" is not exactly an LP_LINKS href']);
+      expect(one(lpA('lp-soomgo').replace('%25EC', '%EC'))).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-soomgo" is not exactly an LP_LINKS href']);
+      expect(one(lpA().replace('data-out="lp-signgate"', 'data-out="lp-soomgo"'))).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-soomgo" has data-out "lp-soomgo", expected "lp-signgate"']);
+      expect(one(lpA().replace('sponsored noopener', 'noopener'))).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-signgate" is not rel=sponsored']);
+      expect(one(lpA().replace(' target="_blank"', ''))).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-signgate" does not open a new tab']);
+      expect(one(lpA().replace('광고, ', ''))).toEqual(['pdf-sign/index.html: the label of the LinkPrice link "lp-signgate" does not say 광고']);
+    });
+
+    it('(h) a page with the wrong count, any other page with one, a link outside a hidden div, a missing page fail', () => {
+      const pages = good();
+      pages.set('pdf-sign/index.html', hiddenDiv(lpBlockHtml(lpA() + lpA())));
+      pages.set('guide/pdf-sign/index.html', hiddenDiv(lpBlockHtml(lpA())));
+      pages.set('char-count/index.html', `<div id="cc-lp">${lpBlockHtml(lpA('lp-soomgo'))}</div>`);
+      pages.delete('stamp-maker/index.html');
+      expect(linkpriceProblems(pages, true, links)).toEqual([
+        'pdf-sign/index.html: 2 LinkPrice link(s) while PUBLIC_AFF_LINKPRICE is on (expected 1)',
+        'char-count/index.html: the LinkPrice link "lp-soomgo" is not inside a hidden div',
+        'guide/pdf-sign/index.html: 1 LinkPrice link(s) while PUBLIC_AFF_LINKPRICE is on (expected 0)',
+        'stamp-maker/index.html: missing although PUBLIC_AFF_LINKPRICE is on',
+      ]);
+      // a hidden div that closed before the link does not count
+      expect(linkpriceProblems(new Map([...good(), ['pdf-sign/index.html', `<div hidden></div>${lpBlockHtml(lpA())}`]]), true, links)).toEqual(['pdf-sign/index.html: the LinkPrice link "lp-signgate" is not inside a hidden div']);
+      // off: any one fails
+      expect(linkpriceProblems(new Map([['pdf-sign/index.html', hiddenDiv(lpBlockHtml(lpA()))]]), false, links)).toEqual(['pdf-sign/index.html: 1 LinkPrice link(s) while PUBLIC_AFF_LINKPRICE is off (expected 0)']);
+    });
+
+    it('(j) a LinkPrice script, iframe, image or other embed fails', () => {
+      for (const tag of ['<img src="https://img.linkprice.com/b.png" alt="">', '<script src="https://cdn.linkprice.com/lp.js"></script>', '<iframe src="https://click.linkprice.com/x"></iframe>', '<link rel="preconnect" href="https://click.linkprice.com">', '<script>window.linkprice = 1;</script>']) {
+        expect(linkpriceProblems(new Map([['index.html', tag]]), false, links), tag).toEqual(['index.html: a LinkPrice script, iframe, image or other embed']);
+      }
+    });
+
+    it('(i) off: no file names click.linkprice.com or carries LP_COPY.ad; on: only HTML names LinkPrice; Coupang on: only HTML names Coupang', () => {
+      const texts: [string, string][] = [['pdf-sign/index.html', `${LP_COPY.ad} https://click.linkprice.com/click.php`], ['_astro/a.js', 'x'], ['llms.txt', 'y']];
+      expect(affTextProblems(texts, { lpOn: true, coupangOn: true, lpAd: LP_COPY.ad })).toEqual([]);
+      expect(affTextProblems(texts, { lpOn: false, coupangOn: false, lpAd: LP_COPY.ad })).toEqual(['pdf-sign/index.html: a LinkPrice link while PUBLIC_AFF_LINKPRICE is off', 'pdf-sign/index.html: LP_COPY.ad while PUBLIC_AFF_LINKPRICE is off']);
+      expect(affTextProblems([['_astro/a.js', '"https://click.linkprice.com/x"'], ['sitemap.xml', 'https://link.coupang.com/a/x'], ['b.json', LP_COPY.ad]], { lpOn: true, coupangOn: true, lpAd: LP_COPY.ad })).toEqual(['_astro/a.js: a LinkPrice link outside HTML', 'sitemap.xml: a Coupang link outside HTML']);
+      expect(affTextProblems([['b.json', LP_COPY.ad]], { lpOn: false, coupangOn: false, lpAd: LP_COPY.ad })).toEqual(['b.json: LP_COPY.ad while PUBLIC_AFF_LINKPRICE is off']);
+    });
   });
 });
 
@@ -805,26 +916,37 @@ describe('built output', () => {
     const legal = readFileSync(join(ROOT, 'src', 'data', 'legal.ts'), 'utf8');
     const date = /PRIVACY_OUT = '([^']+)'/.exec(legal)![1]!;
     const rev2 = /PRIVACY_OUT_ID_PHOTO = '([^']+)'/.exec(legal)![1]!;
-    // ADS1020 D7: with the Coupang links off in code the count names only the 사진관 찾기 link.
+    // LP1028 L12: with either network on the count names the result screens' affiliate links; else only 사진관 찾기.
+    const links = affOn(process.env.PUBLIC_AFF_COUPANG) || lpOn(process.env.PUBLIC_AFF_LINKPRICE);
+    const lp = /PRIVACY_LP = '([^']+)'/.exec(legal)![1]!;
     expect(html.includes('도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)')).toBe(false);
-    expect(html.includes('증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)')).toBe(on);
+    expect(html.includes('도구 결과 화면의 제휴 링크와 증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)')).toBe(on && links);
+    expect(html.includes('보내는 것: 도구 이름') && html.includes('증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)')).toBe(on);
     expect(html.includes('증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크를 눌렀는지')).toBe(false);
     expect(html.includes(`${date}: 익명 사용 통계에 도구 결과 화면과 안내 글의 상품 링크 누름을 더함`)).toBe(on);
     expect(html.includes(`${rev2}: 익명 사용 통계에 증명사진 결과 화면의 사진관·인화 관련 링크와 상품 링크 누름을 더함`)).toBe(on);
-    expect(html.includes(`시행일: ${date}`)).toBe(on);
+    expect(html.includes(`${lp}: 도구 결과 화면에 제휴 링크(`)).toBe(on && links);
+    if (on && links) expect(html).toContain(`시행일: ${lp}`);
   });
 
-  it('REV3 blocks in the build: flag off, none anywhere; flag on, inside the result containers and on the id-photo guides with the first-part line', () => {
+  it('REV3/LP1028 blocks in the build: Coupang on the Coupang result screens, LinkPrice on its six, one network per screen, none on guides or content pages', () => {
     need();
-    const aff = affOn(process.env.PUBLIC_AFF_COUPANG); // ADS1020 D1: false while AFF_ENABLED is false
+    const aff = affOn(process.env.PUBLIC_AFF_COUPANG);
+    const lp = lpOn(process.env.PUBLIC_AFF_LINKPRICE);
     const read = (p: string) => readFileSync(join(DIST, p), 'utf8');
-    for (const p of ['pdf-merge/index.html', 'pdf-split/index.html', 'jpg-to-pdf/index.html', 'pdf-sign/index.html', 'stamp-signature/index.html', 'hwp-to-pdf/index.html', 'hwp-viewer/index.html', 'hwpx-to-hwp/index.html', 'guide/passport-photo/index.html', 'guide/hwp-on-phone/index.html']) {
-      expect(read(p).includes('rel="sponsored'), p).toBe(aff);
+    for (const p of ['pdf-merge/index.html', 'pdf-split/index.html', 'jpg-to-pdf/index.html', 'hwp-to-pdf/index.html', 'hwp-viewer/index.html', 'hwpx-to-hwp/index.html']) {
+      expect(read(p).includes('href="https://link.coupang.com/'), p).toBe(aff);
+      expect(read(p), p).not.toContain('click.linkprice.com');
     }
-    expect(read('guide/passport-photo/index.html').includes(AFF_COPY.top)).toBe(aff);
-    for (const p of ['index.html', '404.html', 'pdf-compress/index.html', 'photo-compress/index.html', 'guide/index.html', 'guide/kakao-photo/index.html', 'guide/photo-sizes/index.html']) {
+    for (const p of ['pdf-sign/index.html', 'stamp-signature/index.html', 'stamp-maker/index.html', 'char-count/index.html', 'resignation-letter/index.html']) {
+      expect(read(p).includes('href="https://click.linkprice.com/'), p).toBe(lp);
+      expect(read(p).includes('href="https://link.coupang.com/'), p).toBe(aff && !lp && !/char-count|resignation/.test(p));
+    }
+    for (const p of ['index.html', '404.html', 'pdf-compress/index.html', 'photo-compress/index.html', 'guide/index.html', 'guide/kakao-photo/index.html', 'guide/photo-sizes/index.html', 'guide/passport-photo/index.html', 'guide/hwp-on-phone/index.html', 'loan-note/index.html', 'power-of-attorney/index.html']) {
       expect(read(p), p).not.toContain('rel="sponsored');
       expect(read(p), p).not.toContain(AFF_COPY.top);
+      expect(read(p), p).not.toContain(COUPANG_DISCLOSURE);
+      expect(read(p), p).not.toContain(LP_COPY.ad);
     }
     if (!aff) return;
     // pdf-merge: inside #merge-result, after the download row, before 이어서 하기.
@@ -835,11 +957,7 @@ describe('built output', () => {
     expect(out).toBeGreaterThan(merge.indexOf('id="merge-download"'));
     expect(out).toBeLessThan(merge.indexOf('id="merge-next"'));
     expect(merge.slice(out)).toMatch(/^<div class="out-links"><p>광고: [^<]+<\/p><p>종이로 내야 하면<\/p><ul><li><a href="https:\/\/link\.coupang\.com\/a\/\w+" rel="sponsored noopener" target="_blank" data-out="cp-mfp">/);
-    // passport-photo: the line right after the H1, the block first in the aside, headed 도움이 되는 물건 (광고).
-    const pp = read('guide/passport-photo/index.html');
-    expect(pp).toMatch(new RegExp(`<h1 id="guide-title"[^>]*>[^<]+</h1>\\s*<p class="guide-aff-top"[^>]*>${AFF_COPY.top}</p>`));
-    expect(pp).toMatch(/<aside class="guide-more[^"]*"[^>]*>\s*<section aria-labelledby="guide-out-title"[^>]*>\s*<div class="out-links" data-guide="passport-photo" data-tool="id-photo">\s*<h2 id="guide-out-title"[^>]*>도움이 되는 물건 \(광고\)<\/h2>/);
-    expect(pp.slice(0, pp.indexOf('<body'))).not.toContain(AFF_COPY.top);
+    expect(merge.slice(out)).toContain(`<p>${AFF_COPY.ad} ${COUPANG_DISCLOSURE}</p>`);
   });
 
   it('REV2 id-photo: the info link block with exact href/rel/target; sponsored links only when an affiliate env is set', () => {
@@ -849,9 +967,14 @@ describe('built output', () => {
       expect(html).toMatch(/<div class="out-links" id="idp-print-links">/);
       expect(html).toContain('<a href="https://map.naver.com/p/search/%EC%82%AC%EC%A7%84%EA%B4%80" rel="noopener noreferrer" target="_blank" data-out="photo-studio">가까운 사진관 찾기 (네이버 지도, 새 창)</a>');
     }
-    const aff = affOn(process.env.PUBLIC_AFF_COUPANG); // ADS1020 D1: false while AFF_ENABLED is false
-    expect(html.includes('rel="sponsored')).toBe(aff);
+    // LP1028 L10: the Coupang group (#idp-cp) and the LinkPrice eSIM group (#idp-lp, hidden), one shown per preset.
+    const aff = affOn(process.env.PUBLIC_AFF_COUPANG);
+    const lp = lpOn(process.env.PUBLIC_AFF_LINKPRICE);
+    expect(html.includes('rel="sponsored')).toBe(aff || lp);
     expect(html.includes(AFF_COPY.ad)).toBe(aff);
+    expect(html.includes('<div id="idp-cp">')).toBe(aff);
+    expect(html.includes(LP_COPY.ad)).toBe(lp);
+    expect(html.includes('<div id="idp-lp" hidden>')).toBe(lp);
   });
 
   it('/admin and /api/ are never pages: not in the sitemap, llms.txt or the precache; _routes.json sends them to Functions', async () => {

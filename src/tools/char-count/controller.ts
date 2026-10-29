@@ -21,6 +21,8 @@ export function initCharCount(): void {
   const clearBtn = byId<HTMLButtonElement>('cc-clear');
   const undoBtn = byId<HTMLButtonElement>('cc-undo');
   const note = byId<HTMLElement>('cc-note');
+  // LP1028 L1: the affiliate group, shown only while the box has text (absent with PUBLIC_AFF_LINKPRICE=0).
+  const lp = document.getElementById('cc-lp');
   const live = byId<HTMLElement>('cc-live');
   const outs: Record<keyof Counts, HTMLElement> = {
     withSpace: byId('cc-n-space'),
@@ -64,6 +66,7 @@ export function initCharCount(): void {
     copyBtn.disabled = empty;
     clearBtn.disabled = empty;
     guardLeave(!empty);
+    if (lp) lp.hidden = text.value.trim().length === 0;
     const goal = parseGoal(goalInput.value);
     goalInput.setAttribute('aria-invalid', String(goalInput.value !== '' && goal === null));
     if (goal === null) {

@@ -14,14 +14,14 @@ import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
 import OutLinks from '../../components/OutLinks.astro';
-import { affBlock, affOn } from '../../data/affiliate';
+import { resultBlock } from '../../data/affiliate';
 import QuickLinks from '../../components/QuickLinks.astro';
 // Page-only styles, inlined (the /stamp-signature/ pattern): no other page carries them.
 import signCss from '../../tools/pdf-sign/sign.css?inline';
 
 const tool = getTool('pdf-sign');
-// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
-const aff = affBlock('tool', 'pdf-sign', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
+// 제휴 링크 (REV3, LP1028 L10): the result screen's one group (LinkPrice 공동인증서; src/data/affiliate.ts resultBlock).
+const aff = resultBlock('pdf-sign', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = toolJsonLd(tool, Astro.site);
 const where = [
   { value: 'one', label: '이 쪽만' },

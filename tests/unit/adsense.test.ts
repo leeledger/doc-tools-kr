@@ -225,15 +225,15 @@ describe('check-dist page and text rules (Build Order G)', () => {
   });
 });
 
-describe('Coupang off in code (D1)', () => {
+describe('Coupang off in code (D1; on again for result screens since LP1028, owner 2026-10-28)', () => {
   const source = readFileSync(join(ROOT, 'src', 'data', 'affiliate.ts'), 'utf8');
   const strings = disclosureStrings(source)!;
 
-  it('AFF_ENABLED is false; affOn is false for every value, "1" included; every block is null through affOn', () => {
-    expect(AFF_ENABLED).toBe(false);
-    expect(affEnabled(source)).toBe(false);
-    for (const v of [undefined, '', '0', '1', ' 1\n']) expect(affOn(v), String(v)).toBe(false);
-    for (const t of Object.keys(TOOL_AFF)) expect(affBlock('tool', t, affOn('1')), t).toBeNull();
+  it('LP1028: AFF_ENABLED is true (check-dist reads it); result screens have their block unless "0"; guides never', () => {
+    expect(AFF_ENABLED).toBe(true);
+    expect(affEnabled(source)).toBe(true);
+    for (const t of Object.keys(TOOL_AFF)) expect(affBlock('tool', t, affOn(undefined)), t).not.toBeNull();
+    for (const t of Object.keys(TOOL_AFF)) expect(affBlock('tool', t, affOn('0')), t).toBeNull();
     for (const t of Object.keys(GUIDE_AFF)) expect(affBlock('guide', t, affOn('1')), t).toBeNull();
   });
 
@@ -264,7 +264,7 @@ describe('Coupang off in code (D1)', () => {
       'llms.txt: COUPANG_DISCLOSURE while AFF_ENABLED is false (src/data/affiliate.ts)',
     ]);
     // The env-flag rule, off (as check-dist calls it while AFF_ENABLED is false): no Coupang link, no sponsored link.
-    expect(coupangProblems(new Map([['id-photo/index.html', '<p>x</p>']]), false)).toEqual([]);
+    expect(coupangProblems(new Map([['id-photo/index.html', '<p>x</p>']]), false, strings)).toEqual([]);
   });
 });
 

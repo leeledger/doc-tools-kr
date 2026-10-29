@@ -142,6 +142,9 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
   const printNote = must<HTMLElement>('idp-print');
   // ROMANIZE1016 D5: the passport preset's result points to 영문 이름 변환기 (late copy; not in the embed widget).
   const englishNote = document.getElementById('idp-english');
+  // LP1028 L10: the result's one affiliate group: LinkPrice eSIM for passport_online, Coupang for every other preset.
+  const lpLinks = document.getElementById('idp-lp');
+  const cpLinks = document.getElementById('idp-cp');
   const result = must<HTMLImageElement>('idp-result');
   const zoom2 = must<HTMLInputElement>('idp-zoom2');
   const againBtn = must<HTMLButtonElement>('idp-again');
@@ -200,6 +203,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
     done.hidden = p !== 'done';
     if (p !== 'done' && nextSlot) hideNextSteps(nextSlot);
     if (p !== 'done') hideSheet();
+    if (p !== 'done' && lpLinks) lpLinks.hidden = true;
     drop.hidden = p !== 'empty' && p !== 'error';
   }
 
@@ -722,6 +726,8 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
         englishNote.append(COPY.english, a);
       }
     }
+    if (lpLinks) lpLinks.hidden = p.id !== 'passport_online';
+    if (cpLinks) cpLinks.hidden = Boolean(lpLinks) && p.id === 'passport_online';
     hideError();
     showSheet(p, st);
     setPhase('done');
@@ -848,6 +854,7 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
   download.addEventListener('click', () => track({ e: 'download', t: 'id-photo' }));
   // 인화·사진관 링크 (REV2, REV3 trackOut): only the link kind is counted; the browser opens the new tab as usual.
   trackOut(document.getElementById('idp-print-links'), 'id-photo');
+  trackOut(lpLinks, 'id-photo');
 
   // Initial state: whatever the preset controls show now (they work before this module loads).
   choosePreset();

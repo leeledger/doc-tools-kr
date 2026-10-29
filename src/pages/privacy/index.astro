@@ -2,11 +2,10 @@
 import Base from '../../layouts/Base.astro';
 import { CONTACT_EMAIL, PRIVACY_OFFICER, SITE } from '../../data/site';
 import { josa } from '../../lib/ui/josa';
-import { PRIVACY_ADDR, PRIVACY_ADS, PRIVACY_AFF_OFF, PRIVACY_ANALYTICS, PRIVACY_CHAIN, PRIVACY_CLOUD, PRIVACY_EMBED, PRIVACY_GA, PRIVACY_OUT, PRIVACY_OUT_ID_PHOTO, PRIVACY_REVISED, PRIVACY_USAGE, PRIVACY_UTM, PRIVACY_V1 } from '../../data/legal';
+import { COUPANG_ON, LINKPRICE_ON, LP_PRIVACY_ACTIVE, PRIVACY_ADDR, PRIVACY_ADS, PRIVACY_AFF_OFF, PRIVACY_LP, PRIVACY_LP_KINDS, PRIVACY_ANALYTICS, PRIVACY_CHAIN, PRIVACY_CLOUD, PRIVACY_EMBED, PRIVACY_GA, PRIVACY_OUT, PRIVACY_OUT_ID_PHOTO, PRIVACY_REVISED, PRIVACY_USAGE, PRIVACY_UTM, PRIVACY_V1 } from '../../data/legal';
 import { ANALYTICS_ON } from '../../data/analytics';
 import { GA_ON } from '../../data/ga';
 import { ADS_ON } from '../../data/adsense';
-import { AFF_ENABLED } from '../../data/affiliate';
 import { USAGE_ON } from '../../lib/ui/usage';
 import { downloadBytes } from '../../lib/bgremove/assets';
 import { aboutMB } from '../../tools/remove-background/copy';
@@ -176,7 +175,7 @@ const GOOGLE_ADS_POLICY = 'https://policies.google.com/technologies/ads?hl=ko';
         <>
           <h2 id="usage">{n(5) - 1}. 익명 사용 통계</h2>
           <p>어떤 도구가 많이 쓰이고 어디서 막히는지 알기 위해, 도구를 쓸 때 일어난 일만 이 사이트로 보내 합계로만 봐요.</p>
-          <p>보내는 것: 도구 이름, 한 일(파일 고르기, 처리 시작, 성공, 실패와 오류 종류, 내려받기), 이어서 하기(보낸 도구·받을 도구 이름), {AFF_ENABLED ? '도구 결과 화면과 안내 글의 상품·사진관 링크를 눌렀는지(링크 종류와 화면 이름만)' : '증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)'}, 고른 설정(목표 크기 구간, 증명사진 규격, 압축 단계처럼 정해진 값), 안내 글에서 넘어왔는지, 다른 누리집에 넣은 도구에서 쓴 것인지, 기기 종류(휴대폰, 태블릿, PC), 실패했을 때 쓰는 앱 종류와 버전, 사이트 버전.</p>
+          <p>보내는 것: 도구 이름, 한 일(파일 고르기, 처리 시작, 성공, 실패와 오류 종류, 내려받기), 이어서 하기(보낸 도구·받을 도구 이름), {COUPANG_ON || LINKPRICE_ON ? '도구 결과 화면의 제휴 링크와 증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)' : '증명사진 결과 화면의 사진관 찾기 링크를 눌렀는지(링크 종류와 화면 이름만)'}, 고른 설정(목표 크기 구간, 증명사진 규격, 압축 단계처럼 정해진 값), 안내 글에서 넘어왔는지, 다른 누리집에 넣은 도구에서 쓴 것인지, 기기 종류(휴대폰, 태블릿, PC), 실패했을 때 쓰는 앱 종류와 버전, 사이트 버전.</p>
           <p>어느 링크로 들어왔는지: 블로그 등 링크 주소에 붙은 표시 중 정해진 이름(예: 네이버 블로그, 티스토리, 문서딱 앱)과 글 이름. 정해진 형식이 아니면 '기타'로만 셉니다. 이 표시는 이 창을 닫으면 지워지는 저장 공간에 최대 3시간 기억해, 같은 창에서 이어서 쓴 도구에도 함께 셉니다.</p>
           <p>보내지 않는 것: 파일 이름, 크기, 내용, IP 주소, 쿠키, 나를 알아볼 수 있는 값. 기록은 Cloudflare의 통계 저장소에 3개월 동안 남은 뒤 지워져요.</p>
         </>
@@ -191,8 +190,9 @@ const GOOGLE_ADS_POLICY = 'https://policies.google.com/technologies/ads?hl=ko';
 
       <h2>{n(5) + (officer ? 1 : 0)}. 변경 이력</h2>
       <ul>
+        {LP_PRIVACY_ACTIVE && <li>{PRIVACY_LP}: 도구 결과 화면에 제휴 링크({PRIVACY_LP_KINDS})를 더하고 익명 사용 통계에 그 링크 누름을 더함</li>}
         {ADS_ON && <li>{PRIVACY_ADS}: Google 애드센스 광고 코드(첫 화면·안내 글·소개·문의)와 국외 이전 내용을 더함</li>}
-        {USAGE_ON && !AFF_ENABLED && <li>{PRIVACY_AFF_OFF}: 상품 링크를 없애고 익명 사용 통계의 상품 링크 누름 항목을 지움</li>}
+        {USAGE_ON && <li>{PRIVACY_AFF_OFF}: 상품 링크를 없애고 익명 사용 통계의 상품 링크 누름 항목을 지움</li>}
         {addr && <li>{PRIVACY_ADDR}: 영문주소 변환기에서 주소를 보내는 경우({addrSection}항){!cloud && '와 개인정보 보호책임자'}를 더함</li>}
         {USAGE_ON && <li>{PRIVACY_UTM}: 익명 사용 통계에 어느 링크로 들어왔는지(정해진 링크 표시)를 더함</li>}
         {USAGE_ON && <li>{PRIVACY_EMBED}: 익명 사용 통계에 다른 누리집에 넣은 도구에서 쓴 것인지를 더함</li>}

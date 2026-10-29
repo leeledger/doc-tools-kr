@@ -15,7 +15,7 @@ import QuickLinks from '../../components/QuickLinks.astro';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import OutLinks from '../../components/OutLinks.astro';
-import { affBlock, affOn } from '../../data/affiliate';
+import { resultBlock } from '../../data/affiliate';
 import { INPUT_MAX } from '../../tools/stamp-maker/limits';
 import { STYLES, STYLE_IDS } from '../../tools/stamp-maker/styles';
 // Sample pictures shown until the controller paints the tiles (scripts/gen-stamp-samples.mjs; committed, hash-checked).
@@ -25,8 +25,8 @@ import samples from '../../tools/stamp-maker/samples.json';
 import smCss from '../../tools/stamp-maker/stamp-maker.css?inline';
 
 const tool = getTool('stamp-maker');
-// 제휴 링크 (REV3 rules, STAMP1015 D2): under the fine-tune panel, shown with it; only with PUBLIC_AFF_COUPANG=1.
-const aff = affBlock('tool', 'stamp-maker', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
+// 제휴 링크 (REV3 rules, STAMP1015 D2, LP1028 L10): under the fine-tune panel, shown with it; the screen's one group (resultBlock).
+const aff = resultBlock('stamp-maker', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = toolJsonLd(tool, Astro.site);
 ---
 <Base title={tool.title} description={tool.description}>

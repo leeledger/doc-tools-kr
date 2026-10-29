@@ -17,7 +17,7 @@ import QuickLinks from '../../components/QuickLinks.astro';
 import { REDUCE_EDGE } from '../../tools/jpg-to-pdf/limits';
 
 const tool = getTool('jpg-to-pdf');
-// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
+// 제휴 링크 (REV3): the result screen's block, Coupang unless PUBLIC_AFF_COUPANG=0 (src/data/affiliate.ts TOOL_AFF).
 const aff = affBlock('tool', 'jpg-to-pdf', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
 const jsonLd = toolJsonLd(tool, Astro.site);
 const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.heic,.heif';

@@ -31,7 +31,7 @@ const jsonLd = guideJsonLd(
   Astro.site,
 );
 const ext = { rel: 'noopener noreferrer', target: '_blank' };
-// 제휴 링크 (REV3 Decision 5): with PUBLIC_AFF_COUPANG=1 a guide whose tools[0] has a block (src/data/affiliate.ts
+// 제휴 링크 (REV3 Decision 5): while AFF_GUIDES is true (false since LP1028: no guide block) a guide whose tools[0] has a block (src/data/affiliate.ts
 // GUIDE_AFF) gets the first-part line under the H1 and the block first in the aside; the click counter only with
 // PUBLIC_USAGE_STATS=1. Never in the meta description, og or JSON-LD.
 const aff = affBlock('guide', g.tools[0] ?? '', affOn(import.meta.env.PUBLIC_AFF_COUPANG));

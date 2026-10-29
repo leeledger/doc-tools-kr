@@ -12,7 +12,7 @@ import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
 import Share from '../../components/Share.astro';
 import OutLinks from '../../components/OutLinks.astro';
-import { affBlock, affOn } from '../../data/affiliate';
+import { resultBlock } from '../../data/affiliate';
 import QuickLinks from '../../components/QuickLinks.astro';
 import { INK, INK_SIZES } from '../../lib/ink/key';
 import { COPY, sizeLabel, strengthLabel } from '../../tools/stamp-signature/copy';
@@ -20,8 +20,8 @@ import { COPY, sizeLabel, strengthLabel } from '../../tools/stamp-signature/copy
 import stampCss from '../../tools/stamp-signature/stamp.css?inline';
 
 const tool = getTool('stamp-signature');
-// 제휴 링크 (REV3): the result screen's block, only with PUBLIC_AFF_COUPANG=1 (src/data/affiliate.ts TOOL_AFF).
-const aff = affBlock('tool', 'stamp-signature', affOn(import.meta.env.PUBLIC_AFF_COUPANG));
+// 제휴 링크 (REV3, LP1028 L10): the result screen's one group (LinkPrice 공동인증서; src/data/affiliate.ts resultBlock).
+const aff = resultBlock('stamp-signature', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = toolJsonLd(tool, Astro.site);
 const accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
 const modes = [

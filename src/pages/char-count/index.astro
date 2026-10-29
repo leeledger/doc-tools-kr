@@ -6,13 +6,17 @@ import JsonLd from '../../components/JsonLd.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
 import ToolNotes from '../../components/ToolNotes.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
+import OutLinks from '../../components/OutLinks.astro';
 import { faqJsonLd, toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { guidePath, publishedGuides } from '../../data/guides';
+import { resultBlock } from '../../data/affiliate';
 // Page-only styles, inlined (the /pdf-sign/ pattern): no other page carries them.
 import ccCss from '../../tools/char-count/char-count.css?inline';
 
 const tool = getTool('char-count');
+// 제휴 링크 (LP1028 L1): the LinkPrice 숨고 group, hidden until there is text (the controller toggles #cc-lp).
+const aff = resultBlock('char-count', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
 const goals = [500, 700, 1000, 1500];
 const bases = [
@@ -86,6 +90,7 @@ const chainGuides = ['resume-photo', 'work24-resume-upload'].map((s) => publishe
           <button type="button" class="btn ghost" id="cc-undo" hidden>되돌리기</button>
         </div>
         <p class="cc-note" id="cc-note"></p>
+        {aff && <div id="cc-lp" hidden><OutLinks block={aff} /></div>}
         <p class="visually-hidden" id="cc-live" aria-live="polite"></p>
       </div>
 

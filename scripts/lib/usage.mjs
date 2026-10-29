@@ -135,21 +135,23 @@ export const NEXT_KEY = 'next';
 export const OUT_KEY = 'out';
 /**
  * The link blocks (brief handoff/ARCHITECT-BRIEF-REV3.md Decision 6): copies of TOOL_AFF and GUIDE_AFF in
- * src/data/affiliate.ts (tests/unit/affiliate.test.ts keeps them equal), plus 사진관 찾기 (src/data/print-links.ts) on the
- * id-photo result. An out from a result screen must name a dest of TOOL_OUT[t], one from a guide (with g) of GUIDE_OUT[t].
+ * src/data/affiliate.ts plus TOOL_LP (LP1028 L11; tests/unit/affiliate.test.ts keeps them equal), plus 사진관 찾기
+ * (src/data/print-links.ts) on the id-photo result. An out from a result screen must name a dest of TOOL_OUT[t], one from a guide (with g) of GUIDE_OUT[t].
  */
 export const TOOL_OUT = {
-  'id-photo': ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop'],
+  'id-photo': ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'lp-dosirak', 'lp-usimsa'],
   'remove-background': ['cp-backdrop'],
-  'stamp-signature': ['cp-stamp'],
-  'pdf-sign': ['cp-stamp'],
-  'stamp-maker': ['cp-stamp'],
+  'stamp-signature': ['cp-stamp', 'lp-signgate'],
+  'pdf-sign': ['cp-stamp', 'lp-signgate'],
+  'stamp-maker': ['cp-stamp', 'lp-signgate'],
   'hwp-viewer': ['cp-hancom'],
   'hwp-to-pdf': ['cp-hancom'],
   'hwpx-to-hwp': ['cp-hancom'],
   'pdf-merge': ['cp-mfp'],
   'pdf-split': ['cp-mfp'],
   'jpg-to-pdf': ['cp-mfp', 'cp-scanner'],
+  'char-count': ['lp-soomgo'],
+  'resignation-letter': ['lp-soomgo'],
 };
 export const GUIDE_OUT = {
   'id-photo': ['cp-tripod', 'cp-backdrop', 'cp-printer'],
@@ -167,7 +169,7 @@ export const GUIDE_OUT = {
 /** The dests of `tool` in TOOL_OUT or GUIDE_OUT ([] for anything else, prototype keys included). */
 const outDests = (map, tool) => (typeof tool === 'string' && Object.hasOwn(map, tool) ? map[tool] : []);
 /** Every link kind, in admin order. */
-export const OUT_DESTS = ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'cp-stamp', 'cp-hancom', 'cp-mfp', 'cp-scanner', 'cp-tripod'];
+export const OUT_DESTS = ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'cp-stamp', 'cp-hancom', 'cp-mfp', 'cp-scanner', 'cp-tripod', 'lp-signgate', 'lp-dosirak', 'lp-usimsa', 'lp-soomgo'];
 
 /** PUBLIC_USAGE_STATS: on only for "1" (after trimming). */
 export function usageOn(value) {
@@ -494,6 +496,10 @@ export const OUT_LABELS = {
   'cp-mfp': '가정용 복합기(쿠팡 광고)',
   'cp-scanner': '휴대용 문서 스캐너(쿠팡 광고)',
   'cp-tripod': '스마트폰 삼각대(쿠팡 광고)',
+  'lp-signgate': '공동인증서(한국정보인증)',
+  'lp-dosirak': '도시락eSIM',
+  'lp-usimsa': '유심사',
+  'lp-soomgo': '숨고 이력서 컨설팅',
 };
 /** The 자리 of the guide rows of the link table (every guide summed). */
 export const OUT_GUIDE_PLACE = '안내 글';
