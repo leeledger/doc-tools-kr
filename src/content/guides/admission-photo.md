@@ -1,16 +1,16 @@
 ---
-title: 대입 원서 사진 규격과 올리는 법
-description: 수시·정시 대입 원서 사진 규격을 진학사·유웨이 원서접수 안내로 정리했어요. 3개월 이내 반명함판 사진과 파일 형식을 담았어요.
+title: 대학 원서 사진 규정·규격, 진학사·유웨이
+description: 진학사 안내로 대학 원서 사진은 3개월 이내 찍은 반명함판(3×4) JPG예요. 학교별 사진 규정도 짚었고, 크기는 바로 맞춰요.
 ogDescription: 대입 원서 사진은 3개월 이내 찍은 반명함판(3×4) 사진이에요. 안 올라갈 때 확인할 점도 정리했어요.
-query: 정시 원서 사진
+query: 대학 원서 사진 규정
 answer: 진학사 원서접수 안내에 따르면 대입 원서 사진은 3개월 이내 찍은 반명함판(3×4) 사진을 JPG 파일로 올리면 되고, 학교마다 따로 정한 규정이 있을 수 있어요.
 published: '2026-10-01'
-updated: '2026-10-21'
+updated: '2026-10-29'
 category: 사진
 topic: 입시·장학
 tools: [id-photo, photo-compress]
 cta: { href: '/id-photo/?preset=half_card', label: '반명함판 사진 크기로 맞추기' }
-related: [univ-docs-upload, kosaf-docs, resume-photo]
+related: [univ-docs-upload, resume-photo, history-exam-photo, kosaf-docs]
 sources:
   - url: https://apply.jinhakapply.com/Customer/Faq?categoryid=7
     title: 진학어플라이 고객센터 FAQ — 원서작성

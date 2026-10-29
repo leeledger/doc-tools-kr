@@ -42,7 +42,7 @@ test('/guide/: hubs first, topic jump links reach their group, each guide listed
   await jump.click();
   await expect(page).toHaveURL(new RegExp(`${target}$`));
   const group = page.locator(`section:has(h2${target})`);
-  await expect(group.getByRole('link', { name: '대입 원서 사진 규격과 올리는 법' })).toBeVisible();
+  await expect(group.getByRole('link', { name: '대학 원서 사진 규정·규격, 진학사·유웨이' })).toBeVisible();
   const hrefs = await page.locator('section .related-list a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
   expect(new Set(hrefs).size).toBe(hrefs.length);
 });

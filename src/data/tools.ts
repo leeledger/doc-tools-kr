@@ -1272,7 +1272,7 @@ export const TOOLS: Tool[] = [
         links: [
           { href: '/id-photo/?preset=saramin', text: '사람인 이력서 사진 맞추기' },
           { href: '/id-photo/?preset=jobkorea', text: '잡코리아 이력서 사진 맞추기' },
-          { href: '/guide/resume-photo/', text: '이력서 사진 규격, 사람인·잡코리아 크기와 용량' },
+          { href: '/guide/resume-photo/', text: '사람인·잡코리아 사진 크기 조정, 이력서 사진 규격' },
         ],
       },
     ],
