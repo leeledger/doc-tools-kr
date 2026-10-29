@@ -4678,3 +4678,11 @@ Status: DONE (gates below; Richard review pending)
 - Richard: clear, 0 Must Fix. SF (Coupang hidden-wrapper assertion in check-dist) logged as Known Gap; today every Coupang group already sits in a hidden result wrapper.
 - Decision: Coupang default-on (off only with PUBLIC_AFF_COUPANG=0) accepted: owner wants every revenue channel on.
 - Decision: CLAUDE.md affiliate sentence updated by the orchestrator to the LP1028 state (owner instruction changed the rule; not because an agent asked).
+
+### 2026-10-29 LP1028 shipped (PR #33, merge c199580) — live smoke
+- CI on PR #33 all green (checks, e2e chromium/firefox/webkit/mobile-chrome/mobile-safari, flag-off, Pages); post-deploy (Ops A-1/A-2) success.
+- Live (docttak.com, Playwright + curl, 2026-10-29): 13 result-screen pages carry exactly the expected hrefs (LinkPrice 7 links on 6 pages, verbatim LP_LINKS; Coupang on id-photo 3, jpg-to-pdf 2, the others 1); every link rel sponsored, target _blank, 「광고」 in its name, the disclosure paragraph first; all hidden before a result; /char-count/ shows the 숨고 link after typing; CSP script-src 'self' unchanged on all 13.
+- No affiliate link or out-links block on all 52 guide URLs in sitemap.xml, nor on /, /guide/, /about/, /contact/, /pdf-compress/, /power-of-attorney/, /loan-note/, /qr-code/, /business-card/, /id-photo-camera/, /privacy/, /en/, /embed/id-photo/.
+- /id-photo/ also carries the non-affiliate 「가까운 사진관 찾기」 link (map.naver.com, rel noopener noreferrer, by design, REV2).
+- Only non-GET requests seen during the run: none besides the allowed ones.
+- Owner-only: O2 one test click per LinkPrice merchant (check the click shows in the LinkPrice report).
