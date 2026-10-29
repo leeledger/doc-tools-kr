@@ -9,12 +9,16 @@ import RelatedTools from '../../components/RelatedTools.astro';
 import ToolNotes from '../../components/ToolNotes.astro';
 import EngineError from '../../components/EngineError.astro';
 import QuickLinks from '../../components/QuickLinks.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { resultBlock } from '../../data/affiliate';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 // Page-only styles, inlined (the /pdf-sign/ pattern): no other page carries them.
 import icCss from '../../tools/id-copy/id-copy.css?inline';
 
 const tool = getTool('id-copy');
+// 제휴 링크 (AFF1029 A6: the Coupang 복합기 group, after the downloads): in the result (hidden until there is one).
+const aff = resultBlock('id-copy', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = toolJsonLd(tool, Astro.site);
 const accept = 'image/jpeg,image/png,image/webp,image/avif,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif';
 ---
@@ -78,6 +82,7 @@ const accept = 'image/jpeg,image/png,image/webp,image/avif,.jpg,.jpeg,.png,.webp
             <a class="btn primary" id="ic-jpg" download tabindex="0">JPG로 저장</a>
             <a class="btn primary" id="ic-pdf" download tabindex="0">PDF로 저장</a>
           </div>
+          <OutLinks block={aff} />
           <div id="ic-next" class="next-steps" role="group" aria-labelledby="ic-next-label" hidden></div>
           <div class="row">
             <button type="button" class="btn ghost" id="ic-edit">다시 고치기</button>

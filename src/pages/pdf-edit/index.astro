@@ -8,6 +8,8 @@ import JsonLd from '../../components/JsonLd.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
 import ToolNotes from '../../components/ToolNotes.astro';
 import EngineError from '../../components/EngineError.astro';
+import OutLinks from '../../components/OutLinks.astro';
+import { resultBlock } from '../../data/affiliate';
 import { toolJsonLd } from '../../data/jsonld';
 import { getTool } from '../../data/tools';
 import { sharePreview } from '../../data/site';
@@ -18,6 +20,8 @@ import signCss from '../../tools/pdf-sign/sign.css?inline';
 import editCss from '../../tools/pdf-edit/edit.css?inline';
 
 const tool = getTool('pdf-edit');
+// 제휴 링크 (AFF1029 A6: the Coupang 복합기 group, after the downloads): in the result (hidden until there is one).
+const aff = resultBlock('pdf-edit', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = toolJsonLd(tool, Astro.site);
 ---
 <Base title={tool.title} description={tool.description}>
@@ -124,6 +128,7 @@ const jsonLd = toolJsonLd(tool, Astro.site);
             <button type="button" class="btn ghost" id="ed-again">다시 편집하기</button>
             <button type="button" class="btn ghost" id="ed-reset">다른 파일 처리하기</button>
           </div>
+          <OutLinks block={aff} />
           <div id="ed-chain" class="next-steps" role="group" aria-labelledby="ed-chain-label" hidden></div>
           <p class="save-name" id="ed-save-name"></p>
           <Share name={tool.name} text={sharePreview('/pdf-edit/', Astro.site!).description} id="ed-share" />

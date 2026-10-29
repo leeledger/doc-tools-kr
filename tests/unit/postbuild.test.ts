@@ -650,27 +650,34 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
   });
 
   it('(e) LP1028: Coupang on, exactly its links on each result screen and none (no disclosure line either) on guides and content pages; off, none', () => {
-    const three = block(ad(full, coupang + coupang.replace('/abc', '/def') + coupang.replace('/abc', '/ghi')));
+    const three = hiddenDiv(block(ad(full, coupang + coupang.replace('/abc', '/def') + coupang.replace('/abc', '/ghi'))));
     const off = block(`<ul><li>${info}</li></ul>`);
     const one = (p: string, html: string, on: boolean) => coupangProblems(new Map([[ID_PHOTO_PAGE, three], [p, html]]), on, d);
-    expect(COUPANG_PAGES).toEqual({ 'id-photo/index.html': 3, 'remove-background/index.html': 1, 'hwp-viewer/index.html': 1, 'hwp-to-pdf/index.html': 1, 'hwpx-to-hwp/index.html': 1, 'pdf-merge/index.html': 1, 'pdf-split/index.html': 1, 'jpg-to-pdf/index.html': 2 });
+    expect(COUPANG_PAGES).toEqual({ 'id-photo/index.html': 3, 'remove-background/index.html': 1, 'hwp-viewer/index.html': 1, 'hwp-to-pdf/index.html': 1, 'hwpx-to-hwp/index.html': 1, 'pdf-merge/index.html': 1, 'pdf-split/index.html': 1, 'jpg-to-pdf/index.html': 2, 'power-of-attorney/index.html': 1, 'id-copy/index.html': 1, 'pdf-edit/index.html': 1 });
     expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three]]), true, d)).toEqual([]);
-    expect(one('pdf-merge/index.html', ad(full, coupang.replace('cp-printer', 'cp-mfp')), true)).toEqual([]);
+    expect(one('pdf-merge/index.html', hiddenDiv(ad(full, coupang.replace('cp-printer', 'cp-mfp'))), true)).toEqual([]);
+    // AFF1029 A3, A6: the new Coupang screens, one link each.
+    expect(one('power-of-attorney/index.html', hiddenDiv(ad(full, link('cp-stamp'))), true)).toEqual([]);
+    for (const p of ['id-copy/index.html', 'pdf-edit/index.html']) expect(one(p, hiddenDiv(ad(full, link('cp-mfp'))), true), p).toEqual([]);
+    expect(one('id-copy/index.html', '<p>x</p>', true)).toEqual(['id-copy/index.html: 0 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 1)']);
     expect(one('pdf-sign/index.html', hiddenDiv(lpBlockHtml(lpA())), true)).toEqual([]);
     expect(coupangProblems(new Map([[ID_PHOTO_PAGE, off]]), false, d)).toEqual([]);
     // counts
     expect(coupangProblems(new Map([[ID_PHOTO_PAGE, off]]), true, d)).toEqual([`${ID_PHOTO_PAGE}: 0 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 3)`]);
-    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, block(ad(full, coupang))]]), true, d)).toEqual([`${ID_PHOTO_PAGE}: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 3)`]);
-    expect(one('jpg-to-pdf/index.html', ad(full, coupang), true)).toEqual(['jpg-to-pdf/index.html: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 2)']);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, hiddenDiv(block(ad(full, coupang)))]]), true, d)).toEqual([`${ID_PHOTO_PAGE}: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 3)`]);
+    expect(one('jpg-to-pdf/index.html', hiddenDiv(ad(full, coupang)), true)).toEqual(['jpg-to-pdf/index.html: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 2)']);
     expect(coupangProblems(new Map([['index.html', '<p>홈</p>']]), true, d)).toEqual([`${ID_PHOTO_PAGE}: missing although PUBLIC_AFF_COUPANG is on`]);
     // a guide, the home page, /en/, /embed/ or a LinkPrice screen with a Coupang link or a Coupang line
     for (const p of ['guide/passport-photo/index.html', 'index.html', 'about/index.html', 'en/index.html', 'embed/id-photo/index.html', 'pdf-sign/index.html', 'stamp-maker/index.html']) {
-      expect(one(p, ad(full, coupang), true), p).toEqual([`${p}: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 0)`, `${p}: COUPANG_DISCLOSURE on a page without Coupang links`]);
+      expect(one(p, hiddenDiv(ad(full, coupang)), true), p).toEqual([`${p}: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 0)`, `${p}: COUPANG_DISCLOSURE on a page without Coupang links`]);
     }
-    // LinkPrice off: the 공동인증서 screens fall back to their Coupang 인감도장 link (resultBlock), and only then.
-    expect(COUPANG_LP_OFF_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1 });
-    const stamp = ad(full, coupang.replace('cp-printer', 'cp-stamp'));
+    // LinkPrice off: the 공동인증서 screens fall back to their Coupang 도장 link (resultBlock), and only then.
+    expect(COUPANG_LP_OFF_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1, 'loan-note/index.html': 1 });
+    const stamp = hiddenDiv(ad(full, coupang.replace('cp-printer', 'cp-stamp')));
     expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['pdf-sign/index.html', stamp]]), true, d, false)).toEqual([]);
+    // AFF1029 A2: /loan-note/ falls back to 도장 (cp-stamp) with LinkPrice off, and has none with it on.
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['loan-note/index.html', stamp]]), true, d, false)).toEqual([]);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['loan-note/index.html', stamp]]), true, d)).toEqual(['loan-note/index.html: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 0)', 'loan-note/index.html: COUPANG_DISCLOSURE on a page without Coupang links']);
     expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['pdf-sign/index.html', '<p>x</p>']]), true, d, false)).toEqual(['pdf-sign/index.html: 0 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 1)']);
     expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['char-count/index.html', stamp]]), true, d, false)).toEqual(['char-count/index.html: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 0)', 'char-count/index.html: COUPANG_DISCLOSURE on a page without Coupang links']);
     expect(one('guide/passport-photo/index.html', `<p class="guide-aff-top">${AFF_COPY.top}</p>`, true)).toEqual(['guide/passport-photo/index.html: AFF_COPY.top on a page without Coupang links']);
@@ -692,15 +699,37 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
     expect(coupangProblems(new Map([['index.html', '<script>console.log(1)</script>']]), false, d)).toEqual([]);
   });
 
+  it('(e) AFF1029 A13: every Coupang link sits inside a div carrying the hidden attribute', () => {
+    const three = hiddenDiv(block(ad(full, coupang + coupang.replace('/abc', '/def') + coupang.replace('/abc', '/ghi'))));
+    const one = (p: string, html: string) => coupangProblems(new Map([[ID_PHOTO_PAGE, three], [p, html]]), true, d);
+    // passes: a hidden result wrapper, or a hidden ancestor further up (/id-photo/: #idp-cp inside the hidden done step)
+    expect(one('pdf-merge/index.html', hiddenDiv(ad(full, link('cp-mfp'))))).toEqual([]);
+    expect(one('pdf-merge/index.html', `<div id="done" hidden><section><div class="row">${ad(full, link('cp-mfp'))}</div></section></div>`)).toEqual([]);
+    // fails: no hidden wrapper, a hidden div that closed before the link, hidden on a non-div only
+    expect(one('pdf-merge/index.html', `<div class="result">${ad(full, link('cp-mfp'))}</div>`)).toEqual(['pdf-merge/index.html: the Coupang link "cp-mfp" is not inside a hidden div']);
+    expect(one('pdf-merge/index.html', `<div hidden></div>${ad(full, link('cp-mfp'))}`)).toEqual(['pdf-merge/index.html: the Coupang link "cp-mfp" is not inside a hidden div']);
+    expect(one('pdf-merge/index.html', `<section hidden>${ad(full, link('cp-mfp'))}</section>`)).toEqual(['pdf-merge/index.html: the Coupang link "cp-mfp" is not inside a hidden div']);
+    expect(coupangProblems(new Map([[ID_PHOTO_PAGE, block(ad(full, coupang + coupang.replace('/abc', '/def') + coupang.replace('/abc', '/ghi')))]]), true, d)).toEqual(Array(3).fill(`${ID_PHOTO_PAGE}: the Coupang link "cp-printer" is not inside a hidden div`));
+  });
+
   describe('LinkPrice (LP1028 g, h, i, j)', () => {
     const source = readFileSync(join(ROOT, 'src', 'data', 'affiliate.ts'), 'utf8');
     const links = lpLinks(source)!;
     /** Every LP page with its expected links inside a hidden wrapper. */
     const good = () => {
       const m = new Map<string, string>();
-      for (const p of Object.keys(LP_PAGES)) m.set(p, hiddenDiv(lpBlockHtml(p === ID_PHOTO_PAGE ? lpA('lp-dosirak') + lpA('lp-usimsa') : lpA(p.startsWith('char-count') || p.startsWith('resignation') ? 'lp-soomgo' : 'lp-signgate'))));
+      const kb = ['gosi', 'qnet', 'history', 'korcham', 'teps', 'kuksiwon', 'police', 'hanja', 'jlpt'];
+      // AFF1029 A1: /id-photo/ holds one hidden group per preset entry inside the hidden #idp-lp.
+      const idPhoto = `<div id="idp-lp" hidden>${[['passport_online', lpA('lp-dosirak') + lpA('lp-usimsa')], ...kb.map((k) => [k, lpA(`lp-kb-${k}`)]), ['saramin jobkorea', lpA('lp-soomgo')]].map(([p, a]) => `<div data-presets="${p}" hidden>${lpBlockHtml(a!)}</div>`).join('')}</div>`;
+      const of: Record<string, string> = {
+        'char-count/index.html': lpA('lp-soomgo'),
+        'resignation-letter/index.html': lpA('lp-soomgo'),
+        'loan-note/index.html': lpA('lp-nice') + lpA('lp-allcredit'),
+        'english-name/index.html': lpA('lp-agoda') + lpA('lp-klook'),
+      };
+      for (const p of Object.keys(LP_PAGES)) m.set(p, p === ID_PHOTO_PAGE ? idPhoto : hiddenDiv(lpBlockHtml(of[p] ?? lpA('lp-signgate'))));
       expect([...m.keys()].length).toBe(Object.keys(LP_PAGES).length);
-      expect(Object.values(LP_PAGES).reduce((a, b) => a + b, 0)).toBe(7);
+      expect(Object.values(LP_PAGES).reduce((a, b) => a + b, 0)).toBe(21);
       return m;
     };
 
@@ -709,11 +738,18 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
       expect(lpEnabled('const LP_ENABLED = true;')).toBeNull();
       expect(links).toEqual(LP_LINKS.map((l) => ({ dest: l.dest, href: l.href })));
       expect(lpLinks('const x = 1;')).toBeNull();
-      expect(LP_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1, 'id-photo/index.html': 2, 'char-count/index.html': 1, 'resignation-letter/index.html': 1 });
+      expect(LP_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1, 'id-photo/index.html': 12, 'char-count/index.html': 1, 'resignation-letter/index.html': 1, 'loan-note/index.html': 2, 'english-name/index.html': 2 });
     });
 
-    it('passes: the six screens with their links inside hidden wrappers; off, none', () => {
+    it('passes: the eight screens with their links inside hidden wrappers; off, none', () => {
       expect(linkpriceProblems(good(), true, links)).toEqual([]);
+      // AFF1029: /id-photo/ with one exam group short, /loan-note/ with one link
+      expect(linkpriceProblems(new Map([...good(), [ID_PHOTO_PAGE, hiddenDiv(lpBlockHtml(lpA('lp-dosirak') + lpA('lp-usimsa')))], ['loan-note/index.html', hiddenDiv(lpBlockHtml(lpA('lp-nice')))]]), true, links)).toEqual([
+        `${ID_PHOTO_PAGE}: 2 LinkPrice link(s) while PUBLIC_AFF_LINKPRICE is on (expected 12)`,
+        'loan-note/index.html: 1 LinkPrice link(s) while PUBLIC_AFF_LINKPRICE is on (expected 2)',
+      ]);
+      // (g) a kbbook deep link decoded once (no longer LinkPrice's exact string) fails
+      expect(linkpriceProblems(new Map([...good(), ['pdf-sign/index.html', hiddenDiv(lpBlockHtml(lpA('lp-kb-gosi').replace(/%25/g, '%')))]]), true, links)).toContain('pdf-sign/index.html: the LinkPrice link "lp-kb-gosi" is not exactly an LP_LINKS href');
       expect(linkpriceProblems(new Map([['index.html', '<p>홈</p>']]), false, links)).toEqual([]);
     });
 
@@ -929,20 +965,22 @@ describe('built output', () => {
     if (on && links) expect(html).toContain(`시행일: ${lp}`);
   });
 
-  it('REV3/LP1028 blocks in the build: Coupang on the Coupang result screens, LinkPrice on its six, one network per screen, none on guides or content pages', () => {
+  it('REV3/LP1028/AFF1029 blocks in the build: Coupang on the Coupang result screens, LinkPrice on its eight, one network per screen, none on guides or content pages', () => {
     need();
     const aff = affOn(process.env.PUBLIC_AFF_COUPANG);
     const lp = lpOn(process.env.PUBLIC_AFF_LINKPRICE);
     const read = (p: string) => readFileSync(join(DIST, p), 'utf8');
-    for (const p of ['pdf-merge/index.html', 'pdf-split/index.html', 'jpg-to-pdf/index.html', 'hwp-to-pdf/index.html', 'hwp-viewer/index.html', 'hwpx-to-hwp/index.html']) {
+    for (const p of ['pdf-merge/index.html', 'pdf-split/index.html', 'jpg-to-pdf/index.html', 'hwp-to-pdf/index.html', 'hwp-viewer/index.html', 'hwpx-to-hwp/index.html', 'power-of-attorney/index.html', 'id-copy/index.html', 'pdf-edit/index.html']) {
       expect(read(p).includes('href="https://link.coupang.com/'), p).toBe(aff);
       expect(read(p), p).not.toContain('click.linkprice.com');
     }
-    for (const p of ['pdf-sign/index.html', 'stamp-signature/index.html', 'stamp-maker/index.html', 'char-count/index.html', 'resignation-letter/index.html']) {
+    for (const p of ['pdf-sign/index.html', 'stamp-signature/index.html', 'stamp-maker/index.html', 'char-count/index.html', 'resignation-letter/index.html', 'loan-note/index.html', 'english-name/index.html']) {
       expect(read(p).includes('href="https://click.linkprice.com/'), p).toBe(lp);
-      expect(read(p).includes('href="https://link.coupang.com/'), p).toBe(aff && !lp && !/char-count|resignation/.test(p));
+      expect(read(p).includes('href="https://link.coupang.com/'), p).toBe(aff && !lp && !/char-count|resignation|english-name/.test(p));
     }
-    for (const p of ['index.html', '404.html', 'pdf-compress/index.html', 'photo-compress/index.html', 'guide/index.html', 'guide/kakao-photo/index.html', 'guide/photo-sizes/index.html', 'guide/passport-photo/index.html', 'guide/hwp-on-phone/index.html', 'loan-note/index.html', 'power-of-attorney/index.html']) {
+    // AFF1029 A5, A6: no group on /english-address/ (when built), /qr-code/, /business-card/, the upload-size tools.
+    const english = existsSync(join(DIST, 'english-address', 'index.html')) ? ['english-address/index.html'] : [];
+    for (const p of ['index.html', '404.html', 'pdf-compress/index.html', 'photo-compress/index.html', 'pdf-to-jpg/index.html', 'qr-code/index.html', 'business-card/index.html', 'guide/index.html', 'guide/kakao-photo/index.html', 'guide/photo-sizes/index.html', 'guide/passport-photo/index.html', 'guide/hwp-on-phone/index.html', 'guide/loan-note/index.html', 'guide/power-of-attorney/index.html', ...english]) {
       expect(read(p), p).not.toContain('rel="sponsored');
       expect(read(p), p).not.toContain(AFF_COPY.top);
       expect(read(p), p).not.toContain(COUPANG_DISCLOSURE);

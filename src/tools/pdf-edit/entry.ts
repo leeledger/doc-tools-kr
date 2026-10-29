@@ -5,11 +5,13 @@
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { pendingHandoff, sweepDue } from '../../lib/ui/handoff-marker';
-import { startUsage, track } from '../../lib/ui/usage';
+import { startUsage, track, trackOut } from '../../lib/ui/usage';
 
 type Api = { open(files: File[]): Promise<void> } | null;
 
 startUsage('pdf-edit');
+// AFF1029 A10: presses of the result's affiliate group (link kind only).
+trackOut(document.getElementById('ed-result'), 'pdf-edit');
 
 const root = document.getElementById('ed-tool');
 if (root) {

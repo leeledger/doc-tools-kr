@@ -17,10 +17,13 @@ import { FORM_HWP, POWER_OF_ATTORNEY as SPEC } from '../../data/forms/power-of-a
 import { GOV24_INGAM_URL } from '../../tools/power-of-attorney/sources';
 import { PA_PREFIX } from '../../tools/power-of-attorney/config';
 import { HANCOM_NOTICE, TRADEMARK_NOTICE } from '../../tools/hwp-shared/messages';
+import { resultBlock } from '../../data/affiliate';
 // Page-only styles, inlined (the /english-name/ pattern): no other page carries them.
 import paCss from '../../tools/form-tool/form-tool.css?inline';
 
 const tool = getTool('power-of-attorney');
+// 제휴 링크 (AFF1029 A3: the Coupang 도장 group): last in the result (FormTool `aff`).
+const aff = resultBlock('power-of-attorney', import.meta.env.PUBLIC_AFF_LINKPRICE, import.meta.env.PUBLIC_AFF_COUPANG);
 const jsonLd = [...toolJsonLd(tool, Astro.site), faqJsonLd(tool)];
 const groups = [
   { id: 'giver', legend: '위임하는 사람 (위임인)', fields: ['giverName', 'giverBirth', 'giverAddress', 'giverPhone'] },
@@ -40,7 +43,7 @@ const groups = [
 
   <section class="tool" aria-label={`${tool.name} 도구`}>
     <div class="wrap narrow">
-      <FormTool spec={SPEC} prefix={PA_PREFIX} groups={groups} after={['date']} hwp={FORM_HWP}>
+      <FormTool spec={SPEC} prefix={PA_PREFIX} groups={groups} after={['date']} hwp={FORM_HWP} aff={aff}>
         <div class="notice pa-caution" id="pa-caution" slot="caution">
           <p>관공서에 따라 정해진 위임장 서식이 있어요. 내기 전에 그 기관에 확인하세요.</p>
           <p>인감증명서를 대신 받을 때는 <a href={GOV24_INGAM_URL} rel="noopener">정부24 인감증명서 발급 안내</a>에 있는 정해진 위임장을 쓰세요.</p>

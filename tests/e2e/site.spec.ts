@@ -362,8 +362,10 @@ test.describe('mobile layout', () => {
 
 // LP1028 (owner 2026-10-28): the default build has Coupang and LinkPrice on (as production): each result screen has one
 // network's links (both on /id-photo/, one shown per preset), none visible before a result; guides and content pages none.
+// AFF1029: /id-photo/ 12 LinkPrice links (one group per preset), /loan-note/, /english-name/, /power-of-attorney/,
+// /id-copy/, /pdf-edit/; /english-address/ none.
 const AFF_SCREENS: Record<string, [coupang: number, linkprice: number]> = {
-  '/id-photo/': [3, 2],
+  '/id-photo/': [3, 12],
   '/pdf-merge/': [1, 0],
   '/pdf-split/': [1, 0],
   '/jpg-to-pdf/': [2, 0],
@@ -375,9 +377,14 @@ const AFF_SCREENS: Record<string, [coupang: number, linkprice: number]> = {
   '/stamp-maker/': [0, 1],
   '/char-count/': [0, 1],
   '/resignation-letter/': [0, 1],
+  '/loan-note/': [0, 2],
+  '/english-name/': [0, 2],
+  '/power-of-attorney/': [1, 0],
+  '/id-copy/': [1, 0],
+  '/pdf-edit/': [1, 0],
 };
-test('LP1028: Coupang and LinkPrice links only on their result screens (none visible on load); none on guides, home and the other tools', async ({ page }) => {
-  for (const path of [...new Set([...PAGES, ...Object.keys(AFF_SCREENS), '/guide/passport-photo/', '/guide/pdf-merge/', '/guide/hwp-on-phone/', '/guide/stamp-image/', '/', '/loan-note/', '/power-of-attorney/'])]) {
+test('LP1028/AFF1029: Coupang and LinkPrice links only on their result screens (none visible on load); none on guides, home and the other tools', async ({ page }) => {
+  for (const path of [...new Set([...PAGES, ...Object.keys(AFF_SCREENS), '/guide/passport-photo/', '/guide/pdf-merge/', '/guide/hwp-on-phone/', '/guide/stamp-image/', '/guide/loan-note/', '/guide/power-of-attorney/', '/'])]) {
     await page.goto(path);
     const [cp, lp] = AFF_SCREENS[path] ?? [0, 0];
     await expect(page.locator('a[href^="https://link.coupang.com/"]'), path).toHaveCount(cp);

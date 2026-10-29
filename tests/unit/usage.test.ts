@@ -1156,13 +1156,16 @@ describe('링크 누름 out event (REV2 decision 7, REV3 decision 6)', () => {
   it('a result screen: each TOOL_OUT pair is accepted, without g', () => {
     expect(EVENTS).toContain('out');
     expect(OUT_KEY).toBe('out');
-    expect(OUT_DESTS).toEqual(['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'cp-stamp', 'cp-hancom', 'cp-mfp', 'cp-scanner', 'cp-tripod', 'lp-signgate', 'lp-dosirak', 'lp-usimsa', 'lp-soomgo']);
+    expect(OUT_DESTS).toEqual(['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop', 'cp-stamp', 'cp-hancom', 'cp-mfp', 'cp-scanner', 'cp-tripod', 'lp-signgate', 'lp-dosirak', 'lp-usimsa', 'lp-soomgo', 'lp-kb-gosi', 'lp-kb-qnet', 'lp-kb-history', 'lp-kb-korcham', 'lp-kb-teps', 'lp-kb-kuksiwon', 'lp-kb-police', 'lp-kb-hanja', 'lp-kb-jlpt', 'lp-nice', 'lp-allcredit', 'lp-agoda', 'lp-klook']);
     for (const [t, dests] of Object.entries(TOOL_OUT)) for (const v of dests) expect(validate(body({ ...OUT, t, v })), `${t} ${v}`).toMatchObject({ e: 'out', t, o: 'out', v, g: '' });
     // REV2 id-photo outs stay valid.
     for (const v of ['photo-studio', 'cp-printer', 'cp-paper', 'cp-backdrop']) expect(validate(body({ ...OUT, v }))).not.toBeNull();
     expect(toDataPoint(validate(body({ ...OUT, v: 'cp-backdrop' }))!).blobs.slice(0, 7)).toEqual(['out', 'id-photo', '', '', 'out', 'cp-backdrop', '']);
     // LP1028 L11: the LinkPrice dests on their screens.
-    for (const [t, v] of [['stamp-signature', 'cp-stamp'], ['pdf-sign', 'cp-stamp'], ['hwp-to-pdf', 'cp-hancom'], ['pdf-merge', 'cp-mfp'], ['jpg-to-pdf', 'cp-scanner'], ['remove-background', 'cp-backdrop'], ['pdf-sign', 'lp-signgate'], ['stamp-signature', 'lp-signgate'], ['stamp-maker', 'lp-signgate'], ['id-photo', 'lp-dosirak'], ['id-photo', 'lp-usimsa'], ['char-count', 'lp-soomgo'], ['resignation-letter', 'lp-soomgo']]) {
+    for (const [t, v] of [['stamp-signature', 'cp-stamp'], ['pdf-sign', 'cp-stamp'], ['hwp-to-pdf', 'cp-hancom'], ['pdf-merge', 'cp-mfp'], ['jpg-to-pdf', 'cp-scanner'], ['remove-background', 'cp-backdrop'], ['pdf-sign', 'lp-signgate'], ['stamp-signature', 'lp-signgate'], ['stamp-maker', 'lp-signgate'], ['id-photo', 'lp-dosirak'], ['id-photo', 'lp-usimsa'], ['char-count', 'lp-soomgo'], ['resignation-letter', 'lp-soomgo'],
+      // AFF1029 A10.
+      ['id-photo', 'lp-kb-gosi'], ['id-photo', 'lp-kb-jlpt'], ['id-photo', 'lp-soomgo'], ['loan-note', 'lp-nice'], ['loan-note', 'lp-allcredit'], ['loan-note', 'cp-stamp'],
+      ['power-of-attorney', 'cp-stamp'], ['english-name', 'lp-agoda'], ['english-name', 'lp-klook'], ['id-copy', 'cp-mfp'], ['pdf-edit', 'cp-mfp']]) {
       expect(validate(body({ ...OUT, t, v })), `${t} ${v}`).not.toBeNull();
     }
   });
@@ -1183,6 +1186,11 @@ describe('링크 누름 out event (REV2 decision 7, REV3 decision 6)', () => {
       ['scanner on pdf-merge', body({ ...OUT, t: 'pdf-merge', v: 'cp-scanner' })],
       ['a LinkPrice dest of another screen', body({ ...OUT, t: 'pdf-merge', v: 'lp-signgate' })],
       ['soomgo on loan-note', body({ ...OUT, t: 'loan-note', v: 'lp-soomgo' })],
+      ['교보문고 on loan-note (AFF1029)', body({ ...OUT, t: 'loan-note', v: 'lp-kb-gosi' })],
+      ['신용정보 on id-photo', body({ ...OUT, v: 'lp-nice' })],
+      ['travel on id-photo', body({ ...OUT, v: 'lp-agoda' })],
+      ['travel on english-address', body({ ...OUT, t: 'english-address', v: 'lp-agoda' })],
+      ['교보문고 from a guide', body({ ...OUT, v: 'lp-kb-gosi', g: 'passport-photo', via: 'guide' })],
       ['eSIM on char-count', body({ ...OUT, t: 'char-count', v: 'lp-dosirak' })],
       ['a LinkPrice dest from a guide', body({ ...OUT, t: 'pdf-sign', v: 'lp-signgate', g: 'pdf-sign-guide' })],
       ['a prototype key as tool', body({ ...OUT, t: 'constructor', v: 'cp-mfp' })],

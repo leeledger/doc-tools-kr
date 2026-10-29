@@ -66,6 +66,8 @@ jobs:
   # each build the unit tests that read dist/ run with the same env. postbuild.test.ts runs after build 1 only: it assumes
   # a GA-, AdSense- and usage-off dist (5 of its tests fail on any dist-bgcloud-like build, camera on or off; BUILD-LOG
   # PRINT1023 A Known Gaps). ga.test.ts is left out: it runs its own GA-on build, covered by the checks job.
+  # AFF1029 (brief Build Order 7): build 3 is the LinkPrice kill switch (PUBLIC_AFF_LINKPRICE=0): check-dist asserts no
+  # LinkPrice link anywhere and the Coupang fallbacks (/loan-note/ and the 공동인증서 screens: 도장).
   flag-off:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -112,6 +114,16 @@ jobs:
           PUBLIC_ADDR_EN: '1'
           PUBLIC_ADSENSE_ON: '1'
           PUBLIC_ADSENSE_CLIENT: 'ca-pub-0000000000000000'
+      - name: Build (camera off, LinkPrice off; check-dist in postbuild)
+        run: rm -rf dist && npm run build
+        env:
+          PUBLIC_ID_CAMERA: '0'
+          PUBLIC_AFF_LINKPRICE: '0'
+      - name: Unit tests that read dist/ (camera off, LinkPrice off)
+        run: npx vitest run tests/unit/postbuild.test.ts
+        env:
+          PUBLIC_ID_CAMERA: '0'
+          PUBLIC_AFF_LINKPRICE: '0'
 
   # One job per Playwright project, run in parallel. The full 5-project suite in a
   # single job ran past the 30-minute limit.
