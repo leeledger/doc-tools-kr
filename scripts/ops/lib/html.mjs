@@ -40,7 +40,8 @@ export const decodeEntities = (s) =>
  * (/cdn-cgi/, cloudflareinsights, rocket-loader). The legal pages carry no JSON-LD by design. Returns a list of
  * problems (empty when healthy).
  */
-export const NO_JSONLD_PATHS = ['/privacy/', '/terms/', '/licenses/'];
+// OPS1030: /contact/ (ADS1020) and the English legal pages carry no JSON-LD either; A-4 flagged them every day.
+export const NO_JSONLD_PATHS = ['/privacy/', '/terms/', '/licenses/', '/contact/', '/en/privacy/', '/en/terms/'];
 export function pageProblems(html, pageUrl) {
   const problems = [];
   const links = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
