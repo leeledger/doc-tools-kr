@@ -8,7 +8,7 @@ export const TOOL_GUIDE_PINS: Readonly<Record<string, readonly string[]>> = {
   // GROWTH3 G0: the full list of 4 is frozen for every tool a new guide names, so adding a guide (or retitling one,
   // which moves it in the title order) never changes a precached tool page. A new guide may name only these tools
   // (or a tool whose 4 shown guides are all pinned here); the unit test checks the exact lists.
-  'id-photo': ['passport-photo', 'photo-kb', 'kuksiwon-photo', 'police-exam-photo'],
+  'id-photo': ['passport-photo', 'driver-license-photo', 'kuksiwon-photo', 'id-card-photo'],
   'photo-compress': ['gosi-photo', 'admission-photo', 'photo-kb', 'passport-photo'],
   'pdf-merge': ['pdf-merge', 'univ-docs-upload', 'yearend-tax-pdf', 'ecfs-pdf-limit'],
   'pdf-compress': ['pdf-compress', 'univ-docs-upload', 'hwp-to-pdf', 'email-attachment-limit'],

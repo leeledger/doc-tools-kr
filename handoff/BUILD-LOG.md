@@ -4718,6 +4718,37 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
 - Live smoke on docttak.com (read-only script, counts taken from scripts/lib/out-links-check.mjs COUPANG_PAGES + LP_PAGES): 85/85 OK. Every result screen has exactly its LinkPrice and Coupang link counts (id-photo 12 + 3, loan-note 2, english-name 2, power-of-attorney / id-copy / pdf-edit 1 Coupang each, the LP1028 pages unchanged); every link rel sponsored, new tab, 「광고」 in the name, the disclosure first, hidden before a result; CSP script-src 'self' with no affiliate host on all 19 pages. 0 links on home, /guide/, about, contact, privacy, pdf-compress, qr-code, business-card, id-photo-camera, english-address, /en/, /embed/id-photo/, and on all 51 guides (taken from /guide/). Non-GET requests: only the Cloudflare beacon and GA collect.
 - Owner-only (unchanged): O2 one test click per new merchant (kbbook, mycredit1, allcredit, agoda, klook) in LinkPrice 실시간 리포트.
 
+## SEO1030 (design) — 구글 검색 클릭 늘리기 (Arch, 2026-10-29)
+- Owner 2026-10-29 「문서딱 자체 사이트 유입이 많아야」. Data reports/gsc/검색어 2026-10-29.md. Brief: handoff/ARCHITECT-BRIEF-SEO1030.md (D1-D10). Branch seo1030.
+- Baseline clicks/impr/pos (28 d to 10-27): driver-license-photo 6/517/9.1; id-card-photo 1/210/9.5; history-exam-photo 6/196/9.9; kakao-photo 3/191/7.2; admission-photo 1/161/8.3; resume-photo 0/113/8.8; youth-card-photo 1/77/8.2; photo-sizes 0/67/15.1; intl-driving-license 0/52/8.4.
+- Checked: JSON-LD (Article, FAQPage, BreadcrumbList) already on every guide/hub; H1 = title; /guide/id-photo-size/ already 301 to photo-sizes. No template change.
+- Decisions: D1 kuksiwon-photo untouched (best CTR 5.8%). D2 titles carry 규정/크기/몇 장/용량 제한/여권용, old core words kept. D5 FAQ in the searcher's wording (max 6). D6 new facts only from a live probe on 2026-10-29, else no claim. D8 TOOL_GUIDE_PINS id-photo = passport, driver-license, kuksiwon, id-card (demand order). D9 regression test for the query words.
+- Owner-only: O1 색인 생성 요청 for the 9 URLs; O2 resubmit sitemap; O3 re-export the GSC report about 2026-11-27.
+
+## SEO1030 (build) — 사진 규격 안내 9쪽 검색어 맞추기 (Bob, 2026-10-29)
+Status: DONE (gates below; Richard review pending). Review request: handoff/REVIEW-REQUEST-SEO1030.md.
+- D6 probes (2026-10-29, curl):
+  - a) 주민등록증 카드 크기: FAILED. law.go.kr `LSW/lsInfoR.do?lsiSeq=285757` answered `alert("기본정보 조회 실패")`; `LSW/lsInfoP.do?lsiSeq=285757&viewCls=lsPrnInfoP…` returned a 145 KB script shell with no 「주민등록증」 text. No card-size claim, no FAQ (Known Gap).
+  - b) 대학원 원서 사진: NOT FOUND. jinhakapply FAQ categoryid=7 has only 「대학원서」 (= 대학 원서); uwayapply FAQ has 「그 외 기관 및 대학원, 편입 등에 지원하고자 하신다면 일반원서접수 회원으로 로그인해주세요!」 (membership, not a photo rule). Title stays 대학 only, no 대학원 word, no new FAQ.
+  - c) 한능검 셀카/6개월: FAILED. historyexam.go.kr FAQ search (`/pst/list.do?bbs=faq`, POST searchKeyword=사진) answered 「ERROR 접근권한 없음.」 (NetFunnel); pageLink rceptInfo / exmneAtpn / sclpstRegltn have no 셀카·휴대폰 사진·6개월 rule for the photo (sclpstRegltn's 「휴대전화 신분증 사진 등은 신분증으로 인정하지 않습니다.」 is about ID cards). No FAQ.
+  - d) 카톡 파일 용량: FOUND. cs.kakao.com/helps_html/1073209424 re-read: 「파일 1회 전송 시: 최대 전송량 300MB」 and the 1GB 톡클라우드 line verbatim; the six quotes of that page bumped to retrieved 2026-10-29; new FAQ 「카톡 파일 전송 용량은 얼마인가요?」.
+- Titles (old → new; for the 28-day comparison, O3):
+  | slug | old | new |
+  |---|---|---|
+  | driver-license-photo | 운전면허 사진 규격 2026 (갱신·적성검사) | 운전면허 사진 규격·규정 2026 (갱신 몇 장) |
+  | id-card-photo | 주민등록증 사진 크기·규격 (신규·재발급) | 주민등록증 사진 규격·크기 (신규·재발급) |
+  | admission-photo | 대입 원서 사진 규격과 올리는 법 | 대학 원서 사진 규정·규격, 진학사·유웨이 |
+  | resume-photo | 이력서 사진 규격, 사람인·잡코리아 크기와 용량 | 사람인·잡코리아 사진 크기 조정, 이력서 사진 규격 |
+  | kakao-photo | 카톡 사진 용량, 한 번에 보낼 수 있는 양 | (unchanged: already the D2 wording) |
+  | history-exam-photo | 한국사능력검정시험(한능검) 원서 사진 규격 | 한능검 사진 규격·크기 (한국사능력검정시험 원서) |
+  | youth-card-photo | 청소년증 사진 규격과 발급 신청 방법 | 청소년증 사진 규격·크기와 발급 신청 방법 |
+  | intl-driving-license | 국제운전면허증 사진 규격과 발급 준비물 | 국제운전면허증 사진 규격 (여권용 3.5×4.5 cm) |
+  | hub photo-sizes | 증명사진 규격 모음, 기관별 크기·용량 한눈에 | 증명사진 크기·사이즈 규격 모음 (기관별 한눈에) |
+- Decisions: D2 kakao title already matched the target, left as is (description/answer now lead with 「카톡 사진 용량」). D3 driver and history descriptions trimmed to ≤ 80 (driver 「2장·2종 갱신 1장, 파일은 413×531픽셀로 맞춰요」; history dropped 「(약 3×4 cm)」, still in its answer). D4 answers edited only where the query noun was missing: resume (크기), kakao (용량), youth (크기). `query` fields set to the brief's query column (driver, id-card, admission, resume); others already matched. D5 FAQs: driver 6 (renamed 몇 장, added 적성검사 and 규정 rules, each from the existing 도로교통공단 quotes, no stricter paraphrase), id-card +재발급, resume +잡코리아 크기 조정 (preset jobkorea 150×210, 5 MB), youth +사진 규정 (only the size is stated, as the body already says), hub +증명사진 vs 반명함판, kakao +파일 용량; history/admission/intl none (no D6 quote). D8 body links: kakao (서류 사진 section) and intl (after the checklist) each gain one one-line paragraph linking /guide/photo-sizes/. TOOL_GUIDE_PINS id-photo and the frozen-4 test updated; the pure orderToolGuides fixture now uses driver-license-photo as the second pin.
+- D10: gen-guide-titles rewrote 8 titles. Literals: tools.ts resume link text, hubs.spec admission name, usage.test weekly-report row and the admin-full-7 snapshot row (the only diff in both was the resume title line; hand-edited, not `-u`).
+- Gates: npm run check 0 errors / 0 warnings (12 hints). Default build: check-dist OK, precache 394.6 / 450 KB. Production-flag build (dist-bgcloud env): check-dist OK, precache 402.3 / 450 KB. AUTOFRAME=1 build: check-dist OK, 396.8 KB. vitest full on the default dist: 2338/2340 with the two literal failures above, fixed and re-run green (usage, admin-view, guides-schema, visits 317/317); a second full run on the AUTOFRAME=1 dist: 2339/2340, the one failure ga.test's own GA build tripping check-dist on the vendored mediapipe (env mismatch from the local build order), green with PUBLIC_ID_PHOTO_AUTOFRAME=1 (21/21). e2e chromium (E2E_PORT=4273): default dist hubs+site+affiliate+embed 149 passed, 1 flaky (affiliate pdf-edit 복합기, passed on retry and alone with --retries=0); AUTOFRAME=1 dist id-photo+affiliate+embed 64 passed, 2 skipped. dist HTML checked for all 9: <title>, H1, meta description and FAQPage questions match.
+- Known Gaps: 주민등록증 카드 크기 (law.go.kr shell), 한능검 셀카/6개월 (NetFunnel) unsourced, retry with the owner's browser (chrome-cdp, via: browser) in a later step. kuksiwon 「국시원 사진 규정」 revisit after O3.
+- Richard: clear, 0 Must Fix (handoff/REVIEW-FEEDBACK-SEO1030.md). Orchestrator applied Should Fix 1 (hub FAQ: 「사진관에서」 dropped, now 「기관이 정한 규격이 아니라 흔히 쓰는 크기」 as the existing answer) and 2 (driver FAQ: 「받지 않아요」 -> 「규격에 맞지 않아 발급이 늦어지거나 반려될 수 있어요」, the 도로교통공단 quote wording). Should Fix 3 (youth 「최근 사진이 좋아요」) kept as is (advice, no number).
 ### 2026-10-29 OPS1030 (orchestrator) — A-4 health check: /contact/, /en/privacy/, /en/terms/ need no JSON-LD
 - Issue #7 re-opened daily since 10-24 for 「JSON-LD 없음」 on those three pages. They are legal/contact pages like /privacy/ and /terms/, which the rule already exempts by design. Decision: add them to NO_JSONLD_PATHS (scripts/ops/lib/html.mjs) instead of adding markup; every other page still needs a JSON-LD block. Unit test added (tests/unit/ops.test.ts). Review: handoff/REVIEW-REQUEST-OPS1030.md.
 - Richard: clear, 0 Must Fix (handoff/REVIEW-FEEDBACK-OPS1030.md).
