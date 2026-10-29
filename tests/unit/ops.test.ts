@@ -96,6 +96,14 @@ describe('page checks (A-4)', () => {
     const legal = 'https://docttak.com/privacy/';
     expect(pageProblems(GOOD(legal).replace(/<script type="application\/ld\+json">.*<\/script>/, ''), legal)).toEqual([]);
   });
+  it('OPS1030: the contact page and the English legal pages need no JSON-LD; other pages still do', () => {
+    for (const path of ['/contact/', '/en/privacy/', '/en/terms/']) {
+      const u = 'https://docttak.com' + path;
+      expect(pageProblems(GOOD(u).replace(/<script type="application\/ld\+json">.*<\/script>/, ''), u)).toEqual([]);
+    }
+    const en = 'https://docttak.com/en/pdf-merge/';
+    expect(pageProblems(GOOD(en).replace(/<script type="application\/ld\+json">.*<\/script>/, ''), en)).toContain('JSON-LD 없음');
+  });
   it('catches off-site and Cloudflare-injected scripts', () => {
     const page = GOOD(url, '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{}\'></script><script src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>');
     expect(offSiteScripts(page, url)).toEqual(['https://static.cloudflareinsights.com/beacon.min.js', 'https://docttak.com/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js']);
