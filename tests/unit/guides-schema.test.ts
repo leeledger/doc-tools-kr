@@ -635,3 +635,34 @@ describe('SEO1030 D9: the photo-spec pages carry the searched words', () => {
     }
   });
 });
+
+describe('SEO1031 D9: photo, HWPX, iPhone and 누끼 pages carry the searched words', () => {
+  const bySlug = (s: string) => published.find((g) => g.slug === s)!;
+  const hub = read(join('..', 'hubs', 'upload-limits.md'));
+
+  it('each title keeps the words people search (GSC 2026-09-29..10-27)', () => {
+    const WORDS: Record<string, string[]> = {
+      'kuksiwon-photo': ['규정', '국가고시', '국시원'],
+      'korcham-photo': ['용량', '대한상공회의소', '컴활'],
+      'heic-to-jpg': ['JPG로 저장', 'HEIC'],
+      'remove-background': ['누끼따기', '배경 지우기'],
+      'hwpx-to-hwp': ['HWP로 변환'],
+      'what-is-hwpx': ['HWPX 파일', '여는 법'],
+      'gosi-photo': ['증명사진', '공무원'],
+      'passport-reissue-photo': ['사진 변경', '재발급'],
+      'passport-english-name': ['영문성명', '영문 이름'],
+    };
+    for (const [slug, words] of Object.entries(WORDS)) for (const w of words) expect(bySlug(slug).parsed.title, slug).toContain(w);
+    expect(hub.data.title, 'upload-limits hub').toContain('첨부파일 용량');
+  });
+
+  it('the FAQ asks in the searcher wording', () => {
+    const NEED: Record<string, string> = { 'kuksiwon-photo': '간호사', 'korcham-photo': '용량', 'heic-to-jpg': '저장', 'remove-background': '한글' };
+    for (const [slug, w] of Object.entries(NEED)) expect(bySlug(slug).parsed.faq.some((f) => f.q.includes(w)), slug).toBe(true);
+  });
+
+  it('remove-background never claims the 한컴 한글 program removes backgrounds', () => {
+    const g = bySlug('remove-background');
+    for (const bad of ['한글에서 배경', '한글 프로그램에서 누끼']) expect(g.raw, bad).not.toContain(bad);
+  });
+});

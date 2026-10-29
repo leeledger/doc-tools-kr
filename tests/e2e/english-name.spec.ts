@@ -243,9 +243,9 @@ test('repeated syllables (영영) get distinct group names, and each picks on it
   await expect(page.locator('#en-joined')).toHaveText('LEE YEONGYOUNG');
 });
 
-test('R4 guide 여권 영문 이름 정하는 법 and the tool link both ways; the 성 table has the 20 surnames', async ({ page }) => {
+test('R4 guide 여권 영문 이름(영문성명) 정하는 법과 변경 and the tool link both ways; the 성 table has the 20 surnames', async ({ page }) => {
   await gotoReady(page, '/guide/passport-english-name/');
-  await expect(page.locator('h1')).toHaveText('여권 영문 이름 정하는 법');
+  await expect(page.locator('h1')).toHaveText('여권 영문 이름(영문성명) 정하는 법과 변경');
   await expect(page.locator('main a[href="/english-name/"]').first()).toBeVisible();
   await expect(page.locator('main table tbody tr')).toHaveCount(20);
   await expect(page.locator('main table')).toContainText('KIM 8,342,772명(99.55%)');
