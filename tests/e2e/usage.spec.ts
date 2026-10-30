@@ -1004,3 +1004,29 @@ test('REQ1014-A D16 서명·도장 → PDF에 넣기: the stored hand-off sends 
   expectClean(beacons);
   expect(beacons.find((b) => b.ev.e === 'next')!.ev).toEqual({ e: 'next', t: 'stamp-signature', o: 'next', v: 'pdf-sign', via: 'direct', d: expect.any(String), b: expect.any(String), w: 1 });
 });
+
+/** A JPEG the sniff accepts (SOF, scan, EOI) that no decoder opens: the first component's sampling factors are 0. */
+function undecodableJpeg(): Buffer {
+  const b = Buffer.from(readFileSync(PORTRAIT));
+  for (let i = 2; i + 3 < b.length && b[i] === 0xff; i += 2 + b.readUInt16BE(i + 2)) {
+    const m = b[i + 1]!;
+    if (m >= 0xc0 && m <= 0xc2) {
+      b[i + 11] = 0x00;
+      return b;
+    }
+  }
+  throw new Error('no SOF');
+}
+
+test('FAIL1030 E/F: 여권·증명사진 logs a PDF as not-image-pdf and a photo that does not decode as corrupt-jpg', async ({ page }) => {
+  const beacons = await record(page);
+  await gotoReady(page, '/id-photo/');
+  await page.setInputFiles('#idp-input', fixturePath('gen_already_small.pdf'));
+  await expect(page.locator('#idp-error')).toContainText('PDF 파일입니다.');
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'fail').map((b) => b.ev.c)).toEqual(['not-image-pdf']);
+  await page.setInputFiles('#idp-input', { name: 'broken.jpg', mimeType: 'image/jpeg', buffer: undecodableJpeg() });
+  await expect(page.locator('#idp-tool')).toHaveAttribute('data-state', 'error', { timeout: 60_000 });
+  await expect.poll(() => beacons.filter((b) => b.ev.e === 'fail').map((b) => b.ev.c)).toEqual(['not-image-pdf', 'corrupt-jpg']);
+  expectClean(beacons);
+  for (const b of beacons.filter((x) => x.ev.e === 'fail')) expect(b.ev).toMatchObject({ t: 'id-photo', p: 'parse' });
+});

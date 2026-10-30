@@ -344,3 +344,19 @@ test('PDF에 넣기: disabled until there is a result; stores the PNG and opens 
   expect(new URL(page.url()).pathname).toBe('/stamp-signature/');
   await expect(page.locator('.related a[href="/pdf-sign/"]')).toHaveText('PDF 서명·도장 넣기');
 });
+
+// FAIL1030 E: a PDF or a 한글 문서 in a photo tool is named, with a button-styled link to the tool that takes it.
+test('a PDF is named, with 「PDF JPG 변환」; a .hwp is named, with 「HWP PDF 변환」; a new pick clears the line', async ({ page }) => {
+  await gotoReady(page, '/stamp-signature/');
+  await open(page, join(process.cwd(), 'tests', 'fixtures', 'gen_already_small.pdf'));
+  const error = page.locator('#ss-error');
+  await expect(error).toContainText('PDF 파일입니다. 이 도구는 사진만 엽니다. PDF 쪽을 사진으로 바꾸려면 PDF JPG 변환을 이용하세요.');
+  await expect(error.getByRole('link', { name: 'PDF JPG 변환' })).toHaveAttribute('href', '/pdf-to-jpg/');
+  await open(page, join(process.cwd(), 'tests', 'corpus', 'hwp', 'law05.hwp'));
+  await expect(error).toContainText('한글 문서입니다. 이 도구는 사진만 엽니다. 한글 문서를 PDF로 바꾸려면 HWP PDF 변환을 이용하세요.');
+  await expect(error.getByRole('link')).toHaveCount(1);
+  await expect(error.getByRole('link', { name: 'HWP PDF 변환' })).toHaveAttribute('href', '/hwp-to-pdf/');
+  await open(page, { name: 'note.png', mimeType: 'image/png', buffer: Buffer.from('not an image at all') });
+  await expect(error).toHaveText('사진 파일이 아닙니다. JPG·PNG·WebP 파일을 선택해 주세요.');
+  await expect(error.getByRole('link')).toHaveCount(0);
+});

@@ -66,9 +66,22 @@ export function view(p: Phase): View {
 
 /**
  * What a cloud try ends with (REQ1014-B D13); the usage code is cloud-<this>. The first five are the cloud client's
- * CloudKind (not imported: only bg.ts may import the cloud client, network-guard.test.ts).
+ * CloudKind and the copy-* ones its CopyFail (not imported: only bg.ts may import the cloud client,
+ * network-guard.test.ts).
  */
-export type CloudFail = 'timeout' | 'network' | 'server' | 'refused' | 'answer' | 'busy' | 'quota' | 'copy' | 'load';
+export type CloudFail =
+  | 'timeout'
+  | 'network'
+  | 'server'
+  | 'refused'
+  | 'answer'
+  | 'busy'
+  | 'quota'
+  | 'copy-canvas'
+  | 'copy-blob'
+  | 'copy-size'
+  | 'copy-meta'
+  | 'load';
 
 /**
  * Whether try number `tries` (1-based) is followed by one more request: only after the first, and only for a

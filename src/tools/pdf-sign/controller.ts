@@ -457,9 +457,14 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     } catch (err) {
       if (id !== imageRun) return false;
       const f = err instanceof ImageFailure ? err : new ImageFailure(isOutOfMemory(err) ? 'oom' : 'corrupt', isOutOfMemory(err) ? ERRORS.oom : ERRORS.corrupt);
-      usageFail(f.code, 'parse');
+      // FAIL1030 E: a PDF or a 한글 문서 picked as the picture is named, with the tool that takes it (lazy).
+      const w = f.code === 'not-image' && picked instanceof File ? await import('../../lib/file/wrong-file').then(async (m) => ({ m, help: await m.wrongFile(picked, 'image') })).catch(() => null) : null;
+      if (id !== imageRun) return false;
+      usageFail(w?.help.code ?? f.code, 'parse');
       imageInfo.textContent = before;
-      announce('alert', f.message, root);
+      announce('alert', w?.help.text ?? f.message, root);
+      const box = root.querySelector<HTMLElement>('[data-live="alert"]');
+      if (w && box) w.m.showWrongFile(box, picked as File, 'pdf-sign', w.help);
       return false;
     }
   }
@@ -508,9 +513,13 @@ export function initPdfSign(pending?: File[]): { open(files: File[]): Promise<vo
     loadDynamicFont();
     setState('empty');
     if (!(await isPdfFile(f))) {
+      // FAIL1030 E: a photo or a 한글 문서 is named, with the tool that makes the PDF (lazy; offline: the line as before).
+      const w = await import('../../lib/file/wrong-file').then(async (m) => ({ m, help: await m.wrongFile(f, 'pdf') })).catch(() => null);
       if (id !== runId) return;
-      usageFail('not-pdf', 'parse');
-      fileError(MESSAGES['not-pdf']);
+      usageFail(w?.help.code ?? 'not-pdf', 'parse');
+      fileError(w?.help.text ?? MESSAGES['not-pdf']);
+      const box = root.querySelector<HTMLElement>('[data-live="alert"]');
+      if (w && box) w.m.showWrongFile(box, f, 'pdf-sign', w.help, (msg) => announce('alert', msg, root));
       return;
     }
     const tooBig = fileLimitMessage(f.size, detectDevice());

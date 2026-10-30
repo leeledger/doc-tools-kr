@@ -847,3 +847,21 @@ test('SEO: title, description, one H1, canonical, JSON-LD; home card; RelatedToo
     else expect(lic, s).toContain(s);
   }
 });
+
+// FAIL1030 E: a PDF in the photo tool is named, with a button-styled link to PDF JPG 변환 (a new tab in the widget).
+test('a PDF is named, with 「PDF JPG 변환」 (no MediaPipe); in the embed widget the link opens a new tab', async ({ page, network }) => {
+  const pdf = join(process.cwd(), 'tests', 'fixtures', 'gen_already_small.pdf');
+  await open(page);
+  await pick(page, pdf, /^error$/);
+  const error = page.locator('#idp-error');
+  await expect(error).toContainText('PDF 파일입니다. 이 도구는 사진만 엽니다. PDF 쪽을 사진으로 바꾸려면 PDF JPG 변환을 이용하세요.');
+  const link = error.getByRole('link', { name: 'PDF JPG 변환' });
+  await expect(link).toHaveAttribute('href', '/pdf-to-jpg/');
+  expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect(network.requests.filter((r) => MP.test(r.url())).map((r) => r.url())).toEqual([]);
+  await open(page, '/embed/id-photo/');
+  await pick(page, pdf, /^error$/);
+  const embedLink = page.locator('#idp-error').getByRole('link', { name: 'PDF JPG 변환 (새 창)' });
+  await expect(embedLink).toHaveAttribute('target', '_blank');
+  await expect(embedLink).toHaveAttribute('rel', 'noopener');
+});

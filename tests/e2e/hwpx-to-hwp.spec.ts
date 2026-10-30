@@ -115,9 +115,14 @@ for (const key of ['adm02', 'adm14', 'adm19', 'adm28']) {
 
 test('an .hwp is already HWP (no worker, no engine): the message, links to the viewer and HWP PDF 변환, focus on the message', async ({ page, network }) => {
   await convert(page, fx('law05.hwp'), 'error');
-  await expect(page.locator('#hx-error')).toHaveText('이미 HWP 파일이에요. 바꾸지 않아도 되고, 아래에서 열어 보거나 PDF로 바꿀 수 있어요.');
+  await expect(page.locator('#hx-error')).toHaveText('이미 HWP 파일이에요. HWPX로 바꾸지 않아도 되고, 아래 버튼으로 바로 열어 보거나 PDF로 바꿀 수 있어요.');
   await expect(page.locator('#hx-error')).toBeFocused();
   await expect(page.locator('#hx-error-links a')).toHaveText(['바로 보기', 'PDF로 바꾸기']);
+  // FAIL1030 C: buttons, not small hint links (tap target ≥ 44 px).
+  for (const a of await page.locator('#hx-error-links a').all()) {
+    await expect(a).toHaveClass(/\bbtn\b/);
+    expect((await a.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
   await expect(page.locator('#hx-error-links a').first()).toHaveAttribute('href', '/hwp-viewer/');
   await expect(page.locator('#hx-error-links a').last()).toHaveAttribute('href', '/hwp-to-pdf/');
   await expect(page.locator('#hx-drop')).toBeVisible();
@@ -126,9 +131,13 @@ test('an .hwp is already HWP (no worker, no engine): the message, links to the v
 
 test('noise and a text file are not HWPX; a password HWPX is refused before the engine loads; .hml is unsupported', async ({ page, network }) => {
   test.setTimeout(120_000);
-  for (const f of [hwpRuntime('noise.hwpx'), hwpRuntime('notes.txt')]) {
+  for (const [f, line] of [
+    // FAIL1030 D: unknown bytes get the 보안 문서 hedge; a text file keeps the pick-a-.hwpx line.
+    [hwpRuntime('noise.hwpx'), '한글 문서로 읽을 수 없는 파일이에요. 회사·기관에서 받은 보안 문서라면 보낸 곳에 PDF로 요청해 주세요.'],
+    [hwpRuntime('notes.txt'), 'HWPX 파일이 아니에요. 확장자가 .hwpx인 한글 파일을 골라 주세요.'],
+  ] as const) {
     await convert(page, f, 'error');
-    await expect(page.locator('#hx-error')).toHaveText('HWPX 파일이 아니에요. 확장자가 .hwpx인 한글 파일을 골라 주세요.');
+    await expect(page.locator('#hx-error')).toHaveText(line);
     await expect(page.locator('#hx-error-links')).toBeHidden();
     await expect(page.locator('#hx-error-actions')).toBeHidden();
   }

@@ -209,9 +209,13 @@ export function initPdfToJpg(pending?: File[]): { open(files: File[]): void } | 
     loadDynamicFont();
     setState('empty');
     if (!(await isPdfFile(f))) {
+      // FAIL1030 E: a photo or a 한글 문서 is named, with the tool that makes the PDF (lazy; offline: the line as before).
+      const w = await import('../../lib/file/wrong-file').then(async (m) => ({ m, help: await m.wrongFile(f, 'pdf') })).catch(() => null);
       if (id !== runId) return;
-      usageFail('not-pdf', 'parse');
-      fileError(MESSAGES['not-pdf']);
+      usageFail(w?.help.code ?? 'not-pdf', 'parse');
+      fileError(w?.help.text ?? MESSAGES['not-pdf']);
+      const box = root.querySelector<HTMLElement>('[data-live="alert"]');
+      if (w && box) w.m.showWrongFile(box, f, 'pdf-to-jpg', w.help, (msg) => announce('alert', msg, root));
       return;
     }
     const tooBig = fileLimitMessage(f.size, detectDevice());

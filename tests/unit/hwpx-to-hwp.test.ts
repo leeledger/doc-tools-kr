@@ -58,7 +58,7 @@ describe('HWPX HWP 변환: copy and error codes', () => {
     for (const c of ['already-hwp', 'unverified', 'export'] as const) {
       expect(HWP_ERROR_CODES).toContain(c);
       expect(ERRORS[c]).toMatch(/[가-힣]/);
-      expect(ERRORS[c].replace(/HWP|PDF/g, '')).not.toMatch(/[A-Za-z]/);
+      expect(ERRORS[c].replace(/HWPX|HWP|PDF/g, '')).not.toMatch(/[A-Za-z]/);
     }
     expect(ERRORS['already-hwp'].startsWith('이미 HWP 파일이에요.')).toBe(true);
     expect(ERRORS.export).toContain('바꾸지 못했어요');

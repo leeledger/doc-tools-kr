@@ -239,3 +239,25 @@ test('keyboard only: pick, compress and download', async ({ page, browserName, i
   const [download] = await Promise.all([page.waitForEvent('download'), page.keyboard.press('Enter')]);
   expect(await pageCount(new Uint8Array(readFileSync(await download.path())))).toBe(1);
 });
+
+// FAIL1030 B: a phone file over the 50 MB limit that PDF 나누기 opens (≤ 100 MB) gets 「PDF 나누기로 열기」.
+test('phone, over 50 MB: the split line and 「PDF 나누기로 열기」 hand the file to /pdf-split/', async ({ page }) => {
+  test.setTimeout(120_000);
+  // detectDevice(): a coarse pointer on a narrow screen is a phone; every project gets it, whatever its device.
+  await page.addInitScript(() => {
+    const mm = window.matchMedia.bind(window);
+    window.matchMedia = (q: string) => (q === '(pointer: coarse)' ? ({ ...mm(q), matches: true, media: q } as MediaQueryList) : mm(q));
+    Object.defineProperty(screen, 'width', { get: () => 412 });
+  });
+  await open(page);
+  await page.setInputFiles('#cmp-input', runtimePath('big_51mb'));
+  const notice = page.locator('#cmp-notice');
+  await expect(notice).toContainText('휴대폰에서는 50 MB까지 줄일 수 있습니다. 쪽을 나눠 작은 파일 몇 개로 만든 뒤 하나씩 줄여 보세요.');
+  const button = notice.getByRole('button', { name: 'PDF 나누기로 열기' });
+  expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expect(tool(page)).toHaveAttribute('data-state', 'empty');
+  await button.click();
+  await expect(page).toHaveURL(/\/pdf-split\/$/);
+  await expect(page.locator('#ps-notice')).toContainText('방금 만든 파일을 가져왔습니다.');
+  await expect(page.locator('#ps-name')).toHaveText('big_51mb.pdf', { timeout: 60_000 });
+});

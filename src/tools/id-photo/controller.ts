@@ -512,7 +512,14 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
     } catch {
       return fail('corrupt', ERRORS.corrupt);
     }
-    if (sniff.format === 'unknown') return fail('not-image', ERRORS['not-image']);
+    if (sniff.format === 'unknown') {
+      // FAIL1030 E: name a PDF or a 한글 문서 and point to the tool that takes it (lazy; offline: the line as before).
+      const w = await import('../../lib/file/wrong-file').then(async (m) => ({ m, help: await m.wrongFile(file, 'image') })).catch(() => null);
+      if (my !== run) return;
+      fail(w?.help.code ?? 'not-image', w?.help.text ?? ERRORS['not-image']);
+      if (w) w.m.showWrongFile(errorBox, file, 'id-photo', w.help);
+      return;
+    }
     if (sniff.format === 'tiff') return fail('unsupported', unsupportedMessage(sniff.format));
     if (sniff.animated) return fail('animated', COPY.animated);
     if (sniff.truncated) return fail('truncated', ERRORS.truncated);
@@ -563,7 +570,9 @@ export function initIdPhotoTool(pending?: File): { open(file: File, opts?: OpenO
       autoRun?.skip();
       const code = err instanceof PhotoError ? err.code : 'corrupt';
       const known = code === 'heic' || code === 'oom' ? code : 'corrupt';
-      return fail(known, ERRORS[known]);
+      // FAIL1030 F: a photo that did not decode is logged by what its bytes say it is (lazy, error path only).
+      const usage = known === 'corrupt' ? await import('../../lib/file/sniff-format').then((m) => m.corruptCode(sniff.format)).catch(() => known) : known;
+      return fail(usage, ERRORS[known]);
     }
     if (my !== run) {
       d.close();
