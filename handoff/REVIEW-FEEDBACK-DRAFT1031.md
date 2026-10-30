@@ -41,3 +41,14 @@ I checked these and they pass:
   - The 네이버→다음 inference.
 - The via:'pdf' refactor (schema enum, type, source-watch manual path and its (PDF) row) has no other consumers. Its test covers: never fetched, the browser row unchanged, and watchList keeping via.
 - ops and guides-schema unit tests: 109/109 green.
+
+## Re-review — fix commit 17b1a95
+Date: 2026-10-30
+Ready for Builder: YES
+
+- Must Fix (local-gosi-photo unsourced 해상도 reassurances): resolved. 「너무 작으면 안 된다는 뜻」 and both 휴대폰 사진 안심 lines are gone; the body now states only the center's two conditions (「규격보다 작은 사이즈의 사진」, 해상도 100 미만), matching the two frontmatter quotes. The new 「해상도 300」 claim for /id-photo/?preset=id_card is true: src/data/id-photo-presets.ts id_card has `dpi: PRINT_PPI` (300) at 3.5×4.5 cm (`printPx(35)`/`printPx(45)`), and src/lib/idphoto/encode.ts writes and verifies JFIF units 1 at `spec.dpi`. No new unsourced claim found.
+- Plain language: DPI appears only inside the two verbatim quotes (lines 17, 25); body uses 「해상도」.
+- Should Fix (Kakao sources): resolved. All 13 kakao-file-limit.md quotes found (whitespace-normalised) in the re-saved kakao-file-limit-1073209399/-424/-427.txt — 13/13.
+- Should Fix (naver-daum 「보낸 쪽 기준」): resolved; now scoped to 「다음 메일로 받을 때」, which is what the Daum source says.
+
+Step DRAFT1031 is clear.
