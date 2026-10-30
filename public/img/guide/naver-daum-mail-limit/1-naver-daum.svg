@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 328" width="720" height="328" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">네이버 메일과 다음 메일의 첨부 용량 비교</title>
+<rect x="0.5" y="0.5" width="719" height="327" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">네이버 메일과 다음 메일 첨부 용량</text>
+<rect x="230.0" y="60" width="225.0" height="36" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="342.5" y="84" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">네이버 메일</text>
+<rect x="465.0" y="60" width="225.0" height="36" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="577.5" y="84" font-size="16" fill="#0f766e" text-anchor="middle" font-weight="bold">다음 메일</text>
+<rect x="30" y="106" width="190" height="44" rx="6" fill="#f3f5f4" stroke="#c9d1cf"/>
+<text x="125" y="133.0" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">일반 첨부</text>
+<rect x="230.0" y="106" width="225.0" height="44" rx="6" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="342.5" y="133.0" font-size="15" fill="#1c2321" text-anchor="middle">파일 1개 10MB까지</text>
+<rect x="465.0" y="106" width="225.0" height="44" rx="6" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="577.5" y="133.0" font-size="15" fill="#1c2321" text-anchor="middle">25MB까지</text>
+<rect x="30" y="158" width="190" height="44" rx="6" fill="#f3f5f4" stroke="#c9d1cf"/>
+<text x="125" y="185.0" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">대용량 첨부 한 파일</text>
+<rect x="230.0" y="158" width="225.0" height="44" rx="6" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="342.5" y="185.0" font-size="15" fill="#1c2321" text-anchor="middle">2GB까지</text>
+<rect x="465.0" y="158" width="225.0" height="44" rx="6" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="577.5" y="185.0" font-size="15" fill="#1c2321" text-anchor="middle">4GB까지</text>
+<rect x="30" y="210" width="190" height="44" rx="6" fill="#f3f5f4" stroke="#c9d1cf"/>
+<text x="125" y="237.0" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">대용량 첨부 보관</text>
+<rect x="230.0" y="210" width="225.0" height="44" rx="6" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="342.5" y="237.0" font-size="15" fill="#1c2321" text-anchor="middle">30일간 · 100회</text>
+<rect x="465.0" y="210" width="225.0" height="44" rx="6" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="577.5" y="237.0" font-size="15" fill="#1c2321" text-anchor="middle">30일 · 100회</text>
+<rect x="30" y="262" width="190" height="44" rx="6" fill="#f3f5f4" stroke="#c9d1cf"/>
+<text x="125" y="289.0" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">메일 한 통</text>
+<rect x="230.0" y="262" width="225.0" height="44" rx="6" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="342.5" y="289.0" font-size="15" fill="#1c2321" text-anchor="middle">받기 40MB까지</text>
+<rect x="465.0" y="262" width="225.0" height="44" rx="6" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="577.5" y="289.0" font-size="15" fill="#1c2321" text-anchor="middle">보내기 30MB까지</text>
+</svg>

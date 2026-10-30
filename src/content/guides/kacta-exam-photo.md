@@ -1,14 +1,236 @@
 ---
-draft: true
-title: 전산회계·전산세무 원서 사진 규격
+title: 전산회계·전산세무 사진 규격, 반명함판
+description: 전산회계·전산세무 시험 원서 사진은 본인의 반명함판 증명사진이에요. 한국세무사회가 받지 않는 사진과 사진 바꾸는 법을 정리했어요.
+ogDescription: 전산회계·전산세무 원서 사진은 본인의 반명함판 증명사진만 돼요. 안 되는 사진도 정리했어요.
 query: 전산회계 사진 규격
-blockedBy: 'license.kacta.or.kr is a script shell (790 bytes, 15 characters of text); the 한국세무사회 main site has no exam photo rule; the browser path was unavailable.'
-publishBy: '2026-11-03'
-tried:
-  - url: https://license.kacpta.or.kr/
-    result: 'HTTP 200 after a redirect to license.kacta.or.kr: 790 bytes of script, 15 characters of text.'
-    date: '2026-10-12'
-  - url: https://www.kacta.or.kr/
-    result: 'HTTP 200, 147,896 bytes: the only 사진 text is a news headline; no exam photo rule.'
-    date: '2026-10-12'
+answer: 한국세무사회 안내에 따르면 전산회계·전산세무 시험 사진은 본인의 반명함판 증명사진만 쓸 수 있고, 크기나 파일 용량 숫자는 따로 안내하지 않아요.
+published: '2026-10-30'
+updated: '2026-10-30'
+category: 사진
+topic: 시험·자격증
+tools: [id-photo]
+cta: { href: '/id-photo/?preset=half_card', label: '반명함판 사진 크기로 맞추기' }
+related: [korcham-photo, admission-photo, photo-kb]
+sources:
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '* 반드시 본인의 [반명함판 증명사진]만 사용하시기 바랍니다.'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 6개월 이상 지난 현재 얼굴과 다른 사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 배경이 있는 일반 사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 화상캠으로 찍은 사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 스티커 사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 전신사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 얼굴만 나온 사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 전(前)면이 아닌 측면사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 신분증을 스캔한 신분증 사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=60
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진등록시 부적격 사진은?)
+    quote: '- 여러 사람이 함께 찍은 단체사진'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=18
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진 등 개인정보는 어떻게 변경하나요?)
+    quote: 사진 등 개인정보 변경은 로그인 하신 후, 우측 상단에 있는 [나의수험정보] - [회원정보관리]으로 들어가 수정하시면 됩니다.
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=18
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (사진 등 개인정보는 어떻게 변경하나요?)
+    quote: 단, 사진변경은 개인회원으로 로그인 하신 경우에만 수정 가능합니다.
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=41
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (자격증 사진을 변경하고 싶습니다.)
+    quote: 또한 자격증은 등록 된 사진으로 제작이 되오니 반드시 신청 전에 사진을 변경 하여 사진 확인 후 신청하시기 바랍니다.
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=43
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (자격증 사진을 변경 했는데 예전 사진이 보여요)
+    quote: 사진 등록을 정상적으로 완료 했는데, 예전 사진이 보이는 경우는 인터넷 익스플로러의 캐쉬 문제로 임시 인터넷 파일을 삭제 하면 정상적으로 보이게 됩니다.
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=57
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (원서접수는 어떻게 하나요?)
+    quote: 개인접수,단체접수를 하려고 하는 모든 수험생은
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=57
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (원서접수는 어떻게 하나요?)
+    quote: 접수시 회원가입이 완료 되어있어야 접수가 가능합니다.
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: · 사진으로 촬영된 유효신분증
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: '※ 시험시작 20분전에 입실 완료 할 것'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: '(2) 수험표(흑백 출력 가능)'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: '① 전산세무, 전산회계 응시자 -> 볼펜(흑색 또는 청색)'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: '(4) 계산기 : 일반 사칙연산이 가능한 단순기능의 계산기만 가능.'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: '* 공학용/재무용 계산기 및 전자수첩, 핸드폰 사용은 절대 불가함.'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: '* 기간이 명시된 모든 신분증은 유효기간 내의 것만 인정함'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: '· 의료보험증, 주민등록초본, 등본'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=55
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (시험당일 준비물 및 유효신분증)
+    quote: '· 모바일학생증'
+    retrieved: '2026-10-30'
+  - url: https://license.kacta.or.kr/web/notice/FAQ.aspx?dsp_mode=Show&sNo=57
+    title: 한국세무사회 국가공인자격시험 — 자주하는 질문 (원서접수는 어떻게 하나요?)
+    quote: 원서접수는 해당 회별 시험의 원서접수기간(시험일정 참조)내에 자격시험 홈페이지(http://license.kacta.or.kr)로 접속하여 단체 및 개인별로 접수하시면 됩니다.
+    retrieved: '2026-10-30'
+  - preset: half_card
+spec:
+  - label: 전산세무회계 시험 사진 (반명함판)
+    kind: photo
+    format: 반명함판 증명사진
+faq:
+  - q: 전산회계 사진 규격은 몇 cm인가요?
+    a: 한국세무사회 안내는 본인의 반명함판 증명사진을 쓰라고만 하고, 몇 cm인지나 파일 용량은 적지 않았어요. 사진관에서 반명함판으로 찍은 사진이면 돼요.
+  - q: 어떤 사진은 쓸 수 없나요?
+    a: 6개월 이상 지나 지금 얼굴과 다른 사진, 배경이 있는 일반 사진, 화상캠으로 찍은 사진, 스티커 사진, 전신사진, 얼굴만 나온 사진, 측면사진, 신분증을 스캔한 사진은 쓸 수 없어요.
+  - q: 등록한 사진은 어디서 바꾸나요?
+    a: 로그인한 뒤 오른쪽 위의 [나의수험정보] - [회원정보관리]에서 바꿔요. 사진 변경은 개인회원으로 로그인했을 때만 돼요.
+  - q: 자격증에도 이 사진이 들어가나요?
+    a: 네. 자격증은 등록된 사진으로 만들어지니, 자격증을 신청하기 전에 사진을 바꾸고 확인한 뒤 신청하세요.
+  - q: 사진을 바꿨는데 예전 사진이 보여요.
+    a: 한국세무사회 안내는 임시 인터넷 파일을 지우면 새 사진이 제대로 보인다고 해요. 지운 뒤 다시 접속하거나 새로고침해 보세요.
+og: { title: '전산회계 시험 사진', line: '본인의 반명함판 증명사진만' }
 ---
+
+## 한눈에 보는 사진 조건
+
+| 항목 | 한국세무사회 안내 |
+|---|---|
+| 사진 | 본인의 반명함판 증명사진 |
+| 크기·파일 용량 | 안내 없음 |
+| 안 되는 사진 | 오래된 사진, 배경 있는 사진, 화상캠·스티커 사진, 전신·측면 사진 등 |
+| 사진 바꾸기 | [나의수험정보] - [회원정보관리] (개인회원만) |
+| 자격증 | 등록된 사진으로 만들어짐 |
+
+## 반명함판 증명사진만 돼요
+
+전산회계와 전산세무는 한국세무사회가 시행하는 국가공인자격시험이에요. 한국세무사회 자격시험 누리집의 자주하는 질문은 원서에 쓰는 사진을 두고 반드시 본인의 반명함판 증명사진만 쓰라고 안내해요. 몇 cm인지, 파일이 몇 KB까지인지 같은 숫자는 공개된 안내에 없어요.
+
+그래서 핵심은 크기 숫자보다 「증명사진답게 찍은 본인 사진」이에요. 사진관에서 반명함판으로 찍은 사진 파일이 있다면 그대로 쓰면 되고, 휴대폰으로 찍은 사진이라면 증명사진처럼 정면을 보고 단색 배경 앞에서 찍은 다음 반명함판 모양으로 잘라 쓰면 돼요. 이 사진은 시험이 끝난 뒤 자격증에도 들어가니, 오래 써도 괜찮은 사진을 고르는 것이 좋아요.
+
+## 쓸 수 없는 사진
+
+한국세무사회는 부적격 사진유형을 이렇게 들어요.
+
+- 6개월 이상 지나 지금 얼굴과 다른 사진
+- 배경이 있는 일반 사진
+- 화상캠으로 찍은 사진
+- 스티커 사진
+- 전신사진
+- 얼굴만 나온 사진
+- 정면이 아닌 측면사진
+- 신분증을 스캔한 신분증 사진
+- 여러 사람이 함께 찍은 단체사진
+
+헷갈리기 쉬운 것은 「얼굴만 나온 사진」이에요. 얼굴을 너무 크게 잘라 어깨가 보이지 않는 사진은 받지 않는다는 뜻이에요. 반대로 전신사진처럼 얼굴이 작은 사진도 안 되니, 증명사진처럼 어깨와 가슴 윗부분까지 나오게 맞추세요. 주민등록증이나 운전면허증을 스캔해 사진 부분만 잘라 쓰는 것도 안 돼요.
+
+<figure class="guide-fig"><img src="/img/guide/kacta-exam-photo/1-bad-photos.svg" width="720" height="362" alt="반명함판 증명사진 틀 옆에 6개월 이상 지난 사진, 배경 있는 사진, 화상캠 사진, 스티커 사진 등 한국세무사회가 받지 않는 사진 여덟 가지를 엑스 표시로 늘어놓은 그림" loading="lazy" decoding="async"><figcaption>본인의 반명함판 증명사진만 쓰고, 오래된 사진이나 배경 있는 사진, 신분증을 스캔한 사진은 피해요.</figcaption></figure>
+
+## 문서딱으로 반명함판 모양 맞추기
+
+[여권·증명사진 규격 맞추기](/id-photo/?preset=half_card)를 열면 제출처가 「반명함판 3×4 cm (일반 크기, 기관 규격 아님)」으로 골라져 있어요. 사진을 고르고 안내선에 얼굴을 맞추면 반명함판 모양으로 잘린 JPG 파일이 만들어져요. 문서딱의 반명함판은 3×4 cm를 해상도 300으로 계산한 354×472픽셀(계산값)이고, 한국세무사회가 정한 크기는 아니에요. 원서 화면에서 크기를 다시 맞추라는 안내가 나오면 그 안내를 따르세요.
+
+배경과 옷은 고치지 않아요. 한 가지 색의 벽 앞에서 찍은 사진을 고르세요. 가입 없이 무료로 쓸 수 있어요.
+
+## 원서접수 전에 회원가입부터
+
+원서접수는 시험 회차마다 정해진 원서접수 기간 안에 한국세무사회 자격시험 누리집에 들어가 개인별로, 또는 단체로 해요. 기간은 누리집의 시험일정에서 볼 수 있어요. 자주하는 질문은 개인접수와 단체접수 모두 접수할 때 회원가입이 끝나 있어야 접수할 수 있다고 안내해요. 원서접수 기간에는 접속이 몰리기 쉬우니, 회원가입과 사진 등록은 접수가 열리기 전에 미리 해 두면 마음이 편해요.
+
+## 사진 바꾸는 법
+
+사진 같은 개인정보는 로그인한 뒤 오른쪽 위의 [나의수험정보] - [회원정보관리]에서 바꿔요. 다만 사진 변경은 개인회원으로 로그인했을 때만 할 수 있어요. 단체 계정으로는 바꿀 수 없으니, 본인 아이디로 다시 로그인하세요.
+
+<figure class="guide-fig"><img src="/img/guide/kacta-exam-photo/2-change-photo.svg" width="720" height="250" alt="개인회원으로 로그인하고 오른쪽 위 나의수험정보를 눌러 회원정보관리에서 사진을 바꾸는 순서를 세 칸으로 그리고, 자격증은 등록된 사진으로 만들어진다고 적은 그림" loading="lazy" decoding="async"><figcaption>개인회원으로 로그인해 [나의수험정보] - [회원정보관리]에서 사진을 바꿔요. 자격증 신청 전에 바꿔 두세요.</figcaption></figure>
+
+## 자격증에도 같은 사진이 들어가요
+
+합격한 뒤 자격증을 신청하면, 자격증은 누리집에 등록된 사진으로 만들어져요. 한국세무사회는 자격증을 신청하기 전에 사진을 바꾸고 확인한 다음 신청하라고 안내해요. 원서 때 급하게 올린 사진이 마음에 들지 않는다면 자격증 신청 전이 바꿀 때예요. 자격증은 오래 쓰는 서류이니 깔끔한 증명사진으로 바꿔 두면 좋아요.
+
+## 시험 날 준비물과 신분증
+
+원서 사진을 마쳤다면 시험 날 준비물도 미리 챙겨 두세요. 한국세무사회의 시험당일 준비물 안내를 정리하면 이래요.
+
+- **입실**: 시험 시작 20분 전까지 입실을 마쳐야 해요.
+- **신분증**: 유효한 신분증이 없으면 시험을 볼 수 없어요. 기간이 적힌 신분증은 유효기간 안의 것만 인정해요.
+- **수험표**: 흑백으로 출력해도 돼요.
+- **필기구**: 전산세무와 전산회계 응시자는 흑색이나 청색 볼펜을 챙겨요.
+- **계산기**: 사칙연산만 되는 단순한 계산기만 쓸 수 있어요. 공학용·재무용 계산기, 전자수첩, 휴대폰은 쓸 수 없어요.
+
+신분증으로 인정되지 않는 것도 따로 적혀 있어요. 의료보험증, 주민등록초본과 등본, 모바일학생증, 그리고 사진으로 찍은 신분증은 인정되지 않아요. 휴대폰에 신분증 사진을 저장해 두는 것으로는 안 되니, 실물 신분증을 챙기세요.
+
+## 종이 반명함판 사진만 있다면
+
+사진관에서 받은 종이 반명함판 사진만 있고 파일이 없다면, 스캐너로 읽거나 휴대폰으로 찍어 파일로 만들 수 있어요. 휴대폰으로 찍을 때는 사진을 밝은 곳의 평평한 책상에 놓고, 바로 위에서 그림자가 지지 않게 찍으세요. 비스듬히 찍으면 얼굴이 사다리꼴로 일그러지고, 형광등 빛이 사진 표면에 반사되면 얼굴 일부가 하얗게 날아가요. 찍은 사진은 사진 둘레의 책상이 보이지 않도록 반명함판 모양으로 잘라 내세요. 단, 신분증을 스캔해 사진 부분만 잘라 쓰는 것은 부적격 사진이니 하지 마세요.
+
+## 집에서 새로 찍는다면
+
+배경이 있는 일반 사진과 화상캠 사진을 받지 않으니, 집에서 찍는다면 증명사진처럼 찍는 것이 중요해요.
+
+- 무늬 없는 밝은 벽 앞에 서서 정면을 봐요. 측면사진은 받지 않아요.
+- 노트북 카메라 대신 휴대폰 뒷면 카메라로, 다른 사람이 가슴 높이에서 찍어 주는 것이 좋아요.
+- 어깨와 가슴 윗부분까지 나오게 찍어요. 얼굴만 꽉 차게 찍으면 얼굴만 나온 사진이 돼요.
+- 모자와 선글라스는 벗고, 창문을 마주 보고 서서 얼굴에 그림자가 지지 않게 해요.
+
+## 사진 등록이 안 될 때
+
+- **파일이 너무 크다고 나와요**: 휴대폰 원본 사진은 용량이 커요. [사진 용량 줄이기](/photo-compress/)로 줄인 다음 다시 등록하세요. 등록 화면에 정해진 용량이 나오면 그 숫자에 맞추세요.
+- **파일이 선택되지 않아요**: 아이폰 사진(HEIC)처럼 흔하지 않은 형식일 수 있어요. [사진 JPG 변환](/image-to-jpg/)으로 JPG로 바꿔 보세요.
+- **얼굴이 너무 크게 잘렸어요**: 얼굴만 나온 사진은 받지 않아요. 원본에서 어깨까지 보이게 다시 잘라 주세요.
+- **단체 계정이라 사진 메뉴가 안 보여요**: 사진은 개인회원으로 로그인했을 때만 바꿀 수 있어요.
+
+## 바꿨는데 예전 사진이 보일 때
+
+사진 등록을 마쳤는데도 예전 사진이 보이면, 한국세무사회 안내는 임시 인터넷 파일을 지우면 제대로 보인다고 해요. 인터넷 설정에서 임시 파일과 사이트 데이터를 지운 뒤 다시 접속하거나 새로고침을 눌러 보세요. 다른 기기에서 로그인해 확인하는 것도 방법이에요.
+
+## 내기 전에 확인할 것
+
+1. 본인의 반명함판 증명사진인지 봐요.
+2. 지금 얼굴과 비슷한 최근 사진인지 봐요.
+3. 배경이 한 가지 색이고 정면을 보고 있는지 봐요.
+4. 얼굴만 크게 잘리거나 너무 작게 나오지 않았는지 봐요.
+5. 개인회원 계정에 사진이 제대로 등록됐는지 봐요.
+
+다른 자격시험 사진과 견주려면 [컴활 사진 규격](/guide/korcham-photo/)을, 여러 기관 규격은 [증명사진 규격 모음](/guide/photo-sizes/)을 보세요.

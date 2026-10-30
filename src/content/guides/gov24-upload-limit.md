@@ -10,4 +10,7 @@ tried:
   - url: https://plus.gov.kr/portal/faq
     result: 'gov.kr now redirects to plus.gov.kr. FAQ rendered in the browser (278 items, read-only): no attachment size item.'
     date: '2026-10-02'
+  - url: https://www.gov.kr/
+    result: 'Web search (discovery only): no official page states a size; only third-party claims (지식iN, news, AI summary).'
+    date: '2026-10-30'
 ---

@@ -10,4 +10,7 @@ tried:
   - url: https://www.work24.go.kr/cm/c/d/0180/retrieveSiteEasyHpcm.do?tabIndex=tab-panel-01&tabSubIndex=ul_p01&recordCountPerPage=50
     result: 'HTTP 200: 이용가이드 list (20 items); GUID000102 (구직신청) has no attachment limit text.'
     date: '2026-10-02'
+  - url: https://www.work24.go.kr/
+    result: 'Web search: the only official 5MB is the 1:1 문의 form, not the resume attachment.'
+    date: '2026-10-30'
 ---

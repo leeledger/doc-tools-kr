@@ -16,4 +16,7 @@ tried:
   - url: https://exam.toeic.co.kr/common/template/viewContents.php?contentsCode=36
     result: 'HTTP 200, 38,999 bytes (수험자가이드): ID rules only; no application photo spec.'
     date: '2026-10-02'
+  - url: https://m.toeic.co.kr/customer/csFaq.php
+    result: 'Chrome, FAQ 사진 items: the size rule (3X4 cm, jpg 6MB 이하, 머리 3.2~3.6cm) is stated only under [TOEIC SW] (Speaking·Writing); no [TOEIC] item states a size or KB. The YBM photo uploader (session-encrypted URL) was not opened.'
+    date: '2026-10-30'
 ---

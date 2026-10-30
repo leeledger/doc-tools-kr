@@ -10,4 +10,7 @@ tried:
   - url: https://www.nts.go.kr/search/search.jsp?query=%EC%9A%A9%EB%9F%89&collection=call_hometaxQna
     result: 'One 홈택스이용 Q&A on size: 5MB for the 영수증 발급처 Excel upload (not a document attachment). "홈택스(pc)에서 증빙 서류 제출 방법" states PDF conversion but no size; both open via fn_goQna (JavaScript), no stable URL.'
     date: '2026-10-02'
+  - url: https://www.hometax.go.kr/
+    result: 'Web search: only third-party claims (삼쩜삼 5MB, 비즈넵 50MB); no 국세청 page.'
+    date: '2026-10-30'
 ---
