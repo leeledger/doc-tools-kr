@@ -17,7 +17,7 @@ import { TOOL_FACTS, isToolFactRef } from './tool-facts';
  * another word (3분의 1, 1분기, 2시험). */
 export type Unit = 'KB' | 'MB' | 'M' | '픽셀' | 'cm' | 'mm' | '개월' | '원' | '세' | '년' | '시간' | '시' | '분' | '시각';
 
-export type GuideSource = { preset: string } | { url: string; title: string; quote: string; retrieved: string; via?: 'browser' };
+export type GuideSource = { preset: string } | { url: string; title: string; quote: string; retrieved: string; via?: 'browser' | 'pdf' };
 
 export interface FactInput {
   sources: readonly GuideSource[];

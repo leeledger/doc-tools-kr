@@ -217,7 +217,7 @@ describe('quotes (A-3)', () => {
     const r = await checkSources([entry], get);
     expect(get).not.toHaveBeenCalled();
     expect(r).toMatchObject({ checked: 0, changed: [], unreachable: [], manual: [{ pages: ['/guide/b/'], url: 'https://shell.kr/faq', quote: '사진은 3개월 이내' }] });
-    expect(issueBody(r, '2026-10-01', '')).toContain('## 수동 확인 (브라우저 출처) (1)');
+    expect(issueBody(r, '2026-10-01', '')).toContain('## 수동 확인 (브라우저·PDF 출처) (1)');
     const fm = parseFrontmatter(`---\ntitle: T\nquery: q\nsources:\n  - url: https://shell.kr/faq\n    title: S\n    quote: '사진은 3개월 이내'\n    retrieved: '2026-10-01'\n    via: browser\n---\n`)!;
     const guide = { slug: 'b', path: '/guide/b/', ...fm };
     expect(watchList([guide], [])[0]).toMatchObject({ via: 'browser', pages: ['/guide/b/'] });
@@ -229,7 +229,24 @@ describe('quotes (A-3)', () => {
     expect(code).toBe(0);
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
-    expect(logs.join('\n')).toContain('수동 확인 (브라우저 출처)');
+    expect(logs.join('\n')).toContain('수동 확인 (브라우저·PDF 출처)');
+  });
+  it('DRAFT1031: a PDF-read quote (via pdf) is never fetched, changed or unreachable; the manual row marks it (PDF)', async () => {
+    const pdf = { urls: ['https://fire.go.kr/file.do?k=1'], quote: '사진기준: 3.5㎝×4.5㎝', origin: 'guide f', pages: ['/guide/f/'], via: 'pdf' };
+    const web = { urls: ['https://a.go.kr/p'], quote: '사진은 3개월 이내', origin: 'guide p', pages: ['/guide/p/'] };
+    const get = vi.fn(async (u: string) => (u === web.urls[0] ? { ok: true, status: 200, text: '<p>사진은 3개월 이내</p>' } : { ok: false, status: 0, error: 'should not be called' }));
+    const r = await checkSources([pdf, web], get, { exact: true });
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith(web.urls[0]);
+    expect(r).toMatchObject({ checked: 1, changed: [], unreachable: [], manual: [{ pages: ['/guide/f/'], url: pdf.urls[0], quote: pdf.quote, via: 'pdf' }] });
+    const body = issueBody(r, '2026-10-30', '');
+    expect(body).toContain('## 수동 확인 (브라우저·PDF 출처) (1)');
+    expect(body).toContain('https://fire.go.kr/file.do?k=1 (PDF) |');
+    const browserRow = issueBody(await checkSources([{ ...pdf, via: 'browser' }], get), '2026-10-30', '');
+    expect(browserRow).toContain('https://fire.go.kr/file.do?k=1 |');
+    expect(browserRow).not.toContain('(PDF)');
+    const fm = parseFrontmatter(`---\ntitle: T\nquery: q\nsources:\n  - url: https://fire.go.kr/file.do?k=1\n    title: S\n    quote: '사진기준'\n    retrieved: '2026-10-30'\n    via: pdf\n---\n`)!;
+    expect(watchList([{ slug: 'f', path: '/guide/f/', ...fm }], [])[0]).toMatchObject({ via: 'pdf', pages: ['/guide/f/'] });
   });
 });
 
