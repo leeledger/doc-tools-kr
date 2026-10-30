@@ -10,7 +10,7 @@ import { accessToken, fetchGrowth, parseServiceAccount, signJwt } from '../../sc
 import { sumDays } from '../../scripts/ops/lib/cloudflare.mjs';
 import { R1, isoWeek, parseReportData, r1Status, renderReport, weekMonday } from '../../scripts/ops/lib/report.mjs';
 import { coveredBy, findOpportunities, suggestTool } from '../../scripts/ops/opportunities.mjs';
-import { checkSources, issueBody, run as sourceWatch } from '../../scripts/ops/source-watch.mjs';
+import { RETRY_404_MS, checkSources, issueBody, run as sourceWatch } from '../../scripts/ops/source-watch.mjs';
 import { checkHealth } from '../../scripts/ops/health.mjs';
 import { run as waitDeploy } from '../../scripts/ops/wait-deploy.mjs';
 import { run as indexnowDiff } from '../../scripts/ops/indexnow-diff.mjs';
@@ -247,6 +247,48 @@ describe('quotes (A-3)', () => {
     expect(browserRow).not.toContain('(PDF)');
     const fm = parseFrontmatter(`---\ntitle: T\nquery: q\nsources:\n  - url: https://fire.go.kr/file.do?k=1\n    title: S\n    quote: '사진기준'\n    retrieved: '2026-10-30'\n    via: pdf\n---\n`)!;
     expect(watchList([{ slug: 'f', path: '/guide/f/', ...fm }], [])[0]).toMatchObject({ via: 'pdf', pages: ['/guide/f/'] });
+  });
+  describe('QUOTES1031: --exact fetches a 404 once more after 10 s, nothing else', () => {
+    const URL_ = 'https://a.go.kr/exam';
+    const guide = { slug: 'e', path: '/guide/e/', title: 'T', query: 'q', sources: [{ url: URL_, title: 'S', quote: '사진은 6개월 이내', retrieved: '2026-10-30' }] };
+    const gate = async (statuses: number[]) => {
+      const fetchImpl = vi.fn(async () => {
+        const s = statuses.shift() ?? 500;
+        return html(s, s === 200 ? '<p>사진은 6개월 이내</p>' : 'Not Found');
+      });
+      const waits: number[] = [];
+      const logs: string[] = [];
+      const code = await sourceWatch(['--exact'], { guides: [guide], presets: [], tools: [], log: (s: string) => logs.push(s), env: {}, fetchImpl: fetchImpl as unknown as typeof fetch, wait: async (ms: number) => void waits.push(ms) });
+      const unreachable = logs.filter((l) => l.startsWith('UNREACHABLE'));
+      return { code, fetchImpl, waits, unreachable };
+    };
+    it('a: 404 then 200 with the quote passes after one 10 s wait', async () => {
+      const r = await gate([404, 200]);
+      expect(r.code).toBe(0);
+      expect(r.unreachable).toEqual([]);
+      expect(r.fetchImpl).toHaveBeenCalledTimes(2);
+      expect(RETRY_404_MS).toBe(10_000);
+      expect(r.waits).toEqual([10_000]);
+    });
+    it('b: 404 then 404 is still one UNREACHABLE HTTP 404 and fails the gate', async () => {
+      const r = await gate([404, 404]);
+      expect(r.code).toBe(1);
+      expect(r.unreachable).toEqual([`UNREACHABLE /guide/e/ ${URL_} HTTP 404`]);
+      expect(r.fetchImpl).toHaveBeenCalledTimes(2);
+    });
+    it('c: a 200 is fetched exactly once, with no 10 s wait', async () => {
+      const r = await gate([200]);
+      expect(r.code).toBe(0);
+      expect(r.fetchImpl).toHaveBeenCalledTimes(1);
+      expect(r.waits).toEqual([]);
+    });
+    it('d: a 403 is not retried and stays UNREACHABLE HTTP 403', async () => {
+      const r = await gate([403, 200]);
+      expect(r.code).toBe(1);
+      expect(r.fetchImpl).toHaveBeenCalledTimes(1);
+      expect(r.waits).toEqual([]);
+      expect(r.unreachable).toEqual([`UNREACHABLE /guide/e/ ${URL_} HTTP 403`]);
+    });
   });
 });
 
