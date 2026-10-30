@@ -89,11 +89,16 @@ export const KO = {
     verify: '결과 파일을 검증하지 못해 원본을 그대로 둡니다. 다른 단계로 다시 시도해 주세요.',
   },
   limits: {
-    fileBytes: (hardBytes, device) => `${where(device)} ${mbText(hardBytes)}까지 줄일 수 있습니다. ${MEMORY}`,
+    // FAIL1030 B: over PDF 나누기's limit too, a phone is pointed to a computer.
+    fileBytes: (hardBytes, device) => `${where(device)} ${mbText(hardBytes)}까지 줄일 수 있습니다. ${MEMORY}${device === 'mobile' ? ' 컴퓨터에서 해 보세요.' : ''}`,
     rasterPages: (hardPages, device) => `이미지로 변환은 ${where(device)} ${pagesText(hardPages)}까지 할 수 있습니다. 쪽마다 큰 이미지를 만들어 ${MEMORY}`,
     softRaster: (pages) => `${josa(pagesText(pages), '이/가')} 넘는 파일을 이미지로 바꾸면 ${SLOW} 계속 줄일까요?`,
     softBytes: (bytes) => `${josa(mbText(bytes), '이/가')} 넘는 파일은 ${SLOW} 계속 줄일까요?`,
     softPages: (pages) => `${josa(pagesText(pages), '이/가')} 넘는 파일은 ${SLOW} 계속 줄일까요?`,
+    split: {
+      fileBytes: (hardBytes, device) => `${where(device)} ${mbText(hardBytes)}까지 줄일 수 있습니다. 쪽을 나눠 작은 파일 몇 개로 만든 뒤 하나씩 줄여 보세요.`,
+      button: 'PDF 나누기로 열기',
+    },
   },
   engine: ENGINE_KO,
   next: NEXT_KO,

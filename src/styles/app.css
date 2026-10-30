@@ -149,6 +149,8 @@ button.btn.ghost { border: 1px solid var(--line); color: var(--text); }
   margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
 }
 .error-box { border-color: var(--danger); color: var(--text); }
+/* FAIL1030: the next-step button under a wrong-file line or a size limit. */
+.error-box > .row, .notice > .row { margin-top: 10px; }
 .confirm { border-color: var(--warn); }
 .confirm p { margin: 0 0 10px; }
 

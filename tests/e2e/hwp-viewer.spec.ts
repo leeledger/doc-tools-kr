@@ -409,6 +409,16 @@ const PICK_HWP = '한글 문서라면 .hwp 또는 .hwpx 파일을 골라 주세�
 // The worker script itself may be warmed by the pick (preload, SPIKE-HWP-DIRECT §6.7); the engine (wasm) must not load.
 const ENGINE_URL = /rhwp_bg/;
 
+test('FAIL1030 D: unknown bytes get the 보안 문서 line, an empty file the 빈 파일 line; no buttons, no engine download', async ({ page, network }) => {
+  await open(page, hwpRuntime('noise.hwpx'), 'error');
+  await expect(page.locator('#hw-error')).toHaveText('한글 문서로 읽을 수 없는 파일입니다. 회사·기관에서 받은 보안 문서라면 보낸 곳에 PDF로 요청해 주세요.');
+  await expect(page.locator('#hw-error-actions')).toBeHidden();
+  await page.setInputFiles('#hw-input', { name: 'empty.hwp', mimeType: 'application/x-hwp', buffer: Buffer.alloc(0) });
+  await expect(page.locator('#hw-error')).toHaveText('빈 파일입니다. 파일을 다시 내려받은 뒤 시도해 주세요.');
+  await expect(page.locator('#hw-error-actions')).toBeHidden();
+  expect(network.requests.filter((r) => /\.wasm(\?|$)/.test(r.url()))).toEqual([]);
+});
+
 test('a PDF renamed .hwp: the PDF line, 「PDF 열기」 opens it in a new tab (U1), 「PDF 쪽 보기·나누기」 opens /pdf-split/ with it; no engine download', async ({ page, network }, info) => {
   await open(page, hwpRuntime('report-pdf.hwp'), 'error');
   await expect(page.locator('#hw-error')).toHaveText('PDF 파일입니다. PDF는 휴대폰·컴퓨터에서 바로 열 수 있습니다.');

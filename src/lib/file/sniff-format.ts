@@ -98,9 +98,21 @@ export function sniffFormat(head: Uint8Array, tail?: Uint8Array): FileFamily {
   }
 }
 
-/** The usage fail code of a file a HWP tool could not read (labels: FAIL_LABELS in scripts/lib/usage.mjs). */
-export function notHwpCode(f: FileFamily): string {
+/**
+ * The usage fail code of a file a HWP tool could not read (labels: FAIL_LABELS in scripts/lib/usage.mjs). FAIL1030 D:
+ * `empty` is a file under 4 bytes, `unread` one whose bytes could not be read; not-hwp-other is left for truly
+ * unknown bytes.
+ */
+export function notHwpCode(f: FileFamily | 'empty' | 'unread'): string {
   switch (f) {
+    case 'empty':
+      return 'not-hwp-empty';
+    case 'unread':
+      return 'not-hwp-unread';
+    case 'hwp3':
+      return 'not-hwp-old';
+    case 'hwpml':
+      return 'not-hwp-hwpml';
     case 'pdf':
       return 'not-hwp-pdf';
     case 'hwpx':

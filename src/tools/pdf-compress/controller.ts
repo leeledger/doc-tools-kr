@@ -164,6 +164,36 @@ export function initCompressTool(m: Messages): void {
     notice.hidden = !msg;
     notice.textContent = msg ?? '';
   };
+  /**
+   * FAIL1030 B: 「PDF 나누기로 열기」 under the size line; the file is handed to /pdf-split/ (이어서 하기), counted only
+   * once stored. The next showNotice removes it.
+   */
+  const splitButton = (f: File, label: string): void => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn ghost';
+    b.textContent = label;
+    b.addEventListener('click', () => {
+      if (b.disabled) return;
+      b.disabled = true;
+      void import('../../lib/ui/handoff')
+        .then(({ sendTo }) =>
+          sendTo('pdf-split', 'pdf-compress', f, f.name, 'application/pdf', (path) => {
+            track({ e: 'next', t: 'pdf-compress', o: 'next', v: 'pdf-split' });
+            window.location.assign(path);
+          }),
+        )
+        .catch(() => false)
+        .then((ok) => {
+          b.disabled = false;
+          if (!ok) announce('alert', m.next.sendFailed(m.next.labels['pdf-split']), root);
+        });
+    });
+    const row = document.createElement('span');
+    row.className = 'row';
+    row.append(b);
+    notice.append(row);
+  };
   const revokeBlob = (): void => {
     if (blobUrl) URL.revokeObjectURL(blobUrl);
     blobUrl = null;
@@ -308,6 +338,7 @@ export function initCompressTool(m: Messages): void {
     if (size.level !== 'ok') {
       usageFail('too-large', 'parse');
       showNotice(size.message);
+      if (size.split && m.limits.split) splitButton(f, m.limits.split.button);
       status(size.message);
       return;
     }

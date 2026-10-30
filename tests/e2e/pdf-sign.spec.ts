@@ -418,3 +418,20 @@ test('axe: the editor with a picture and the result have no serious or critical 
   await save(page);
   expect(await serious()).toEqual([]);
 });
+
+// FAIL1030 E: a photo picked as the PDF is named and handed to 사진 PDF 변환; a PDF picked as the picture is pointed
+// to PDF JPG 변환.
+test('a photo as the PDF: 「사진 PDF 변환으로 열기」 opens /jpg-to-pdf/ with it; a PDF as the picture: 「PDF JPG 변환」', async ({ page }) => {
+  await open(page, join(process.cwd(), 'tests', 'fixtures', 'gen_already_small.pdf'));
+  await page.setInputFiles('#sg-image-input', join(process.cwd(), 'tests', 'fixtures', 'gen_already_small.pdf'));
+  await expect(page.locator('#sg-error')).toContainText('PDF 파일입니다. 이 도구는 사진만 엽니다.');
+  await expect(page.locator('#sg-error').getByRole('link', { name: 'PDF JPG 변환' })).toHaveAttribute('href', '/pdf-to-jpg/');
+  await gotoReady(page, '/pdf-sign/');
+  await page.setInputFiles('#sg-input', join(process.cwd(), 'tests', 'fixtures', 'photo', 'scene_cc0.jpg'));
+  const error = page.locator('#sg-error');
+  await expect(error).toContainText('사진 파일입니다. 먼저 PDF로 만들어 주세요.');
+  await expect(page.locator('#sg-tool')).toHaveAttribute('data-state', 'empty');
+  await error.getByRole('button', { name: '사진 PDF 변환으로 열기' }).click();
+  await expect(page).toHaveURL(/\/jpg-to-pdf\/$/);
+  await expect(page.locator('#jp-list > li .name')).toHaveText(['scene_cc0.jpg']);
+});

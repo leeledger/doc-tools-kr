@@ -168,7 +168,7 @@ describe('PDF 용량 줄이기 KO', () => {
 
   it('limits', () => {
     expect(CMP.limits.fileBytes(100 * MB, 'desktop')).toBe('이 기기에서는 100 MB까지 줄일 수 있습니다. 이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다.');
-    expect(CMP.limits.fileBytes(50 * MB, 'mobile')).toBe('휴대폰에서는 50 MB까지 줄일 수 있습니다. 이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다.');
+    expect(CMP.limits.fileBytes(50 * MB, 'mobile')).toBe('휴대폰에서는 50 MB까지 줄일 수 있습니다. 이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다. 컴퓨터에서 해 보세요.');
     expect(CMP.limits.rasterPages(500, 'desktop')).toBe(
       '이미지로 변환은 이 기기에서는 500쪽까지 할 수 있습니다. 쪽마다 큰 이미지를 만들어 이 기기에서 처리하기에 너무 커서 화면이 멈출 수 있기 때문입니다.',
     );

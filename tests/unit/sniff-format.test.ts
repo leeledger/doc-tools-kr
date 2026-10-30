@@ -81,7 +81,7 @@ describe('sniffFormat', () => {
 });
 
 describe('notHwpCode / corruptCode', () => {
-  const codes = [...ALL_FAMILIES.map(notHwpCode), ...ALL_IMAGE_FORMATS.map(corruptCode)];
+  const codes = [...ALL_FAMILIES.map(notHwpCode), notHwpCode('empty'), notHwpCode('unread'), ...ALL_IMAGE_FORMATS.map(corruptCode)];
 
   it('maps every family and image format as the brief lists', () => {
     expect(Object.fromEntries(ALL_FAMILIES.map((f) => [f, notHwpCode(f)]))).toEqual({
@@ -95,10 +95,12 @@ describe('notHwpCode / corruptCode', () => {
       pptx: 'not-hwp-office',
       zip: 'not-hwp-zip',
       text: 'not-hwp-text',
-      hwp3: 'not-hwp-other',
-      hwpml: 'not-hwp-other',
+      hwp3: 'not-hwp-old',
+      hwpml: 'not-hwp-hwpml',
       other: 'not-hwp-other',
     });
+    // FAIL1030 D: an empty and an unreadable file are their own codes.
+    expect([notHwpCode('empty'), notHwpCode('unread')]).toEqual(['not-hwp-empty', 'not-hwp-unread']);
     expect(Object.fromEntries(ALL_IMAGE_FORMATS.map((f) => [f, corruptCode(f)]))).toEqual({
       jpeg: 'corrupt-jpg',
       png: 'corrupt-png',
