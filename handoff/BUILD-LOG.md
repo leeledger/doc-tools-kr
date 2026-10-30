@@ -4843,3 +4843,12 @@ Status: DONE (Richard review pending). Review request: handoff/REVIEW-REQUEST-SE
 
 ## FAIL1030 (live)
 FAIL1030 live smoke 2026-10-30: deploy f2952ed post-deploy run green; /pdf-compress/ 「PDF 나누기로 열기」, wrong-file lines on /stamp-signature/ /id-photo/ /pdf-sign/ /pdf-to-jpg/, /hwpx-to-hwp/ button links, /remove-background/ copy-meta code — 7 pages 200, 14/14 pass (scratchpad fail1030-smoke.mjs). CI note: pdf-split axe target-size flaked once on mobile-chrome (sticky bar), passed on rerun and locally 3/3. Worktree wt/fail1030 removed.
+
+## QUOTES1031 (design) — 바뀐 공식 출처 인용 고치기 (Arch, 2026-10-30)
+- Brief handoff/ARCHITECT-BRIEF-QUOTES1031.md. Branch quotes1031 on draft1031 (PR #42).
+- Apple iPhone guide iphbf4977cff now serves iOS 27: 「썸네일을 표시하려면 사이드바 보기 버튼 을 탭하십시오. ( 사이드바 보기 버튼 이 나타나지 않으면 PDF를 탭하십시오.)」 replaces the 페이지 수 quote; pdf-split 쪽 빼기 step rewritten; 5 pdf-split Apple dates to 2026-10-30.
+- Decision D2: jlpt.or.kr is wholly parked (every path 302 to `/`, an image JLPT_parking_20261027.jpg 「시스템 점검 안내 … 서비스가 중단」); the text did not move and exists nowhere official. Keep every JLPT quote/URL/date as is (no bump, no drop, no allowlist); the gate stays red for those lines only.
+- Decision D3: source-watch fetches a 404 once more after 10 s (historyexam apyexmInfo 404 was a blip; 200 with all 6 quotes verbatim today, nothing bumped). Real 404s still fail.
+### Known Gaps (QUOTES1031)
+- JLPT outage: when jlpt.or.kr returns, or by 2026-11-13, re-run `node scripts/ops/source-watch.mjs --exact`; re-find or drop any non-verbatim jlpt quote and its number (jlpt-photo, youth-card-photo, preset `jlpt`). Still parked on 2026-11-13: escalate keep-vs-drop to the owner.
+- source-watch reports a redirect-to-home as "fetch failed"/NOT VERBATIM instead of "moved to the home page".
