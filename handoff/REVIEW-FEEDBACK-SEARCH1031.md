@@ -44,3 +44,42 @@ Not cleared yet. The engine, privacy, lazy-loading, flag handling, budgets and a
 - 한글 / hwp → hwp-viewer, hwp-to-pdf, hwpx-to-hwp, resignation-letter, english-name, power-of-attorney. The tail comes from keyword hits on 한글 양식; tolerable.
 - ㅍㄷㅍ, 압추, 엑셀, word → none + popular.
 - 여권 → id-photo, english-name, id-photo-camera, remove-background.
+
+---
+
+# Review Feedback — SEARCH1031 round 2 (commit 933c556)
+Date: 2026-10-31
+Ready for Builder: YES
+
+## Must Fix
+None.
+
+## Round-1 items
+- **Must Fix (IME flash): resolved.**
+  - **Matcher:** `prefixDocs` adds jamo-start completion for the last word, and only for docs that word misses outright. All 13 failing half-typed states now return the right tools: 사ㅈ/샂/사지 → photo-compress first; 증며/증명ㅅ → id-photo first; 압ㅊ/압추 → pdf-compress, photo-compress; 한그 → hwp-viewer; 배겨 → remove-background; 누ㄲ → remove-background; 큐아 → qr-code; 도자/서며/싸이 → stamp tools.
+  - **UI:** `composing` holds back a miss: no none line and no announcement until compositionend. I read ui.ts:120-127 and :181-187. Enter while composing re-renders before it chooses an option.
+- **Typo score: resolved.** fuzzyName 30 / fuzzy 20. 증멍사진 → id-photo top-1, and 여권샤진 → id-photo.
+- **Enter on a miss or an empty box: resolved.** `go(options[active] ?? (matched ? options[0] : undefined))`, with an e2e check at search.spec:143.
+- **ㅍㄷㅍ: resolved.** It finds pdf-merge, pdf-compress, jpg-to-pdf and so on (READINGS). resignation-letter in 4th place is a keyword reading; harmless.
+- **차용증 synonyms: resolved.** 돈 빌려 and 돈 빌려준 → loan-note.
+- **Home box (Arch decision): done.** At 360 px the box and three results fit on the first screen (home-360-light-results.png). The e2e checks the box ends at ≤ 440 px.
+
+## Regression probe (same ~140 queries plus 25 single syllables)
+- **Goldens:** every round-1 top-1 result is unchanged: 피디에프 합치기, 병합, 붙이기, 한글 pdf, 큐알, 증명사진, 사진 줄이기, 용량 (pdf-compress, photo-compress), 합치가, ㅎㅊㄱ, ㅇㅁㅇㄹ, 퇴사, 신분증 사본, hwpx, heic and the rest.
+- **Negatives:**
+  - The finished word 「사진」 still keeps resignation-letter out of the top 6.
+  - 디자인, 엑셀, word, asdfgh and ㅁㄴㅇㄹㅁㄴㅇㄹ still return none + popular.
+  - A single syllable (사, 하, 이 …) gives a broad list. That is expected while typing; it was substring-broad before this change too.
+- **Speed:** worst query 24 ms (the first one, which builds the cache); most take under 2 ms.
+
+## Gates (in place)
+- search-match + network-guard: 96/96.
+- `astro check`: 0 errors (12 hints, as on main).
+- Default build: check-dist OK. Precache 408.8 KB / 450, module 5.7 KB / 8 KB gzip, site script 1.8 KB gzip, index 6.1 KB gzip.
+- search.spec + site.spec on chromium (E2E_PORT=4373): 143/143.
+
+## Should Fix
+None new.
+
+## Cleared
+Round-2 fixes reviewed against the code and re-probed: the IME hold, prefix completion, typo weights, Enter guard, Latin 초성, loan synonyms and the home placement all hold, with no golden or negative regression.
