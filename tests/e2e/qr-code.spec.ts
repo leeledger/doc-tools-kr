@@ -288,6 +288,7 @@ test('색·로고 c) a low (#cccccc on white) and an inverted (white on black) p
     await page.locator('#qr-fg').fill(fg);
     await page.locator('#qr-bg').fill(bg);
     await expect(page.locator('#qr-color-error')).toHaveText(line);
+    await expect(page.locator('#qr-color-error')).toHaveAttribute('role', 'alert');
     await expect(page.locator('#qr-fg')).toHaveAttribute('aria-invalid', 'true');
     // The preview still shows the chosen colors.
     await expect(page.locator('#qr-preview path')).toHaveAttribute('fill', fg);
@@ -344,6 +345,8 @@ test('색·로고 d) a PNG and a JPEG logo: the PNG decodes, the SVG has one PNG
   expect((await download(page, '#qr-svg')).bytes.toString('utf8')).toBe(qrSvg(plain.modules));
   await page.locator('#qr-logo-input').setInputFiles({ name: 'note.png', mimeType: 'image/png', buffer: Buffer.from('this is not a picture at all') });
   await expect(page.locator('#qr-logo-error')).toHaveText('사진 파일이 아닙니다. JPG·PNG·WebP 파일을 선택해 주세요.');
+  // The error arrives after the file dialog closes, so it must be announced (review QR1031 Must Fix).
+  await expect(page.locator('#qr-logo-error')).toHaveAttribute('role', 'alert');
   await expect(page.locator('#qr-logo-remove')).toBeHidden();
   await expect(page.locator('#qr-preview image')).toHaveCount(0);
   expect(await serious(page)).toEqual([]);

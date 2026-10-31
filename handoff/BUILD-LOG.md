@@ -4944,3 +4944,9 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
 - Known Gaps (new): xlink:href for old SVG editors (check Illustrator / Inkscape 0.92 once); the scan rule is derived from
   jsQR/ZXing, iPhone (Vision) not measured — owner item O1 covers it; colors are plain black/white until the panel code
   loads (a styled QR is blocked, not wrong, in that window).
+
+### QR1031 review fixes (2026-10-31, Bob) — DONE
+- Must Fix: `role="alert"` on `#qr-color-error` and `#qr-logo-error` (src/pages/qr-code/index.astro), same as `#qr-over`; e2e c and d assert the role; axe in f re-run clean.
+- Should Fix: guide qr-code.md table intro now says M only without a logo and points to 「색과 로고를 넣을 때」 for H (no ratios or percentages).
+- Should Fix: style.ts comment corrected: jsQR's low-contrast block threshold is min / 2 (darkest value); in an even block min ≈ max, so the measured cliff stands.
+- Gates: `npm run check` 0 errors; vitest tests/unit/qr* 54/54; build + check-dist OK (2685 files); qr-code.spec.ts chromium + webkit 36/36 (E2E_PORT=4273).

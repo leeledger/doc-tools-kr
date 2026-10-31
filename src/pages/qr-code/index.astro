@@ -121,13 +121,13 @@ const kinds = [
                 <label class="qr-color" for="qr-bg"><input type="color" id="qr-bg" value="#ffffff" aria-describedby="qr-color-error"><span>배경 색</span></label>
                 <button type="button" class="btn ghost small" id="qr-color-reset">검은색·흰색으로</button>
               </div>
-              <p class="field-error" id="qr-color-error"></p>
+              <p class="field-error" id="qr-color-error" role="alert"></p>
               <div class="qr-logo">
                 <input id="qr-logo-input" class="file-input" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp,.heic,.heif" aria-describedby="qr-logo-error">
                 <label for="qr-logo-input" class="btn ghost small">로고·사진 고르기</label>
                 <button type="button" class="btn ghost small" id="qr-logo-remove" hidden>로고 빼기</button>
               </div>
-              <p class="field-error" id="qr-logo-error"></p>
+              <p class="field-error" id="qr-logo-error" role="alert"></p>
             </div>
           </details>
           <p class="visually-hidden" id="qr-status" aria-live="polite"></p>

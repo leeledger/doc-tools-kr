@@ -5,9 +5,9 @@
 // ratio is never rounded: 2.999:1 fails). Relative luminance and contrast ratio as WCAG 2.2 defines them
 // (handoff/sources/qr1031/w3c-wcag22-contrast.txt, fetched 2026-10-31).
 // 3:1 alone fails jsQR (D3 → BUILD-LOG QR1031): a gray at 3.03:1 on white is read at 2 px per module and lost from 4 px
-// up. jsQR (a ZXing port; ZXing's HybridBinarizer does the same) gives an even 8×8 block the threshold "half its
-// lightest value", so a QR color whose 8-bit luma (BT.709 weights on the sRGB values, what it compares) is over half
-// the background's turns white inside big modules: measured cliff 0.496-0.499 over 3,000 random pairs. A ratio-only
+// up. jsQR (a ZXing port; ZXing's HybridBinarizer does the same) gives a low-contrast 8×8 block the threshold
+// "half its darkest value" (min / 2); inside a big module the block is even (min ≈ max), so a QR color whose 8-bit
+// luma (BT.709 weights on the sRGB values, what it compares) is over half the background's turns white there: measured cliff 0.496-0.499 over 3,000 random pairs. A ratio-only
 // rule would need about 4.9:1 (gray on magenta) and block red on white (4.0:1, luma share 0.21, reads fine), so the
 // raise is a second rule: the QR color's luma at most SCAN_LUMA_SHARE of the background's, 0.45 leaving room for
 // print and camera.
