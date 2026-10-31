@@ -61,6 +61,10 @@ function setup(root: HTMLElement): void {
   let options: Option[] = [];
   let active = -1;
   let index: SearchIndex | null = null;
+  // True between compositionstart and compositionend (a Korean syllable is still being typed).
+  let composing = false;
+  // The last list shown has real matches (not only 많이 찾는 도구): Enter may open its first option.
+  let matched = false;
 
   const setActive = (i: number): void => {
     options[active]?.el.setAttribute('aria-selected', 'false');
@@ -116,6 +120,11 @@ function setup(root: HTMLElement): void {
     if (!index) return;
     const q = input.value.trim();
     const r = search(index, q);
+    const missed = q !== '' && !r.tools.length && !r.guides.length;
+    // A miss while a syllable is still composing keeps the list shown (no 「찾지 못했어요」 flash, no announcement);
+    // compositionend renders again.
+    if (missed && composing) return;
+    matched = r.tools.length > 0 || r.guides.length > 0;
     options = [];
     active = -1;
     input.removeAttribute('aria-activedescendant');
@@ -124,7 +133,6 @@ function setup(root: HTMLElement): void {
     if (r.guides.length) groups.push(group('g', '안내', r.guides, false));
     if (r.popular.length) groups.push(group('p', '많이 찾는 도구', r.popular, true));
     list.replaceChildren(...groups);
-    const missed = q !== '' && !r.tools.length && !r.guides.length;
     none.hidden = !missed;
     none.textContent = missed ? NONE(q) : '';
     status.textContent = !q ? '' : missed ? NONE(q) : `도구 ${r.tools.length}개, 안내 ${r.guides.length}개를 찾았어요`;
@@ -170,6 +178,13 @@ function setup(root: HTMLElement): void {
     ensure();
     render();
   });
+  input.addEventListener('compositionstart', () => {
+    composing = true;
+  });
+  input.addEventListener('compositionend', () => {
+    composing = false;
+    render();
+  });
   input.addEventListener('keydown', (e) => {
     const open = !pop.hidden;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -186,8 +201,13 @@ function setup(root: HTMLElement): void {
       // Also while a Korean syllable is still composing: the value already holds it, and Chrome sends no second Enter.
       e.preventDefault();
       if (!index) return;
-      if (!open) render();
-      go(options[active] ?? options[0]);
+      if (composing) {
+        // The list may still show the state before the syllable; search what the box holds now.
+        composing = false;
+        render();
+      } else if (!open) render();
+      // Only an option the user moved to, or the first real match: never a 많이 찾는 도구 entry on a miss or an empty box.
+      go(options[active] ?? (matched ? options[0] : undefined));
     }
   });
   form?.addEventListener('submit', (e) => e.preventDefault());

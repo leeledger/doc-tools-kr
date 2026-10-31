@@ -140,6 +140,80 @@ test('no result: the 찾지 못했어요 line and the 많이 찾는 도구 list'
   await expect(options(page, 'sp-input')).toHaveCount(6);
 });
 
+test('Enter on a miss or an empty box opens nothing (the 많이 찾는 도구 list stays)', async ({ page }) => {
+  await gotoReady(page, '/search/');
+  const input = page.locator('#sp-input');
+  await input.click();
+  await expect(page.locator('#sp-list')).toContainText('많이 찾는 도구');
+  await input.press('Enter');
+  await input.fill('asdfgh');
+  await expect(page.locator('.site-search [data-ss-none]').last()).toBeVisible();
+  await input.press('Enter');
+  await page.waitForTimeout(300);
+  expect(new URL(page.url()).pathname).toBe('/search/');
+  await expect(page.locator('#sp-list')).toContainText('많이 찾는 도구');
+});
+
+// Review fix: a Korean keyboard passes through 샂 and 사지 on the way to 사진. Real composition events (CDP
+// Input.imeSetComposition in Chromium, dispatched CompositionEvents elsewhere) never show 「찾지 못했어요」.
+test('typing 사진 with a Korean keyboard: no 찾지 못했어요 at any composing step', async ({ page, browserName }) => {
+  await gotoReady(page, '/');
+  const input = page.locator('#home-input');
+  await input.click();
+  await expect(options(page, 'home-input').first()).toBeVisible();
+  const none = page.locator('.site-search-page [data-ss-none]').first();
+  const status = page.locator('.site-search-page [role="status"]').first();
+  const steps = ['ㅅ', '사', '샂', '사지', '사진'];
+  const check = async (): Promise<void> => {
+    await expect(none).toBeHidden();
+    await expect(status).not.toContainText('찾지 못했어요');
+  };
+  if (browserName === 'chromium') {
+    const cdp = await page.context().newCDPSession(page);
+    for (const s of steps) {
+      await cdp.send('Input.imeSetComposition', { text: s, selectionStart: s.length, selectionEnd: s.length });
+      await page.waitForTimeout(80);
+      await check();
+    }
+    await cdp.send('Input.insertText', { text: '사진' });
+  } else {
+    await input.evaluate((el: HTMLInputElement, list) => {
+      el.dispatchEvent(new CompositionEvent('compositionstart', { data: '' }));
+      for (const s of list) {
+        el.value = s;
+        el.dispatchEvent(new CompositionEvent('compositionupdate', { data: s }));
+        el.dispatchEvent(new InputEvent('input', { data: s, inputType: 'insertCompositionText', isComposing: true }));
+      }
+    }, steps.slice(0, 4));
+    await check();
+    await input.evaluate((el: HTMLInputElement) => {
+      el.value = '사진';
+      el.dispatchEvent(new InputEvent('input', { data: '사진', inputType: 'insertCompositionText', isComposing: true }));
+      el.dispatchEvent(new CompositionEvent('compositionend', { data: '사진' }));
+    });
+  }
+  await expect(input).toHaveValue('사진');
+  await expect(options(page, 'home-input').first()).toContainText('사진 용량 줄이기');
+  await check();
+});
+
+test('a miss held back while composing shows once the composition ends', async ({ page }) => {
+  await gotoReady(page, '/');
+  const input = page.locator('#home-input');
+  await input.click();
+  await expect(options(page, 'home-input').first()).toBeVisible();
+  const none = page.locator('.site-search-page [data-ss-none]').first();
+  await input.evaluate((el: HTMLInputElement) => {
+    el.dispatchEvent(new CompositionEvent('compositionstart', { data: '' }));
+    el.value = '퓨퓨';
+    el.dispatchEvent(new InputEvent('input', { data: '퓨퓨', inputType: 'insertCompositionText', isComposing: true }));
+  });
+  await page.waitForTimeout(150);
+  await expect(none).toBeHidden();
+  await input.evaluate((el: HTMLInputElement) => el.dispatchEvent(new CompositionEvent('compositionend', { data: '퓨퓨' })));
+  await expect(none).toContainText('「퓨퓨」에 맞는 도구를 찾지 못했어요');
+});
+
 test('404: the box finds a tool', async ({ page }) => {
   await page.goto('/does-not-exist/');
   const input = page.locator('#nf-input');
@@ -198,6 +272,8 @@ for (const width of [320, 360]) {
     await gotoReady(page, '/');
     expect(await overflow()).toBe(0);
     const home = (await page.locator('#home-input').boundingBox())!;
+    // D1(b) review fix: the box sits right under the h1, on the first screen of a 640 px tall phone.
+    expect(home.y + home.height).toBeLessThanOrEqual(640 - 200);
     expect(home.x).toBeGreaterThanOrEqual(16);
     expect(home.x + home.width).toBeLessThanOrEqual(width - 16);
   });

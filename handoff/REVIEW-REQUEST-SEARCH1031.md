@@ -52,3 +52,21 @@ Status: DONE (one environment note below; nothing escalated)
 - English search on /en/ (D13), guide body text in the index, any search analytics, indexable /search/.
 - Environment: the main checkout's node_modules is empty, so astro build/check fail inside wt/ worktrees (Vite resolves the main tsconfig); all builds ran from a mirror outside C:\dev\doc-tools-kr. `npm ci` in C:\dev\doc-tools-kr fixes it (refused to me by the permission guard).
 - Pre-existing webkit flake site.spec:26 (/pdf-compress/ axe, 15 s page-count wait under load).
+
+# Review Request — SEARCH1031 round 2 (review fixes)
+Date: 2026-10-31
+Ready for Review: YES
+
+## Files Changed
+- src/lib/search/match.ts — SCORE.fuzzyName; READINGS/choseongs (Latin 초성); nameJamo; vocab in prepare; fuzzyDocs returns scores; prefixDocs (last-token jamo-start completion); loose map in rank/search.
+- src/lib/search/ui.ts — composing flag (compositionstart/end), miss held back while composing, compositionend re-render; Enter uses `matched`.
+- src/lib/search/synonyms.ts — loan terms.
+- src/pages/index.astro — home box right under the h1 (Arch decision).
+- tests/unit/search-match.test.ts — half-typed block, 증멍사진, ㅍㄷㅍ, loan rows.
+- tests/e2e/search.spec.ts — Enter on miss/empty, IME composition (CDP / CompositionEvent), held-back miss, 360 px box position.
+
+## Open Questions
+- prefixDocs widens a finished last word slightly (docs hitting a longer word it starts, at score 20/30, only when the doc misses outright). All prior goldens hold; please probe your table again.
+
+## Out of Scope
+- none new.

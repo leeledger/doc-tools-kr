@@ -34,8 +34,22 @@ export interface SearchResult {
 
 export const MAX_TOOLS = 6;
 export const MAX_GUIDES = 4;
-/** D8 field scores. */
-export const SCORE = { exact: 1000, name: 100, concept: 60, choseong: 50, keyword: 40, fuzzy: 20, summary: 15, faq: 8 } as const;
+/** D8 field scores. A typo or a half-typed word (fuzzy) on a name word or a concept term outranks one on a keyword. */
+export const SCORE = { exact: 1000, name: 100, concept: 60, choseong: 50, keyword: 40, fuzzyName: 30, fuzzy: 20, summary: 15, faq: 8 } as const;
+
+/** The shortest half-typed last word (in jamo) completed to the words it starts (샂 -> 사진, 압추 -> 압축). */
+export const PREFIX_MIN = 2;
+
+/** Korean readings of the Latin alias keys (pdf -> 피디에프, 피디프), so the choseong mode finds PDF tools (ㅍㄷㅍ). */
+const READINGS = ALIASES.filter((a) => /^[a-z]+$/.test(a.key)).map((a) => ({ key: a.key, readings: a.variants.filter((v) => /^[가-힣]+$/.test(v)) }));
+
+/** The choseong strings of a text: as written, and with each Latin alias key read in Korean. */
+function choseongs(text: string): string[] {
+  const t = clean(text);
+  const out = [choseong(t)];
+  for (const { key, readings } of READINGS) if (t.includes(key)) for (const r of readings) out.push(choseong(t.split(key).join(r)));
+  return out;
+}
 
 const VARIANTS = ALIASES.flatMap((a) => a.variants.map((v) => ({ v, key: a.key, word: a.word === true }))).sort((a, b) => b.v.length - a.v.length);
 
@@ -99,6 +113,8 @@ interface Prepared<D> {
   terms: string[];
   /** The terms as jamo (fuzzy matching). */
   termJamo: string[];
+  /** The name (title) words as jamo: a fuzzy hit on one of them scores SCORE.fuzzyName. */
+  nameJamo: string[];
 }
 
 const compactWords = (t: string): string => words(t).join('');
@@ -113,17 +129,17 @@ function prepTool(d: ToolDoc, table: readonly Concept[]): Prepared<ToolDoc> {
     name,
     nameKey: name,
     keys: d.k.map(compactWords),
-    cho: [d.n, ...d.k].map((t) => choseong(clean(t))),
+    cho: [d.n, ...d.k].flatMap(choseongs),
     summary: compactWords(d.s),
     faq: d.f.map(compactWords),
     concepts: new Set(table.filter((c) => c.tools.includes(slug)).map((c) => c.id)),
-    ...termsOf([...words(d.n), ...d.k.flatMap(words)]),
+    ...termsOf(words(d.n), d.k.flatMap(words)),
   };
 }
 
-function termsOf(list: string[]): { terms: string[]; termJamo: string[] } {
-  const terms = [...new Set(list)];
-  return { terms, termJamo: terms.map(toJamo) };
+function termsOf(names: string[], rest: string[]): { terms: string[]; termJamo: string[]; nameJamo: string[] } {
+  const terms = [...new Set([...names, ...rest])];
+  return { terms, termJamo: terms.map(toJamo), nameJamo: [...new Set(names)].map(toJamo) };
 }
 
 function prepGuide(d: GuideDoc): Prepared<GuideDoc> {
@@ -137,18 +153,35 @@ function prepGuide(d: GuideDoc): Prepared<GuideDoc> {
     summary: '',
     faq: [],
     concepts: new Set(),
-    ...termsOf([...words(d.n), ...words(d.q)]),
+    ...termsOf(words(d.n), words(d.q)),
   };
 }
 
-type PreparedIndex = { tools: Prepared<ToolDoc>[]; guides: Prepared<GuideDoc>[]; conceptJamo: Map<string, string[]> };
+type PreparedIndex = {
+  tools: Prepared<ToolDoc>[];
+  guides: Prepared<GuideDoc>[];
+  conceptJamo: Map<string, string[]>;
+  /** Every word a half-typed last word can complete to (terms, concept terms, alias keys) and its jamo. */
+  vocab: [word: string, jamo: string][];
+};
 const cache = new WeakMap<SearchIndex, WeakMap<readonly Concept[], PreparedIndex>>();
 function prepare(index: SearchIndex, table: readonly Concept[]): PreparedIndex {
   let byTable = cache.get(index);
   if (!byTable) cache.set(index, (byTable = new WeakMap()));
   let p = byTable.get(table);
   if (!p) {
-    p = { tools: index.t.map((d) => prepTool(d, table)), guides: index.g.map(prepGuide), conceptJamo: new Map(table.map((c) => [c.id, c.terms.map(toJamo)])) };
+    const tools = index.t.map((d) => prepTool(d, table));
+    const guides = index.g.map(prepGuide);
+    // Alias variants complete to their key (한그 -> 한글 -> hwp, 큐아 -> 큐알 -> qr).
+    const vocab = new Map<string, string>();
+    const add = (word: string, as: string): void => {
+      const j = toJamo(word);
+      if (!vocab.has(j)) vocab.set(j, as);
+    };
+    for (const d of [...tools, ...guides]) for (const t of d.terms) add(t, t);
+    for (const c of table) for (const t of c.terms) add(t, t);
+    for (const a of ALIASES) for (const v of [a.key, ...a.variants]) add(v, a.key);
+    p = { tools, guides, conceptJamo: new Map(table.map((c) => [c.id, c.terms.map(toJamo)])), vocab: [...vocab].map(([j, w]) => [w, j]) };
     byTable.set(table, p);
   }
   return p;
@@ -175,15 +208,48 @@ function hit(p: Prepared<ToolDoc | GuideDoc>, form: string, cho: boolean, concep
   return [Math.max(...fields), fields.reduce((a, b) => a + b, 0)];
 }
 
-/** Docs whose single terms (name words, keywords, concept terms) are within the jamo allowance of the form (D8). */
-function fuzzyDocs(form: string, all: Prepared<ToolDoc | GuideDoc>[], conceptJamo: Map<string, string[]>): Set<Prepared<ToolDoc | GuideDoc>> {
-  const out = new Set<Prepared<ToolDoc | GuideDoc>>();
+type Doc = Prepared<ToolDoc | GuideDoc>;
+/** Loose (typo or half-typed) hits: doc -> score. */
+type Loose = Map<Doc, number>;
+
+/**
+ * Docs whose single terms (name words, keywords, concept terms) are within the jamo allowance of the form (D8):
+ * SCORE.fuzzyName for a name word or a concept term, SCORE.fuzzy for a keyword only.
+ */
+function fuzzyDocs(form: string, all: Doc[], conceptJamo: Map<string, string[]>): Loose {
+  const out: Loose = new Map();
   const j = toJamo(form);
   const max = fuzzyBudget([...j].length);
   if (!max) return out;
   const near = (t: string): boolean => distance(j, t, max) <= max;
   const concepts = new Set([...conceptJamo].filter(([, terms]) => terms.some(near)).map(([id]) => id));
-  for (const p of all) if (p.termJamo.some(near) || [...p.concepts].some((c) => concepts.has(c))) out.add(p);
+  for (const p of all) {
+    if (p.nameJamo.some(near) || [...p.concepts].some((c) => concepts.has(c))) out.set(p, SCORE.fuzzyName);
+    else if (p.termJamo.some(near)) out.set(p, SCORE.fuzzy);
+  }
+  return out;
+}
+
+/**
+ * The last word while it is still being typed (샂, 사지, 압추, 증명ㅅ): the docs that a word it is the jamo start of
+ * would find, at the fuzzy scores (a name or concept hit above a keyword hit). A finished word is not the jamo start
+ * of a different one (사진 ㅅㅏㅈㅣㄴ never starts 사직서 ㅅㅏㅈㅣㄱㅅㅓ).
+ */
+function prefixDocs(form: string, all: Doc[], vocab: PreparedIndex['vocab'], cOf: (form: string) => Set<string>): Loose {
+  const out: Loose = new Map();
+  const j = toJamo(form);
+  if ([...j].length < PREFIX_MIN) return out;
+  const done = vocab.filter(([w, wj]) => wj.length > j.length && wj.startsWith(j) && w !== form).map(([w]) => w);
+  if (!done.length) return out;
+  for (const p of all) {
+    let s = 0;
+    for (const w of done) {
+      const b = hit(p, w, false, cOf(w))[0];
+      s = Math.max(s, b >= SCORE.concept ? SCORE.fuzzyName : b > 0 ? SCORE.fuzzy : 0);
+      if (s === SCORE.fuzzyName) break;
+    }
+    if (s) out.set(p, s);
+  }
   return out;
 }
 
@@ -194,7 +260,7 @@ interface Ranked<D> {
   breadth: number;
 }
 
-function rank<D extends ToolDoc | GuideDoc>(list: Prepared<D>[], q: ReturnType<typeof tokenize>, fuzzy: Map<number, Set<Prepared<ToolDoc | GuideDoc>>>, cOf: (form: string) => Set<string>): Ranked<D>[] {
+function rank<D extends ToolDoc | GuideDoc>(list: Prepared<D>[], q: ReturnType<typeof tokenize>, loose: Map<number, Loose[]>, cOf: (form: string) => Set<string>): Ranked<D>[] {
   const need = Math.ceil(q.tokens.length / 2);
   const out: Ranked<D>[] = [];
   for (const p of list) {
@@ -209,7 +275,7 @@ function rank<D extends ToolDoc | GuideDoc>(list: Prepared<D>[], q: ReturnType<t
         best = Math.max(best, b);
         wide = Math.max(wide, w);
       }
-      if (!best && fuzzy.get(i)?.has(p)) best = wide = SCORE.fuzzy;
+      if (!best) for (const m of loose.get(i) ?? []) best = wide = Math.max(best, m.get(p) ?? 0);
       if (best) covered++;
       score += best;
       breadth += wide;
@@ -240,28 +306,32 @@ function rank<D extends ToolDoc | GuideDoc>(list: Prepared<D>[], q: ReturnType<t
  * `table`: the concept table (default: this build's; the unit tests pass one with every release flag on).
  */
 export function search(index: SearchIndex, query: string, table: readonly Concept[] = CONCEPTS): SearchResult {
-  const { tools, guides, conceptJamo } = prepare(index, table);
+  const { tools, guides, conceptJamo, vocab } = prepare(index, table);
   const popular = (): ToolDoc[] => POPULAR.map((s) => tools.find((t) => t.slug === s)?.doc).filter((d): d is ToolDoc => d !== undefined);
   const q = tokenize(query);
   if (!q.tokens.length) return { tools: [], guides: [], popular: popular() };
-  const all: Prepared<ToolDoc | GuideDoc>[] = [...tools, ...guides];
+  const all: Doc[] = [...tools, ...guides];
   const memo = new Map<string, Set<string>>();
   const cOf = (form: string): Set<string> => {
     let c = memo.get(form);
     if (!c) memo.set(form, (c = conceptsOf(form, table)));
     return c;
   };
-  // Fuzzy only for a token with no exact, alias or concept hit anywhere, and never in choseong mode.
-  const fuzzy = new Map<number, Set<Prepared<ToolDoc | GuideDoc>>>();
+  // Loose hits count only for a doc the token misses outright, never in choseong mode: the typo allowance for a token
+  // with no exact, alias or concept hit anywhere, and the jamo-start completion of the last token (still being typed).
+  const loose = new Map<number, Loose[]>();
   q.tokens.forEach((t, i) => {
     if (t.cho) return;
+    const maps: Loose[] = [];
     const anyHit = t.forms.some((f) => {
       const c = cOf(f);
       return c.size > 0 || all.some((p) => hit(p, f, false, c)[0] > 0);
     });
-    if (!anyHit) fuzzy.set(i, fuzzyDocs(t.forms[t.forms.length - 1]!, all, conceptJamo));
+    if (!anyHit) maps.push(fuzzyDocs(t.forms[t.forms.length - 1]!, all, conceptJamo));
+    if (i === q.tokens.length - 1) maps.push(prefixDocs(t.forms[0]!, all, vocab, cOf));
+    loose.set(i, maps);
   });
-  const foundTools = rank(tools, q, fuzzy, cOf).slice(0, MAX_TOOLS).map((r) => r.p.doc);
-  const foundGuides = rank(guides, q, fuzzy, cOf).slice(0, MAX_GUIDES).map((r) => r.p.doc);
+  const foundTools = rank(tools, q, loose, cOf).slice(0, MAX_TOOLS).map((r) => r.p.doc);
+  const foundGuides = rank(guides, q, loose, cOf).slice(0, MAX_GUIDES).map((r) => r.p.doc);
   return { tools: foundTools, guides: foundGuides, popular: foundTools.length || foundGuides.length ? [] : popular() };
 }

@@ -62,7 +62,7 @@ export const CONCEPTS: readonly Concept[] = [
   { id: 'qr', terms: ['qr'], tools: ['qr-code'] },
   { id: 'card', terms: ['명함', '전자명함'], tools: ['business-card'] },
   { id: 'poa', terms: ['위임장'], tools: ['power-of-attorney'] },
-  { id: 'loan', terms: ['차용증'], tools: ['loan-note'] },
+  { id: 'loan', terms: ['차용증', '빌려', '빌린', '빌리', '빌림', '돈거래', '꿔준', '꾼돈'], tools: ['loan-note'] },
   { id: 'resign', terms: ['사직서', '퇴사'], tools: ['resignation-letter'] },
   { id: 'photo-format', terms: ['사진변환', 'heic'], tools: ['image-to-jpg'] },
   { id: 'hwpx-convert', terms: ['hwpx', '낮은버전'], tools: ['hwpx-to-hwp'] },

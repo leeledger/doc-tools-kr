@@ -91,6 +91,18 @@ describe('SEARCH1031 golden queries (top-1 unless noted)', () => {
   it('pdf: ties go to the 많이 찾는 도구 order (top-2 = pdf-merge, pdf-compress)', () => {
     expect(toolSlugs('pdf').slice(0, 2)).toEqual(['pdf-merge', 'pdf-compress']);
   });
+  it('증멍사진 (typo of a tool name) puts id-photo first, above a keyword-only typo hit', () => {
+    expect(toolSlugs('증멍사진')[0]).toBe('id-photo');
+  });
+  it.each([
+    ['ㅍㄷㅍ', 'pdf-merge'],
+    ['ㅍㄷㅇㅍ', 'pdf-merge'],
+  ])('choseong of a Latin name read in Korean: %s -> %s', (q, slug) => {
+    expect(toolSlugs(q)[0]).toBe(slug);
+  });
+  it.each(['돈 빌려', '빌린 돈', '돈 빌려준', '돈거래'])('%s -> loan-note', (q) => {
+    expect(toolSlugs(q)[0]).toBe('loan-note');
+  });
   it('이력서 사진: tools include id-photo, guides include resume-photo', () => {
     expect(toolSlugs('이력서 사진')).toContain('id-photo');
     expect(guideSlugs('이력서 사진')).toContain('resume-photo');
@@ -99,6 +111,43 @@ describe('SEARCH1031 golden queries (top-1 unless noted)', () => {
     const r = search(INDEX, '사진', ALL_ON);
     expect(r.tools.length).toBeLessThanOrEqual(6);
     expect(r.guides.length).toBeLessThanOrEqual(4);
+  });
+});
+
+// Review fix: the states a Korean keyboard passes through while the last word is still composing (샂 and 사지 on the
+// way to 사진) find what the finished word would, never 「찾지 못했어요」.
+describe('SEARCH1031 half-typed last word (IME composing)', () => {
+  const states: [string, string][] = [
+    ['샂', 'photo-compress'],
+    ['사지', 'photo-compress'],
+    ['사ㅈ', 'photo-compress'],
+    ['압추', 'pdf-compress'],
+    ['압ㅊ', 'pdf-compress'],
+    ['증명ㅅ', 'id-photo'],
+    ['증며', 'id-photo'],
+    ['한그', 'hwp-viewer'],
+    ['배겨', 'remove-background'],
+    ['누ㄲ', 'remove-background'],
+    ['큐아', 'qr-code'],
+    ['도자', 'stamp-maker'],
+    ['서며', 'stamp-signature'],
+    ['pdf 합ㅊ', 'pdf-merge'],
+  ];
+  it.each(states)('%s: a result, and the top 3 includes %s', (q, slug) => {
+    const r = search(INDEX, q, ALL_ON);
+    expect(r.popular).toEqual([]);
+    expect(toolSlugs(q).slice(0, 3)).toContain(slug);
+  });
+  it('압추 -> pdf-compress, photo-compress', () => {
+    expect(toolSlugs('압추').slice(0, 2).sort()).toEqual(['pdf-compress', 'photo-compress']);
+  });
+  it('배겨 with 배경 지우기 off still finds a tool (stamp-signature, id-photo …)', () => {
+    const off = searchIndex(INDEX.t.filter((t) => t.u !== '/remove-background/'), INDEX.g);
+    expect(search(off, '배겨').tools.length).toBeGreaterThan(0);
+  });
+  it('a finished word is not completed into another: 사진 never reaches 사직서', () => {
+    expect(toolSlugs('사진')).not.toContain('resignation-letter');
+    expect(toolSlugs('사진 만들기')).not.toContain('resignation-letter');
   });
 });
 
