@@ -390,12 +390,14 @@ test('색·로고 f) 390×844: opening the panel never moves the preview; axe cl
   const top = async (): Promise<number> => page.locator('#qr-preview').evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
   const closed = await top();
   await openStyle(page);
-  expect(await top()).toBe(closed);
+  // Sub-pixel float noise on Firefox (620.54999 vs 620.55000); any visible move is far over 0.01 px.
+  expect(Math.abs((await top()) - closed)).toBeLessThan(0.01);
   expect(await serious(page)).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
   await page.locator('#qr-fg').fill('#ffffff');
   await page.locator('#qr-bg').fill('#000000');
   await expect(page.locator('#qr-color-error')).not.toBeEmpty();
-  expect(await top()).toBe(closed);
+  // Sub-pixel float noise on Firefox (620.54999 vs 620.55000); any visible move is far over 0.01 px.
+  expect(Math.abs((await top()) - closed)).toBeLessThan(0.01);
   expect(await serious(page)).toEqual([]);
 });

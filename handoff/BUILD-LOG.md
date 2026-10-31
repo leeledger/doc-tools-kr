@@ -4950,3 +4950,6 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
 - Should Fix: guide qr-code.md table intro now says M only without a logo and points to 「색과 로고를 넣을 때」 for H (no ratios or percentages).
 - Should Fix: style.ts comment corrected: jsQR's low-contrast block threshold is min / 2 (darkest value); in an even block min ≈ max, so the measured cliff stands.
 - Gates: `npm run check` 0 errors; vitest tests/unit/qr* 54/54; build + check-dist OK (2685 files); qr-code.spec.ts chromium + webkit 36/36 (E2E_PORT=4273).
+
+### QR1031 CI fix (2026-10-31)
+- PR #44 e2e (firefox): 색·로고 f failed 3/3 on `top() toBe(closed)`: 620.5499878 vs 620.5500031 (float noise, 0.00002 px). Changed both compares to |Δ| < 0.01 px; a visible move is still caught. Other firefox reds were 20 s timeouts that passed on retry (runner load).
