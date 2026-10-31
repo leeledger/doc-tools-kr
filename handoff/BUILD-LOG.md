@@ -4859,6 +4859,101 @@ FAIL1030 live smoke 2026-10-30: deploy f2952ed post-deploy run green; /pdf-compr
 - Commit B src/content/guides/pdf-split.md: Apple source #1 quote = 「썸네일을 표시하려면 사이드바 보기 버튼 을 탭하십시오. ( 사이드바 보기 버튼 이 나타나지 않으면 PDF를 탭하십시오.)」 (single-quoted, byte-exact from the brief); 5 Apple `retrieved` '2026-10-10' -> '2026-10-30' (file's single-quote style kept; `published` untouched); 쪽 빼기 step rewritten word-for-word per brief. Line 113 hedge kept; FAQ line 52 has no 페이지 수 wording (confirmed, unchanged). JLPT, presets, history-exam-photo, jpg-to-pdf untouched.
 - Gates: npm run check 0 errors / 0 warnings (12 hints; a fresh worktree needs one build first for src/generated/*.json). npm test 112 files / 2400 tests green. PUBLIC_SITE_URL=https://docttak.com build + check-dist OK (2683 files); guide-length all ok. check:quotes live: 「source-watch --exact: 17 problem(s) in 699 quotes」 — 0 NOT VERBATIM, 17 UNREACHABLE all https://www.jlpt.or.kr/html/information_01.html (fetch failed; D2 outage); historyexam 200, pdf-split verbatim. e2e chromium pdf-split + site (E2E_PORT=4273): 131 passed.
 
+## QR1031 (design) — QR코드 색 바꾸기 + 로고·사진 넣기 (Arch, 2026-10-31)
+- Owner 2026-10-31: 「qr코드 생성 기능 추가해」 → 「색·가운데 로고」. Brief: handoff/ARCHITECT-BRIEF-QR1031.md (D1–D14).
+- Locked: closed-by-default details under the 받기 buttons (preview never moves); fg/bg color inputs; BLOCK (not warn) when
+  QR 색 is not darker than 바탕 or WCAG contrast < 3:1 (SC 1.4.11), preview still shows; logo = local file → sniff +
+  decodeImage <= 512 px → PNG data URL in memory, own lazy chunk; logo ⇒ ECC H, minVersion 5, H cap 1,273 bytes
+  (qrcode.com table), centered plate = largest odd module count <= 22 % of the side (<= 4.4 % of the symbol vs ~30 % H);
+  jsQR sweep v5–v40 decides any LOGO_MAX_VERSION; defaults byte-identical (business-card untouched); no budget raised,
+  0 new glyphs target, no dependency, no CSP change (img-src data: blob: already), usage beacon unchanged.
+- Known Gaps (opened): transparent background; module/eye styles; logo size slider; logo on /business-card/; style usage
+  fields; remember choices; /en/ twin. Owner item O1: real-phone scans of a colored and a logo QR.
+
+## SEO1031 · DRAFT1031 · QUOTES1031 (live)
+SEO1031 + DRAFT1031 + QUOTES1031 live smoke 2026-10-31: PRs #41 #42 #43 merged (main 54a080e, post-deploy green). 15 guides (9 SEO1031 + 6 DRAFT1031): 200, title, description, answer, FAQPage — 75/75 pass (scratchpad guide-smoke.mjs); hubs upload-limits/photo-sizes link the new guides; /guide/pdf-split/ shows the iOS 27 「사이드바 보기」 step. Worktrees seo1031/photo1031/quotes1031 removed.
+
+## QR1031 build — QR코드 색 바꾸기 + 로고·사진 넣기 (Bob, 2026-10-31)
+Status: DONE (gates below; Richard review pending). Review request: handoff/REVIEW-REQUEST-QR1031.md. Branch qr1031
+(main 54a080e merged in first, fast-forward; BUILD-LOG conflict: both sides kept, main's first).
+- Files: src/lib/qr/encode.ts (opts `{ ecc, minVersion }`, QR_MAX_BYTES_H 1273; no-arg path unchanged), src/lib/qr/style.ts
+  (new: parseHex, rgb, luminance, contrastRatio, scanLuma, checkColors, MIN_CONTRAST 3, SCAN_LUMA_SHARE 0.45,
+  LOGO_MIN_VERSION 5, defaults), src/lib/qr/styled.ts (new: colorSvg/colorRgba on top of the plain renderers),
+  src/lib/qr/logo-render.ts (new: logoPlate, logoSvg, plateRgba, logoPng), src/lib/qr/render.ts (only: qrPng now calls
+  the new exported rgbaPng(img, draw?)), src/pages/qr-code/index.astro + qr-code.css (closed details #qr-style after
+  .qr-actions), src/tools/qr-code/controller.ts (panel glue), src/tools/qr-code/logo.ts (new lazy chunk), scripts/check-dist.mjs
+  (QR1031 block), tests/unit/qr-style.test.ts (new, 14 tests), tests/e2e/qr-code.spec.ts (+7 tests), src/data/tools.ts,
+  src/content/tool-notes/qr-code.md, src/content/guides/qr-code.md, docs/COPY.md, handoff/sources/qr1031/ (3 files).
+- Decision D3 (raised, not lowered): 3:1 alone FAILS jsQR. #949494 on white (3.03:1) decodes at 2 px per module and not at
+  4, 8 or 41 (the PNG uses 8–41). Cause: jsQR's binarizer (a ZXing port; ZXing's HybridBinarizer has the same rule) gives an
+  even 8×8 block the threshold "half its lightest value" (MIN_DYNAMIC_RANGE 24, min / 2), so a QR color whose 8-bit luma
+  (0.2126 R + 0.7152 G + 0.0722 B on the sRGB values) is over half the background's turns white inside big modules.
+  Measured: 3,000 random pairs >= 3:1 with luma share in 0.35–0.65, decoded at 3/8/16/41 px: every failure at share >=
+  0.496, every pass <= 0.499. A ratio-only raise would need about 4.9:1 (worst case gray on magenta, analytic search) and
+  would block red on white (#ff0000, 4.0:1, share 0.21, reads fine), so the raise is a second rule in checkColors: `low`
+  also when scanLuma(fg) > 0.45 × scanLuma(bg) (0.45 = the 0.5 cliff minus room for print and camera). MIN_CONTRAST stays 3
+  (WCAG 2.2 SC 1.4.11, sourced). Proven: the boundary pairs (#ff28ff at 3.0002:1, luma share 0.40; #727272 the lightest allowed gray,
+  #1a4d8f/#fff8e1) decode at 4, 8 and 41 px with and without a logo (checker plate); 60 random allowed pairs decode at 8
+  and 41 px; #737373 and #949494 on white are `low`. Arch: if you prefer a single WCAG number, the honest one is 5:1.
+- D8 sweep: versions 5, 7, 10, 15, 20, 25, 30, 35, 40 at level H, the whole plate painted as a fg/bg checker (worse than
+  any real picture), black/white and #1a4d8f/#fff8e1, jsQR at 4 px: all decode, plus 1,273 bytes (v40-H) with the checker.
+  No LOGO_MAX_VERSION needed (not added: it would be dead code).
+- D7 correction: the plate covers 3.4 % (v8) to 4.8 % (v31) of the symbol, not "<= 4.4 %" (0.22² = 4.84 % is the bound);
+  v5 → 7 modules, v40 → 37 as the brief says; never on a finder (start >= 8 and end <= n − 8 for v5–v40, unit).
+- D5 (moved code, not budget): with colors in the controller the /qr-code/ controller was 9.7 KB / 9.2 (and the shared
+  QR chunk grew business-card's controller to 10.1). Fix 1: render.ts stays as it was (only the rgbaPng split); colors
+  and the logo are applied on top in new modules, so business-card is back to 9.4 KB (9.3 at CARD1026 C; +rgbaPng).
+  Fix 2: the whole panel code (color check + messages, styled renderers, picture decode, logo renderers) is the lazy
+  logo.ts chunk, loaded when the panel is first opened (toggle) or used; the controller keeps only the glue. Rolldown
+  note: a lazy chunk that imports a module living in the controller chunk makes the controller export a namespace through
+  the runtime helper, which rolldown put in export-chunk (866 KB raw: the static closure became 355.8 KB); so the logo
+  chunk imports nothing the controller imports (only the shared QR chunk and image libs) and check-dist would catch it.
+  Until the chunk is here a styled QR is never downloaded (colorsOk false → 받기 opens the panel, focuses QR 색; the
+  chunk failing shows 「처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.」 under the colors or the picker).
+- D9 deviation (names): renderers are colorSvg/colorRgba (styled.ts) and logoSvg/plateRgba/logoPng (logo-render.ts) on top
+  of the unchanged qrSvg/qrRgba/qrPng instead of an optional style parameter, so the default bytes are the very same code
+  path. `<image href>` only (SVG 2, every current browser); xlink:href not added: no viewer check done (Known Gap).
+- D2 wording: 「배경 색」, not 「바탕 색」 (탕 is not in the UI font, D12). Messages: 「QR 색이 배경 색보다 어두워야 잘
+  찍혀요.」 (inverted), 「두 색의 차이가 작아 잘 찍히지 않을 수 있어요. QR 색을 더 어둡게 골라 주세요.」 (low), the D6 over
+  line verbatim; picture errors are the shared photo texts pdf-sign uses (ERRORS, imageLimitMessage).
+- D12 glyphs: uiCharSets of main 54a080e (+ the same src/generated) vs this branch: core 615 = 615, late 82 = 82, 0 new,
+  0 gone (reworded 바탕→배경, 색깔→색 in the FAQ question, 비슷→차이가 작, 복원 레벨/힘→가려진 곳을 되살리는 정도).
+  gen-ui-font: core 615, late 82; fonts preloaded 92.1 / 92.66 KB default (92.2 production flags), late 7.5 / 7.9 of 8 KB.
+- Budgets (gzip, measured default = production flags): /qr-code/ initial 9.1 KB default, 10.7 production / 12.9
+  (unchanged); controller 9,170 B = 9.0 KB / 9.2 (unchanged; main 8.1); logo chunk (logo + messages + sniff + decode + 3
+  limits) 8,377 B = 8.2 KB → QR_LOGO_KB 9.9 (8.18 + 20 %); business-card controller 9.4 / 11.1. Precache 397.3 / 450 KB
+  default (26 URLs, unchanged), 405.0 / 450 production flags (23 URLs). No budget raised, no dependency, no CSP change,
+  usage beacon unchanged.
+- Copy D14: tools.ts updated 2026-10-31, description 「… 색과 로고도 넣고, 기간이 지나도 멈추지 않아요.」 (meta-length
+  green), FAQ +2, keywords +4; tool-notes line rewritten; guide: new 「색과 로고를 넣을 때」 section (3 qrcode.com
+  error_correction quotes, retrieved 2026-10-31; numbers only 2,331 and 1,273 from the already-cited v40 row), the
+  「색을 바꾸거나 위에 그림을 얹었어요」 bullet rewritten, updated 2026-10-31; COPY.md qr-code line extended; no 「30%」.
+- Environment: the root C:\dev\doc-tools-kr\node_modules was empty (emptied 10:10, before this build; not by this sprint's
+  files). Vite 8 / rolldown resolves the root tsconfig.json for paths under the root, and its `extends:
+  astro/tsconfigs/strict` failed ("Tsconfig not found"), so every worktree build failed. Root cause confirmed with
+  rolldown's resolveTsconfig on a root path; fixed by `npm ci` in the root (lockfile unchanged, 506 packages). This
+  worktree has its own node_modules (npm ci).
+- Gates: npm run check 0 errors / 0 warnings (12 hints). npm test full run 2411 / 2414: the 3 reds were timeouts of
+  check-dist-spawning tests (ga.test GA-off; postbuild invalid contact email; postbuild usage statistics, a fixed 120 s for
+  8 check-dist runs). check-dist takes 30 s here for main's script and this branch's alike on the same dist (machine
+  load), so environmental: ga.test + postbuild re-run with --testTimeout 105 / 106, and the usage test alone with its
+  timeout raised locally (reverted, not committed) passed in 259 s. Default build + check-dist OK (2685 files); production
+  flags (ci.yml) build + check-dist OK. e2e E2E_PORT=4273: qr-code.spec + business-card.spec chromium + webkit 54 / 54
+  (first run 4 webkit flaky under load; webkit re-run with --retries=0 27 / 27); polish.spec + site.spec chromium 187
+  passed, 1 skipped. qr-style unit (jsQR matrix) 14 / 14.
+- Known Gaps (new): xlink:href for old SVG editors (check Illustrator / Inkscape 0.92 once); the scan rule is derived from
+  jsQR/ZXing, iPhone (Vision) not measured — owner item O1 covers it; colors are plain black/white until the panel code
+  loads (a styled QR is blocked, not wrong, in that window).
+
+### QR1031 review fixes (2026-10-31, Bob) — DONE
+- Must Fix: `role="alert"` on `#qr-color-error` and `#qr-logo-error` (src/pages/qr-code/index.astro), same as `#qr-over`; e2e c and d assert the role; axe in f re-run clean.
+- Should Fix: guide qr-code.md table intro now says M only without a logo and points to 「색과 로고를 넣을 때」 for H (no ratios or percentages).
+- Should Fix: style.ts comment corrected: jsQR's low-contrast block threshold is min / 2 (darkest value); in an even block min ≈ max, so the measured cliff stands.
+- Gates: `npm run check` 0 errors; vitest tests/unit/qr* 54/54; build + check-dist OK (2685 files); qr-code.spec.ts chromium + webkit 36/36 (E2E_PORT=4273).
+
+### QR1031 CI fix (2026-10-31)
+- PR #44 e2e (firefox): 색·로고 f failed 3/3 on `top() toBe(closed)`: 620.5499878 vs 620.5500031 (float noise, 0.00002 px). Changed both compares to |Δ| < 0.01 px; a visible move is still caught. Other firefox reds were 20 s timeouts that passed on retry (runner load).
+
 ## SEARCH1031 (design) — 사이트 찾기, 유사어 허용 (Arch, 2026-10-31)
 - Owner 「기능이 많아져서 무슨 메뉴가 어디있는지 모르겠네 검색 기능을 추가해 … 유사어로 검색도 가능하도록 해야해」. Brief: handoff/ARCHITECT-BRIEF-SEARCH1031.md (D1-D13). Branch search1031 off 79f5bc1; E2E_PORT=4373; src/data/tools.ts untouched (QR1031 owns the qr-code entry).
 - Decided: header 「찾기」 disclosure (overlay dropdown like the 도구 menu; a plain link to /search/ without JS) on all Korean pages + a visible box in the home hero + /search/ page + a box on 404. Never auto-opens, no pop-up, nothing above the tool.

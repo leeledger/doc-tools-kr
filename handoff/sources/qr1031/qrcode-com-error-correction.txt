@@ -1,0 +1,15 @@
+Title: QRcode.com (DENSO WAVE) — 오류 복원 기능에 대해 / Error Correction Feature (Korean page, English twin for cross-check)
+Fetched: 2026-10-31 (curl, server HTML, UTF-8; tags stripped, text verbatim; QR1031 D13, Bob)
+
+URL: https://www.qrcode.com/ko/about/error_correction.html (sha256 bbf0aa6b50c5b6c0e583c9980ff74bc6ad2e18a7007af375b432414f1348f8e5)
+	QR코드는 코드의 오염이나 손상에도 코드 자체에 데이터를 복원하는 기능이 있습니다. "오류복원 레벨" 4단계에서 사용자가 사용 환경에 맞추어 레벨을 선택 할 수 있습니다. 레벨을 올리면 오류복원 능력은 향상되지만 데이터가 증가되어 코드의 크기가 커집니다.
+	어떤 레벨을 선택하는가는 사용 환경, 코드 크기 등을 종합적으로 고려하여 결정합니다. 공장 등 더러워지기 쉬운 환경에서는 레벨Q 또는 H를 선택하고, 쉽게 더러워지지 않고 데이터 량이 많은 경우에는 레벨 L을 선택 할 수 있습니다. 일반적으로는 레벨M(15%)로 운용되는 경우가 많습니다. 
+	※모든 code words(데이터를 구성하는 단위로 QR코드에는 8bit/codewords)에 대한 복원률
+(The per-level percentages other than 레벨M(15%) are only in a table image on this page; copy never states them.)
+
+URL: https://www.qrcode.com/en/about/error_correction.html (sha256 44e25f08579ea5f63e86404969afcb63595658e303a767652f1e2247da1a5d11)
+	QR Code has error correction capability to restore data if the code is dirty or damaged. Four error correction levels are available for users to choose according to the operating environment. Raising this level improves error correction capability but also increases the amount of data QR Code size.
+	To select error correction level, various factors such as the operating environment and QR Code size need to be considered.
+Level Q or H may be selected for factory environment where QR Code get dirty, whereas Level L may be selected for clean environment with the large amount of data. Typically, Level M (15%) is most frequently selected.
+
+H at version 40, binary: 1,273 (handoff/sources/card1026/qrcode-com.txt line 13, versionPage31_40.html, fetched 2026-10-26).

@@ -6,6 +6,8 @@ import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import type { Download, Page } from '@playwright/test';
+import { encodeQr } from '../../src/lib/qr/encode';
+import { pngModulePx, qrRgba, qrSvg } from '../../src/lib/qr/render';
 import { decodeQrText } from '../helpers/qr-decode';
 import { expect, gotoReady, test } from './no-upload';
 
@@ -202,4 +204,200 @@ test('the first interaction is a 받기 press: the controller loads, the press i
   const r = await decodePng(readFileSync((await (d as Download).path())!));
   expect(r.text).toBe('https://example.org/first-press');
   await expect(page.locator('#qr-tool')).toHaveAttribute('data-ready', '1');
+});
+
+// QR1031: 색 바꾸기·로고 넣기. Defaults byte-identical to the plain renderers; colors decode; low and inverted pairs are
+// blocked with a red line and focus; a picture (PNG, JPEG) goes in the middle at level H and decodes; 로고 빼기; a
+// non-image; too much text with a logo; the logo code failing to load; the panel never moves the preview; axe.
+const HREF = 'https://example.org/qr-style';
+
+async function pngPixels(png: Buffer): Promise<{ data: Uint8ClampedArray; w: number }> {
+  const img = await loadImage(png);
+  const c = createCanvas(img.width, img.height);
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  return { data: new Uint8ClampedArray(ctx.getImageData(0, 0, img.width, img.height).data), w: img.width };
+}
+
+/** A small picture made in the test: a red disc on a green square with a blue bar (PNG or JPEG). */
+function testPicture(type: 'image/png' | 'image/jpeg'): Buffer {
+  const c = createCanvas(300, 200);
+  const g = c.getContext('2d');
+  g.fillStyle = '#2a9d4a';
+  g.fillRect(0, 0, 300, 200);
+  g.fillStyle = '#d62828';
+  g.beginPath();
+  g.arc(150, 100, 80, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#1d3dbf';
+  g.fillRect(0, 170, 300, 30);
+  return type === 'image/png' ? c.toBuffer('image/png') : c.toBuffer('image/jpeg');
+}
+
+async function openStyle(page: Page): Promise<void> {
+  await page.locator('#qr-style > summary').click();
+  await expect(page.locator('#qr-fg')).toBeVisible();
+}
+
+test('색·로고 a) defaults: the panel is closed; PNG and SVG are exactly the plain renderers (fill #000, no image)', async ({ page }) => {
+  await gotoReady(page, '/qr-code/');
+  await expect(page.locator('#qr-style')).not.toHaveAttribute('open', /.*/);
+  await expect(page.locator('#qr-fg')).toBeHidden();
+  await page.locator('#qr-url').fill('example.org/qr-style');
+  await expect(page.locator('#qr-preview svg')).toBeVisible();
+  const enc = encodeQr(HREF);
+  if (!enc.ok) throw new Error(enc.code);
+  const svg = (await download(page, '#qr-svg')).bytes.toString('utf8');
+  expect(svg).toBe(qrSvg(enc.modules));
+  expect(svg).toContain('<path fill="#000" d="');
+  expect(svg).not.toContain('<image');
+  const png = await pngPixels((await download(page, '#qr-png')).bytes);
+  const want = qrRgba(enc.modules, pngModulePx(enc.modules.length));
+  expect(png.w).toBe(want.width);
+  expect(Buffer.from(png.data).equals(Buffer.from(want.data))).toBe(true);
+  // Opening the panel with the defaults changes nothing.
+  await openStyle(page);
+  expect((await download(page, '#qr-svg')).bytes.toString('utf8')).toBe(qrSvg(enc.modules));
+});
+
+test('색·로고 b) #1a4d8f on #fff8e1: the PNG decodes to the href; the SVG carries both colors', async ({ page }) => {
+  await gotoReady(page, '/qr-code/');
+  await page.locator('#qr-url').fill('example.org/qr-style');
+  await openStyle(page);
+  await page.locator('#qr-fg').fill('#1a4d8f');
+  await page.locator('#qr-bg').fill('#fff8e1');
+  await expect(page.locator('#qr-preview path')).toHaveAttribute('fill', '#1a4d8f');
+  await expect(page.locator('#qr-color-error')).toBeEmpty();
+  await expectPng(page, HREF);
+  const svg = (await download(page, '#qr-svg')).bytes.toString('utf8');
+  expect(svg).toContain('fill="#fff8e1"/>');
+  expect(svg).toContain('<path fill="#1a4d8f" d="');
+});
+
+test('색·로고 c) a low (#cccccc on white) and an inverted (white on black) pair: red line, aria-invalid, 받기 gives nothing and focuses QR 색; reset works', async ({ page }) => {
+  await gotoReady(page, '/qr-code/');
+  await page.locator('#qr-url').fill('example.org/qr-style');
+  await openStyle(page);
+  let downloads = 0;
+  page.on('download', () => downloads++);
+  const pairs: [string, string, string][] = [
+    ['#cccccc', '#ffffff', '두 색의 차이가 작아 잘 찍히지 않을 수 있어요. QR 색을 더 어둡게 골라 주세요.'],
+    ['#ffffff', '#000000', 'QR 색이 배경 색보다 어두워야 잘 찍혀요.'],
+  ];
+  for (const [fg, bg, line] of pairs) {
+    await page.locator('#qr-fg').fill(fg);
+    await page.locator('#qr-bg').fill(bg);
+    await expect(page.locator('#qr-color-error')).toHaveText(line);
+    await expect(page.locator('#qr-color-error')).toHaveAttribute('role', 'alert');
+    await expect(page.locator('#qr-fg')).toHaveAttribute('aria-invalid', 'true');
+    // The preview still shows the chosen colors.
+    await expect(page.locator('#qr-preview path')).toHaveAttribute('fill', fg);
+    expect(await serious(page)).toEqual([]);
+    // Closed panel + a 받기 press: it opens and QR 색 gets the focus, no file.
+    await page.locator('#qr-style > summary').click();
+    await expect(page.locator('#qr-fg')).toBeHidden();
+    await page.locator('#qr-png').click();
+    await expect(page.locator('#qr-style')).toHaveAttribute('open', '');
+    await expect(page.locator('#qr-fg')).toBeFocused();
+    await page.locator('#qr-svg').click();
+    await expect(page.locator('#qr-fg')).toBeFocused();
+  }
+  await page.waitForTimeout(300);
+  expect(downloads).toBe(0);
+  await page.locator('#qr-color-reset').click();
+  await expect(page.locator('#qr-fg')).toHaveValue('#000000');
+  await expect(page.locator('#qr-bg')).toHaveValue('#ffffff');
+  await expect(page.locator('#qr-color-error')).toBeEmpty();
+  await expect(page.locator('#qr-fg')).not.toHaveAttribute('aria-invalid', /.*/);
+  await expectPng(page, HREF);
+});
+
+test('색·로고 d) a PNG and a JPEG logo: the PNG decodes, the SVG has one PNG data URL image; 로고 빼기; a non-image is refused', async ({ page }) => {
+  await gotoReady(page, '/qr-code/');
+  await page.locator('#qr-url').fill('example.org/qr-style');
+  await openStyle(page);
+  const plain = encodeQr(HREF);
+  if (!plain.ok) throw new Error(plain.code);
+  const files: ['logo.png' | 'logo.jpg', 'image/png' | 'image/jpeg'][] = [
+    ['logo.png', 'image/png'],
+    ['logo.jpg', 'image/jpeg'],
+  ];
+  for (const [name, mimeType] of files) {
+    await page.locator('#qr-logo-input').setInputFiles({ name, mimeType, buffer: testPicture(mimeType) });
+    await expect(page.locator('#qr-logo-remove')).toBeVisible();
+    await expect(page.locator('#qr-preview image')).toHaveCount(1);
+    await expect(page.locator('#qr-logo-error')).toBeEmpty();
+    await expectPng(page, HREF);
+    const svg = (await download(page, '#qr-svg')).bytes.toString('utf8');
+    expect(svg.match(/<image /g)).toHaveLength(1);
+    expect(svg).toMatch(/<image href="data:image\/png;base64,[A-Za-z0-9+/]+=*" x="\d+" y="\d+" width="\d+" height="\d+" preserveAspectRatio="xMidYMid meet"\/>/);
+    // Level H from version 5: at least 37 modules plus the quiet zone.
+    expect(Number(/viewBox="0 0 (\d+) /.exec(svg)![1])).toBeGreaterThanOrEqual(45);
+    // The PNG has the picture's colors in the middle (the red disc).
+    const png = await pngPixels((await download(page, '#qr-png')).bytes);
+    const mid = (Math.floor(png.w / 2) * png.w + Math.floor(png.w / 2)) * 4;
+    expect(png.data[mid]!).toBeGreaterThan(150);
+    expect(png.data[mid + 1]!).toBeLessThan(110);
+  }
+  await page.locator('#qr-logo-remove').click();
+  await expect(page.locator('#qr-logo-remove')).toBeHidden();
+  await expect(page.locator('#qr-preview image')).toHaveCount(0);
+  expect((await download(page, '#qr-svg')).bytes.toString('utf8')).toBe(qrSvg(plain.modules));
+  await page.locator('#qr-logo-input').setInputFiles({ name: 'note.png', mimeType: 'image/png', buffer: Buffer.from('this is not a picture at all') });
+  await expect(page.locator('#qr-logo-error')).toHaveText('사진 파일이 아닙니다. JPG·PNG·WebP 파일을 선택해 주세요.');
+  // The error arrives after the file dialog closes, so it must be announced (review QR1031 Must Fix).
+  await expect(page.locator('#qr-logo-error')).toHaveAttribute('role', 'alert');
+  await expect(page.locator('#qr-logo-remove')).toBeHidden();
+  await expect(page.locator('#qr-preview image')).toHaveCount(0);
+  expect(await serious(page)).toEqual([]);
+});
+
+test('색·로고 e) a logo and more than 1,273 bytes: the logo line, no file; 로고 빼기 brings the QR back', async ({ page }) => {
+  await gotoReady(page, '/qr-code/?tab=text');
+  await openStyle(page);
+  await page.locator('#qr-logo-input').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: testPicture('image/png') });
+  await expect(page.locator('#qr-logo-remove')).toBeVisible();
+  await page.locator('#qr-text').fill('a'.repeat(1300));
+  await expect(page.locator('#qr-over')).toHaveText('로고를 넣으면 QR에 담을 수 있는 글자가 줄어요. 글자를 줄이거나 로고를 빼 주세요.');
+  await expect(page.locator('#qr-preview svg')).toHaveCount(0);
+  let downloads = 0;
+  page.on('download', () => downloads++);
+  await page.locator('#qr-png').click();
+  await page.locator('#qr-svg').click();
+  await page.waitForTimeout(300);
+  expect(downloads).toBe(0);
+  await page.locator('#qr-logo-remove').click();
+  await expect(page.locator('#qr-over')).toBeEmpty();
+  await expectPng(page, 'a'.repeat(1300));
+});
+
+test('색·로고: the logo code cannot load (offline): one line under the picker, the QR keeps working', async ({ page }) => {
+  await gotoReady(page, '/qr-code/');
+  await page.route(/\/logo\.[\w-]+\.js$/, (r) => r.abort());
+  await page.locator('#qr-url').fill('example.org/qr-style');
+  await openStyle(page);
+  await page.locator('#qr-logo-input').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: testPicture('image/png') });
+  await expect(page.locator('#qr-logo-error')).toHaveText('처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.');
+  await expect(page.locator('#qr-logo-remove')).toBeHidden();
+  await expectPng(page, HREF);
+});
+
+test('색·로고 f) 390×844: opening the panel never moves the preview; axe clean open and with an error shown', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await gotoReady(page, '/qr-code/');
+  await page.locator('#qr-url').fill('example.org/qr-style');
+  await expect(page.locator('#qr-preview svg')).toBeVisible();
+  const top = async (): Promise<number> => page.locator('#qr-preview').evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+  const closed = await top();
+  await openStyle(page);
+  // Sub-pixel float noise on Firefox (620.54999 vs 620.55000); any visible move is far over 0.01 px.
+  expect(Math.abs((await top()) - closed)).toBeLessThan(0.01);
+  expect(await serious(page)).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  await page.locator('#qr-fg').fill('#ffffff');
+  await page.locator('#qr-bg').fill('#000000');
+  await expect(page.locator('#qr-color-error')).not.toBeEmpty();
+  // Sub-pixel float noise on Firefox (620.54999 vs 620.55000); any visible move is far over 0.01 px.
+  expect(Math.abs((await top()) - closed)).toBeLessThan(0.01);
+  expect(await serious(page)).toEqual([]);
 });
