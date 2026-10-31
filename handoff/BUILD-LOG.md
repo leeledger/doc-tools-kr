@@ -4858,3 +4858,131 @@ FAIL1030 live smoke 2026-10-30: deploy f2952ed post-deploy run green; /pdf-compr
 - tests/unit/ops.test.ts 「QUOTES1031」 describe, 4 tests via `run(['--exact'], io)` with stub fetchImpl + recording wait: a 404→200 exit 0, waits [10000]; b 404→404 exit 1, one 「UNREACHABLE … HTTP 404」; c 200 one fetch, no wait; d 403 one fetch, 「UNREACHABLE … HTTP 403」. Existing tests unchanged.
 - Commit B src/content/guides/pdf-split.md: Apple source #1 quote = 「썸네일을 표시하려면 사이드바 보기 버튼 을 탭하십시오. ( 사이드바 보기 버튼 이 나타나지 않으면 PDF를 탭하십시오.)」 (single-quoted, byte-exact from the brief); 5 Apple `retrieved` '2026-10-10' -> '2026-10-30' (file's single-quote style kept; `published` untouched); 쪽 빼기 step rewritten word-for-word per brief. Line 113 hedge kept; FAQ line 52 has no 페이지 수 wording (confirmed, unchanged). JLPT, presets, history-exam-photo, jpg-to-pdf untouched.
 - Gates: npm run check 0 errors / 0 warnings (12 hints; a fresh worktree needs one build first for src/generated/*.json). npm test 112 files / 2400 tests green. PUBLIC_SITE_URL=https://docttak.com build + check-dist OK (2683 files); guide-length all ok. check:quotes live: 「source-watch --exact: 17 problem(s) in 699 quotes」 — 0 NOT VERBATIM, 17 UNREACHABLE all https://www.jlpt.or.kr/html/information_01.html (fetch failed; D2 outage); historyexam 200, pdf-split verbatim. e2e chromium pdf-split + site (E2E_PORT=4273): 131 passed.
+
+## QR1031 (design) — QR코드 색 바꾸기 + 로고·사진 넣기 (Arch, 2026-10-31)
+- Owner 2026-10-31: 「qr코드 생성 기능 추가해」 → 「색·가운데 로고」. Brief: handoff/ARCHITECT-BRIEF-QR1031.md (D1–D14).
+- Locked: closed-by-default details under the 받기 buttons (preview never moves); fg/bg color inputs; BLOCK (not warn) when
+  QR 색 is not darker than 바탕 or WCAG contrast < 3:1 (SC 1.4.11), preview still shows; logo = local file → sniff +
+  decodeImage <= 512 px → PNG data URL in memory, own lazy chunk; logo ⇒ ECC H, minVersion 5, H cap 1,273 bytes
+  (qrcode.com table), centered plate = largest odd module count <= 22 % of the side (<= 4.4 % of the symbol vs ~30 % H);
+  jsQR sweep v5–v40 decides any LOGO_MAX_VERSION; defaults byte-identical (business-card untouched); no budget raised,
+  0 new glyphs target, no dependency, no CSP change (img-src data: blob: already), usage beacon unchanged.
+- Known Gaps (opened): transparent background; module/eye styles; logo size slider; logo on /business-card/; style usage
+  fields; remember choices; /en/ twin. Owner item O1: real-phone scans of a colored and a logo QR.
+
+## SEO1031 · DRAFT1031 · QUOTES1031 (live)
+SEO1031 + DRAFT1031 + QUOTES1031 live smoke 2026-10-31: PRs #41 #42 #43 merged (main 54a080e, post-deploy green). 15 guides (9 SEO1031 + 6 DRAFT1031): 200, title, description, answer, FAQPage — 75/75 pass (scratchpad guide-smoke.mjs); hubs upload-limits/photo-sizes link the new guides; /guide/pdf-split/ shows the iOS 27 「사이드바 보기」 step. Worktrees seo1031/photo1031/quotes1031 removed.
+
+## QR1031 build — QR코드 색 바꾸기 + 로고·사진 넣기 (Bob, 2026-10-31)
+Status: DONE (gates below; Richard review pending). Review request: handoff/REVIEW-REQUEST-QR1031.md. Branch qr1031
+(main 54a080e merged in first, fast-forward; BUILD-LOG conflict: both sides kept, main's first).
+- Files: src/lib/qr/encode.ts (opts `{ ecc, minVersion }`, QR_MAX_BYTES_H 1273; no-arg path unchanged), src/lib/qr/style.ts
+  (new: parseHex, rgb, luminance, contrastRatio, scanLuma, checkColors, MIN_CONTRAST 3, SCAN_LUMA_SHARE 0.45,
+  LOGO_MIN_VERSION 5, defaults), src/lib/qr/styled.ts (new: colorSvg/colorRgba on top of the plain renderers),
+  src/lib/qr/logo-render.ts (new: logoPlate, logoSvg, plateRgba, logoPng), src/lib/qr/render.ts (only: qrPng now calls
+  the new exported rgbaPng(img, draw?)), src/pages/qr-code/index.astro + qr-code.css (closed details #qr-style after
+  .qr-actions), src/tools/qr-code/controller.ts (panel glue), src/tools/qr-code/logo.ts (new lazy chunk), scripts/check-dist.mjs
+  (QR1031 block), tests/unit/qr-style.test.ts (new, 14 tests), tests/e2e/qr-code.spec.ts (+7 tests), src/data/tools.ts,
+  src/content/tool-notes/qr-code.md, src/content/guides/qr-code.md, docs/COPY.md, handoff/sources/qr1031/ (3 files).
+- Decision D3 (raised, not lowered): 3:1 alone FAILS jsQR. #949494 on white (3.03:1) decodes at 2 px per module and not at
+  4, 8 or 41 (the PNG uses 8–41). Cause: jsQR's binarizer (a ZXing port; ZXing's HybridBinarizer has the same rule) gives an
+  even 8×8 block the threshold "half its lightest value" (MIN_DYNAMIC_RANGE 24, min / 2), so a QR color whose 8-bit luma
+  (0.2126 R + 0.7152 G + 0.0722 B on the sRGB values) is over half the background's turns white inside big modules.
+  Measured: 3,000 random pairs >= 3:1 with luma share in 0.35–0.65, decoded at 3/8/16/41 px: every failure at share >=
+  0.496, every pass <= 0.499. A ratio-only raise would need about 4.9:1 (worst case gray on magenta, analytic search) and
+  would block red on white (#ff0000, 4.0:1, share 0.21, reads fine), so the raise is a second rule in checkColors: `low`
+  also when scanLuma(fg) > 0.45 × scanLuma(bg) (0.45 = the 0.5 cliff minus room for print and camera). MIN_CONTRAST stays 3
+  (WCAG 2.2 SC 1.4.11, sourced). Proven: the boundary pairs (#ff28ff at 3.0002:1, luma share 0.40; #727272 the lightest allowed gray,
+  #1a4d8f/#fff8e1) decode at 4, 8 and 41 px with and without a logo (checker plate); 60 random allowed pairs decode at 8
+  and 41 px; #737373 and #949494 on white are `low`. Arch: if you prefer a single WCAG number, the honest one is 5:1.
+- D8 sweep: versions 5, 7, 10, 15, 20, 25, 30, 35, 40 at level H, the whole plate painted as a fg/bg checker (worse than
+  any real picture), black/white and #1a4d8f/#fff8e1, jsQR at 4 px: all decode, plus 1,273 bytes (v40-H) with the checker.
+  No LOGO_MAX_VERSION needed (not added: it would be dead code).
+- D7 correction: the plate covers 3.4 % (v8) to 4.8 % (v31) of the symbol, not "<= 4.4 %" (0.22² = 4.84 % is the bound);
+  v5 → 7 modules, v40 → 37 as the brief says; never on a finder (start >= 8 and end <= n − 8 for v5–v40, unit).
+- D5 (moved code, not budget): with colors in the controller the /qr-code/ controller was 9.7 KB / 9.2 (and the shared
+  QR chunk grew business-card's controller to 10.1). Fix 1: render.ts stays as it was (only the rgbaPng split); colors
+  and the logo are applied on top in new modules, so business-card is back to 9.4 KB (9.3 at CARD1026 C; +rgbaPng).
+  Fix 2: the whole panel code (color check + messages, styled renderers, picture decode, logo renderers) is the lazy
+  logo.ts chunk, loaded when the panel is first opened (toggle) or used; the controller keeps only the glue. Rolldown
+  note: a lazy chunk that imports a module living in the controller chunk makes the controller export a namespace through
+  the runtime helper, which rolldown put in export-chunk (866 KB raw: the static closure became 355.8 KB); so the logo
+  chunk imports nothing the controller imports (only the shared QR chunk and image libs) and check-dist would catch it.
+  Until the chunk is here a styled QR is never downloaded (colorsOk false → 받기 opens the panel, focuses QR 색; the
+  chunk failing shows 「처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.」 under the colors or the picker).
+- D9 deviation (names): renderers are colorSvg/colorRgba (styled.ts) and logoSvg/plateRgba/logoPng (logo-render.ts) on top
+  of the unchanged qrSvg/qrRgba/qrPng instead of an optional style parameter, so the default bytes are the very same code
+  path. `<image href>` only (SVG 2, every current browser); xlink:href not added: no viewer check done (Known Gap).
+- D2 wording: 「배경 색」, not 「바탕 색」 (탕 is not in the UI font, D12). Messages: 「QR 색이 배경 색보다 어두워야 잘
+  찍혀요.」 (inverted), 「두 색의 차이가 작아 잘 찍히지 않을 수 있어요. QR 색을 더 어둡게 골라 주세요.」 (low), the D6 over
+  line verbatim; picture errors are the shared photo texts pdf-sign uses (ERRORS, imageLimitMessage).
+- D12 glyphs: uiCharSets of main 54a080e (+ the same src/generated) vs this branch: core 615 = 615, late 82 = 82, 0 new,
+  0 gone (reworded 바탕→배경, 색깔→색 in the FAQ question, 비슷→차이가 작, 복원 레벨/힘→가려진 곳을 되살리는 정도).
+  gen-ui-font: core 615, late 82; fonts preloaded 92.1 / 92.66 KB default (92.2 production flags), late 7.5 / 7.9 of 8 KB.
+- Budgets (gzip, measured default = production flags): /qr-code/ initial 9.1 KB default, 10.7 production / 12.9
+  (unchanged); controller 9,170 B = 9.0 KB / 9.2 (unchanged; main 8.1); logo chunk (logo + messages + sniff + decode + 3
+  limits) 8,377 B = 8.2 KB → QR_LOGO_KB 9.9 (8.18 + 20 %); business-card controller 9.4 / 11.1. Precache 397.3 / 450 KB
+  default (26 URLs, unchanged), 405.0 / 450 production flags (23 URLs). No budget raised, no dependency, no CSP change,
+  usage beacon unchanged.
+- Copy D14: tools.ts updated 2026-10-31, description 「… 색과 로고도 넣고, 기간이 지나도 멈추지 않아요.」 (meta-length
+  green), FAQ +2, keywords +4; tool-notes line rewritten; guide: new 「색과 로고를 넣을 때」 section (3 qrcode.com
+  error_correction quotes, retrieved 2026-10-31; numbers only 2,331 and 1,273 from the already-cited v40 row), the
+  「색을 바꾸거나 위에 그림을 얹었어요」 bullet rewritten, updated 2026-10-31; COPY.md qr-code line extended; no 「30%」.
+- Environment: the root C:\dev\doc-tools-kr\node_modules was empty (emptied 10:10, before this build; not by this sprint's
+  files). Vite 8 / rolldown resolves the root tsconfig.json for paths under the root, and its `extends:
+  astro/tsconfigs/strict` failed ("Tsconfig not found"), so every worktree build failed. Root cause confirmed with
+  rolldown's resolveTsconfig on a root path; fixed by `npm ci` in the root (lockfile unchanged, 506 packages). This
+  worktree has its own node_modules (npm ci).
+- Gates: npm run check 0 errors / 0 warnings (12 hints). npm test full run 2411 / 2414: the 3 reds were timeouts of
+  check-dist-spawning tests (ga.test GA-off; postbuild invalid contact email; postbuild usage statistics, a fixed 120 s for
+  8 check-dist runs). check-dist takes 30 s here for main's script and this branch's alike on the same dist (machine
+  load), so environmental: ga.test + postbuild re-run with --testTimeout 105 / 106, and the usage test alone with its
+  timeout raised locally (reverted, not committed) passed in 259 s. Default build + check-dist OK (2685 files); production
+  flags (ci.yml) build + check-dist OK. e2e E2E_PORT=4273: qr-code.spec + business-card.spec chromium + webkit 54 / 54
+  (first run 4 webkit flaky under load; webkit re-run with --retries=0 27 / 27); polish.spec + site.spec chromium 187
+  passed, 1 skipped. qr-style unit (jsQR matrix) 14 / 14.
+- Known Gaps (new): xlink:href for old SVG editors (check Illustrator / Inkscape 0.92 once); the scan rule is derived from
+  jsQR/ZXing, iPhone (Vision) not measured — owner item O1 covers it; colors are plain black/white until the panel code
+  loads (a styled QR is blocked, not wrong, in that window).
+
+### QR1031 review fixes (2026-10-31, Bob) — DONE
+- Must Fix: `role="alert"` on `#qr-color-error` and `#qr-logo-error` (src/pages/qr-code/index.astro), same as `#qr-over`; e2e c and d assert the role; axe in f re-run clean.
+- Should Fix: guide qr-code.md table intro now says M only without a logo and points to 「색과 로고를 넣을 때」 for H (no ratios or percentages).
+- Should Fix: style.ts comment corrected: jsQR's low-contrast block threshold is min / 2 (darkest value); in an even block min ≈ max, so the measured cliff stands.
+- Gates: `npm run check` 0 errors; vitest tests/unit/qr* 54/54; build + check-dist OK (2685 files); qr-code.spec.ts chromium + webkit 36/36 (E2E_PORT=4273).
+
+### QR1031 CI fix (2026-10-31)
+- PR #44 e2e (firefox): 색·로고 f failed 3/3 on `top() toBe(closed)`: 620.5499878 vs 620.5500031 (float noise, 0.00002 px). Changed both compares to |Δ| < 0.01 px; a visible move is still caught. Other firefox reds were 20 s timeouts that passed on retry (runner load).
+
+## SEARCH1031 (design) — 사이트 찾기, 유사어 허용 (Arch, 2026-10-31)
+- Owner 「기능이 많아져서 무슨 메뉴가 어디있는지 모르겠네 검색 기능을 추가해 … 유사어로 검색도 가능하도록 해야해」. Brief: handoff/ARCHITECT-BRIEF-SEARCH1031.md (D1-D13). Branch search1031 off 79f5bc1; E2E_PORT=4373; src/data/tools.ts untouched (QR1031 owns the qr-code entry).
+- Decided: header 「찾기」 disclosure (overlay dropdown like the 도구 menu; a plain link to /search/ without JS) on all Korean pages + a visible box in the home hero + /search/ page + a box on 404. Never auto-opens, no pop-up, nothing above the tool.
+- Decided: /search/ noindex (internal search results are thin/duplicate; home and /guide/ stay the crawlable directory), not in sitemap/llms.txt/precache; no ads, no affiliate (not a content page).
+- Decided: the query lives only in the URL fragment, inputs have no name attribute, no analytics/beacon event of any kind; index = build-time /search-index.json (LIVE_TOOLS + published guides + hubs; flag-off tools absent), fetched once on first interaction; module loaded lazily by the utm-land worker-url pattern (no dynamic import in site.ts). Budgets: index ≤ 60 KB raw / 15 KB gzip, module ≤ 8 KB gzip, site script ≤ 4 KB gzip unchanged, precache ≤ 450 KB.
+- Decided: own matcher, no dependency: normalize + alias fold + intent concepts + choseong + jamo-distance fuzzy (only tokens ≥ 6 jamo, so 사진 never hits 사직); ranking name > concept > choseong > keyword/title > fuzzy > summary > FAQ; ≤ 6 tools + ≤ 4 guides; empty and no-result states show a fixed 「많이 찾는 도구」 list.
+- Decided: search UI renders in the system font (SYSTEM_FONT_PATHS), so core/late glyphs and the preload tripwire stay unchanged.
+- Known Gaps: English search on /en/ (later); guide body text not indexed; no search analytics (owner constraint); no SearchAction JSON-LD / indexable search page.
+
+## SEARCH1031 (build) — 사이트 찾기, 유사어 허용 (Bob, 2026-10-31) — Status: DONE
+- Merged origin/main (54a080e) into search1031 first; the BUILD-LOG conflict kept both sides, main's first.
+- Matcher (D6-D8), pure, no dependency: src/lib/search/normalize.ts (NFKC, lower case, punctuation to spaces; typed compatibility jamo survive NFKC), hangul.ts (jamo, choseong, bounded optimal-string-alignment distance, fuzzyBudget 0/1/2 by 6/12 jamo), synonyms.ts (ALIASES; `word: true` folds only at a word start so 디자인 never becomes 디자서명; CONCEPTS; POPULAR; STOPWORDS; PARTICLES), match.ts (search(index, query, table = CONCEPTS)). Ranking exactly D8 (best field per token, summed; whole space-stripped query as an extra token; coverage ≥ ceil(n/2); fuzzy only for a token with no exact/alias/concept hit anywhere, never in choseong mode). Decided (logged, beyond D8's covered → score → name): two tie-breaks before the name — breadth (the sum of every field the doc hit) and then the 많이 찾는 도구 order; without them 「hwpx」 put HWP 보기 above HWPX HWP 변환 by name and 「pdf」 listed 사진 PDF 변환 first and dropped PDF 합치기 from the six (360 px screenshot). Particle strip keeps both forms (사진 pdf로 matches the to-pdf concept and pdf).
+- Decided: flag-gated tools in CONCEPTS are behind their build constants (`BG_TOOL = __BG_REMOVE__ ? ['remove-background'] : []`, same for english-address): check-dist forbids the remove-background name in any flag-off file, so "skipped at runtime" alone would have failed the default build. The golden test passes a flags-on table (ALL_ON); a unit test pins that the vitest (flag-off) table names neither; check-dist pins the module names remove-background iff PUBLIC_BG_REMOVE.
+- Index (D5): src/pages/search-index.json.ts via src/lib/search/build.ts (toolEntry/guideEntry, shared with the golden test, which reads the guide/hub frontmatter with yaml). Hubs: q '' and c '규격 모음'. Default build 22.0 KB raw / 6.1 KB gzip; production-flag 23.2 / 6.4 (caps 60 / 15).
+- UI (D1, D9, D10): src/components/SiteSearch.astro (props id, variant). Header variant is a `<div role="search">`, not a form: its panel only opens with JS, and check-dist forbids any `<form>` on /qr-code/ and /business-card/ (QR1031's lines, untouched). Page variant = `<form role="search" action="/search/" method="get">`, input without name. src/lib/search/ui.ts: combobox (Down/Up wrap, Enter = active or first, also mid-composition; Esc closes the list and marks the event, a second Esc closes the header panel; mousedown on an option keeps focus; live count; 찾지 못했어요 + popular; load-failure line on script or fetch error, retry on next focus). /search/ fragment only on the page box (not the header box on /search/).
+- Boot (D4): src/lib/ui/search-boot.ts in site.ts, `?worker&url` + module script like utm-land. Listens to focusin + pointerdown (bubbling), not keydown: a key in a box always follows its focusin, and a capture keydown listener broke polish.spec's /pdf-merge/ drag-listener count (caught by the regression run, fixed at the cause). /search/ loads it at once. Header toggle = the 도구 menu's pattern; mutual close falls out of each panel's outside-click close.
+- D3 measured: Cloudflare's beacon.min.js (2026.10.1, read 2026-10-31) strips hash, search, user and password from every URL it reports (function `ot`: `e.hash="",e.search=""`), and ga.mjs already drops the hash: the fragment design stays (no in-memory fallback needed). search.cloud.spec.ts (added to CLOUD_SPEC) proves no GA/usage/other request carries a fragment or typed query.
+- Fonts (D11): SiteSearch.astro, lib/search/, pages/search/ in SYSTEM_FONT_PATHS; `.site-search, .search-page` added to the one system-font rule in app.css (weights 800, the 700 face is retired). 「찾기」 glyphs were already core. gen-ui-font: core 615 / late 82 (default) and 616 / 82 (production-flag), equal to main; preload tripwire 92.1 / 92.66 KB unchanged.
+- Header at 320 px (measured, search.spec): @media (max-width: 380px) nav gap 0 and item padding 0 8px; 44 px targets kept.
+- en-check id parity cuts the `.ssh` header panel from the Korean twin (D13: no search on /en/), like the tool notes.
+- check-dist SEARCH1031 block: index shape, budgets, every u a page of the build, flag tools present iff their flag; exactly one search module URL in the shared site script, ≤ 8 KB gzip (5.3), not initial, fetches /search-index.json, no beacon/storage, flag naming; module, /search/ and the index not precached; /search/ noindex, no AdSense, no sponsored link, a form to /search/; sitemap/llms.txt/rss do not list /search/; /en/ and /embed/ have no search markup; every Korean header has the 찾기 link; no named search input; home and 404 have the box. network-guard: lib/search/ui.ts allowlisted with a pin test (one fetch of the fixed INDEX_URL).
+- Budgets: shared site script 1.5 → 1.8 KB gzip (cap 4); search module 5.3 KB gzip (cap 8). Precache before → after: default 397.3 → 408.8 KB, production-flag 407.7 → 419.2 KB (cap 450; +11.5 KB = the header panel markup on the precached pages + CSS).
+- Environment (logged, nothing committed): C:\dev\doc-tools-kr\node_modules is empty today and Vite/oxc resolves the main checkout's tsconfig.json (extends astro/tsconfigs/strict) for Astro's virtual index.html importer, so `astro build`/`astro check` fail inside any wt/ worktree ("Tsconfig not found astro/tsconfigs/strict"). Restoring the root node_modules was refused by the permission guard (outside this worktree), so every build/check/e2e ran from a mirror of this worktree outside C:\dev\doc-tools-kr (scratchpad b1031, own npm ci, same lockfile); unit tests also ran in the worktree. Owner/Arch: `npm ci` in C:\dev\doc-tools-kr restores in-place builds.
+- OPS-RUNBOOK §13: how to add a synonym or an intent word.
+- Gates: npm run check 0 errors / 0 warnings / 12 hints. vitest (checks build): 2456/2461; the 5 are load timeouts/timing thresholds (char-count 100k 130 ms, ga.test and postbuild check-dist subprocess tests); rerun alone all pass except postbuild 「usage statistics (brief USAGE)」, which times out identically on main 54a080e side by side (machine load, another sprint testing). search-match 60/60. Builds + check-dist OK: default, production-flag (ci dist-bgcloud env), AUTOFRAME=1, checks env. e2e E2E_PORT=4373: search.spec 57/57 chromium + webkit + mobile-chrome (final build); site.spec chromium 121/121, webkit/mobile-chrome green but the pre-existing webkit flake site.spec:26 (/pdf-compress/ axe, flakes on main too: 1 of 3 with --repeat-each=3); hubs/en/embed/preload/sw/affiliate/polish chromium green (polish drag test fixed at the cause, see Boot); cloud-chromium (E2E_CLOUD_PORT=4383) search.cloud + ga.cloud + ads.cloud + usage 52 passed + 1 flaky (usage.spec:534 embed widget, passed on retry). Screenshots (360 px, light/dark): scratchpad search1031-shots (paths in the review request).
+
+## SEARCH1031 review fixes (Bob, 2026-10-31) — Status: DONE
+- Richard's review: handoff/REVIEW-FEEDBACK-SEARCH1031.md (1 Must Fix, 4 Should Fix, 1 escalation).
+- Must Fix (IME mid-word 「찾지 못했어요」): match.ts prefixDocs — the last token also matches when its jamo are the start of a vocabulary word (index terms, concept terms, alias keys and variants; at least PREFIX_MIN = 2 jamo), scored like a fuzzy hit and only for a doc the token misses outright. Alias variants complete to their key (한그 → 한글 → hwp, 큐아 → 큐알 → qr). 샂/사지/사ㅈ → 사진 tools, 압추/압ㅊ → pdf-compress + photo-compress, 증명ㅅ/증며 → id-photo, 배겨/누ㄲ → remove-background (flag off: still stamp-signature, id-photo …), 도자, 서며, 큐아, pdf 합ㅊ: all give results. 사진 still never reaches 사직서 (ㅅㅏㅈㅣㄴ is not the start of ㅅㅏㅈㅣㄱ…). ui.ts: between compositionstart and compositionend a miss renders nothing (no none line, no live-region announcement, the previous list stays); compositionend renders again; Enter mid-composition re-renders the current value first. Unit golden block 「half-typed last word」 (16 rows) and e2e: CDP Input.imeSetComposition ㅅ→사→샂→사지→사진 on chromium/mobile-chrome, dispatched CompositionEvents on webkit; plus a held-back miss shows after compositionend.
+- Should Fix: SCORE.fuzzyName 30 (typo or half-typed hit on a name word or concept term) above SCORE.fuzzy 20 (keyword only); 증멍사진 → id-photo first. Enter opens options[active], else options[0] only when the list has real matches (never a 많이 찾는 도구 entry on a miss or an empty box; e2e). 초성 for Latin names: each Latin alias key in a name/keyword is also read with its Hangul variants (pdf → 피디에프, 피디프; jpg → 제이펙, 제이피지; qr → 큐알…) in the 초성 source; ㅍㄷㅍ and ㅍㄷㅇㅍ → pdf-merge first; tools.ts untouched. 차용증 concept: 빌려, 빌린, 빌리, 빌림, 돈거래, 꿔준, 꾼돈 (돈 빌려, 빌린 돈, 돈 빌려준, 돈거래 → loan-note).
+- D1(b) changed: home box directly under h1 (Richard 360 px finding; home is not a tool page, so nothing is pushed above a tool or result). search.spec 360 px asserts the box bottom ≤ 440 px (results fit a 640 px screen). No check-dist placement assert existed (it checks presence only). Screenshots: scratchpad search1031-shots/home-360-{light,dark}{,-results}.png.
+- Gates: npm run check 0/0/12 hints. search-match + network-guard 84/84. Builds + check-dist OK: ci checks env (BG_REMOVE, ADDR_EN): index 23.2 KB / 6.4 KB gzip, module 5.7 KB gzip (cap 8), precache 414.5 KB; default: index 22.0 / 6.1, module 5.7, precache 408.8 KB (cap 450). No budget raised. e2e E2E_PORT=4373: search.spec chromium + webkit + mobile-chrome 66 passed (+1 webkit axe /search/ timeout passed on retry; webkit axe block rerun --repeat-each=2: 12/12), site.spec chromium 121/121.

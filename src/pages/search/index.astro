@@ -1,0 +1,30 @@
+---
+// SEARCH1031 D2: /search/, the site search page. noindex (internal search results are thin and duplicate; home and
+// /guide/ carry the crawlable directory), and absent from sitemap.xml, llms.txt, RSS and the precache. Without JS it is
+// the directory itself: the box, every live tool and a link to the guides. The query lives only in the URL fragment
+// (#q=…), read by src/lib/search/ui.ts, which this page loads at once (search-boot.ts). No ads, no affiliate links (not a
+// content page). Its text renders in the system font (.search-page; SYSTEM_FONT_PATHS).
+import Base from '../../layouts/Base.astro';
+import SiteSearch from '../../components/SiteSearch.astro';
+import { SITE } from '../../data/site';
+import { LIVE_TOOLS } from '../../data/tools';
+---
+<Base
+  title={`도구·안내 찾기 | ${SITE.name}`}
+  description={`PDF 합치기, 사진 용량 줄이기처럼 하려는 일을 쓰면 ${SITE.name}에서 맞는 도구와 안내를 바로 찾아 드려요.`}
+  noindex
+>
+  <div class="prose search-page">
+    <div class="wrap narrow">
+      <h1>도구·안내 찾기</h1>
+      <SiteSearch id="sp" variant="page" />
+      <h2>모든 도구</h2>
+      <ul class="search-all">
+        {LIVE_TOOLS.map((t) => (
+          <li><a href={`/${t.slug}/`}>{t.name}</a> <span>{t.summary}</span></li>
+        ))}
+      </ul>
+      <p><a href="/guide/">안내 모두 보기</a></p>
+    </div>
+  </div>
+</Base>

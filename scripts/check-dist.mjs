@@ -37,6 +37,8 @@ const ENGLISH_NAME_INITIAL_KB = 22.2;
 // CARD1026 B: /qr-code/ (measured + 20 %, BUILD-LOG CARD1026 B).
 const QR_INITIAL_KB = 12.9;
 const QR_CONTROLLER_KB = 9.2;
+// QR1031 D5: the /qr-code/ logo chunk (measured + 20 %, BUILD-LOG QR1031).
+const QR_LOGO_KB = 9.9;
 // CARD1026 C: /business-card/ (measured + 20 %, BUILD-LOG CARD1026 C).
 const BC_INITIAL_KB = 12.6;
 const BC_CONTROLLER_KB = 11.1;
@@ -1133,7 +1135,9 @@ for (const t of FORM_TOOLS) {
 // names #qr-preview); nothing typed is stored or put in the URL (no Web Storage, IndexedDB, cookie or history call in the
 // page's own chunks); no form, no action and no name on a text field; the six kinds in the brief's order; a tool page
 // (no AdSense tag, no off-site script besides the analytics beacon). jsQR is a test-only decoder: no dist file names it.
-// Budgets: measured + 20 % of the larger build (BUILD-LOG CARD1026 B).
+// Budgets: measured + 20 % of the larger build (BUILD-LOG CARD1026 B). QR1031: the logo code (logo*.js, imported
+// dynamically by the controller) is in neither the initial JS nor the controller's static closure, stores nothing; the
+// 「색 바꾸기·로고 넣기」 panel ships closed, black on white, and its file input has no name.
 {
   const html = pageHtml.get('qr-code/index.html');
   if (!html) errors.push('qr-code/index.html: no file found');
@@ -1156,6 +1160,19 @@ for (const t of FORM_TOOLS) {
     for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`qr-code/index.html: off-site script ${m[2]}`);
     budget('qr-code initial JS', [...initial], QR_INITIAL_KB * KB);
     budget('qr-code controller (lazy)', lazyOwn, QR_CONTROLLER_KB * KB);
+    const logoChunks = [...new Set(controller.flatMap((f) => [...read(f).toString('utf8').matchAll(/import\([`"']\.\/(logo\.[\w-]{8}\.js)[`"']\)/g)].map((m) => posix.join(posix.dirname(f), m[1]))))];
+    if (logoChunks.length !== 1) errors.push(`qr-code logo: ${logoChunks.length} lazy logo chunk(s) imported by the controller, expected 1`);
+    if (logoChunks.some((f) => initial.has(f) || lazyOwn.includes(f))) errors.push('qr-code logo: the logo chunk loads with the page or the controller');
+    const logoOwn = [...new Set(logoChunks.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f) && !lazyOwn.includes(f));
+    if (!logoOwn.some((f) => read(f).includes('image/png'))) errors.push('qr-code logo: not the logo reader (no image/png)');
+    for (const f of logoOwn) if (/localStorage|sessionStorage|indexedDB|document\.cookie|history\.(push|replace)State|sendBeacon|XMLHttpRequest|\bfetch\(/.test(read(f).toString('utf8'))) errors.push(`${f}: the /qr-code/ logo code stores, sends or uses the URL`);
+    if (logoOwn.length) budget('qr-code logo (lazy)', logoOwn, QR_LOGO_KB * KB);
+    const panel = /<details\b[^>]*\bid="qr-style"[^>]*>/.exec(html)?.[0];
+    if (!panel) errors.push('qr-code/index.html: no 색 바꾸기·로고 넣기 panel (#qr-style)');
+    else if (/\bopen\b/.test(panel)) errors.push('qr-code/index.html: #qr-style ships open');
+    if (!/<input\b[^>]*\bid="qr-fg"[^>]*\bvalue="#000000"/.test(html) || !/<input\b[^>]*\bid="qr-bg"[^>]*\bvalue="#ffffff"/.test(html)) errors.push('qr-code/index.html: color inputs not #000000 / #ffffff by default');
+    const logoInput = /<input\b[^>]*\bid="qr-logo-input"[^>]*>/.exec(html)?.[0];
+    if (!logoInput || !/type="file"/.test(logoInput) || /\bname=/.test(logoInput)) errors.push('qr-code/index.html: logo input missing, not a file input or has a name');
   }
   for (const f of match(/\.(m?js|html)$/)) if (/jsQR|jsqr/.test(read(f).toString('utf8'))) errors.push(`${f}: names jsQR (a test-only decoder, never shipped)`);
 }
@@ -1227,6 +1244,66 @@ budget('HWP font CSS (fonts/hwp/hwp-fonts.*.css)', match(/^fonts\/hwp\/hwp-fonts
 // Every fallback face file (the base face and the HWP direct extended faces; .woff2 preview, .woff PDF).
 for (const f of match(/^fonts\/hwp\/fallback[^/]*@[^/]+\/[^/]+\.woff2?$/)) budget(`HWP fallback face ${f.split('/').slice(-2).join('/')}`, [f], 60 * KB, raw, 'raw');
 budget('HWP PDF face list (fonts/hwp/hwp-pdf-faces.*.json)', match(/^fonts\/hwp\/hwp-pdf-faces\.[^/]+\.json$/), 48 * KB);
+
+// Site search (SEARCH1031): the index (D5), the lazy module (D4), /search/ (D2, D12) and where the box may appear (D13).
+{
+  const ix = files.some((f) => f.path === 'search-index.json') ? JSON.parse(read('search-index.json').toString('utf8')) : null;
+  if (!ix || ix.v !== 1 || !Array.isArray(ix.t) || !Array.isArray(ix.g)) errors.push('search-index.json: missing or not {v:1,t:[],g:[]}');
+  else {
+    budget('search-index.json (raw)', ['search-index.json'], 60 * KB, raw, 'raw');
+    budget('search-index.json', ['search-index.json'], 15 * KB);
+    for (const d of [...ix.t, ...ix.g]) {
+      if (typeof d.u !== 'string' || !pageHtml.has(`${d.u.slice(1)}index.html`)) errors.push(`search-index.json: ${d.u} is not a page of this build`);
+      if (typeof d.n !== 'string' || !d.n) errors.push(`search-index.json: ${d.u} has no name`);
+    }
+    for (const d of ix.t) if (!Array.isArray(d.k) || !Array.isArray(d.f) || typeof d.s !== 'string') errors.push(`search-index.json: tool ${d.u} is not {u,n,s,k,f}`);
+    for (const d of ix.g) if (typeof d.q !== 'string' || typeof d.c !== 'string') errors.push(`search-index.json: guide ${d.u} is not {u,n,q,c}`);
+    const toolUrls = new Set(ix.t.map((d) => d.u));
+    for (const [path, on] of [['/remove-background/', bgOn], [ADDR_EN_PATH, addrEnOn(env)], [ID_CAMERA_PATH, idCameraOn(env)]]) {
+      if (toolUrls.has(path) !== on) errors.push(`search-index.json: ${on ? 'misses' : 'lists'} ${path} (flag ${on ? 'on' : 'off'})`);
+    }
+  }
+  const home = pageHtml.get('index.html') ?? '';
+  const siteJs = initialJs(home);
+  const modules = [...new Set(siteJs.flatMap((f) => [...read(f).toString('utf8').matchAll(/["'`]\/(_astro\/ui-[\w-]+\.js)["'`]/g)].map((m) => m[1])))];
+  if (modules.length !== 1) errors.push(`site search: ${modules.length} search module URL(s) in the shared site script, expected 1`);
+  for (const m of modules) {
+    if (!files.some((f) => f.path === m)) {
+      errors.push(`site search: ${m} is not in dist`);
+      continue;
+    }
+    const closure = staticClosure(dist, m);
+    budget('site search module (lazy)', closure, 8 * KB);
+    if (siteJs.some((f) => closure.includes(f))) errors.push(`site search: ${m} loads with the page`);
+    const code = closure.map((f) => read(f).toString('utf8')).join('\n');
+    if (!code.includes('/search-index.json')) errors.push(`site search: ${m} does not fetch /search-index.json`);
+    if (/sendBeacon|gtag\(|dataLayer|\/api\/usage|localStorage|sessionStorage|indexedDB|document\.cookie/.test(code)) errors.push(`site search: ${m} reports or stores (D3: nothing typed leaves the page)`);
+    if (code.includes('remove-background') !== bgOn) errors.push(`site search: ${m} ${bgOn ? 'does not name' : 'names'} remove-background (PUBLIC_BG_REMOVE ${bgOn ? 'on' : 'off'})`);
+    const pre = precacheList(dist).urls;
+    for (const u of [`/${m}`, '/search/', '/search-index.json']) if (pre.includes(u)) errors.push(`site search: ${u} is precached`);
+  }
+  const page = pageHtml.get('search/index.html');
+  if (!page) errors.push('search/index.html: missing');
+  else {
+    if (!page.includes('<meta name="robots" content="noindex">')) errors.push('search/index.html: no robots noindex meta');
+    if (/adsbygoogle|pagead2\.googlesyndication|ads-cfg/.test(page)) errors.push('search/index.html: carries the AdSense tag (not a content page)');
+    if (/rel="sponsored/.test(page)) errors.push('search/index.html: has an affiliate link');
+    if (!/<form\b[^>]*role="search"[^>]*action="\/search\/"/.test(page)) errors.push('search/index.html: the box is not a form to /search/');
+  }
+  for (const f of ['sitemap.xml', 'llms.txt', 'guide/rss.xml']) if (files.some((x) => x.path === f) && /\/search\//.test(read(f).toString('utf8'))) errors.push(`${f}: lists /search/ (noindex page)`);
+  for (const [p, html] of pageHtml) {
+    const boxes = (html.match(/\bdata-search\b/g) ?? []).length;
+    if (EN_PAGE_RE.test(p) || EMBED_PAGE_RE.test(p)) {
+      if (boxes || html.includes('data-ssh')) errors.push(`${p}: has site search markup (D13: Korean pages only)`);
+      continue;
+    }
+    if (!/<header class="top"/.test(html)) continue;
+    if (!/<a class="ssh-toggle" href="\/search\/"/.test(html)) errors.push(`${p}: no header 「찾기」 link to /search/`);
+    if (/<input\b[^>]*\bdata-ss-input\b[^>]*>/.test(html) && /<input\b(?=[^>]*\bdata-ss-input\b)[^>]*\bname=/.test(html)) errors.push(`${p}: a search input has a name (D3)`);
+    if (/<form\b[^>]*role="search"[^>]*method="post"/i.test(html)) errors.push(`${p}: a search form posts`);
+  }
+  for (const p of ['index.html', '404.html']) if (!/<div class="site-search site-search-page" data-search>/.test(pageHtml.get(p) ?? '')) errors.push(`${p}: no search box (D1)`);
+}
 
 rows.push({ label: `files (guard ${MAX_FILES.toLocaleString('en-US')} / CF ${CF_MAX_FILES.toLocaleString('en-US')})`, size: files.length * KB, limit: MAX_FILES * KB, unit: 'files', count: true });
 console.log('check-dist: budgets');

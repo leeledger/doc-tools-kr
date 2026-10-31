@@ -1,0 +1,33 @@
+Title: W3C WCAG 2.2 — Success Criterion 1.4.11 Non-text Contrast, definitions of relative luminance and contrast ratio
+Fetched: 2026-10-31 (curl, server HTML, UTF-8; tags stripped, entities decoded, text verbatim; QR1031 D13, Bob)
+
+URL: https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html (sha256 2f48093e72b1070c07a7d4aa9e9c5c07815607e8af7c46da9b292cd40086bb7a)
+	[...] have a contrast ratio of at least 3:1 against adjacent color(s):
+	User Interface Components
+	Visual information required to identify user interface components and states, except for inactive components or where the appearance of the component is determined by the user agent and not modified by the author;
+	Graphical Objects
+	Parts of graphics required to understand the content, except when a particular presentation of graphics is essential to the information being conveyed.
+	Note
+	The 3:1 contrast ratios referenced in this success criterion is intended to be treated as threshold values. When comparing the computed contrast ratio to the success criterion ratio, the computed values should not be rounded (e.g. 2.999:1 would not meet the 3:1 threshold).
+
+URL: https://www.w3.org/TR/WCAG22/ (sha256 6e3c5fe397257cae509a2fb4752b73062cf8cbeb92c2cec618989b17e4cf7057)
+	Success Criterion 1.4.11 Non-text Contrast
+	The visual presentation of the following have a contrast ratio of at least 3:1 against adjacent color(s):
+
+	contrast ratio
+	(L1 + 0.05) / (L2 + 0.05), where
+	L1 is the relative luminance of the lighter of the colors, and
+	L2 is the relative luminance of the darker of the colors.
+	Note 1 Contrast ratios can range from 1 to 21 (commonly written 1:1 to 21:1).
+
+	relative luminance
+	the relative brightness of any point in a colorspace, normalized to 0 for darkest black and 1 for lightest white
+	Note 1
+	For the sRGB colorspace, the relative luminance of a color is defined as L = 0.2126 * R + 0.7152 * G + 0.0722 * B where R, G and B are defined as:
+	if RsRGB <= 0.04045 then R = RsRGB/12.92 else R = ((RsRGB+0.055)/1.055) ^ 2.4
+	if GsRGB <= 0.04045 then G = GsRGB/12.92 else G = ((GsRGB+0.055)/1.055) ^ 2.4
+	if BsRGB <= 0.04045 then B = BsRGB/12.92 else B = ((BsRGB+0.055)/1.055) ^ 2.4
+	and RsRGB, GsRGB, and BsRGB are defined as:
+	RsRGB = R8bit/255
+	GsRGB = G8bit/255
+	BsRGB = B8bit/255
