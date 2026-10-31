@@ -3,7 +3,8 @@
 // the code holds what was typed, so it never stops working. The page ships the kind picker, the six panels and empty
 // output slots; entry.ts switches panels (and reads ?tab= once, never writing it back) and loads the controller
 // (uqr, payload, render: src/lib/qr) on the first interaction. Nothing typed is stored, put in the URL or sent: no
-// form, no name attributes, fixed file names.
+// form, no name attributes, fixed file names. QR1031: a closed 「색 바꾸기·로고 넣기」 panel under the 받기 buttons (QR and
+// background color, a center picture chosen from this device, kept in memory only); opening it never moves the preview.
 import Base from '../../layouts/Base.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
@@ -112,6 +113,23 @@ const kinds = [
             <button type="button" class="btn primary" id="qr-png">QR 그림 받기 (PNG)</button>
             <button type="button" class="btn ghost" id="qr-svg">SVG로 받기</button>
           </div>
+          <details class="qr-style" id="qr-style">
+            <summary>색 바꾸기·로고 넣기</summary>
+            <div class="qr-style-body">
+              <div class="qr-colors">
+                <label class="qr-color" for="qr-fg"><input type="color" id="qr-fg" value="#000000" aria-describedby="qr-color-error"><span>QR 색</span></label>
+                <label class="qr-color" for="qr-bg"><input type="color" id="qr-bg" value="#ffffff" aria-describedby="qr-color-error"><span>배경 색</span></label>
+                <button type="button" class="btn ghost small" id="qr-color-reset">검은색·흰색으로</button>
+              </div>
+              <p class="field-error" id="qr-color-error"></p>
+              <div class="qr-logo">
+                <input id="qr-logo-input" class="file-input" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp,.heic,.heif" aria-describedby="qr-logo-error">
+                <label for="qr-logo-input" class="btn ghost small">로고·사진 고르기</label>
+                <button type="button" class="btn ghost small" id="qr-logo-remove" hidden>로고 빼기</button>
+              </div>
+              <p class="field-error" id="qr-logo-error"></p>
+            </div>
+          </details>
           <p class="visually-hidden" id="qr-status" aria-live="polite"></p>
         </div>
       </div>
