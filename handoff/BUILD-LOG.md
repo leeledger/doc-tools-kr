@@ -4774,3 +4774,39 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
 - Gates: npm run check 0 errors · vitest 112 files / 2382 tests green (default build) · default build check-dist OK (precache 397.3 / 450 KB; initial JS /pdf-compress/ 18.1, /pdf-sign/ 10.1, /pdf-to-jpg/ 9.0, /stamp-signature/ 9.2, /id-photo/ 13.2, /hwpx-to-hwp/ 8.6 KB, all / 30) · AUTOFRAME=1 build check-dist OK (399.4 KB) · cloud build (dist-bgcloud, CI env) check-dist OK (407.7 KB; cloud client 1.5 / 3 KB) · playwright chromium: stamp-signature, pdf-to-jpg, pdf-sign, pdf-compress, hwp-viewer, hwpx-to-hwp, hwp-to-pdf (default dist) + id-photo, embed, chain, en, pdf-split, jpg-to-pdf (AUTOFRAME dist) all green (12 id-photo MediaPipe tests fail on a default dist only, as on main: they need the flag-on build) · cloud-chromium 94 passed (incl. the remove-background POST-without-EXIF test and the new usage F/E test). MediaPipe leftovers removed from public/vendor/ before the cloud build.
 - Known Gaps (new): none beyond the brief's list.
 - Richard: clear, 0 Must Fix (handoff/REVIEW-FEEDBACK-FAIL1030.md). Orchestrator applied Should Fix 1 (bgcloud gps case now asserts the copy is cleaned and sent, then no APP1 and isCleanJpeg). Should Fix 2 logged as Known Gap: HWP 3.0 / HWPML files log not-hwp-old / not-hwp-hwpml but still show the generic 보안 문서 line; give them their own line if the week-45 report shows any.
+
+## SEO1031 (design) — 구글 검색 클릭 늘리기 2차 (Arch, 2026-10-30)
+- Owner standing goal #1 traffic, 「오늘 밤새도록 일을 멈추지 말고 진행 시켜」. Data reports/gsc/검색어 2026-10-29.md. Brief: handoff/ARCHITECT-BRIEF-SEO1031.md (D1-D10). Branch seo1031 off 7c5b6b8.
+- Decided: scope 10 pages (kuksiwon, korcham, heic-to-jpg, remove-background, hwpx-to-hwp, what-is-hwpx, gosi, passport-reissue, passport-english-name, hub upload-limits). /hwpx-to-hwp/ tool dropped (already fits, 23.8% CTR).
+- Decided: kuksiwon retitled despite earning clicks (owner listed it; 국시원 사진 규정 14 + 간호사 국가고시 사진 7 miss); all old title words kept except 국가시험 (kept in description/answer). Rollback = old title in brief D2 table.
+- Decided: 「한글 누끼따기」 read as the Korean search for 누끼따기 / putting a cutout into a 한글 document; never claim the 한컴 program removes backgrounds (no source); D9 guards it.
+- Decided: 「대한상공회의소 사진 용량」 answered with the existing 「안내 없음」 unless a live korcham probe gives a verbatim size.
+
+## SEO1030 (live)
+- SEO1030 live smoke 2026-10-30: deploy 7c5b6b8 post-deploy run green; 8 guides + /guide/photo-sizes/ hub: 200, title, description, answer, FAQPage JSON-LD, Should Fix 1 & 2 copy live — 45/45 pass. Worktree wt/seo1030 removed.
+
+## SEO1031 (build) — 구글 검색 클릭 늘리기 2차 (Bob, 2026-10-30)
+Status: DONE (Richard review pending). Review request: handoff/REVIEW-REQUEST-SEO1031.md.
+- D6 probe (2026-10-30): curl license.korcham.net/customer/guideDetail.do?no=194 (사진파일의 규격) and /ex/examInfo1.do → 200 (EUC-KR). no=194 reads only 「사진파일은 JPG, JPEG, PNG, GIF만 가능합니다 / 사진 크기는 400 x 500 픽셀로 변경되며 1 : 1.25 비율로 맞춰주셔야 사진이 정상적으로 보입니다 / * 최초 등록시에는 …」; neither page contains 용량, KB or MB. Result: no size rule, 「안내 없음」 kept; the no=194 quote (re-read, byte-exact) retrieved bumped 2026-10-02 → 2026-10-30; the new 용량 FAQ says the 수험자가이드 사진파일 규격 안내 has no size rule.
+- Old → new titles (28-day GSC comparison, O3 ~2026-11-27; rollback = old title):
+  | slug | old | new |
+  |---|---|---|
+  | kuksiwon-photo | 국시원 원서 사진 규격 (간호사 등 국가시험) | 국시원 원서 사진 규정·규격 (간호사 국가고시 등) |
+  | korcham-photo | 컴활 원서 사진 규격 (대한상공회의소 자격시험) | 컴활 사진 규격·용량 (대한상공회의소 원서 사진 등록) |
+  | heic-to-jpg | 아이폰 HEIC 사진 JPG로 바꾸는 법 | 아이폰 사진 JPG로 저장하는 설정, HEIC 바꾸는 법 |
+  | remove-background | 누끼 따기 쉽게 하는 법, 사진 배경 지우기 | 누끼따기 쉽게 하는 법, 사진 배경 지우기 |
+  | hwpx-to-hwp | HWPX 파일 HWP로 바꾸는 법 (한글 없이) | HWPX HWP로 변환하는 법 (한글 없이 무료) |
+  | what-is-hwpx | HWPX가 뭔가요? 여는 법 | HWPX 파일이란? 여는 법과 뷰어 (한글 없이) |
+  | hub upload-limits | 서류 제출 용량 모음, 메일·전자소송·원서 사진 | 첨부파일 용량 제한 모음 (메일·전자소송·원서 사진) |
+  | gosi-photo | 공무원 시험 원서 사진 규격 (국가직) | 공무원 시험 증명사진 규격·크기 (국가직 원서) |
+  | passport-reissue-photo | 여권 재발급 사진 규격과 온라인 신청 | 여권 사진 변경·재발급 사진 규격 (온라인 신청) |
+  | passport-english-name | 여권 영문 이름 정하는 법 | 여권 영문 이름(영문성명) 정하는 법과 변경 |
+- All D2 titles as briefed (no trims; HTML title with suffix 29–37 code points). D3 descriptions as briefed, 68–79. updated 2026-10-30 on all 10.
+- Decided: kuksiwon answer opens 「간호사 등 국가시험의 국시원 원서 사진 규정은 …」 so 국가시험 stays in the answer (D1a) and 규정 is added (D4).
+- Decided: heic answer was 138 after the D4 lead; re-cut to 116 with the same facts, setting first: 「아이폰 사진을 JPG로 저장하려면 카메라 포맷을 「높은 호환성」으로 바꾸고, 이미 찍은 HEIC 사진은 아이폰·맥 사파리의 사진 JPG 변환에서 바꾸면 되며, PC 크롬·엣지에서 안 열리면 아이폰에서 바꿔요.」
+- Decided: guide FAQ items have no link field (strict schema), so the new remove-background 서명·도장 FAQ names 전자서명·도장 이미지 만들기 and the 도장·서명 이미지 만들기 안내 in words; body L117/L131 already link them.
+- Decided (Known Gap for Arch): body anchor texts in other guides that use an old title as a description (「[아이폰 HEIC 사진 JPG로 바꾸는 법]」 ×4, 「[HWPX가 뭔가요?]」 ×4 + hwpx-to-hwp FAQ, 「[컴활 원서 사진 규격]」 ×2, 「[여권 영문 이름 정하는 법]」 ×3, 「[서류 제출 용량 모음]」 ×1, what-is-hwpx L190 「[HWPX 파일 HWP로 바꾸는 법]」) left unchanged (D8 no churn; still accurate descriptions). og titles unchanged per brief.
+- D10: gen-guide-titles rewrote 10 entries; tools.ts:816 link text, english-name.spec.ts:246/248, upload-limits/index.astro:2 comment updated. usage/admin snapshots did not fail.
+- D9: describe 「SEO1031 D9」 appended to tests/unit/guides-schema.test.ts (title words, 4 FAQ words, 한컴 non-claim negative).
+- Gates: npm run check 0 errors / 0 warnings (12 hints). vitest full 2344/2344 (111 files). guide-length all ok. Builds: default (PUBLIC_SITE_URL only) check-dist OK, precache 394.7 / 450 KB; PUBLIC_ID_PHOTO_AUTOFRAME=1 check-dist OK, 396.8 KB; production-flag (ci.yml dist-bgcloud env) check-dist OK, 402.3 KB. e2e chromium (E2E_PORT=4273), default dist: site, hubs, english-name, remove-background, image-to-jpg, hwpx-to-hwp, id-photo, affiliate, embed — 232 passed, 4 skipped, 12 failed, all 12 id-photo autoframe specs (need the AUTOFRAME=1 build, as in SEO1030); AUTOFRAME=1 dist id-photo + affiliate + embed 64 passed, 2 skipped. No guides.spec exists; guide pages are covered by site/hubs + check-dist. dist HTML (production-flag build, the only one that builds /guide/remove-background/) checked for all 10: <title> = title + 「 | 문서딱」, meta description, H1, every frontmatter FAQ q in FAQPage JSON-LD — 10/10.
+- No threshold, og image, layout, JSON-LD code, pins or related list changed.
