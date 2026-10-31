@@ -53,6 +53,56 @@ button.menu-toggle[aria-expanded="true"]::after { transform: translateY(2px) rot
   .menu-panel a { min-height: 48px; }
 }
 
+/* SEARCH1031: the site search (header panel, home hero, /search/, 404). Its text is in the system font (the
+   system-font rule below); the header 「찾기」 label keeps the UI font (its glyphs are in the core set). */
+.ssh { position: relative; }
+button.ssh-toggle { border: 0; background: none; font: inherit; font-size: 15px; cursor: pointer; }
+.ssh-toggle svg { width: 18px; height: 18px; margin-right: 4px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.ssh-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 6; width: min(440px, calc(100vw - 32px));
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / .14);
+  max-height: calc(100vh - var(--top-clear)); max-height: calc(100dvh - var(--top-clear)); overflow-y: auto; overscroll-behavior: contain;
+}
+@media (max-width: 640px) {
+  /* A full-width sheet under the sticky header, like the 도구 menu. */
+  .ssh { position: static; }
+  .ssh-panel { top: 100%; left: 0; right: 0; width: auto; border-radius: 0 0 12px 12px; border-width: 0 0 1px; padding: 12px 16px 16px; }
+}
+@media (max-width: 380px) {
+  /* Brand + 도구 + 안내 + 찾기 in 320 px (measured, search.spec): tighter nav items, same 44 px targets. */
+  .top-nav { gap: 0; }
+  .top-nav > a, .menu-toggle, .ssh-toggle { padding: 0 8px; }
+}
+.site-search { max-width: 560px; }
+.site-search-page { margin-top: 28px; }
+.ss-form { position: relative; margin: 0; }
+.ss-label { display: block; margin: 0 0 8px; font-weight: 800; font-size: 16px; color: var(--text); }
+.ss-field { position: relative; }
+.ss-icon { position: absolute; left: 14px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; pointer-events: none; }
+.ss-input {
+  display: block; width: 100%; min-height: 48px; margin: 0; padding: 0 14px 0 44px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); color: var(--text); font: inherit; font-size: 16px; -webkit-appearance: none; appearance: none;
+}
+.ss-input::placeholder { color: var(--muted); opacity: 1; }
+.ss-input:focus { border-color: var(--brand); }
+.ss-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 7; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgb(0 0 0 / .14);
+}
+.site-search-header .ss-pop, .search-page .ss-pop { position: static; margin-top: 8px; padding: 0; border: 0; box-shadow: none; }
+.ss-head { padding: 8px 12px 4px; font-size: 13px; font-weight: 800; color: var(--muted); }
+.ss-opt { display: flex; flex-direction: column; justify-content: center; min-height: 44px; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.ss-opt:hover, .ss-opt[aria-selected="true"] { background: var(--brand-soft); }
+.ss-opt[aria-selected="true"] { outline: 2px solid var(--brand); outline-offset: -2px; }
+.ss-n { color: var(--text); font-size: 15.5px; font-weight: 800; }
+.ss-s { color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-none, .ss-fail { margin: 8px 0 0; font-size: 15px; color: var(--text); }
+.ss-none { margin: 6px 12px 8px; }
+.search-all { padding-left: 20px; }
+.search-all li { margin: 0 0 10px; }
+.search-all span { display: block; color: var(--muted); font-size: 15px; }
+
 /* home: soon tools, names only (Polish P.6) */
 .soon { margin-top: 28px; }
 .soon h3 { margin: 0 0 10px; font-size: 17px; color: var(--muted); }
@@ -497,9 +547,10 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
    in the stylesheet that also declares the UI font: in a page-only stylesheet there is a moment (that sheet still
    loading, style already computed) when guide text resolves to the UI font and fetches its late face (LCP CI
    follow-up). check-dist only honours exemptions from this stylesheet. ADS1020: the /about/ and /contact/ text (.site-info).
-   CONTENT1021 D8: the tool notes (.tool-notes). */
+   CONTENT1021 D8: the tool notes (.tool-notes). SEARCH1031 D11: the site search (.site-search) and /search/ (.search-page). */
 .guide-page, .guide-index .guide-topics, .guide-index section h2,
-.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides, .en-guides, .out-links, .idp-sheet, .site-info, .tool-notes { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+.guide-grid, .guide-index .related-list, .quick-guides, .nf-guides, .en-guides, .out-links, .idp-sheet, .site-info, .tool-notes,
+.site-search, .search-page { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
 /* EN1 (brief EN decision 3): English pages use the system font, so they never fetch the UI font. html[lang="en"], never
    :lang(en): the "English" link on Korean pages carries lang="en" and keeps the UI font. */
 html[lang="en"] body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }

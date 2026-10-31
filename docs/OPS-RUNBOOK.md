@@ -192,3 +192,13 @@ Actions에서는 각 워크플로의 **Run workflow**에 “Dry run” 체크박
 - **어느 누리집이 넣었는지:** 우리 통계에는 넣은 누리집 주소를 보내지 않습니다. Cloudflare 대시보드 → 도메인 `docttak.com` → Analytics & Logs(또는 Web Analytics가 아닌 일반 트래픽 화면)의 참조 사이트(Referrers)에서 `/embed/id-photo/` 요청을 보낸 곳을 봅니다. 서버 쪽 기록이라 새로 보내는 것은 없습니다.
 - **화이트라벨 메일이 오면:** (로고 바꾸기, 「문서딱 제공」 빼기) 가격과 조건은 대표가 정합니다. 답하기 전에 Arch와 상의해 주세요. 지금은 무료판(표시와 링크 유지)만 있습니다.
 - **멈추기:** `src/pages/embed/id-photo/`를 지우고 `public/_headers`의 `/embed/id-photo/*` 묶음을 지운 뒤 배포합니다. 이미 넣은 누리집에는 빈 틀(찾을 수 없음 페이지)이 보입니다. 약관 11항(넣어 쓰기, 바뀌거나 멈출 수 있음)이 이 경우를 덮습니다.
+
+## 13. 사이트 찾기 (SEARCH1031) — 유사어 넣기
+
+- 찾기는 기기 안에서만 돌아갑니다. 처음 찾기 칸을 쓸 때 `/search-index.json`(도구 이름·한 줄 설명·키워드·자주 묻는 질문 제목, 안내 제목) 하나만 받고, 쓴 말은 어디에도 보내지 않습니다. `/search/`의 검색어는 주소의 `#q=` 뒤에만 남습니다(요청에 실리지 않음, Cloudflare·GA 집계도 `#` 뒤는 버림).
+- **비슷한 말 넣기:** `src/lib/search/synonyms.ts`
+  - 같은 뜻의 다른 표기(예: 피디에프 → pdf, 큐알 → qr)는 `ALIASES`에. 짧고 다른 낱말 안에 끼기 쉬운 표기(사인, 한글)는 `word: true`(낱말 첫머리에서만 바꿈).
+  - 하고 싶은 일의 말(예: 「붙이기」 → PDF 합치기)은 `CONCEPTS`의 그 묶음 `terms`에. 새 도구는 묶음을 하나 더 만들고 `tools`에 slug를 씁니다. 출시 플래그가 있는 도구는 `BG_TOOL`처럼 플래그로 감쌉니다(꺼진 빌드에 이름이 남으면 check-dist가 막음).
+  - 고친 뒤 `tests/unit/search-match.test.ts`의 골든 표에 그 검색어 한 줄을 더하고 `npx vitest run tests/unit/search-match.test.ts`.
+- 도구 이름·설명·키워드는 `src/data/tools.ts`에서 그대로 들어가므로 따로 손댈 것이 없습니다. 안내는 제목과 `query`가 들어갑니다.
+- 크기 제한(check-dist): 색인 60 KB(gzip 15 KB), 찾기 모듈 gzip 8 KB, 공용 사이트 스크립트 gzip 4 KB. 넘으면 낱말을 줄이고, 한도는 올리지 않습니다.

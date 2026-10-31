@@ -1228,6 +1228,66 @@ budget('HWP font CSS (fonts/hwp/hwp-fonts.*.css)', match(/^fonts\/hwp\/hwp-fonts
 for (const f of match(/^fonts\/hwp\/fallback[^/]*@[^/]+\/[^/]+\.woff2?$/)) budget(`HWP fallback face ${f.split('/').slice(-2).join('/')}`, [f], 60 * KB, raw, 'raw');
 budget('HWP PDF face list (fonts/hwp/hwp-pdf-faces.*.json)', match(/^fonts\/hwp\/hwp-pdf-faces\.[^/]+\.json$/), 48 * KB);
 
+// Site search (SEARCH1031): the index (D5), the lazy module (D4), /search/ (D2, D12) and where the box may appear (D13).
+{
+  const ix = files.some((f) => f.path === 'search-index.json') ? JSON.parse(read('search-index.json').toString('utf8')) : null;
+  if (!ix || ix.v !== 1 || !Array.isArray(ix.t) || !Array.isArray(ix.g)) errors.push('search-index.json: missing or not {v:1,t:[],g:[]}');
+  else {
+    budget('search-index.json (raw)', ['search-index.json'], 60 * KB, raw, 'raw');
+    budget('search-index.json', ['search-index.json'], 15 * KB);
+    for (const d of [...ix.t, ...ix.g]) {
+      if (typeof d.u !== 'string' || !pageHtml.has(`${d.u.slice(1)}index.html`)) errors.push(`search-index.json: ${d.u} is not a page of this build`);
+      if (typeof d.n !== 'string' || !d.n) errors.push(`search-index.json: ${d.u} has no name`);
+    }
+    for (const d of ix.t) if (!Array.isArray(d.k) || !Array.isArray(d.f) || typeof d.s !== 'string') errors.push(`search-index.json: tool ${d.u} is not {u,n,s,k,f}`);
+    for (const d of ix.g) if (typeof d.q !== 'string' || typeof d.c !== 'string') errors.push(`search-index.json: guide ${d.u} is not {u,n,q,c}`);
+    const toolUrls = new Set(ix.t.map((d) => d.u));
+    for (const [path, on] of [['/remove-background/', bgOn], [ADDR_EN_PATH, addrEnOn(env)], [ID_CAMERA_PATH, idCameraOn(env)]]) {
+      if (toolUrls.has(path) !== on) errors.push(`search-index.json: ${on ? 'misses' : 'lists'} ${path} (flag ${on ? 'on' : 'off'})`);
+    }
+  }
+  const home = pageHtml.get('index.html') ?? '';
+  const siteJs = initialJs(home);
+  const modules = [...new Set(siteJs.flatMap((f) => [...read(f).toString('utf8').matchAll(/["'`]\/(_astro\/ui-[\w-]+\.js)["'`]/g)].map((m) => m[1])))];
+  if (modules.length !== 1) errors.push(`site search: ${modules.length} search module URL(s) in the shared site script, expected 1`);
+  for (const m of modules) {
+    if (!files.some((f) => f.path === m)) {
+      errors.push(`site search: ${m} is not in dist`);
+      continue;
+    }
+    const closure = staticClosure(dist, m);
+    budget('site search module (lazy)', closure, 8 * KB);
+    if (siteJs.some((f) => closure.includes(f))) errors.push(`site search: ${m} loads with the page`);
+    const code = closure.map((f) => read(f).toString('utf8')).join('\n');
+    if (!code.includes('/search-index.json')) errors.push(`site search: ${m} does not fetch /search-index.json`);
+    if (/sendBeacon|gtag\(|dataLayer|\/api\/usage|localStorage|sessionStorage|indexedDB|document\.cookie/.test(code)) errors.push(`site search: ${m} reports or stores (D3: nothing typed leaves the page)`);
+    if (code.includes('remove-background') !== bgOn) errors.push(`site search: ${m} ${bgOn ? 'does not name' : 'names'} remove-background (PUBLIC_BG_REMOVE ${bgOn ? 'on' : 'off'})`);
+    const pre = precacheList(dist).urls;
+    for (const u of [`/${m}`, '/search/', '/search-index.json']) if (pre.includes(u)) errors.push(`site search: ${u} is precached`);
+  }
+  const page = pageHtml.get('search/index.html');
+  if (!page) errors.push('search/index.html: missing');
+  else {
+    if (!page.includes('<meta name="robots" content="noindex">')) errors.push('search/index.html: no robots noindex meta');
+    if (/adsbygoogle|pagead2\.googlesyndication|ads-cfg/.test(page)) errors.push('search/index.html: carries the AdSense tag (not a content page)');
+    if (/rel="sponsored/.test(page)) errors.push('search/index.html: has an affiliate link');
+    if (!/<form\b[^>]*role="search"[^>]*action="\/search\/"/.test(page)) errors.push('search/index.html: the box is not a form to /search/');
+  }
+  for (const f of ['sitemap.xml', 'llms.txt', 'guide/rss.xml']) if (files.some((x) => x.path === f) && /\/search\//.test(read(f).toString('utf8'))) errors.push(`${f}: lists /search/ (noindex page)`);
+  for (const [p, html] of pageHtml) {
+    const boxes = (html.match(/\bdata-search\b/g) ?? []).length;
+    if (EN_PAGE_RE.test(p) || EMBED_PAGE_RE.test(p)) {
+      if (boxes || html.includes('data-ssh')) errors.push(`${p}: has site search markup (D13: Korean pages only)`);
+      continue;
+    }
+    if (!/<header class="top"/.test(html)) continue;
+    if (!/<a class="ssh-toggle" href="\/search\/"/.test(html)) errors.push(`${p}: no header 「찾기」 link to /search/`);
+    if (/<input\b[^>]*\bdata-ss-input\b[^>]*>/.test(html) && /<input\b(?=[^>]*\bdata-ss-input\b)[^>]*\bname=/.test(html)) errors.push(`${p}: a search input has a name (D3)`);
+    if (/<form\b[^>]*role="search"[^>]*method="post"/i.test(html)) errors.push(`${p}: a search form posts`);
+  }
+  for (const p of ['index.html', '404.html']) if (!/<div class="site-search site-search-page" data-search>/.test(pageHtml.get(p) ?? '')) errors.push(`${p}: no search box (D1)`);
+}
+
 rows.push({ label: `files (guard ${MAX_FILES.toLocaleString('en-US')} / CF ${CF_MAX_FILES.toLocaleString('en-US')})`, size: files.length * KB, limit: MAX_FILES * KB, unit: 'files', count: true });
 console.log('check-dist: budgets');
 for (const r of rows) {

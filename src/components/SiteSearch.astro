@@ -1,0 +1,45 @@
+---
+// SEARCH1031 D1/D9/D10: the site search box (header panel, home hero, /search/, 404). Static markup only: the site
+// script loads src/lib/search/ui.ts on the first focus, tap or key inside [data-search] and wires the ARIA 1.2
+// combobox. Without JS the form lands on /search/ (the input has no name, so no query is ever sent); the query lives
+// only in /search/'s URL fragment. The header variant has no <form>: its panel only opens with JS (without JS the
+// toggle is a link to /search/), and tool pages carry no form (check-dist). Its text renders in the system font
+// (.site-search; SYSTEM_FONT_PATHS).
+interface Props {
+  /** Unique id prefix of this instance. */
+  id: string;
+  variant: 'header' | 'page';
+}
+const { id, variant } = Astro.props;
+const Box = variant === 'header' ? 'div' : 'form';
+const formAttrs = variant === 'header' ? {} : { action: '/search/', method: 'get' };
+---
+<div class:list={['site-search', `site-search-${variant}`]} data-search>
+  <Box class="ss-form" role="search" {...formAttrs}>
+    <label class:list={['ss-label', variant === 'header' && 'visually-hidden']} for={`${id}-input`}>어떤 작업을 하시나요?</label>
+    <div class="ss-field">
+      <svg class="ss-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4.2-4.2" /></svg>
+      <input
+        id={`${id}-input`}
+        class="ss-input"
+        type="search"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded="false"
+        aria-controls={`${id}-list`}
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="search"
+        placeholder="예: 사진 용량 줄이기, PDF 합치기"
+        data-ss-input
+      />
+    </div>
+    <div class="ss-pop" data-ss-pop hidden>
+      <p class="ss-none" data-ss-none hidden></p>
+      <div class="ss-list" id={`${id}-list`} role="listbox" aria-label="찾은 도구와 안내" data-ss-list></div>
+    </div>
+    <p class="visually-hidden" role="status" data-ss-status></p>
+    <p class="ss-fail" data-ss-fail hidden>지금은 찾기를 쓸 수 없어요. 인터넷 연결을 확인하거나 <a href="/#tools">도구 목록</a>에서 골라 주세요.</p>
+  </Box>
+</div>

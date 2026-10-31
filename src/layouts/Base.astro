@@ -10,6 +10,7 @@ import { BUILD_ID } from '../data/build';
 import { LIVE_TOOLS } from '../data/tools';
 import JsonLd from '../components/JsonLd.astro';
 import SiteScript from '../components/SiteScript.astro';
+import SiteSearch from '../components/SiteSearch.astro';
 import { enTwin } from '../i18n/en/tools';
 // Preloaded UI weights (Polish P.12): 400 (body) and 800 (every H1). 700 loads on demand. There is no 600 face: a
 // fourth file on the critical path put home LCP over 2,000 ms (G2 ci-green; BUILD-LOG).
@@ -139,6 +140,13 @@ const favicon =
         </div>
       </div>
       <a class="nav-guide" href="/guide/" aria-current={path.startsWith('/guide/') ? 'page' : undefined}>안내</a>
+      {/* SEARCH1031 D1: without JS a link to /search/; the site script turns it into the toggle of this overlay panel. */}
+      <div class="ssh" data-ssh>
+        <a class="ssh-toggle" href="/search/" data-ssh-toggle aria-current={path === '/search/' ? 'page' : undefined}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4.2-4.2" /></svg>찾기</a>
+        <div class="ssh-panel" id="search-panel" hidden>
+          <SiteSearch id="hs" variant="header" />
+        </div>
+      </div>
       <a class="nav-extra" href={`${nav}#faq`}>자주 묻는 질문</a>
     </nav>
   </div>

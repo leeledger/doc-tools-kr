@@ -61,9 +61,10 @@ export const CORE_PATHS = [
 export const EN_DIRS = ['i18n/', 'pages/en/'];
 /**
  * ADS1020 D9-D10: /about/ and /contact/ render their text in the system font (.site-info in src/styles/app.css), like the
- * guide prose, so their pages and the /about/ milestone data are in neither set (paths relative to src/).
+ * guide prose, so their pages and the /about/ milestone data are in neither set (paths relative to src/). SEARCH1031 D11:
+ * the site search box, its module and /search/ (.site-search, .search-page) too.
  */
-export const SYSTEM_FONT_PATHS = ['pages/about/', 'pages/contact/', 'data/about.ts'];
+export const SYSTEM_FONT_PATHS = ['pages/about/', 'pages/contact/', 'data/about.ts', 'components/SiteSearch.astro', 'lib/search/', 'pages/search/'];
 /**
  * LOAN1022 L-D3: files whose text is document text only (drawn in the HWP/PDF faces, never in the UI font): in neither
  * set (paths relative to src/). The 금액 한글 digits and places (일 … 구, 십 백 천, 만 억 조).
