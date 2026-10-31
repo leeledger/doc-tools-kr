@@ -25,3 +25,14 @@ textarea.qr-input { resize: vertical; }
 .qr-out .field-error, .qr-dense { text-align: center; }
 .qr-dense[hidden] { display: none; }
 .qr-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.qr-style { width: 100%; border-top: 1px solid var(--line); padding-top: 10px; }
+.qr-style > summary { min-height: 48px; display: flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; }
+.qr-style > summary:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.qr-style-body { display: grid; gap: 8px; padding-top: 6px; }
+.qr-colors, .qr-logo { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+.qr-color { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; font-weight: 800; cursor: pointer; }
+.qr-color input { width: 48px; height: 48px; padding: 2px; border: 1px solid var(--muted); border-radius: 10px; background: var(--bg); cursor: pointer; }
+.qr-color input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.qr-color input[aria-invalid="true"] { border-color: var(--danger); }
+.qr-style .btn.small { min-height: 48px; }
+.qr-style .field-error { text-align: center; }
