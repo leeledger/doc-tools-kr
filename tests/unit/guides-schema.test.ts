@@ -666,3 +666,93 @@ describe('SEO1031 D9: photo, HWPX, iPhone and 누끼 pages carry the searched wo
     for (const bad of ['한글에서 배경', '한글 프로그램에서 누끼']) expect(g.raw, bad).not.toContain(bad);
   });
 });
+
+describe('DRAFT1031: six sourced drafts published (photo specs and file limits)', () => {
+  const bySlug = (s: string) => published.find((g) => g.slug === s);
+  const SIX = ['fire-exam-photo', 'military-civilian-photo', 'kacta-exam-photo', 'local-gosi-photo', 'kakao-file-limit', 'naver-daum-mail-limit'];
+  const STAY = ['toeic-photo', 'hsk-photo', 'mma-photo', 'teacher-exam-photo', 'gov24-upload-limit', 'epeople-upload-limit', 'hometax-upload-limit', 'work24-resume-upload'];
+  const visibleText = (g: NonNullable<ReturnType<typeof bySlug>>) =>
+    [g.parsed.title, g.parsed.description, g.parsed.ogDescription, g.parsed.answer, g.parsed.og.title, g.parsed.og.line, g.parsed.cta.label, ...g.parsed.faq.flatMap((f) => [f.q, f.a]), g.body].join('\n');
+
+  it('the six are published, dated 2026-10-30, and the eight others stay drafts with a 2026-10-30 attempt', () => {
+    for (const s of SIX) {
+      const g = bySlug(s);
+      expect(g, s).toBeDefined();
+      expect(g!.parsed.published, s).toBe('2026-10-30');
+    }
+    for (const s of STAY) {
+      const g = guides.find((x) => x.slug === s)!;
+      expect(g.data.draft, s).toBe(true);
+      expect((g.data.tried as { date: string }[]).some((t) => t.date === '2026-10-30'), s).toBe(true);
+    }
+  });
+
+  it('each title keeps the searched words; each CTA opens the brief deep link', () => {
+    const WORDS: Record<string, string[]> = {
+      'fire-exam-photo': ['소방공무원', '원서', '사진'],
+      'military-civilian-photo': ['군무원', '사진'],
+      'kacta-exam-photo': ['전산회계', '전산세무', '사진'],
+      'local-gosi-photo': ['지방직', '사진'],
+      'kakao-file-limit': ['카톡', '파일', '용량'],
+      'naver-daum-mail-limit': ['네이버', '메일', '첨부', '용량'],
+    };
+    for (const [slug, words] of Object.entries(WORDS)) for (const w of words) expect(bySlug(slug)!.parsed.title, slug).toContain(w);
+    const CTA: Record<string, string> = {
+      'fire-exam-photo': '/id-photo/?preset=gosi',
+      'military-civilian-photo': '/photo-compress/?target=500',
+      'kacta-exam-photo': '/id-photo/?preset=half_card',
+      'local-gosi-photo': '/id-photo/?preset=id_card',
+      'kakao-file-limit': '/pdf-compress/',
+      'naver-daum-mail-limit': '/pdf-compress/?target=10',
+    };
+    for (const [slug, href] of Object.entries(CTA)) expect(bySlug(slug)!.parsed.cta.href, slug).toBe(href);
+  });
+
+  it('the PDF-only quotes are marked via pdf; the page quotes are fetchable (no via)', () => {
+    for (const s of ['fire-exam-photo', 'military-civilian-photo']) for (const src of bySlug(s)!.parsed.sources) if ('url' in src) expect(src.via, s).toBe('pdf');
+    for (const s of ['kacta-exam-photo', 'local-gosi-photo', 'kakao-file-limit', 'naver-daum-mail-limit']) for (const src of bySlug(s)!.parsed.sources) if ('url' in src) expect(src.via, s).toBeUndefined();
+  });
+
+  it('소방 never states the gosi 350 KB limit; 지방직 never prints dpi and never opens the gosi preset', () => {
+    const fire = bySlug('fire-exam-photo')!;
+    expect(visibleText(fire)).not.toMatch(/350/);
+    const local = bySlug('local-gosi-photo')!;
+    expect(visibleText(local)).not.toMatch(/dpi/i);
+    expect(local.body).not.toContain('preset=gosi');
+    for (const f of readdirSync(join(__dirname, '..', '..', 'public', 'img', 'guide', 'local-gosi-photo'))) {
+      expect(readFileSync(join(__dirname, '..', '..', 'public', 'img', 'guide', 'local-gosi-photo', f), 'utf8'), f).not.toMatch(/dpi/i);
+    }
+  });
+
+  it('전산회계·전산세무 states a cm or pixel number only where it explains the half_card calculation', () => {
+    const g = bySlug('kacta-exam-photo')!;
+    const sizeFacts = (t: string) => numberUnits(t).filter((f) => / (cm|mm|픽셀)$/.test(f));
+    expect(sizeFacts(g.parsed.answer)).toEqual([]);
+    expect(sizeFacts(g.parsed.description)).toEqual([]);
+    for (const f of g.parsed.faq) expect(sizeFacts(f.a), f.q).toEqual([]);
+    const paras = g.body.split(/\n\s*\n/).filter((p) => sizeFacts(p).length);
+    expect(paras).toHaveLength(1);
+    expect(paras[0]).toContain('계산값');
+    expect(paras[0]).toContain('한국세무사회가 정한 크기는 아니에요');
+  });
+
+  it('군무원 is scoped to the 국방부 주관 2026년도 공고 and states no size of its own', () => {
+    const g = bySlug('military-civilian-photo')!;
+    expect(g.parsed.answer).toContain('2026년도 국방부 주관');
+    expect(g.body).toContain('육군·해군·공군');
+    expect(g.parsed.spec).toEqual([{ label: '군무원 원서 사진 (국방부 주관)', kind: 'photo', kb: 500, format: 'JPG·PNG·GIF', source: 1 }]);
+    expect(numberUnits(visibleText(g)).filter((f) => / (cm|mm|픽셀)$/.test(f))).toEqual([]);
+  });
+
+  it('one published guide links each new guide in its body', () => {
+    const INBOUND: Record<string, string> = {
+      'fire-exam-photo': 'gosi-photo',
+      'local-gosi-photo': 'gosi-photo',
+      'military-civilian-photo': 'photo-kb',
+      'kacta-exam-photo': 'korcham-photo',
+      'kakao-file-limit': 'kakao-photo',
+      'naver-daum-mail-limit': 'email-attachment-limit',
+    };
+    for (const [slug, from] of Object.entries(INBOUND)) expect(bySlug(from)!.body, `${from} -> ${slug}`).toContain(`](/guide/${slug}/)`);
+  });
+});

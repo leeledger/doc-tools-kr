@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" width="720" height="250" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">소방공무원 원서 사진을 면접시험까지 같은 사진으로 쓰는 흐름</title>
+<rect x="0.5" y="0.5" width="719" height="249" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">한 번 등록한 사진을 끝까지 써요</text>
+<rect x="30.0" y="64" width="200.0" height="96" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="44.0" y="82" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">1</text>
+<text x="130.0" y="111.8" font-size="14" fill="#1c2321" text-anchor="middle">원서접수 때</text>
+<text x="130.0" y="130.0" font-size="14" fill="#1c2321" text-anchor="middle">사진 등록</text>
+<line x1="234.0" y1="112" x2="247.0" y2="112" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="256.0,112 247.0,116.5 247.0,107.5" fill="#1c2321"/>
+<rect x="260.0" y="64" width="200.0" height="96" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="274.0" y="82" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">2</text>
+<text x="360.0" y="111.8" font-size="14" fill="#1c2321" text-anchor="middle">시험 단계마다</text>
+<text x="360.0" y="130.0" font-size="14" fill="#1c2321" text-anchor="middle">같은 사진</text>
+<line x1="464.0" y1="112" x2="477.0" y2="112" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="486.0,112 477.0,116.5 477.0,107.5" fill="#1c2321"/>
+<rect x="490.0" y="64" width="200.0" height="96" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="504.0" y="82" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">3</text>
+<text x="590.0" y="111.8" font-size="14" fill="#1c2321" text-anchor="middle">면접시험까지</text>
+<text x="590.0" y="130.0" font-size="14" fill="#1c2321" text-anchor="middle">그대로 사용</text>
+<rect x="30" y="184" width="660" height="40" rx="6" fill="#fbeceb" stroke="#b42318" stroke-width="1.5"/>
+<text x="360" y="209" font-size="14" fill="#1c2321" text-anchor="middle" font-weight="bold">접수기간이 끝나면 사진을 바꿀 수 없어요</text>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 362" width="720" height="362" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">전산회계·전산세무 시험 사진으로 쓸 수 없는 사진 여덟 가지</title>
+<rect x="0.5" y="0.5" width="719" height="361" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">본인의 반명함판 증명사진만 써요</text>
+<rect x="70" y="70" width="140" height="180" rx="4" fill="#f3f5f4" stroke="#0f766e" stroke-width="2"/>
+<circle cx="140" cy="142" r="34" fill="#c9d1cf"/>
+<path d="M 92 250 Q 140 170 188 250 Z" fill="#c9d1cf"/>
+<text x="140" y="276" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">반명함판 증명사진</text>
+<text x="140" y="298" font-size="14" fill="#1c2321" text-anchor="middle">본인 사진만</text>
+<text x="290" y="84" font-size="16" fill="#b42318" text-anchor="start" font-weight="bold">부적격 사진 (한국세무사회 안내)</text>
+<path d="M 290 108 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="118" font-size="15" fill="#1c2321" text-anchor="start">6개월 이상 지나 지금 얼굴과 다른 사진</text>
+<path d="M 290 136 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="146" font-size="15" fill="#1c2321" text-anchor="start">배경이 있는 일반 사진</text>
+<path d="M 290 164 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="174" font-size="15" fill="#1c2321" text-anchor="start">화상캠으로 찍은 사진</text>
+<path d="M 290 192 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="202" font-size="15" fill="#1c2321" text-anchor="start">스티커 사진</text>
+<path d="M 290 220 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="230" font-size="15" fill="#1c2321" text-anchor="start">전신사진</text>
+<path d="M 290 248 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="258" font-size="15" fill="#1c2321" text-anchor="start">얼굴만 나온 사진</text>
+<path d="M 290 276 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="286" font-size="15" fill="#1c2321" text-anchor="start">정면이 아닌 측면사진</text>
+<path d="M 290 304 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="314" font-size="15" fill="#1c2321" text-anchor="start">신분증을 스캔한 사진</text>
+</svg>

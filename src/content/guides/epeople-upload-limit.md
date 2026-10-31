@@ -10,4 +10,7 @@ tried:
   - url: https://www.epeople.go.kr/nep/gdnc/PttnUtilGdncContent.npaid
     result: 'HTTP 200, 109,862 bytes: 민원 이용안내 (what to file, the process); no attachment limit. /nep/pttn/gnrlPttn/PttnRqstWrtnInfo.paid redirects to the login page.'
     date: '2026-10-02'
+  - url: https://www.epeople.go.kr/
+    result: 'Web search (discovery only): no official page states a size; only third-party claims (지식iN, news, AI summary). A 110.go.kr 제도개선 사례 mentions 50MB as a past improvement, not a current rule — not used.'
+    date: '2026-10-30'
 ---

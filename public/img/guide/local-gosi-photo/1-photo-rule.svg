@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">지방직 공무원 원서 사진 규격: 3.5×4.5 cm, 해상도 100 이상</title>
+<rect x="0.5" y="0.5" width="719" height="319" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">지방직 공무원 원서 사진</text>
+<rect x="70" y="70" width="140" height="180" rx="4" fill="#f3f5f4" stroke="#0f766e" stroke-width="2"/>
+<circle cx="140" cy="142" r="34" fill="#c9d1cf"/>
+<path d="M 92 250 Q 140 170 188 250 Z" fill="#c9d1cf"/>
+<text x="140" y="276" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">3.5 cm</text>
+<text x="52" y="160" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold" transform="rotate(-90 52 160)">4.5 cm</text>
+<text x="140" y="298" font-size="14" fill="#1c2321" text-anchor="middle">해상도 100 이상</text>
+<text x="290" y="84" font-size="16" fill="#0f766e" text-anchor="start" font-weight="bold">등록할 때 확인할 것</text>
+<path d="M 290 113 l 4 5 l 8 -10" stroke="#0f766e" stroke-width="2" fill="none"/>
+<text x="312" y="118" font-size="15" fill="#1c2321" text-anchor="start">규격보다 작은 사진은 안 돼요</text>
+<path d="M 290 141 l 4 5 l 8 -10" stroke="#0f766e" stroke-width="2" fill="none"/>
+<text x="312" y="146" font-size="15" fill="#1c2321" text-anchor="start">해상도가 100보다 낮으면 안 돼요</text>
+<path d="M 290 169 l 4 5 l 8 -10" stroke="#0f766e" stroke-width="2" fill="none"/>
+<text x="312" y="174" font-size="15" fill="#1c2321" text-anchor="start">[자동크기]로 공백을 빼요</text>
+<path d="M 290 197 l 4 5 l 8 -10" stroke="#0f766e" stroke-width="2" fill="none"/>
+<text x="312" y="202" font-size="15" fill="#1c2321" text-anchor="start">[마이페이지]에서 등록을 확인해요</text>
+</svg>

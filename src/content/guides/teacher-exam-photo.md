@@ -10,4 +10,7 @@ tried:
   - url: https://www.kice.re.kr/
     result: 'HTTP 200, 169 bytes: a redirect stub; KICE runs no application site for the exam (applications go through the 시도교육청 notices on edurecruit.go.kr).'
     date: '2026-10-02'
+  - url: https://www.edurecruit.go.kr/
+    result: 'Chrome: redirects to /nxui/index.html, a Nexacro app with no readable text; the photo rule stays in each 시도교육청 공고.'
+    date: '2026-10-30'
 ---

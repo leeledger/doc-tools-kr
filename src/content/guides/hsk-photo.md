@@ -17,4 +17,7 @@ tried:
   - url: https://www.hsk.or.kr/?c1=400&c2=003
     result: 'HTTP 200 (FAQ): no 사진 text.'
     date: '2026-10-12'
+  - url: https://www.hsk.or.kr/?c1=400&c2=003
+    result: 'Chrome: FAQ, 인터넷접수 (c1=100&c2=002&c3=002&c4=001) and 응시자 가이드 (c1=100&c2=002&c3=003&c4=001) contain no 사진 text.'
+    date: '2026-10-30'
 ---

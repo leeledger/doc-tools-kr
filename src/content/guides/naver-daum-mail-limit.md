@@ -1,17 +1,229 @@
 ---
-draft: true
-title: 네이버·다음 메일 첨부 용량
+title: 네이버·다음 메일 첨부 용량, 일반·대용량 첨부
+description: 네이버 메일은 파일 1개 10MB, 다음 메일은 25MB까지 일반 첨부예요. 넘으면 대용량 첨부로 바뀌고 30일 동안 받을 수 있어요.
+ogDescription: 네이버 메일 일반 첨부는 파일 1개 10MB, 다음 메일은 25MB까지예요. 넘으면 대용량 첨부예요.
 query: 네이버 메일 첨부 용량
-blockedBy: 'The Naver help center is a script app; the Daum mail help articles on attachments state no size limit.'
-publishBy: '2026-11-03'
-tried:
-  - url: https://help.naver.com/service/5640/contents/18560
-    result: 'HTTP 200 after a redirect to a category page: 1,372 characters, no mail attachment text.'
-    date: '2026-10-12'
-  - url: https://cs.daum.net/faq/service/43/category/4592/detail/37492
-    result: 'HTTP 200 (파일 첨부를 하려면 어떻게 하나요?): how to attach only, no size limit.'
-    date: '2026-10-12'
-  - url: https://cs.daum.net/faq/service/43/category/4592/detail/37509
-    result: 'HTTP 200 (일반첨부 기능은 안되나요?): no size limit.'
-    date: '2026-10-12'
+answer: 고객센터 안내에 따르면 네이버 메일은 파일 1개 10MB, 다음 메일은 25MB까지 일반 첨부로 보내고, 넘는 파일은 대용량 첨부로 바뀌어요.
+published: '2026-10-30'
+updated: '2026-10-30'
+category: PDF
+topic: PDF·메일
+tools: [pdf-compress, photo-compress]
+cta: { href: '/pdf-compress/?target=10', label: 'PDF 10MB 이하로 줄이기' }
+related: [email-attachment-limit, kakao-file-limit, pdf-compress]
+sources:
+  - url: https://help.naver.com/service/30029/contents/21295?osType=COMMONOS
+    title: 네이버 메일 고객센터 — 첨부 가능한 파일 용량 안내
+    quote: 1개에 10MB가 넘지 않는 파일을 일반 파일로 분류하며, 다운로드 기간이나 횟수에 제한이 없습니다.
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21295?osType=COMMONOS
+    title: 네이버 메일 고객센터 — 첨부 가능한 파일 용량 안내
+    quote: '- 하나의 파일당 최대 2GB까지 첨부 가능'
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21295?osType=COMMONOS
+    title: 네이버 메일 고객센터 — 첨부 가능한 파일 용량 안내
+    quote: '- 메일 한 통 당 총 10개의 대용량 파일 첨부 가능'
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21295?osType=COMMONOS
+    title: 네이버 메일 고객센터 — 첨부 가능한 파일 용량 안내
+    quote: '- 대용량 파일을 첨부한 메일은 1일 10회 발송 가능'
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21295?osType=COMMONOS
+    title: 네이버 메일 고객센터 — 첨부 가능한 파일 용량 안내
+    quote: '- 파일을 첨부한 시점을 기준으로 30일간, 100회 다운로드 가능'
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21233?osType=COMMONOS
+    title: 네이버 메일 고객센터 — 1통 당 수신 가능한 용량 안내
+    quote: 네이버 메일의 경우 그 크기의 한계가 메일 한 개당 40MB입니다.
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21294?osType=MOBILE&lang=ko
+    title: 네이버 메일 고객센터 — 한 번에 여러 개의 파일을 첨부하는 방법
+    quote: 파일 첨부는 1회 최대 10MB까지 갯수 제한 없이 첨부할 수 있습니다.
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21294?osType=MOBILE&lang=ko
+    title: 네이버 메일 고객센터 — 한 번에 여러 개의 파일을 첨부하는 방법
+    quote: 10MB를 초과하면 그 이상의 파일은 대용량 첨부파일로 전환됩니다.
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21233?osType=COMMONOS
+    title: 네이버 메일 고객센터 — 1통 당 수신 가능한 용량 안내
+    quote: 즉, 일반 첨부 방식으로 첨부한 파일의 경우 메일 내용과 합쳐 하나의 파일로 인코딩하므로 메일의 용량이 40MB를 초과할 경우 수신되지 않습니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/4592/detail/35985
+    title: Daum 고객센터 — 메일보내기 도움말
+    quote: 파일 첨부는 최대 25MB까지 일반 첨부가 가능합니다. (25MB 넘으면 자동으로 대용량 첨부로 전환됩니다.)
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/4592/detail/35985
+    title: Daum 고객센터 — 메일보내기 도움말
+    quote: 메일 사이즈는 첨부파일을 포함하여 30MB까지 허용되며, 그 이상을 초과하면 정상적으로 발송되지 않을 수 있습니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/15550/detail/38504
+    title: Daum 고객센터 — 모바일 웹메일 도움말
+    quote: 대용량 첨부는 한 파일당 4GB의 용량제한이 있으나 첨수 개수에는 제한이 없습니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/18758/detail/35912
+    title: Daum 고객센터 — 메일읽기 도움말
+    quote: 대용량 첨부 파일은 30일 동안 보관되고 100회까지 다운로드하실 수 있습니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/18758/detail/35912
+    title: Daum 고객센터 — 메일읽기 도움말
+    quote: 만약 100명에게 단체로 첨부 파일을 발송한 경우, 한 사람이 한 번씩만 내려받아도 100번 다운로드한 것으로
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/15550/detail/38502
+    title: Daum 고객센터 — 모바일 웹메일 도움말
+    quote: 단일 파일의 용량이 25MB가 초과되거나 첨부된 일반 파일의 합계가 25MB를 초과하는 경우, 자동으로 대용량 첨부로 전환됩니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/15550/detail/38481
+    title: Daum 고객센터 — 모바일 웹메일 도움말
+    quote: 메일 본문과 일반 첨부파일의 용량을 합쳐 30MB가 넘으면, 메일 보내기가 되지 않습니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/15550/detail/38481
+    title: Daum 고객센터 — 모바일 웹메일 도움말
+    quote: '- 첨부파일을 대용량으로 재 첨부 또는 전환해주세요.'
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/15550/detail/38506
+    title: Daum 고객센터 — 모바일 웹메일 도움말
+    quote: 또한, 타 메일에서 발송된 대용량 메일을 받으셨다면 다운로드 횟수와 보관기간은 발송측의 기준대로 적용됩니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/15550/detail/38506
+    title: Daum 고객센터 — 모바일 웹메일 도움말
+    quote: 파일은 다운로드 횟수가 초과하거나, 보관 기간이 종료되면 저희 서버에서도 자동으로 삭제되므로
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21293?osType=PC&lang=ko
+    title: 네이버 메일 고객센터 — 파일을 첨부하는 방법
+    quote: '- 대용량 파일은 보낸이/받는이 모두 포함하여 30일간 100회 다운로드 가능합니다.'
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21293?osType=PC&lang=ko
+    title: 네이버 메일 고객센터 — 파일을 첨부하는 방법
+    quote: 메일 쓰기 페이지에서 '내 PC' 버튼을 클릭하면 PC에 저장된 파일들이 표시되며, 원하는 파일을 선택하여 '열기'를 누르면 메일쓰기 화면으로 첨부됩니다.
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21294?osType=MOBILE&lang=ko
+    title: 네이버 메일 고객센터 — 한 번에 여러 개의 파일을 첨부하는 방법
+    quote: '- 안드로이드 : 파일 선택 화면에서 파일을 길게 누르면 여러 개를 선택할 수 있습니다.'
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21294?osType=MOBILE&lang=ko
+    title: 네이버 메일 고객센터 — 한 번에 여러 개의 파일을 첨부하는 방법
+    quote: '- iOS : 파일 선택 화면에서 바로 여러 개를 선택할 수 있습니다.'
+    retrieved: '2026-10-30'
+  - url: https://help.naver.com/service/30029/contents/21135?osType=COMMONOS
+    title: 네이버 메일 고객센터 — 네이버 메일 용량 안내
+    quote: 네이버 메일은 기본 용량 5GB를 제공하고 있습니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/14487/detail/28248
+    title: Daum 고객센터 — 다음메일앱 도움말
+    quote: 첨부하신 파일들의 용량 총합이 25MB를 넘으면 이후 첨부 파일들은 대용량 첨부 형식으로 변경되어 발송됩니다.
+    retrieved: '2026-10-30'
+  - url: https://cs.daum.net/faq/service/43/category/14487/detail/28248
+    title: Daum 고객센터 — 다음메일앱 도움말
+    quote: 단, 보내는 메일 주소가 Daum 메일일 때만 대용량 파일 첨부를 지원합니다.
+    retrieved: '2026-10-30'
+spec:
+  - label: 네이버 메일 일반 첨부 (파일 1개)
+    kind: upload
+    mb: 10
+    source: 1
+  - label: 다음 메일 일반 첨부
+    kind: upload
+    mb: 25
+    source: 10
+faq:
+  - q: 네이버 메일 첨부파일 용량은 얼마인가요?
+    a: 파일 1개가 10MB를 넘지 않으면 일반 첨부로, 넘으면 대용량 첨부로 보내져요. 대용량 첨부는 파일 하나에 최대 2GB, 메일 한 통에 10개까지예요.
+  - q: 다음 메일은 몇 MB까지 첨부되나요?
+    a: 최대 25MB까지 일반 첨부가 되고, 25MB를 넘으면 자동으로 대용량 첨부로 바뀌어요. 대용량 첨부는 한 파일에 4GB까지예요.
+  - q: 대용량 첨부는 언제까지 받을 수 있나요?
+    a: 네이버는 첨부한 때부터 30일간 100회, 다음은 30일 동안 100회까지 받을 수 있어요. 기간이 지나면 받을 수 없으니 받는 사람이 빨리 저장해야 해요.
+  - q: 메일 한 통은 몇 MB까지 보낼 수 있나요?
+    a: 다음 메일은 첨부파일을 포함해 메일 한 통이 30MB까지예요. 네이버 메일은 메일 한 개당 40MB까지 받을 수 있다고 안내해요.
+  - q: 첨부파일을 10MB 이하로 줄이려면요?
+    a: PDF는 PDF 용량 줄이기에서 목표를 10MB로 두고 줄이면 돼요. 사진이면 사진 용량 줄이기로 장마다 줄이세요.
+og: { title: '네이버·다음 메일 첨부', line: '일반 첨부 네이버 10MB · 다음 25MB' }
 ---
+
+## 한눈에 보는 첨부 용량
+
+| 항목 | 네이버 메일 | 다음 메일 |
+|---|---|---|
+| 일반 첨부 | 파일 1개 10MB까지 | 일반 파일 합계 25MB까지 |
+| 대용량 첨부 한 파일 | 최대 2GB | 4GB |
+| 대용량 첨부 개수 | 메일 한 통에 10개 | 제한 없음 |
+| 대용량 첨부 받기 | 30일간, 100회 | 30일 동안, 100회 |
+| 메일 한 통 | 받기 40MB까지 | 보내기 30MB까지 (첨부 포함) |
+
+## 네이버 메일: 파일 1개 10MB가 기준
+
+네이버 메일 고객센터의 「첨부 가능한 파일 용량 안내」는 첨부 방식을 둘로 나눠요. 1개에 10MB가 넘지 않는 파일은 일반 파일로, 넘는 파일은 대용량 파일로 분류해요. 일반 파일은 받는 사람이 내려받는 기간이나 횟수에 제한이 없어요.
+
+10MB가 넘는 대용량 파일은 이런 제약이 있어요.
+
+- 파일 하나에 최대 2GB까지 첨부할 수 있어요.
+- 메일 한 통에 대용량 파일은 모두 10개까지예요.
+- 대용량 파일을 첨부한 메일은 하루에 10회까지 보낼 수 있어요.
+- 첨부한 때부터 30일간, 100회까지 내려받을 수 있어요.
+
+휴대폰 앱 안내도 같은 기준이에요. 파일 첨부는 1회 최대 10MB까지 갯수 제한 없이 할 수 있고, 10MB를 넘는 파일은 대용량 첨부파일로 바뀌어요.
+
+## 다음 메일: 25MB까지 일반 첨부
+
+Daum 고객센터의 메일보내기 도움말은 파일 첨부는 최대 25MB까지 일반 첨부가 되고, 25MB를 넘으면 자동으로 대용량 첨부로 바뀐다고 안내해요. 네이버와 다른 점은 합계로 센다는 거예요. 파일 하나가 25MB를 넘거나, 붙인 일반 파일을 모두 더한 크기가 25MB를 넘으면 대용량 첨부로 바뀌어요. 대용량 첨부는 한 파일에 4GB까지이고, 첨부 개수에는 제한이 없어요. 대용량 첨부 파일은 30일 동안 보관되고 100회까지 내려받을 수 있어요.
+
+다음 메일 앱도 같아요. 첨부한 파일들의 합이 25MB를 넘으면 그 뒤에 붙인 파일은 대용량 첨부로 바뀌어 보내져요. 다만 대용량 첨부는 보내는 메일 주소가 Daum 메일일 때만 쓸 수 있어요. 다음 메일 앱에 다른 메일 계정을 연결해 보낸다면 큰 파일은 미리 줄여 두세요.
+
+다음 메일은 메일 한 통의 크기도 정해 두었어요. 첨부파일을 포함한 메일 크기는 30MB까지이고, 그보다 크면 제대로 보내지지 않을 수 있어요. 일반 첨부를 여러 개 붙이다 보면 이 한도에 먼저 닿을 수 있으니, 큰 파일은 줄이거나 대용량 첨부로 보내세요.
+
+<figure class="guide-fig"><img src="/img/guide/naver-daum-mail-limit/1-naver-daum.svg" width="720" height="328" alt="네이버 메일과 다음 메일의 일반 첨부 한도 10MB와 25MB, 대용량 첨부 한 파일 2GB와 4GB, 대용량 첨부 보관 30일 100회, 메일 한 통 받기 40MB와 보내기 30MB를 나란히 비교한 표 그림" loading="lazy" decoding="async"><figcaption>일반 첨부는 네이버 파일 1개 10MB, 다음 25MB까지예요. 넘으면 대용량 첨부로 바뀌고 30일 동안 100회까지 받을 수 있어요.</figcaption></figure>
+
+## 일반 첨부와 대용량 첨부는 무엇이 다를까
+
+일반 첨부는 파일이 메일 안에 함께 들어가요. 받는 사람은 언제든 메일을 열어 첨부파일을 받을 수 있어요. 대용량 첨부는 파일이 메일 밖에 따로 보관되고, 메일에는 내려받는 곳이 붙어 가요. 그래서 기간과 횟수 제한이 있어요. 30일이 지나거나 100회를 넘게 내려받으면 더는 받을 수 없어요.
+
+횟수는 받는 사람 수만큼 빨리 줄어요. 다음 메일 안내는 100명에게 한꺼번에 첨부파일을 보냈다면, 한 사람이 한 번씩만 내려받아도 100번 내려받은 것으로 센다고 설명해요. 여러 사람에게 보내는 공지나 과제 파일이라면 대용량 첨부보다 일반 첨부로 보내는 편이 안전해요.
+
+## 대용량 첨부를 피하고 싶다면 10MB 아래로
+
+입사 지원서, 과제, 계약서처럼 받는 사람이 나중에 다시 꺼내 볼 파일은 일반 첨부로 보내는 것이 좋아요. 대용량 첨부로 가면 30일 뒤에는 받을 수 없기 때문이에요. 네이버 메일로 보낸다면 파일 하나를 10MB 아래로, 다음 메일이라면 25MB 아래로 줄이면 일반 첨부로 보낼 수 있어요.
+
+[PDF 용량 줄이기](/pdf-compress/?target=10)를 열면 목표 용량이 10MB로 맞춰져 있어요.
+
+1. 위 링크로 PDF 용량 줄이기를 열어요.
+2. 보낼 PDF를 골라요.
+3. 목표 10MB를 확인하고 줄이기를 눌러요.
+4. 줄인 파일을 메일에 첨부해요. 첨부 칸에 일반 첨부로 붙었는지 봐요.
+
+글자는 선택·검색할 수 있는 상태로 남아요. 사진 파일이라면 [사진 용량 줄이기](/photo-compress/)로 장마다 줄이면 돼요. 가입 없이 무료로 쓸 수 있어요.
+
+<figure class="guide-fig"><img src="/img/guide/naver-daum-mail-limit/2-normal-vs-big.svg" width="720" height="234" alt="네이버 메일에서 첨부할 파일의 용량을 확인해 10MB 이하면 기간과 횟수 제한이 없는 일반 첨부로, 10MB를 넘으면 30일간 100회까지 받는 대용량 첨부로 바뀌는 흐름 그림" loading="lazy" decoding="async"><figcaption>네이버 메일은 파일 1개가 10MB 이하면 일반 첨부, 넘으면 대용량 첨부예요. 오래 보관할 파일은 10MB 아래로 줄여 보내세요.</figcaption></figure>
+
+## 다른 메일에서 온 대용량 첨부는 보낸 쪽 기준
+
+다음 메일로 받을 때는 대용량 첨부의 기간과 횟수가 다음 메일이 아니라 보낸 쪽 메일의 기준을 따라요. 다음 메일 안내는 다른 메일에서 보낸 대용량 메일을 받았다면 내려받기 횟수와 보관 기간이 보낸 쪽의 기준대로 적용된다고 적었어요. 네이버에서 다음으로 보낸 대용량 파일은 네이버 기준(30일간, 100회)을 따르는 셈이에요.
+
+네이버는 이 100회에 보낸 사람과 받는 사람이 내려받은 횟수를 모두 더해 센다고 안내해요. 보낸 사람이 확인하려고 몇 번 내려받는 것도 횟수에 들어가요. 기간이나 횟수가 끝난 파일은 보관하던 곳에서도 자동으로 지워져서 되살릴 방법이 없다고 다음 메일 안내는 설명해요. 받는 사람에게 「받는 즉시 저장해 달라」고 한 줄 적어 두면 좋아요.
+
+## 메일이 보내지지 않을 때
+
+다음 메일은 메일 본문과 일반 첨부파일을 합쳐 30MB가 넘으면 메일을 보낼 수 없어요. 이럴 때 다음 메일 안내는 두 가지를 권해요.
+
+- 메일 내용이나 첨부파일을 일부 지워요.
+- 첨부파일을 대용량으로 다시 첨부하거나 전환해요.
+
+여기에 하나를 더하면, 파일을 줄이는 방법이 있어요. 큰 PDF나 사진을 줄이면 일반 첨부로 그대로 보낼 수 있어서 받는 사람에게 기간 제한도 생기지 않아요.
+
+## PC와 휴대폰에서 첨부하는 법
+
+네이버 메일 PC 화면에서는 메일 쓰기의 「내 PC」 버튼을 눌러 파일을 고르고 「열기」를 누르면 첨부돼요. 휴대폰에서는 파일 선택 화면에서 여러 파일을 한꺼번에 고를 수 있어요. 안드로이드는 파일을 길게 누르면 여러 개를 고를 수 있고, 아이폰은 선택 화면에서 바로 여러 개를 고르면 돼요. 여러 파일을 고르면 파일마다 10MB를 넘는지에 따라 일반 첨부와 대용량 첨부가 나뉘니, 첨부 칸의 표시를 한 번 보세요.
+
+받은 첨부파일이 쌓이면 메일함 용량도 줄어요. 네이버 메일의 기본 용량은 5GB라서, 큰 첨부가 많은 메일은 필요한 파일만 저장하고 지워 두면 메일함이 덜 차요.
+
+## 받는 쪽 한도도 생각해요
+
+네이버 메일 고객센터는 메일 한 통을 받을 수 있는 크기를 메일 한 개당 40MB로 안내해요. 일반 첨부로 붙인 파일은 메일 내용과 합쳐 하나로 보내지기 때문에, 첨부파일이 이 크기에 가까우면 받는 쪽에서 메일을 받지 못할 수 있어요. 받는 사람의 메일이 네이버인지, 회사 메일인지에 따라 한도가 다르니, 큰 파일은 미리 줄여 두는 것이 가장 확실해요.
+
+## 보내기 전에 확인할 것
+
+1. 첨부할 파일 하나하나의 용량을 봐요.
+2. 네이버는 10MB, 다음은 25MB를 넘는지 봐요.
+3. 넘는다면 줄일지, 대용량 첨부로 보낼지 정해요.
+4. 대용량 첨부라면 받는 사람에게 30일 안에 저장해 달라고 알려요.
+5. 여러 사람에게 보낼 때는 내려받기 횟수를 생각해요.
+
+지메일이나 아웃룩의 첨부 한도는 [메일 첨부파일 용량 제한](/guide/email-attachment-limit/)에, 카카오톡으로 파일을 보낼 때의 한도는 [카톡 파일 용량](/guide/kakao-file-limit/)에 정리했어요. 기관 제출처의 첨부 한도는 [첨부파일 용량 모음](/guide/upload-limits/)에서 볼 수 있어요.

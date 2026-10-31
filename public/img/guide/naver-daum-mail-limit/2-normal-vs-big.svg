@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 234" width="720" height="234" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">네이버 메일에서 10MB를 넘는 파일이 대용량 첨부로 바뀌는 흐름</title>
+<rect x="0.5" y="0.5" width="719" height="233" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">네이버 메일: 10MB를 넘으면 대용량 첨부</text>
+<rect x="30.0" y="64" width="200.0" height="110" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="44.0" y="82" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">1</text>
+<text x="130.0" y="118.8" font-size="14" fill="#1c2321" text-anchor="middle">첨부할 파일</text>
+<text x="130.0" y="137.0" font-size="14" fill="#1c2321" text-anchor="middle">용량 확인</text>
+<line x1="234.0" y1="119" x2="247.0" y2="119" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="256.0,119 247.0,123.5 247.0,114.5" fill="#1c2321"/>
+<rect x="260.0" y="64" width="200.0" height="110" rx="6" fill="#e6f2f0" stroke="#0f766e" stroke-width="1.5"/>
+<text x="274.0" y="82" font-size="12" fill="#0f766e" text-anchor="middle" font-weight="bold">2</text>
+<text x="360.0" y="109.7" font-size="14" fill="#1c2321" text-anchor="middle">10MB 이하</text>
+<text x="360.0" y="127.9" font-size="14" fill="#1c2321" text-anchor="middle">일반 첨부</text>
+<text x="360.0" y="146.1" font-size="14" fill="#1c2321" text-anchor="middle">기간·횟수 제한 없음</text>
+<line x1="464.0" y1="119" x2="477.0" y2="119" stroke="#1c2321" stroke-width="1.5"/>
+<polygon points="486.0,119 477.0,123.5 477.0,114.5" fill="#1c2321"/>
+<rect x="490.0" y="64" width="200.0" height="110" rx="6" fill="#fdf3e1" stroke="#8a5a00" stroke-width="1.5"/>
+<text x="504.0" y="82" font-size="12" fill="#8a5a00" text-anchor="middle" font-weight="bold">3</text>
+<text x="590.0" y="109.7" font-size="14" fill="#1c2321" text-anchor="middle">10MB 넘음</text>
+<text x="590.0" y="127.9" font-size="14" fill="#1c2321" text-anchor="middle">대용량 첨부</text>
+<text x="590.0" y="146.1" font-size="14" fill="#1c2321" text-anchor="middle">30일간 100회 받기</text>
+<text x="360" y="206" font-size="13" fill="#5b6663" text-anchor="middle">받는 사람이 오래 보관해야 하면 10MB 아래로 줄여 일반 첨부로 보내세요</text>
+</svg>

@@ -1,0 +1,61 @@
+https://cs.kakao.com/helps_html/1073209399
+PC에서 이미지/ 동영상/ 음성/ 압축 파일을 전송할 수 있나요? | kakao 고객센터
+본문 바로가기
+메뉴 바로가기
+카카오 고객센터
+카카오톡
+전체 서비스 펼쳐보기
+검색창, 검색어 입력 후 추천검색어는 방향키로 탐색 가능
+검색
+한국어
+더보기
+더보기
+로그인
+PC에서 이미지/ 동영상/ 음성/ 압축 파일을 전송할 수 있나요?
+카카오톡 일반 기능/이용 멀티미디어
+개당 최대 300MB의 이미지/ 동영상/ 음성/ 압축 파일 등을 아래의 방법으로 전송할 수 있습니다.
+
+
+■ 카카오톡 PC 버전 파일 전송 방법
+• 대화 입력창 하단 파일 전송 아이콘을 눌러 전송할 이미지/ 동영상/ 음성 파일 선택
+• 채팅창으로 전송할 파일을 드래그 앤 드롭(Drag&Drop)
+
+
+파일 유형별 전송 가능한 확장자는 아래 내용을 참고해 주세요.
+
+
+■ 이미지
+• jpg, jpeg, gif, bmp, png, tif, tiff, tga, psd, ai
+
+
+■ 동영상
+• mp4, m4v, avi, asf, wmv, mkv, ts, mpg, mpeg, mov, flv, ogv
+
+
+■ 음성
+• mp3, wav, flac, tta, tak, aac, wma, ogg, m4a
+
+
+■ 문서
+• doc, docx, hwp, txt, rtf, xml, pdf, wks, wps, xps, md, odf, odt, ods, odp, csv, tsv, xls, xlsx, ppt, pptx, pages, key, numbers, show, ce
+
+
+■ 압축파일
+• zip, gz, bz2, rar, 7z, lzh, alz
+도움말을 통해 문제를 해결하지 못하셨나요?
+문의하기 
+간편하게 메일로 답변을 받을 수 있어요.
+회사소개
+이용약관
+개인정보처리방침
+운영정책
+청소년보호정책
+권리침해신고안내
+공지사항
+카카오 고객센터 : 1577-3754 
+카카오 고객센터 안내
+(상세보기)
+
+Copyright © Kakao Corp. 
+(새창열림)
+All rights reserved.

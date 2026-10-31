@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 344" width="720" height="344" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+<title id="t">소방공무원 원서 사진 규격과 쓸 수 없는 사진</title>
+<rect x="0.5" y="0.5" width="719" height="343" rx="8" fill="#ffffff" stroke="#c9d1cf"/>
+<text x="360" y="36" font-size="18" fill="#1c2321" text-anchor="middle" font-weight="bold">소방공무원 원서 사진 (2026년 공고)</text>
+<rect x="70" y="70" width="140" height="180" rx="4" fill="#f3f5f4" stroke="#0f766e" stroke-width="2"/>
+<circle cx="140" cy="142" r="34" fill="#c9d1cf"/>
+<path d="M 92 250 Q 140 170 188 250 Z" fill="#c9d1cf"/>
+<text x="140" y="276" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold">3.5 cm</text>
+<text x="52" y="160" font-size="14" fill="#0f766e" text-anchor="middle" font-weight="bold" transform="rotate(-90 52 160)">4.5 cm</text>
+<text x="140" y="298" font-size="14" fill="#1c2321" text-anchor="middle">137×177픽셀 · JPG</text>
+<text x="290" y="84" font-size="16" fill="#b42318" text-anchor="start" font-weight="bold">쓸 수 없는 사진</text>
+<path d="M 290 108 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="118" font-size="15" fill="#1c2321" text-anchor="start">배경이 있는 사진</text>
+<path d="M 290 136 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="146" font-size="15" fill="#1c2321" text-anchor="start">스냅사진</text>
+<path d="M 290 164 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="174" font-size="15" fill="#1c2321" text-anchor="start">상반신 전체가 나온 사진</text>
+<path d="M 290 192 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="202" font-size="15" fill="#1c2321" text-anchor="start">얼굴이 잘려 나온 사진</text>
+<path d="M 290 220 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="230" font-size="15" fill="#1c2321" text-anchor="start">동물·식물 사진</text>
+<path d="M 290 248 l 10 10 m 0 -10 l -10 10" stroke="#b42318" stroke-width="2"/>
+<text x="312" y="258" font-size="15" fill="#1c2321" text-anchor="start">모자나 선글라스를 쓴 사진</text>
+<text x="360" y="324" font-size="13" fill="#5b6663" text-anchor="middle">제복처럼 신분을 알 수 있는 사진도 불이익이 있을 수 있어요</text>
+</svg>

@@ -44,9 +44,9 @@ export const urlSource = z
     title: len(2, 80),
     quote: len(2, 300),
     retrieved: isoDate,
-    /** The quote was read from the rendered page in a browser (the HTML is a script shell): source-watch lists it
-     * for a manual check instead of fetching it (G2 A1). */
-    via: z.literal('browser').optional(),
+    /** The quote was read from the rendered page in a browser (the HTML is a script shell, G2 A1) or from an
+     * official PDF (DRAFT1031): source-watch lists it for a manual check instead of fetching it. */
+    via: z.enum(['browser', 'pdf']).optional(),
   })
   .strict();
 
