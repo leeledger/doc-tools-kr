@@ -14,24 +14,24 @@ related: [pdf-merge, pdf-compress, email-attachment-limit]
 sources:
   - url: https://support.apple.com/ko-kr/guide/iphone/iphbf4977cff/ios
     title: iPhone 사용 설명서 — 미리보기 앱에서 PDF 페이지 추가, 삭제, 회전, 이동 또는 자르기
-    quote: 썸네일을 표시하려면 페이지 수를 탭하십시오.
-    retrieved: '2026-10-10'
+    quote: '썸네일을 표시하려면 사이드바 보기 버튼 을 탭하십시오. ( 사이드바 보기 버튼 이 나타나지 않으면 PDF를 탭하십시오.)'
+    retrieved: '2026-10-30'
   - url: https://support.apple.com/ko-kr/guide/iphone/iphbf4977cff/ios
     title: iPhone 사용 설명서 — 미리보기 앱에서 PDF 페이지 추가, 삭제, 회전, 이동 또는 자르기
     quote: '선택한 페이지 삭제하기: 페이지 삭제를 탭하십시오.'
-    retrieved: '2026-10-10'
+    retrieved: '2026-10-30'
   - url: https://support.apple.com/ko-kr/guide/iphone/iphbf4977cff/ios
     title: iPhone 사용 설명서 — 미리보기 앱에서 PDF 페이지 추가, 삭제, 회전, 이동 또는 자르기
     quote: 더 보기 버튼 을 탭한 다음, ‘왼쪽으로 회전’ 또는 ‘오른쪽으로 회전’을 탭하십시오.
-    retrieved: '2026-10-10'
+    retrieved: '2026-10-30'
   - url: https://support.apple.com/ko-kr/guide/iphone/iphbf4977cff/ios
     title: iPhone 사용 설명서 — 미리보기 앱에서 PDF 페이지 추가, 삭제, 회전, 이동 또는 자르기
     quote: 메뉴 옵션이 나타날 때까지 썸네일을 길게 터치한 다음, 다른 페이지 썸네일 위 또는 아래로 드래그하십시오.
-    retrieved: '2026-10-10'
+    retrieved: '2026-10-30'
   - url: https://support.apple.com/ko-kr/guide/iphone/iphbf4977cff/ios
     title: iPhone 사용 설명서 — 미리보기 앱에서 PDF 페이지 추가, 삭제, 회전, 이동 또는 자르기
     quote: 변경 사항을 실행 취소하려면 더 보기 버튼 을 탭한 다음, 실행 취소를 탭하십시오.
-    retrieved: '2026-10-10'
+    retrieved: '2026-10-30'
 toolFacts:
   - ref: pdf-split.maxFileMb.desktop
     value: 500
@@ -112,7 +112,7 @@ og: { title: 'PDF 쪽 삭제·회전', line: '필요 없는 쪽 빼고, 누운 �
 
 Apple iPhone 사용 설명서 안내대로 하면 앱을 따로 받지 않고도 쪽을 빼거나 돌릴 수 있어요. 메뉴 이름은 iOS 버전에 따라 조금 다를 수 있어요.
 
-- **쪽 빼기**: 「미리보기」 앱에서 PDF를 열고 페이지 수를 눌러 쪽 그림을 띄운 뒤, 뺄 쪽 그림을 길게 누르고 「페이지 삭제」를 눌러요.
+- **쪽 빼기**: 「미리보기」 앱에서 PDF를 열고 「사이드바 보기」 버튼을 눌러 쪽 그림을 띄운 뒤(버튼이 안 보이면 PDF를 한 번 눌러요), 뺄 쪽 그림을 길게 누르고 「페이지 삭제」를 눌러요.
 - **쪽 돌리기**: 더 보기 버튼을 누른 뒤 「왼쪽으로 회전」이나 「오른쪽으로 회전」을 눌러요.
 - **순서 바꾸기**: 쪽 그림을 메뉴가 나올 때까지 길게 누른 다음, 다른 쪽 그림 위나 아래로 끌어요.
 

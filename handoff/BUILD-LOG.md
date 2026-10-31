@@ -4843,3 +4843,18 @@ Status: DONE (Richard review pending). Review request: handoff/REVIEW-REQUEST-SE
 
 ## FAIL1030 (live)
 FAIL1030 live smoke 2026-10-30: deploy f2952ed post-deploy run green; /pdf-compress/ 「PDF 나누기로 열기」, wrong-file lines on /stamp-signature/ /id-photo/ /pdf-sign/ /pdf-to-jpg/, /hwpx-to-hwp/ button links, /remove-background/ copy-meta code — 7 pages 200, 14/14 pass (scratchpad fail1030-smoke.mjs). CI note: pdf-split axe target-size flaked once on mobile-chrome (sticky bar), passed on rerun and locally 3/3. Worktree wt/fail1030 removed.
+
+## QUOTES1031 (design) — 바뀐 공식 출처 인용 고치기 (Arch, 2026-10-30)
+- Brief handoff/ARCHITECT-BRIEF-QUOTES1031.md. Branch quotes1031 on draft1031 (PR #42).
+- Apple iPhone guide iphbf4977cff now serves iOS 27: 「썸네일을 표시하려면 사이드바 보기 버튼 을 탭하십시오. ( 사이드바 보기 버튼 이 나타나지 않으면 PDF를 탭하십시오.)」 replaces the 페이지 수 quote; pdf-split 쪽 빼기 step rewritten; 5 pdf-split Apple dates to 2026-10-30.
+- Decision D2: jlpt.or.kr is wholly parked (every path 302 to `/`, an image JLPT_parking_20261027.jpg 「시스템 점검 안내 … 서비스가 중단」); the text did not move and exists nowhere official. Keep every JLPT quote/URL/date as is (no bump, no drop, no allowlist); the gate stays red for those lines only.
+- Decision D3: source-watch fetches a 404 once more after 10 s (historyexam apyexmInfo 404 was a blip; 200 with all 6 quotes verbatim today, nothing bumped). Real 404s still fail.
+### Known Gaps (QUOTES1031)
+- JLPT outage: when jlpt.or.kr returns, or by 2026-11-13, re-run `node scripts/ops/source-watch.mjs --exact`; re-find or drop any non-verbatim jlpt quote and its number (jlpt-photo, youth-card-photo, preset `jlpt`). Still parked on 2026-11-13: escalate keep-vs-drop to the owner.
+- source-watch reports a redirect-to-home as "fetch failed"/NOT VERBATIM instead of "moved to the home page".
+
+## QUOTES1031 (build) — Apple 인용 고침 + source-watch 404 한 번 더 (Bob, 2026-10-30) — Status: DONE
+- Commit A scripts/ops/source-watch.mjs: `export const RETRY_404_MS = 10_000`; `get()` fetches a 404 once more after `(io.wait ?? sleep)(RETRY_404_MS)`, logs 「ERR 404 <url> retry」, reports the second answer. 403/410 and every other status unchanged (fetchText still owns 429/5xx/network retries). Header comment updated.
+- tests/unit/ops.test.ts 「QUOTES1031」 describe, 4 tests via `run(['--exact'], io)` with stub fetchImpl + recording wait: a 404→200 exit 0, waits [10000]; b 404→404 exit 1, one 「UNREACHABLE … HTTP 404」; c 200 one fetch, no wait; d 403 one fetch, 「UNREACHABLE … HTTP 403」. Existing tests unchanged.
+- Commit B src/content/guides/pdf-split.md: Apple source #1 quote = 「썸네일을 표시하려면 사이드바 보기 버튼 을 탭하십시오. ( 사이드바 보기 버튼 이 나타나지 않으면 PDF를 탭하십시오.)」 (single-quoted, byte-exact from the brief); 5 Apple `retrieved` '2026-10-10' -> '2026-10-30' (file's single-quote style kept; `published` untouched); 쪽 빼기 step rewritten word-for-word per brief. Line 113 hedge kept; FAQ line 52 has no 페이지 수 wording (confirmed, unchanged). JLPT, presets, history-exam-photo, jpg-to-pdf untouched.
+- Gates: npm run check 0 errors / 0 warnings (12 hints; a fresh worktree needs one build first for src/generated/*.json). npm test 112 files / 2400 tests green. PUBLIC_SITE_URL=https://docttak.com build + check-dist OK (2683 files); guide-length all ok. check:quotes live: 「source-watch --exact: 17 problem(s) in 699 quotes」 — 0 NOT VERBATIM, 17 UNREACHABLE all https://www.jlpt.or.kr/html/information_01.html (fetch failed; D2 outage); historyexam 200, pdf-split verbatim. e2e chromium pdf-split + site (E2E_PORT=4273): 131 passed.

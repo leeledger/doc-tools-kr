@@ -2,7 +2,8 @@
 //   node scripts/ops/source-watch.mjs [--dry-run]
 //   node scripts/ops/source-watch.mjs --exact   (G2 A1 publish gate: no issue, exit 1 on any non-verbatim quote)
 // Every official source a page cites (guide frontmatter `sources`, the official id-photo presets, a tool page's own
-// sources file: guides.mjs TOOL_SOURCE_FILES) is fetched once, politely (identifying UA, one request at a time with a pause, retries with backoff), and every quoted
+// sources file: guides.mjs TOOL_SOURCE_FILES) is fetched once, politely (identifying UA, one request at a time with a pause, retries with backoff;
+// a 404 is fetched once more after 10 s (QUOTES1031)), and every quoted
 // fragment must still be on that page. A missing fragment or an unreachable source is reported in one issue
 // labelled ops:source-changed: page, URL, the quote we publish and the page text around the closest match.
 // Exit 0 once reported (or all clear); 1 only if the job itself failed.
@@ -13,6 +14,7 @@ import { findQuote, hasExactQuote, pageText, pageTextExact, quoteFragments } fro
 
 export const LABEL = 'ops:source-changed';
 const PAUSE_MS = 1500;
+export const RETRY_404_MS = 10_000;
 
 /**
  * Checks a watch list against fetched pages. `get(url)` returns { ok, status, text, error }. A quote read in a
@@ -96,7 +98,14 @@ export async function run(argv, io = {}) {
   const get = async (url) => {
     if (!first) await (io.wait ?? sleep)(PAUSE_MS);
     first = false;
-    const r = await fetchText(url, { headers: { 'User-Agent': BOT_UA, Accept: 'text/html,*/*;q=0.8', 'Accept-Language': 'ko-KR,ko;q=0.9' }, fetchImpl: io.fetchImpl, wait: io.wait });
+    const fetchOnce = () => fetchText(url, { headers: { 'User-Agent': BOT_UA, Accept: 'text/html,*/*;q=0.8', 'Accept-Language': 'ko-KR,ko;q=0.9' }, fetchImpl: io.fetchImpl, wait: io.wait });
+    let r = await fetchOnce();
+    if (r.status === 404) {
+      // fetchText returns a 4xx at once; a one-off 404 (historyexam 2026-10-30) gets one more try, a real one stays 404.
+      log(`  ERR 404 ${url} retry`);
+      await (io.wait ?? sleep)(RETRY_404_MS);
+      r = await fetchOnce();
+    }
     log(`  ${r.ok ? 'OK ' : 'ERR'} ${r.status || r.error} ${url}`);
     return r;
   };
