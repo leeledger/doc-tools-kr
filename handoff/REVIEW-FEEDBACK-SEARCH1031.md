@@ -83,3 +83,25 @@ None new.
 
 ## Cleared
 Round-2 fixes reviewed against the code and re-probed: the IME hold, prefix completion, typo weights, Enter guard, Latin 초성, loan synonyms and the home placement all hold, with no golden or negative regression.
+
+---
+
+# Review Feedback — SEARCH1031 round 3 (commit 56aeff1, CI fixes)
+Date: 2026-11-01
+Ready for Builder: YES
+
+## Must Fix
+None.
+
+## Should Fix
+- tests/e2e/power-of-attorney.spec.ts:158 (confidence: 8/10) — the precondition `getBoundingClientRect().top >= innerHeight || (e as HTMLElement).hidden` is always true: `#pa-result` is `hidden` before the build (src/components/FormTool.astro:105 `... tabindex="-1" ... hidden>`), so it does not prove the 위임장 만들기 button sat at the bottom edge. The post-build poll still catches the WebKit regression, so this is not blocking. Fix: assert `#pa-make`'s rect bottom is within a few px of `innerHeight` instead.
+
+## Checked
+- **Label-in-name (2.5.3):** 「문서딱에서 찾기」 contains the visible 「찾기」. The no-JS `<a>` and the JS `<button>` get the same name, because search-boot copies `aria-label` from the link before it moves the child nodes. search.spec asserts the name on both and `toHaveText('찾기')` on the button. Correct.
+- **Brand:** 문서딱 is right for Korean pages. /en/ uses BaseEn.astro, which has no `.ssh`, so the Korean label never reaches the English pages.
+- **english-address.cloud:** scoping to `main` is the right disambiguation, and the 44 px height assert is kept.
+- **form-tool showResult:** the order is the same as id-copy (636–637): `scrollIntoView({block:'start'})`, then `focus({preventScroll:true})`. There is no explicit `behavior`, so the CSS decides it: `html{scroll-behavior:smooth; scroll-padding-top:var(--top-clear)}`, with `auto` under reduced motion (global.css:148, app.css:515). The result is still focused and `announce()` is unchanged. The test waits for the scroll with `expect.poll`, so a smooth scroll is covered.
+- **Weakening:** no test or axe rule was weakened. The new test runs `serious()` axe on the result.
+
+## Cleared
+Round 3 reviewed: the header toggle name, the spec scoping and the form-tool scroll and focus change pass, with one non-blocking test-precondition note.
