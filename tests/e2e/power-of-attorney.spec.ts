@@ -156,7 +156,8 @@ test('a result that appears below the screen: its top and both 받기 buttons la
   await gotoReady(page, '/power-of-attorney/');
   await fill(page, SAMPLE);
   await page.locator('#pa-make').evaluate((e) => e.scrollIntoView({ block: 'end' }));
-  expect(await page.locator('#pa-result').evaluate((e) => e.getBoundingClientRect().top >= innerHeight || (e as HTMLElement).hidden)).toBe(true);
+  // Setup check (review round 3): 위임장 만들기 ends at the bottom edge, so the result will start off screen (polled: html scrolls smoothly).
+  await expect.poll(() => page.locator('#pa-make').evaluate((e) => Math.abs(e.getBoundingClientRect().bottom - innerHeight) <= 2)).toBe(true);
   await build(page);
   await expect(page.locator('#pa-result')).toBeFocused();
   await expect
