@@ -68,6 +68,9 @@ test('header 찾기 on /pdf-merge/: opens, Down Down Up moves the active option,
   const toggle = page.locator('button.ssh-toggle');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(toggle).toHaveAttribute('aria-controls', 'search-panel');
+  // Its own name, the visible 「찾기」 inside it (WCAG 2.5.3), apart from a tool's 찾기 button (/english-address/) and 도구.
+  await expect(toggle).toHaveAccessibleName('문서딱에서 찾기');
+  await expect(toggle).toHaveText('찾기');
   await openHeader(page);
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   const input = page.locator('#hs-input');
@@ -312,6 +315,7 @@ test.describe('without JavaScript', () => {
   test('the header 찾기 is a link to /search/, which lists every tool; the form has no named field', async ({ page }) => {
     await gotoReady(page, '/pdf-merge/');
     await expect(page.locator('a.ssh-toggle')).toHaveAttribute('href', '/search/');
+    await expect(page.locator('a.ssh-toggle')).toHaveAccessibleName('문서딱에서 찾기');
     await expect(page.locator('#search-panel')).toBeHidden();
     await page.locator('a.ssh-toggle').click();
     await page.waitForURL('**/search/');

@@ -37,6 +37,8 @@ export function initSearch(doc: Document = document): void {
   const btn = doc.createElement('button');
   btn.type = 'button';
   btn.className = link.className;
+  const label = link.getAttribute('aria-label');
+  if (label) btn.setAttribute('aria-label', label);
   btn.append(...link.childNodes);
   btn.setAttribute('aria-expanded', 'false');
   btn.setAttribute('aria-controls', panel.id);

@@ -149,6 +149,25 @@ test('filled: 1-page preview; 위임장.hwp reopens in rhwp with 1 page and ever
   for (const v of ['홍길동', '1001']) expect(page.url()).not.toContain(encodeURIComponent(v));
 });
 
+test('a result that appears below the screen: its top and both 받기 buttons land under the sticky header, not behind it (axe clean)', async ({ page }) => {
+  // SEARCH1031 CI: with 위임장 만들기 at the bottom edge the whole result starts off screen, and a bare focus() let
+  // WebKit centre it (taller than the screen), so 받기 sat behind the header items.
+  test.setTimeout(300_000);
+  await gotoReady(page, '/power-of-attorney/');
+  await fill(page, SAMPLE);
+  await page.locator('#pa-make').evaluate((e) => e.scrollIntoView({ block: 'end' }));
+  expect(await page.locator('#pa-result').evaluate((e) => e.getBoundingClientRect().top >= innerHeight || (e as HTMLElement).hidden)).toBe(true);
+  await build(page);
+  await expect(page.locator('#pa-result')).toBeFocused();
+  await expect
+    .poll(() => page.evaluate(() => {
+      const head = document.querySelector('.top')!.getBoundingClientRect().bottom;
+      return ['#pa-result', '#pa-hwp', '#pa-pdf'].every((s) => document.querySelector(s)!.getBoundingClientRect().top >= head);
+    }))
+    .toBe(true);
+  expect(await serious(page), 'axe on the result').toEqual([]);
+});
+
 // ---------- blank ----------
 
 test('빈 양식으로 받기: no field needed; a 1-page HWP and PDF with the labels and a blank date line, no 귀중 line', async ({ page }) => {

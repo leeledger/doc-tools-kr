@@ -68,7 +68,7 @@ async function beacons(page: Page): Promise<Record<string, unknown>[]> {
 
 async function search(page: Page, q: string): Promise<void> {
   await page.locator('#ea-q').fill(q);
-  await page.getByRole('button', { name: '찾기', exact: true }).click();
+  await page.locator('main').getByRole('button', { name: '찾기', exact: true }).click();
 }
 
 const ok = (items: unknown[], total = items.length, page = 1) => ({ status: 200, body: { total, page, items } });
@@ -305,7 +305,7 @@ test('page: SEO, JSON-LD (WebApplication + FAQPage), related tools, privacy and 
   await expect(page.locator('#ea-q')).toHaveAttribute('type', 'search');
   await expect(page.locator('#ea-q')).toHaveAttribute('enterkeyhint', 'search');
   await expect(page.locator('#ea-q')).toHaveAttribute('autocomplete', 'off');
-  const go = await page.getByRole('button', { name: '찾기', exact: true }).boundingBox();
+  const go = await page.locator('main').getByRole('button', { name: '찾기', exact: true }).boundingBox();
   expect(go!.height).toBeGreaterThanOrEqual(44);
 });
 

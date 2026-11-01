@@ -401,7 +401,10 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
     track({ e: 'success', t: TOOL });
     const line = kind === 'blank' ? COPY.readyBlank : FORM_HWP && hwpUrl ? COPY.ready : COPY.readyPdfOnly;
     announce([line, hwpError.textContent].filter(Boolean).join(' '));
-    result.focus();
+    // Top of the result under the sticky header (scroll-padding-top), as id-copy does: a bare focus() lets WebKit
+    // centre a result taller than the screen that starts below it, which put 받기 under the header (SEARCH1031 CI).
+    result.scrollIntoView({ block: 'start' });
+    result.focus({ preventScroll: true });
     if (editedWhileBuilding) markStale();
   }
 

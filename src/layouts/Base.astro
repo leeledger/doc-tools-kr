@@ -142,7 +142,7 @@ const favicon =
       <a class="nav-guide" href="/guide/" aria-current={path.startsWith('/guide/') ? 'page' : undefined}>안내</a>
       {/* SEARCH1031 D1: without JS a link to /search/; the site script turns it into the toggle of this overlay panel. */}
       <div class="ssh" data-ssh>
-        <a class="ssh-toggle" href="/search/" data-ssh-toggle aria-current={path === '/search/' ? 'page' : undefined}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4.2-4.2" /></svg>찾기</a>
+        <a class="ssh-toggle" href="/search/" data-ssh-toggle aria-label="문서딱에서 찾기" aria-current={path === '/search/' ? 'page' : undefined}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4.2-4.2" /></svg>찾기</a>
         <div class="ssh-panel" id="search-panel" hidden>
           <SiteSearch id="hs" variant="header" />
         </div>
