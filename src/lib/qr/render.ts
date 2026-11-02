@@ -1,5 +1,7 @@
 // QR renderers (CARD1026 C5/C6): black #000 on white #fff, a 4-module quiet zone on every side (qrcode.com 「상하좌우
 // 4cell 이상」, handoff/sources/card1026/qrcode-com.txt), integer module sizes and no smoothing so edges stay crisp.
+// QR1031: colors and the logo are applied on top of these outputs (styled.ts, logo-render.ts), so these stay as they
+// were (business-card uses them as is).
 import type { QrModules } from './encode';
 
 /** Quiet zone width in modules (qrcode.com). */
@@ -55,14 +57,20 @@ export function qrRgba(modules: QrModules, px: number): { data: Uint8ClampedArra
 }
 
 /** PNG blob of the QR (about 1,200 px wide), drawn from qrRgba on a canvas. */
-export function qrPng(modules: QrModules): Promise<Blob> {
-  const { data, width, height } = qrRgba(modules, pngModulePx(modules.length));
+export const qrPng = (modules: QrModules): Promise<Blob> => rgbaPng(qrRgba(modules, pngModulePx(modules.length)));
+
+/** PNG blob of RGBA pixels drawn on a canvas; `draw` paints on top before encoding (QR1031: the logo). */
+export function rgbaPng(
+  { data, width, height }: { data: Uint8ClampedArray<ArrayBuffer>; width: number; height: number },
+  draw?: (ctx: CanvasRenderingContext2D) => void,
+): Promise<Blob> {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return Promise.reject(new Error('qrPng: no 2d context'));
   ctx.putImageData(new ImageData(data, width, height), 0, 0);
+  draw?.(ctx);
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('qrPng: toBlob gave null'))), 'image/png');
   });

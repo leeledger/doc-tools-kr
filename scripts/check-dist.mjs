@@ -37,6 +37,8 @@ const ENGLISH_NAME_INITIAL_KB = 22.2;
 // CARD1026 B: /qr-code/ (measured + 20 %, BUILD-LOG CARD1026 B).
 const QR_INITIAL_KB = 12.9;
 const QR_CONTROLLER_KB = 9.2;
+// QR1031 D5: the /qr-code/ logo chunk (measured + 20 %, BUILD-LOG QR1031).
+const QR_LOGO_KB = 9.9;
 // CARD1026 C: /business-card/ (measured + 20 %, BUILD-LOG CARD1026 C).
 const BC_INITIAL_KB = 12.6;
 const BC_CONTROLLER_KB = 11.1;
@@ -1133,7 +1135,9 @@ for (const t of FORM_TOOLS) {
 // names #qr-preview); nothing typed is stored or put in the URL (no Web Storage, IndexedDB, cookie or history call in the
 // page's own chunks); no form, no action and no name on a text field; the six kinds in the brief's order; a tool page
 // (no AdSense tag, no off-site script besides the analytics beacon). jsQR is a test-only decoder: no dist file names it.
-// Budgets: measured + 20 % of the larger build (BUILD-LOG CARD1026 B).
+// Budgets: measured + 20 % of the larger build (BUILD-LOG CARD1026 B). QR1031: the logo code (logo*.js, imported
+// dynamically by the controller) is in neither the initial JS nor the controller's static closure, stores nothing; the
+// 「색 바꾸기·로고 넣기」 panel ships closed, black on white, and its file input has no name.
 {
   const html = pageHtml.get('qr-code/index.html');
   if (!html) errors.push('qr-code/index.html: no file found');
@@ -1156,6 +1160,19 @@ for (const t of FORM_TOOLS) {
     for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`qr-code/index.html: off-site script ${m[2]}`);
     budget('qr-code initial JS', [...initial], QR_INITIAL_KB * KB);
     budget('qr-code controller (lazy)', lazyOwn, QR_CONTROLLER_KB * KB);
+    const logoChunks = [...new Set(controller.flatMap((f) => [...read(f).toString('utf8').matchAll(/import\([`"']\.\/(logo\.[\w-]{8}\.js)[`"']\)/g)].map((m) => posix.join(posix.dirname(f), m[1]))))];
+    if (logoChunks.length !== 1) errors.push(`qr-code logo: ${logoChunks.length} lazy logo chunk(s) imported by the controller, expected 1`);
+    if (logoChunks.some((f) => initial.has(f) || lazyOwn.includes(f))) errors.push('qr-code logo: the logo chunk loads with the page or the controller');
+    const logoOwn = [...new Set(logoChunks.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f) && !lazyOwn.includes(f));
+    if (!logoOwn.some((f) => read(f).includes('image/png'))) errors.push('qr-code logo: not the logo reader (no image/png)');
+    for (const f of logoOwn) if (/localStorage|sessionStorage|indexedDB|document\.cookie|history\.(push|replace)State|sendBeacon|XMLHttpRequest|\bfetch\(/.test(read(f).toString('utf8'))) errors.push(`${f}: the /qr-code/ logo code stores, sends or uses the URL`);
+    if (logoOwn.length) budget('qr-code logo (lazy)', logoOwn, QR_LOGO_KB * KB);
+    const panel = /<details\b[^>]*\bid="qr-style"[^>]*>/.exec(html)?.[0];
+    if (!panel) errors.push('qr-code/index.html: no 색 바꾸기·로고 넣기 panel (#qr-style)');
+    else if (/\bopen\b/.test(panel)) errors.push('qr-code/index.html: #qr-style ships open');
+    if (!/<input\b[^>]*\bid="qr-fg"[^>]*\bvalue="#000000"/.test(html) || !/<input\b[^>]*\bid="qr-bg"[^>]*\bvalue="#ffffff"/.test(html)) errors.push('qr-code/index.html: color inputs not #000000 / #ffffff by default');
+    const logoInput = /<input\b[^>]*\bid="qr-logo-input"[^>]*>/.exec(html)?.[0];
+    if (!logoInput || !/type="file"/.test(logoInput) || /\bname=/.test(logoInput)) errors.push('qr-code/index.html: logo input missing, not a file input or has a name');
   }
   for (const f of match(/\.(m?js|html)$/)) if (/jsQR|jsqr/.test(read(f).toString('utf8'))) errors.push(`${f}: names jsQR (a test-only decoder, never shipped)`);
 }

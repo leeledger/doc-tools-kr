@@ -3,9 +3,15 @@
 // a wrong format shows while typing, a missing required field only on a download click, which also focuses the first
 // field in error. Downloads: QR코드.png (about 1,200 px) and QR코드.svg, fixed names. Usage: start once per page view
 // at the first QR shown, download per file; never a value or the payload. Nothing is stored.
+// QR1031: the 「색 바꾸기·로고 넣기」 panel. Its code (colors, contrast check, picture, styled renderers: logo.ts) is a lazy
+// chunk loaded when the panel is first opened or used, so the plain path stays as it was and black on white without a
+// picture gives the same files as before. A pair phones may not read shows a red line (the preview still shows it) and
+// a 받기 press opens the panel and focuses QR 색, no file; until the chunk is here a styled QR is never downloaded. A
+// picture switches the QR to level H from version 5 with a plate in the middle; it lives in this page view only.
 import { checkContact, contactEmpty, CONTACT_ERROR_TEXT, CONTACT_KEYS } from '../../lib/qr/contact';
 import { encodeQr, type QrModules } from '../../lib/qr/encode';
 import { smsPayload, telPayload, textPayload, urlPayload, wifiPayload, type Payload, type PayloadError, type WifiSecurity } from '../../lib/qr/payload';
+import type { QrLogo } from '../../lib/qr/logo-render';
 import { qrPng, qrSvg } from '../../lib/qr/render';
 import { vcard, type ContactFields } from '../../lib/qr/vcard';
 import { track } from '../../lib/ui/usage';
@@ -29,7 +35,11 @@ const T = {
   needPw: '비밀번호를 쓰면 QR이 나와요.',
   needTo: '받는 전화번호를 쓰면 QR이 나와요.',
   saveFailed: '그림을 만들지 못했어요. 한 번 더 눌러 주세요.',
+  /** The panel code could not load (offline): pdf-sign's retry text. */
+  styleLoad: '처리 중 문제가 생겼습니다. 새로고침 후 다시 시도해 주세요.',
 };
+
+type Styler = typeof import('./logo');
 
 const DEBOUNCE_MS = 150;
 
@@ -72,6 +82,29 @@ export function initQrCode(): void {
   const over = must<HTMLParagraphElement>('qr-over');
   const dense = must<HTMLParagraphElement>('qr-dense');
   const status = must<HTMLParagraphElement>('qr-status');
+  const styleBox = must<HTMLDetailsElement>('qr-style');
+  const fgInput = must<HTMLInputElement>('qr-fg');
+  const bgInput = must<HTMLInputElement>('qr-bg');
+  const colorError = must<HTMLParagraphElement>('qr-color-error');
+  const logoInput = must<HTMLInputElement>('qr-logo-input');
+  const logoRemove = must<HTMLButtonElement>('qr-logo-remove');
+  const logoError = must<HTMLParagraphElement>('qr-logo-error');
+
+  let styler: Styler | null = null;
+  let stylerLoad: Promise<Styler> | null = null;
+  /** The panel code, loaded once (a failed load is tried again on the next use). */
+  const loadStyler = (): Promise<Styler> =>
+    (stylerLoad ??= import('./logo').then(
+      (m) => (styler = m),
+      (err: unknown) => {
+        stylerLoad = null;
+        throw err;
+      },
+    ));
+  let pic: QrLogo | null = null;
+  /** Anything but black on white without a picture (the inputs' defaults are #000000 and #ffffff). */
+  const styled = (): boolean => fgInput.value.toLowerCase() !== fgInput.defaultValue || bgInput.value.toLowerCase() !== bgInput.defaultValue || !!pic;
+  const colors = () => ({ fg: fgInput.value, bg: bgInput.value });
 
   const kind = (): Kind => (root.querySelector<HTMLInputElement>('input[name="qr-kind"]:checked')?.value ?? 'url') as Kind;
   const security = (): WifiSecurity => (root.querySelector<HTMLInputElement>('input[name="qr-sec"]:checked')?.value ?? 'WPA') as WifiSecurity;
@@ -149,6 +182,26 @@ export function initQrCode(): void {
   let modules: QrModules | null = null;
   let svg = '';
   let started = false;
+  /** False while the colors are blocked or a styled QR waits for the panel code. */
+  let colorsOk = true;
+
+  /** The red line under the colors; the panel code is loaded first when a style is set. Its module, or null. */
+  function checkStyle(): Styler | null {
+    const st = styled() ? styler : null;
+    const problem = st ? st.colorProblem(colors()) : '';
+    colorsOk = !problem && (!!st || !styled());
+    if (styled() && !st) {
+      loadStyler().then(
+        () => update(false),
+        () => {
+          colorError.textContent = T.styleLoad;
+        },
+      );
+    } else colorError.textContent = problem;
+    if (problem) fgInput.setAttribute('aria-invalid', 'true');
+    else fgInput.removeAttribute('aria-invalid');
+    return st;
+  }
 
   function clearPreview(hint: string | null = null): void {
     empty.textContent = hint ?? emptyDefault;
@@ -170,15 +223,16 @@ export function initQrCode(): void {
       clearPreview(missingHint(k));
       return false;
     }
-    const enc = encodeQr(b.payload);
+    const st = checkStyle();
+    const enc = encodeQr(b.payload, st && pic ? st.LOGO_ENCODE : undefined);
     if (!enc.ok) {
       clearPreview();
-      if (enc.code === 'tooLong') over.textContent = T.tooLong;
+      if (enc.code === 'tooLong') over.textContent = st && pic ? st.LOGO_OVER : T.tooLong;
       return false;
     }
     modules = enc.modules;
-    svg = qrSvg(enc.modules);
-    // The SVG is built from the module matrix only (no typed text inside it).
+    svg = st ? st.styledSvg(enc.modules, colors(), pic) : qrSvg(enc.modules);
+    // The SVG is built from the module matrix, #rrggbb colors and a PNG data URL only (no typed text inside it).
     preview.innerHTML = svg;
     preview.classList.remove('is-empty');
     dense.textContent = T.dense;
@@ -199,7 +253,7 @@ export function initQrCode(): void {
     if ((ev.target as HTMLInputElement | null)?.type !== 'radio') schedule();
   });
   root.addEventListener('change', (ev) => {
-    if ((ev.target as HTMLInputElement | null)?.type !== 'radio') return;
+    if ((ev.target as HTMLInputElement | null)?.type !== 'radio' && ev.target !== fgInput && ev.target !== bgInput) return;
     window.clearTimeout(timer);
     update(false);
   });
@@ -208,7 +262,12 @@ export function initQrCode(): void {
   function ready(): boolean {
     window.clearTimeout(timer);
     status.textContent = '';
-    if (update(true)) return true;
+    if (update(true)) {
+      if (colorsOk) return true;
+      styleBox.open = true;
+      fgInput.focus();
+      return false;
+    }
     const k = kind();
     const bad = panelFields(k).find((el) => el.getAttribute('aria-invalid') === 'true') ?? (over.textContent ? panelFields(k)[0] : undefined);
     bad?.focus();
@@ -217,7 +276,7 @@ export function initQrCode(): void {
 
   must<HTMLButtonElement>('qr-png').addEventListener('click', () => {
     if (!ready() || !modules) return;
-    qrPng(modules).then(
+    (styler && styled() ? styler.styledPng(modules, colors(), pic) : qrPng(modules)).then(
       (blob) => {
         saveBlob(blob, 'QR코드.png');
         status.textContent = T.saved;
@@ -235,5 +294,52 @@ export function initQrCode(): void {
     track({ e: 'download', t: 'qr-code' });
   });
 
+  // Opening the panel fetches its code before anything in it is used; a failure shows when it is used.
+  styleBox.addEventListener('toggle', () => {
+    if (styleBox.open) loadStyler().catch(() => undefined);
+  });
+  must<HTMLButtonElement>('qr-color-reset').addEventListener('click', () => {
+    fgInput.value = fgInput.defaultValue;
+    bgInput.value = bgInput.defaultValue;
+    window.clearTimeout(timer);
+    update(false);
+  });
+
+  /** Sets (or clears) the picture and redraws. */
+  const setPic = (next: QrLogo | null): void => {
+    pic = next;
+    logoRemove.hidden = !next;
+    window.clearTimeout(timer);
+    update(false);
+  };
+  let picks = 0;
+  async function onPick(): Promise<void> {
+    const file = logoInput.files?.[0];
+    if (!file) return;
+    const mine = ++picks;
+    logoError.textContent = '';
+    try {
+      const st = await loadStyler();
+      const next = await st.readLogo(file);
+      if (mine === picks) setPic(next);
+    } catch (err) {
+      if (mine !== picks) return;
+      logoInput.value = '';
+      // A picture problem has its own line; the code not loading (offline) or anything else, the retry line.
+      logoError.textContent = styler && err instanceof styler.LogoError ? err.message : T.styleLoad;
+      setPic(null);
+    }
+  }
+  logoInput.addEventListener('change', () => void onPick());
+  logoRemove.addEventListener('click', () => {
+    picks++;
+    logoInput.value = '';
+    logoError.textContent = '';
+    setPic(null);
+    logoInput.focus();
+  });
+
   update(false);
+  // A picture picked before this code loaded.
+  if (logoInput.files?.length) void onPick();
 }
