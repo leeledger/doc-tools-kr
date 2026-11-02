@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import JsonLd from '../components/JsonLd.astro';
+import SiteSearch from '../components/SiteSearch.astro';
 import { BLOGS, SITE, defaultDescription, liveNames } from '../data/site';
 import { HOME_TITLE, LIVE_TOOLS, TOOLS } from '../data/tools';
 import { guidePath, guidesBySlug } from '../data/guides';
@@ -40,6 +41,9 @@ const jsonLd = [
     <div class="wrap">
       <p class="eyebrow">가입 없음 · 설치 없음 · 무료</p>
       <h1>내야 하는 문서·사진, <br>용량과 규격에 딱 맞춰 드려요</h1>
+      {/* SEARCH1031 D1b (review fix): right under the h1, so the box and its results are on the first screen at 360 px;
+          static markup in the first paint (no layout shift); results overlay what follows. */}
+      <SiteSearch id="home" variant="page" />
       <p class="lead">지금 쓸 수 있는 도구: {liveNames()}.</p>
       <div class="hero-cta">
         <a class="btn primary" href="#tools">도구 둘러보기</a>

@@ -71,11 +71,11 @@ a { color: inherit; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; font-size: 19px; color: var(--brand); }
 .brand span { color: var(--text); }
 .top-nav { display: flex; gap: 4px; align-items: center; }
-.top-nav > a, .menu-toggle {
+.top-nav > a, .menu-toggle, .ssh-toggle {
   display: inline-flex; align-items: center; min-height: 44px;
   text-decoration: none; color: var(--muted); font-size: 15px; padding: 0 10px; border-radius: 8px;
 }
-.top-nav > a:hover, .menu-toggle:hover, .menu-toggle[aria-expanded="true"] { color: var(--text); background: var(--brand-soft); }
+.top-nav > a:hover, .menu-toggle:hover, .menu-toggle[aria-expanded="true"], .ssh-toggle:hover, .ssh-toggle[aria-expanded="true"] { color: var(--text); background: var(--brand-soft); }
 
 /* hero */
 .hero { padding: 88px 0 72px; }

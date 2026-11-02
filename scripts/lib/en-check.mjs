@@ -109,7 +109,8 @@ export function idParityProblems(pages, koOnly = KO_ONLY_IDS) {
     const allowed = new Set(koOnly[enPath] ?? []);
     const enIds = ids(en);
     // CONTENT1021 D8: the Korean tool notes (Markdown headings with their own ids) have no English counterpart.
-    const koIds = ids(cutElements(ko, 'section', (t) => /\bclass="tool-notes"/.test(t)));
+    // SEARCH1031 D13: nor the header search panel (Korean pages only; English search is a Known Gap).
+    const koIds = ids(cutElements(cutElements(ko, 'section', (t) => /\bclass="tool-notes"/.test(t)), 'div', (t) => /\bclass="ssh"/.test(t)));
     const missing = [...koIds].filter((i) => !enIds.has(i) && !allowed.has(i));
     const extra = [...enIds].filter((i) => !koIds.has(i));
     const stale = [...allowed].filter((i) => !koIds.has(i) || enIds.has(i));

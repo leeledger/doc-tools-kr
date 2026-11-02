@@ -22,9 +22,11 @@ const FORBIDDEN = ['XMLHttpRequest', 'WebSocket', 'EventSource'];
  *   2026-10-02): one same-origin POST of a <= 1024 px JPEG copy to /api/remove-bg, after the user pressed 배경 지우기,
  *   only in a build with PUBLIC_BG_CLOUD on (dead code otherwise; check-dist proves the flag-off bundle never names
  *   the endpoint). The test below pins it to that one call.
+ * - lib/search/ui.ts (SEARCH1031 D3/D4): one same-origin GET of the fixed /search-index.json, no query-derived part;
+ *   the query stays in the page. The test below pins it to that one call.
  * (The preload, Polish P.7, calls no network API itself: its warm workers load through the wasm loaders.)
  */
-const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts', 'lib/bgremove/cloud.ts', 'tools/pdf-edit/coverage.ts'];
+const FETCH_ALLOWLIST: string[] = ['lib/codecs/wasm-browser.ts', 'lib/ui/engine-load.ts', 'sw/sw.ts', 'lib/face/assets.ts', 'lib/hwp/wasm-browser.ts', 'lib/hwp/pdf/font-source.ts', 'lib/bgremove/assets.ts', 'lib/bgremove/cloud.ts', 'tools/pdf-edit/coverage.ts', 'lib/search/ui.ts'];
 /**
  * sendBeacon only in the usage tracker, which is off (and dropped from the bundle) unless PUBLIC_USAGE_STATS=1, and in
  * its guide twin (REV3; rendered only in a PUBLIC_USAGE_STATS=1 build, src/layouts/Guide.astro).
@@ -62,6 +64,13 @@ describe('no network APIs in src/', () => {
     expect([...hits].sort()).toEqual([...FETCH_ALLOWLIST].sort());
   });
 
+  it('the site search fetches only the fixed /search-index.json, once in the file, with no query-derived URL (SEARCH1031 D3)', () => {
+    const src = readFileSync(join(SRC, 'lib/search/ui.ts'), 'utf8');
+    expect(src.match(/\bfetch\s*\(/g)).toHaveLength(1);
+    expect(src).toMatch(/fetch\(INDEX_URL, \{ credentials: 'same-origin' \}\)/);
+    expect(src).toMatch(/const INDEX_URL = '\/search-index\.json';/);
+    expect(src).not.toMatch(/sendBeacon|XMLHttpRequest|WebSocket|method:/);
+  });
   it('in the HWP module only wasm-browser.ts and pdf/font-source.ts call fetch( (own origin)', () => {
     const hits = all
       .filter((f) => /\bfetch\s*\(/.test(readFileSync(f, 'utf8')))
