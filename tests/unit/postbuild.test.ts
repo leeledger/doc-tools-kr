@@ -1143,7 +1143,9 @@ describe('built output', () => {
     // (never shown) are exempt.
     const quotes = new Set(PRESETS.map((p) => p.quote).filter(Boolean));
     for (const f of walk(join(DIST, '_astro'), /\.js$/)) {
-      for (const seg of readFileSync(f, 'utf8').match(/[^"'`\n]*[가-힣][^"'`\n]*/g) ?? []) {
+      // Same segments as /[^"'`\n]*[가-힣][^"'`\n]*/g, but linear: that pattern rescans long Hangul-free lines from every
+      // start (quadratic), which took >60 s on Node 26 for the 300 KB one-line worker bundles.
+      for (const seg of (readFileSync(f, 'utf8').match(/[^"'`\n]+/g) ?? []).filter((s) => /[가-힣]/.test(s))) {
         if (!seg.match(JARGON) || quotes.has(seg)) continue;
         for (const m of seg.matchAll(JARGON)) hits.push(`${f.split(/[\\/]/).pop()}: …${seg.slice(Math.max(0, m.index! - 30), m.index! + 20)}…`);
       }
