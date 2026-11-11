@@ -77,17 +77,14 @@ a { color: inherit; }
 }
 .top-nav > a:hover, .menu-toggle:hover, .menu-toggle[aria-expanded="true"], .ssh-toggle:hover, .ssh-toggle[aria-expanded="true"] { color: var(--text); background: var(--brand-soft); }
 
-/* hero */
-.hero { padding: 88px 0 72px; }
-.eyebrow {
-  display: inline-block; margin: 0 0 18px;
-  font-size: 14px; font-weight: 800; color: var(--brand);
-  background: var(--brand-soft); padding: 6px 12px; border-radius: 999px;
-}
+/* hero (home and /en/ only). UNSLOP1111 polish pass — 디자인 정리: unslop by Damir Sokolovsky (@heydamir), CC BY 4.0 —
+   https://github.com/heydamir/unslop. Eyebrow is plain accent text (no pill), spacing on the 4 px grid. */
+.hero { padding: 96px 0 72px; }
+.eyebrow { margin: 0 0 16px; font-size: 15px; color: var(--brand); }
 .hero h1 {
   margin: 0; font-size: clamp(32px, 5.4vw, 54px); line-height: 1.22; letter-spacing: -0.03em; font-weight: 800;
 }
-.lead { margin: 22px 0 0; max-width: 640px; font-size: clamp(17px, 2vw, 19px); color: var(--muted); }
+.lead { margin: 24px 0 0; max-width: 640px; font-size: clamp(17px, 2vw, 19px); color: var(--muted); }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
 
 .btn {
@@ -107,15 +104,18 @@ section h2 { font-size: clamp(24px, 3.2vw, 32px); letter-spacing: -0.02em; line-
 
 .tools { padding: 56px 0 72px; }
 .grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+/* Tool cards (home and /en/): hairline border, the icon in the muted text role (accent on hover), 「사용하기」 as quiet
+   accent text instead of a pill; the card border takes the accent only on hover and focus (UNSLOP1111). */
 .card {
   position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 24px 22px 22px;
+  padding: 24px; transition: border-color .15s cubic-bezier(.22,1,.36,1);
 }
-.card h3 { margin: 16px 0 6px; font-size: 19px; letter-spacing: -0.01em; }
-.card p { margin: 0 0 16px; color: var(--muted); font-size: 15.5px; }
-.icon { width: 44px; height: 44px; border-radius: 12px; background: var(--brand-soft); display: grid; place-items: center; }
-.icon svg { width: 24px; height: 24px; fill: none; stroke: var(--brand); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.status { display: inline-block; font-size: 13px; font-weight: 800; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+.card h3 { margin: 16px 0 8px; font-size: 19px; line-height: 1.4; }
+.card p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+.icon { width: 24px; height: 24px; display: block; }
+.icon svg { display: block; width: 24px; height: 24px; fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s; }
+.card:hover .icon svg { stroke: var(--brand); }
+.status { display: inline-block; font-size: 15px; color: var(--muted); }
 
 .points { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .points li { display: grid; gap: 2px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }

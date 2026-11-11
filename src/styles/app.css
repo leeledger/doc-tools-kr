@@ -104,10 +104,10 @@ button.ssh-toggle { border: 0; background: none; font: inherit; font-size: 15px;
 .search-all span { display: block; color: var(--muted); font-size: 15px; }
 
 /* home: soon tools, names only (Polish P.6) */
-.soon { margin-top: 28px; }
-.soon h3 { margin: 0 0 10px; font-size: 17px; color: var(--muted); }
+.soon { margin-top: 32px; }
+.soon h3 { margin: 0 0 12px; font-size: 17px; color: var(--muted); }
 .soon-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.soon-list li { color: var(--muted); font-size: 15px; padding: 4px 12px; border: 1px dashed var(--line); border-radius: 999px; }
+.soon-list li { color: var(--muted); font-size: 15px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px; }
 .nf-tools { margin: 0 0 24px; padding-left: 20px; }
 .nf-tools a { color: var(--brand); display: inline-block; min-height: 24px; }
 
@@ -124,13 +124,12 @@ button.ssh-toggle { border: 0; background: none; font: inherit; font-size: 15px;
 .btn.icon-btn { width: 44px; padding: 0; flex: none; }
 
 /* live tool card: whole card is the link target */
-.card.live { border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
 .card-link { text-decoration: none; }
 .card-link::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
 .card.live:hover { border-color: var(--brand); }
 .card.live:focus-within { outline: 3px solid var(--brand); outline-offset: 2px; }
 .card-link:focus-visible { outline: none; }
-.status-live { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
+.status-live { color: var(--brand); }
 
 /* shared page blocks */
 .tool-hero { padding: 56px 0 8px; }
@@ -534,8 +533,8 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .quick-list a:hover, .quick-guides a:hover { border-color: var(--brand); }
 .guide-feed a, .more-link a { color: var(--brand); display: inline-block; min-height: 24px; }
 .home-guides { padding: 24px 0 56px; }
-.guide-grid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
-.guide-grid li { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
+.guide-grid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.guide-grid li { display: grid; gap: 4px; align-content: start; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .guide-grid a { font-weight: 800; color: var(--brand); display: inline-block; min-height: 24px; }
 .guide-grid span { color: var(--muted); font-size: 15px; }
 .out-links { display: grid; gap: 6px; }
