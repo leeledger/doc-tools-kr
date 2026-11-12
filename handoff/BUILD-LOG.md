@@ -5025,3 +5025,23 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
   total stops at 10 digits). §6: 10 rows of one-line items (9 Hangul 품명, 4 Hangul 규격) = 1 page in memory; 2-line items
   do not fit even at 8 rows. So item text must stay on one line in the worst case: the final lengths are set in A3 by the
   real-engine all-max matrix (logged there).
+
+### A2 — engine: quantity, choice, amount allowZero/maxDigits, items block, computed slots, seal; ledger.ts — Status: DONE
+- src/lib/form/spec.ts: kinds `quantity` and `choice` (options 2–4, value/label/doc), amount `allowZero` / `maxDigits`,
+  block `items {rows, vatField, colWidths[7], rowHeight}` (home of i{n}Name/Spec/Qty/Price and the vat choice;
+  itemFieldIds), computed slots `{=totalHangul|totalDigits|vatNote}` (COMPUTED_SLOTS), signLine `mark` / `seal`. Lint
+  covers each (only on the right kind, option count/uniqueness, items widths and item kinds, vatField a choice, slots
+  only with an items block and only known names, one sealed sign line, mark not empty).
+- src/lib/form/values.ts: normalizeQuantity (NFKC, commas/spaces dropped, ≤ 6 digits + ≤ 2 decimals, 0 allowed, written
+  plainly), fieldProblem quantity (7+ digits tooBig, else number), normalizeAmount(raw, maxDigits, allowZero),
+  normalizeChoice (unknown → first option; also for a non-string), docText quantity grouped / choice its option doc.
+  Fixed on the way: `numeric(raw, '')` would have sliced everything (endsWith('') is true) — guarded.
+- src/lib/form/ledger.ts (own code, BigInt): exactly Q5 (line = floor(q×p/100); 별도 floor(supply/10); 포함
+  floor(line/11) and supply = line − tax; 없음 tax 0 and empty cells; compaction; pair; tooBig past 10 digits).
+- src/lib/form/build.ts: buildForm(doc, spec, values, extras?: {seal}) — a spec whose ledger has a problem is not built
+  (HwpError export; the page blocks first); item grid built in step 2 (header, rows, 합계 row merged over 번호…단가),
+  cells padded ITEM_CELL_PAD = 140 HU; computed slots filled in planParagraphs (trailing space trimmed only in a
+  paragraph with computed slots, so POA/loan/resign text is unchanged); seal = insertPicture inline at the end of the
+  sealed sign line, in place of the mark, 4,252 HU on the long side (sealSize). FormDocument gains insertPicture.
+- Tests: tests/unit/form-ledger.test.ts (values, lint, ledger incl. the brief's three cases, 2,000 random 포함 rows,
+  exact past 2^53). form-build / form-values / loan-note / resignation-letter rerun: green.
