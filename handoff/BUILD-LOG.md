@@ -5045,3 +5045,25 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
   sealed sign line, in place of the mark, 4,252 HU on the long side (sealSize). FormDocument gains insertPicture.
 - Tests: tests/unit/form-ledger.test.ts (values, lint, ledger incl. the brief's three cases, 2,000 random 포함 rows,
   exact past 2^53). form-build / form-values / loan-note / resignation-letter rerun: green.
+
+### A3 — specs 견적서 / 거래명세서 + 1-page matrix — Status: DONE
+- src/data/forms/quotation.ts: QUOTATION + TRANSACTION_STATEMENT share QUOTE_FIELDS (reference-equal); differ in title
+  (「견 적 서」/「거 래 명 세 서」 20 pt), closing line, fileBase. QUOTE_HWP = true. Order: title · 공급받는자 table ·
+  공급자 table · amount line (Q6) · item grid · 비고 table (no section, 3 presets) · closing · date · sign line
+  「공급자  {ceo}  (인)」 with seal. Label tables [5,000 · 8,000 · 28,952] HU (28,952 keeps 60-char 주소 at 3 lines).
+- Decided (Q7 cut, logged): **ITEM_ROWS = 8, 품명 18, 규격 8** instead of 10 rows. Real-engine all-max matrix: 10 rows fit
+  1 page only with 품명 9 / 규격 4 (one line each in the widest glyph); 10/12/4 and 10/10/5 → 2 pages; 9/18/8 → 2;
+  8/20/8 and 8/18/10 → 2 (the third line); 8/18/8 → 1 page in all 36 cases. 18-character 품명 (「사무용 의자 (메시,
+  팔걸이)」) is worth more to a seller than rows 9–10; the brief allows the cut to 8. rhwp layout uses its own metrics
+  (the worker's measure counter), so the Node count is the browser's.
+- 수량 field maxLength 12, 단가 16 (room for commas/원 before normalizing), 단가 allowZero + maxDigits 10.
+- tests/unit/quotation.test.ts: lint/registration/shared fields; the specs differ only in title + closing; no
+  세금계산서/공식/법정/효력 in the documents; sample 별도 = 704,000 (일금 칠십만사천원정); 포함/없음 lines; blank room;
+  seal replaces 「(인)」; sealSize; ledger problems not built; real rhwp matrix 2 specs × blank/sample/all-max × 3 modes ×
+  seal on/off = 36 builds, each 1 page in memory, loss 0, no page shift, every docLabel, paragraph and grid cell drawn,
+  sealed reload draws an `<image>`.
+- tests/helpers/form-samples.ts: QUOTE_SAMPLE (made-up ○○상사 / 홍길동, for both ids), quoteMaxValues (widest values
+  under 100억 in every mode), sealPng; allMaxValues honours maxDigits and choice.
+- scripts/forms/hancom-check.mjs: specs with an items block get blank / sample / all-max (quoteMaxValues) / sealed, and
+  their expected 한글 text = docLabels + every paragraph + every grid cell. This PC: 「SKIP: 한글 not installed (built 20
+  files in Node)」, no rhwp failure → owner O1 still to run at the 한글 PC.
