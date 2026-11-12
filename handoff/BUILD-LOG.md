@@ -5004,3 +5004,24 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
 - Decisions locked (Q1–Q18 in the brief): slug /quotation/, prefix qt, specs quotation + transaction-statement sharing one field list (page radio picks); engine gains quantity + choice kinds, amount allowZero/maxDigits, an items block (7 columns, 10 rows, 합계 row), computed slots, signLine mark/seal, an optional seal picture; BigInt ledger (line = floor(q×p), 별도 tax = floor(supply/10), 포함 tax = floor(line/11), 없음 tax 0; line-level, totals = sums); 10-digit (under 100억) cap; 「일금 …원정 (…원)」 via own amountHangul; never a 세금계산서 (plain line + 홈택스 link); seal from a file or from /stamp-maker/ via the existing sign-handoff (read once, removed); affiliate on the result only (LinkPrice signgate, Coupang cp-stamp fallback); tool page runtime-cached; guide in Step C.
 - Escalated (non-blocking): O4 — saving 공급자 details on the device for next time would need local storage of values (today's rule: none). Default no.
 - Known Gaps added: 세금계산서/영수증; Excel/DOCX/HWPX; 보관용 2-up; side-by-side party boxes; 단위/per-row 비고/할인; >10 rows; 등록번호 format check; saved 공급자 details (O4); /en/ twin; seal from /stamp-signature/.
+
+## QUOTE1112 build (Bob, 2026-11-12)
+
+### A1 — probe: widths and the memory/reload page split — Status: DONE
+- handoff/sources/quote1112/probe-a1.mjs + probe-a1.out.txt (rhwp 0.8.6, Node 26.13, the probes' fake measureTextWidth).
+- Root cause of q1/q1b's 「2 pages in memory, 1 after reload」: the reloaded document does not paginate a treat-as-char
+  table at all. Proof (probe-a1 §3): a 40-row grid of 2-line cells is 2 pages in memory (89/73 text runs per page) and
+  1 page after reload with all 162 runs on page 0; in §2 the reloaded grid's bbox is 1,721 px tall on a 1,122.5 px A4
+  page and still answers pageCount 1. So the reload count is not a layout check; the in-memory count is the real one
+  (and the PDF path renders the in-memory document). Gate stays: in-memory pages = 1.
+- Wrapping is what grows the grid: amount cells wrap in q1b's 6,400 HU column (15-char amounts) and every wrapped
+  item line adds ~19.8 px (§5: 8 rows 1-line items 206 px, 2-line 364 px).
+- Cell padding: rhwp's default cell padding is 510 HU left/right (getCellProperties). setCellProperties
+  {paddingLeft, paddingRight, applyInnerMargin: true} works and is kept after reload (scratch check, then §6). With 140 HU
+  the one-line minimum widths are: 번호 2,207 · 999,999.99 5,306 · 9,999,999,999 6,725 · 999,999,999 5,859 ·
+  공급가액 4,149 · 9 Hangul 9,001 · 4 Hangul 4,149.
+- Widths chosen (grid cells padded 140 HU left/right, 41,952 in all): 번호 2,400 · 품명 9,200 · 규격 4,252 · 수량 5,700 ·
+  단가 7,100 · 공급가액 7,100 · 세액 6,200 (5–9 % over each one-line minimum; 세액's widest value is 999,999,999 because a
+  total stops at 10 digits). §6: 10 rows of one-line items (9 Hangul 품명, 4 Hangul 규격) = 1 page in memory; 2-line items
+  do not fit even at 8 rows. So item text must stay on one line in the worst case: the final lengths are set in A3 by the
+  real-engine all-max matrix (logged there).
