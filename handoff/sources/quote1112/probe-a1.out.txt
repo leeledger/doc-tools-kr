@@ -1,0 +1,15 @@
+min width "번호": 2948
+min width "10": 2112
+min width "품명": 2948
+min width "규격": 2948
+min width "수량": 2948
+min width "999,999.99": 6048
+min width "단가": 2948
+min width "9,999,999,999": 7467
+min width "공급가액": 4885
+min width "세액": 2948
+min width "909,090,909": 6601
+min width "합 계": 3451
+min width "가가가가가가가가가가": 10712
+min width "WWWWWWWWWW": 10107
+min width "9": 207

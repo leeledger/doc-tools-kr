@@ -1,0 +1,5 @@
+none H1700 19ch imgfalse,false next[ |위와 같이 견적합니다.]: insert - | pages 2 | svgImage false | bytes 14848 loss {"schemaVersion":1,"outputFormat":"hwp","count":0,"losses":[]} reloadPages 1 reloadImg false
+none H1400 19ch imgfalse,false next[위와 같이 견적합니다.|2026]: insert - | pages 2 | svgImage false | bytes 14848 loss {"schemaVersion":1,"outputFormat":"hwp","count":0,"losses":[]} reloadPages 1 reloadImg false
+none H1400 6ch imgfalse,false next[위와 같이 견적합니다.|2026]: insert - | pages 2 | svgImage false | bytes 14848 loss {"schemaVersion":1,"outputFormat":"hwp","count":0,"losses":[]} reloadPages 1 reloadImg false
+inline H1400 6ch imgfalse,true next[위와 같이 견적합니다.|2026]: insert {"ok":true,"paraIdx":12,"controlIdx":0,"logicalOffset":22} | pages 2 | svgImage false | bytes 14848 loss {"schemaVersion":1,"outputFormat":"hwp","count":0,"losses":[]} reloadPages 1 reloadImg true
+cell H1400 6ch imgtrue,false next[위와 같이 견적합니다.|2026]: insert {"ok":true,"paraIdx":2,"controlIdx":1,"logicalOffset":2} | pages 2 | svgImage true | bytes 14848 loss {"schemaVersion":1,"outputFormat":"hwp","count":0,"losses":[]} reloadPages 1 reloadImg true
