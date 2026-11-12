@@ -5067,3 +5067,58 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
 - scripts/forms/hancom-check.mjs: specs with an items block get blank / sample / all-max (quoteMaxValues) / sealed, and
   their expected 한글 text = docLabels + every paragraph + every grid cell. This PC: 「SKIP: 한글 not installed (built 20
   files in Node)」, no rhwp failure → owner O1 still to run at the 한글 PC.
+
+### B1 + B2 — /quotation/ page, totals box, seal, 도장 만들기 「견적서에 찍기」, registration — Status: DONE_WITH_CONCERNS
+- Picked up mid-build (the previous builder ran out of usage after A3; its uncommitted page work reviewed against the
+  brief and kept). Concerns: O1 (한글 with a sealed file) and O2 (phones) stay owner-only; the shared form controller now
+  has little headroom (below).
+- Page src/pages/quotation/index.astro + src/tools/quotation/{config,copy,controller,entry,items,seal}.ts on the generic
+  form tool: FormTool.astro gains `specs` (the 「만들 서류」 radio, 견적서 checked) and group `items` (rows 「품목 n」,
+  3 shown, 「품목 줄 더하기」 up to ITEM_ROWS = 8, the rows' error line, the live totals box); fields split out to
+  src/components/FormField.astro (+ quantity and choice kinds; POA/loan/resign markup unchanged, see the diff below).
+  The form controller gains `hooks` (spec, input, check, reset, seal) so the quotation parts stay in its own chunk;
+  radios read as their checked value and reset to `defaultChecked`; file names follow the built spec.
+- Totals box = lib/form/ledger on the page's normalized values, the same code the worker runs (e2e: box = PDF text =
+  HWP text in 별도/포함/없음). Pair / 100억 problems block the build and name the row.
+- Seal (Q9): PNG/JPG sniffed by bytes, ≤ 2 MB (SEAL_MAX_BYTES = 2 MiB), decoded and re-encoded as PNG ≤ 600 px; the
+  controller transfers a fresh copy per build; the worker accepts only a PNG of sane size (lib/form/seal.ts sealExtras,
+  else built without a seal). /stamp-maker/ 「견적서에 찍기」 → sign-handoff sendToQuotation (same keys, from
+  stamp-maker; HANDOFF_FAILED_QUOTE line) → /quotation/ starts its controller at once, reads once and removes.
+  check-dist allows sessionStorage in /quotation/ scripts only next to the docttak:sign-png key.
+- Usage (Q11): a filled build sends `start o=doc v=quotation|transaction-statement` (instead of build=filled), a blank
+  one build=blank; download format as the other form tools. Decision: the enum rides the start event (the build
+  start), never a value or whether a seal was used (cloud usage spec).
+- Chain FLOW quotation = [pdf-sign, pdf-edit, pdf-compress]: decided over the brief's pdf-merge because pdf-merge
+  cannot receive a hand-off (the other form tools' row). Related links: /stamp-maker/ and /loan-note/ → /quotation/.
+- Affiliate: TOOL_LP quotation {signgate, lp-signgate}, Coupang fallback cp-stamp, TOOL_LEAD stamp-signature;
+  check-dist LP_PAGES / COUPANG_LP_OFF_PAGES 1 each; e2e site + affiliate specs: 0 on load, the group last in the result.
+- Registration: tools.ts (5 FAQs, numbers from the spec), og.json, HOME_DESC_ORDER after resignation-letter, synonyms
+  (견적서·거래명세서·거래명세표), usage TOOLS/labels/FORM_DOCS, bgcloud LOCAL_SCOPE_RE, gen-sw NOT_PRECACHED + sw
+  RUNTIME_PAGES, lighthouserc, qa:visual, docs/COPY.md, tool-facts (11 refs), tool note 2,000+ with 제30조 / 제29조③ /
+  제32조① quoted from handoff/sources/quote1112/vat-law.txt (unit-checked verbatim). Test lists and counts extended
+  (site, polish, affiliate e2e; postbuild, bgcloud, polish unit).
+- Budget fix (root cause, measured): the A2 engine (quantity/choice normalizers) and the B1 hooks put the shared form
+  controller over the POA/loan/resign 8.4 KB lazy budget in the GA-on build of tests/unit/ga.test.ts (loan-note 8.4 >
+  8.4 KB; dist-bgcloud 8,601 of 8,601.6 B). Budget not raised; the shared code trimmed instead: the seal hook hands a
+  ready message, file names computed once per build, radios reset to defaultChecked, fieldProblem one path for
+  amount/quantity, the quantity regex literal. Shared chunk 4,326 → 4,251 B gzip; GA-on build loan-note 8,526 /
+  8,601.6 B (75 B headroom), resign 8,476, POA 8,291. The next engine change must shrink this chunk first.
+- Numbers (this PC, Node 26): /quotation/ initial 11.0 KB default / 12.6 production flags (budget 15.1), controller
+  11.5 / 11.5 (budget 13.8 = measured + 20 %). Glyphs (Q12): 0 new core or late characters vs main (uiCharSets diff of
+  this tree and the main checkout); core 618 / 619 production, preload 92.4 / 92.6 of 92.66 KB, late-800 7.8 / 8 KB.
+  Precache (Q13): 411.9 KB default, 422.3 KB production flags / 450 (/quotation/ runtime-cached; nothing moved).
+- POA / loan / resign dist HTML vs the main checkout's dist (hashes normalized): only the menu entry for /quotation/
+  (and loan-note's new related link, the main dist being a cloud build with 배경 지우기/영문주소 in its menu); form markup
+  identical.
+- Tests fixed on the way: quotation-page unit restored `window` correctly and typed SEAL_COPY; the 없음 e2e asserted
+  「not 1,000」, which 11,000 contains: now asserts the row ends at its 공급가액 (empty 세액 cells).
+- Gates: npm run check 0/0 (14 hints) · vitest full 2,569/2,569 (117 files) · builds default and production flags check-dist OK ·
+  e2e chromium: quotation 9/9, stamp-maker + loan + resign + POA + site + affiliate + polish + pdf-sign 261 passed,
+  hwp-to-pdf + hwp-viewer + hwpx-to-hwp + hubs + search 103 passed, cloud-chromium usage 40 passed · regress:hwp
+  --fixtures-only 10/10 all pass · check:licenses OK · check:quotes --exact on the quotation note: 3 quotes verbatim (law.go.kr
+  200; the full run stalled on jlpt.or.kr UNREACHABLE from this PC, not ours) · commits f798e6b, 02937a7, 239f6d2. Not run here: firefox/webkit/mobile projects and LHCI (CI),
+  forms:hancom with 한글 (O1).
+- Known Gaps (QUOTE1112): Excel/DOCX/HWPX output; 2-up 보관용 page; 단위/per-row 비고 columns; more than 8 rows; 등록번호
+  format check; saving 공급자 details (O4); /en/ twin; seal from /stamp-signature/.
+- Tool note: 「100억을 넘으면」 → 「100억 원 이상이면」 (the ledger refuses 11 digits, so exactly 100억 too). The in-tool
+  line keeps the brief's 「100억 원 넘는 금액은 만들 수 없어요」 (Arch may want 「100억 원 이상」 there as well).
