@@ -53,6 +53,7 @@ export const COUPANG_LP_OFF_PAGES = {
   'stamp-signature/index.html': 1,
   'stamp-maker/index.html': 1,
   'loan-note/index.html': 1,
+  'quotation/index.html': 1,
 };
 
 /** (h) LP1028 L1: the LinkPrice links of each result screen while PUBLIC_AFF_LINKPRICE is on. */
@@ -64,6 +65,7 @@ export const LP_PAGES = {
   'id-photo/index.html': 12,
   'char-count/index.html': 1,
   'resignation-letter/index.html': 1,
+  'quotation/index.html': 1,
   'loan-note/index.html': 2,
   'english-name/index.html': 2,
 };

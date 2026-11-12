@@ -380,7 +380,7 @@ describe('gen-brand (P.10)', () => {
     expect(pngSize(out['brand/icon-maskable-512.png'])).toMatchObject({ w: 512, h: 512 });
     // One share image per og.json image (Polish Q), 1200×630, ≤ 300 KB; no single og.png any more.
     const og = Object.keys(out).filter((k) => /^brand\/og-[a-z-]+\.png$/.test(k)).sort();
-    expect(og).toEqual(['business-card', 'char-count', 'default', 'english-name', 'home', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'id-copy', 'id-photo-camera', 'id-photo', 'image-to-jpg', 'jpg-to-pdf', 'loan-note', 'pdf-compress', 'pdf-edit', 'pdf-merge', 'pdf-password', 'pdf-sign', 'pdf-split', 'pdf-to-jpg', 'photo-compress', 'power-of-attorney', 'qr-code', 'resignation-letter', 'stamp-maker', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
+    expect(og).toEqual(['business-card', 'char-count', 'default', 'english-name', 'home', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'id-copy', 'id-photo-camera', 'id-photo', 'image-to-jpg', 'jpg-to-pdf', 'loan-note', 'pdf-compress', 'pdf-edit', 'pdf-merge', 'pdf-password', 'pdf-sign', 'pdf-split', 'pdf-to-jpg', 'photo-compress', 'power-of-attorney', 'qr-code', 'quotation', 'resignation-letter', 'stamp-maker', 'stamp-signature'].map((n) => `brand/og-${n}.png`));
     expect(out).not.toHaveProperty(['brand/og.png']);
     for (const k of og) {
       expect(pngSize(out[k]), k).toMatchObject({ w: 1200, h: 630, png: true });
@@ -672,7 +672,7 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
       expect(one(p, hiddenDiv(ad(full, coupang)), true), p).toEqual([`${p}: 1 Coupang link(s) while PUBLIC_AFF_COUPANG is on (expected 0)`, `${p}: COUPANG_DISCLOSURE on a page without Coupang links`]);
     }
     // LinkPrice off: the 공동인증서 screens fall back to their Coupang 도장 link (resultBlock), and only then.
-    expect(COUPANG_LP_OFF_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1, 'loan-note/index.html': 1 });
+    expect(COUPANG_LP_OFF_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1, 'loan-note/index.html': 1, 'quotation/index.html': 1 });
     const stamp = hiddenDiv(ad(full, coupang.replace('cp-printer', 'cp-stamp')));
     expect(coupangProblems(new Map([[ID_PHOTO_PAGE, three], ['pdf-sign/index.html', stamp]]), true, d, false)).toEqual([]);
     // AFF1029 A2: /loan-note/ falls back to 도장 (cp-stamp) with LinkPrice off, and has none with it on.
@@ -729,7 +729,7 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
       };
       for (const p of Object.keys(LP_PAGES)) m.set(p, p === ID_PHOTO_PAGE ? idPhoto : hiddenDiv(lpBlockHtml(of[p] ?? lpA('lp-signgate'))));
       expect([...m.keys()].length).toBe(Object.keys(LP_PAGES).length);
-      expect(Object.values(LP_PAGES).reduce((a, b) => a + b, 0)).toBe(21);
+      expect(Object.values(LP_PAGES).reduce((a, b) => a + b, 0)).toBe(22);
       return m;
     };
 
@@ -738,7 +738,7 @@ describe('check-dist: link blocks (REV2 H, REV3 R3.6, scripts/lib/out-links-chec
       expect(lpEnabled('const LP_ENABLED = true;')).toBeNull();
       expect(links).toEqual(LP_LINKS.map((l) => ({ dest: l.dest, href: l.href })));
       expect(lpLinks('const x = 1;')).toBeNull();
-      expect(LP_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1, 'id-photo/index.html': 12, 'char-count/index.html': 1, 'resignation-letter/index.html': 1, 'loan-note/index.html': 2, 'english-name/index.html': 2 });
+      expect(LP_PAGES).toEqual({ 'pdf-sign/index.html': 1, 'stamp-signature/index.html': 1, 'stamp-maker/index.html': 1, 'id-photo/index.html': 12, 'char-count/index.html': 1, 'resignation-letter/index.html': 1, 'quotation/index.html': 1, 'loan-note/index.html': 2, 'english-name/index.html': 2 });
     });
 
     it('passes: the eight screens with their links inside hidden wrappers; off, none', () => {
@@ -974,7 +974,7 @@ describe('built output', () => {
       expect(read(p).includes('href="https://link.coupang.com/'), p).toBe(aff);
       expect(read(p), p).not.toContain('click.linkprice.com');
     }
-    for (const p of ['pdf-sign/index.html', 'stamp-signature/index.html', 'stamp-maker/index.html', 'char-count/index.html', 'resignation-letter/index.html', 'loan-note/index.html', 'english-name/index.html']) {
+    for (const p of ['pdf-sign/index.html', 'stamp-signature/index.html', 'stamp-maker/index.html', 'char-count/index.html', 'resignation-letter/index.html', 'quotation/index.html', 'loan-note/index.html', 'english-name/index.html']) {
       expect(read(p).includes('href="https://click.linkprice.com/'), p).toBe(lp);
       expect(read(p).includes('href="https://link.coupang.com/'), p).toBe(aff && !lp && !/char-count|resignation|english-name/.test(p));
     }
@@ -1224,7 +1224,7 @@ describe('built output', () => {
     }
     // Each tool page has its own image; the legal pages share the default one.
     const imageOf = (path: string) => readFileSync(join(DIST, path, 'index.html'), 'utf8').match(/<meta property="og:image" content="[^"]*\/brand\/(og-[a-z-]+)\.png"/)![1];
-    for (const slug of ['pdf-merge', 'pdf-compress', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'pdf-split', 'pdf-sign', 'image-to-jpg', 'photo-compress', 'id-photo', 'stamp-signature', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'qr-code', 'business-card', 'english-name', 'power-of-attorney', 'resignation-letter']) expect(imageOf(slug)).toBe(`og-${slug}`);
+    for (const slug of ['pdf-merge', 'pdf-compress', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'pdf-split', 'pdf-sign', 'image-to-jpg', 'photo-compress', 'id-photo', 'stamp-signature', 'hwp-to-pdf', 'hwp-viewer', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'qr-code', 'business-card', 'english-name', 'power-of-attorney', 'resignation-letter', 'quotation']) expect(imageOf(slug)).toBe(`og-${slug}`);
     expect(imageOf('')).toBe('og-home');
     for (const p of ['privacy', 'terms', 'licenses']) expect(imageOf(p)).toBe('og-default');
   });

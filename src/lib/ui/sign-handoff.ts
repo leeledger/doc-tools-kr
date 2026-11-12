@@ -1,15 +1,19 @@
 // 전자서명·도장 이미지 만들기 / 도장 만들기 → PDF 서명·도장 넣기 (TOOLS5 U3 decision 10, STAMP1015 D7): the made PNG
 // travels in this tab's sessionStorage as a data URL with the name of the tool that made it, is read once by /pdf-sign/
 // and removed. Nothing leaves the device; a full or blocked storage (QuotaExceeded, private mode) is reported so the page
-// can ask for the download path instead.
+// can ask for the download path instead. QUOTE1112 Q9: /stamp-maker/'s 「견적서에 찍기」 sends the same keys to
+// /quotation/ (its seal picture), which reads them once and removes them the same way.
 import { track as trackUsage, type UsageEvent } from './usage';
 
 export const SIGN_PNG_KEY = 'docttak:sign-png';
 /** The tool that made the waiting PNG (STAMP1015 D7); missing or unknown reads as stamp-signature. */
 export const SIGN_FROM_KEY = 'docttak:sign-from';
 export const PDF_SIGN_PATH = '/pdf-sign/';
+export const QUOTATION_PATH = '/quotation/';
 /** Shown on /stamp-signature/ when the PNG could not be stored. */
 export const HANDOFF_FAILED = 'PNG를 내려받은 뒤 PDF 서명·도장 넣기에서 골라 주세요.';
+/** Shown on /stamp-maker/ when the PNG for /quotation/ could not be stored. */
+export const HANDOFF_FAILED_QUOTE = 'PNG를 내려받은 뒤 견적서 만들기의 「직인 그림 넣기」에서 골라 주세요.';
 
 /** Tools that hand a picture to /pdf-sign/ -> their names (equal to tools.ts names; unit test). */
 export const SIGN_SOURCES = { 'stamp-signature': '전자서명·도장 이미지 만들기', 'stamp-maker': '도장 만들기' } as const;
@@ -117,6 +121,20 @@ export async function sendToPdfSign(
   go: (path: string) => void = (p) => window.location.assign(p),
   track: (ev: UsageEvent) => void = trackUsage,
 ): Promise<boolean> {
+  return send(png, from, 'pdf-sign', PDF_SIGN_PATH, go, track);
+}
+
+/** QUOTE1112 Q9: the same for /quotation/ (its seal picture; next from -> quotation). */
+export async function sendToQuotation(
+  png: Blob,
+  from: SignSource = 'stamp-maker',
+  go: (path: string) => void = (p) => window.location.assign(p),
+  track: (ev: UsageEvent) => void = trackUsage,
+): Promise<boolean> {
+  return send(png, from, 'quotation', QUOTATION_PATH, go, track);
+}
+
+async function send(png: Blob, from: SignSource, to: 'pdf-sign' | 'quotation', path: string, go: (path: string) => void, track: (ev: UsageEvent) => void): Promise<boolean> {
   let url: string;
   try {
     url = await blobToDataUrl(png);
@@ -124,7 +142,7 @@ export async function sendToPdfSign(
     return false;
   }
   if (!storeSignPng(url, session(), from)) return false;
-  track({ e: 'next', t: from, o: 'next', v: 'pdf-sign' });
-  go(PDF_SIGN_PATH);
+  track({ e: 'next', t: from, o: 'next', v: to });
+  go(path);
   return true;
 }

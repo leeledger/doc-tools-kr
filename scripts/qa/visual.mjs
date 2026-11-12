@@ -50,6 +50,7 @@ const PAGES = [
   ['powerofattorney', '/power-of-attorney/'],
   ['loannote', '/loan-note/'],
   ['resignation', '/resignation-letter/'],
+  ['quotation', '/quotation/'],
   ['idcamera', '/id-photo-camera/'],
   // ADDREN1016: only in a PUBLIC_ADDR_EN=1 build (a 404 elsewhere).
   ['englishaddress', '/english-address/'],

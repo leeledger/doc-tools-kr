@@ -23,6 +23,10 @@ import { KB_BYTES, RANGES } from '../tools/photo-compress/options';
 import { POWER_OF_ATTORNEY } from './forms/power-of-attorney';
 import { LOAN_NOTE } from './forms/loan-note';
 import { RESIGNATION_LETTER } from './forms/resignation-letter';
+import { ITEM_NAME_MAX, ITEM_PRICE_DIGITS, ITEM_ROWS, ITEM_SPEC_MAX, QUOTE_FIELDS } from './forms/quotation';
+import { LEDGER_MAX_DIGITS } from '../lib/form/ledger';
+import { QUANTITY_DECIMALS, QUANTITY_INT_DIGITS } from '../lib/form/values';
+import { SEAL_MAX_BYTES, SEAL_MAX_PX } from '../lib/form/seal';
 import { AMOUNT_MAX_DIGITS } from '../lib/form/values';
 import { QR_MAX_BYTES } from '../lib/qr/encode';
 import { SMS_MAX } from '../lib/qr/payload';
@@ -92,6 +96,18 @@ export const TOOL_FACTS = {
   // RESIGN1027: the 사직서 form (src/data/forms/resignation-letter.ts).
   'resignation-letter.reasonMaxLines': { value: RESIGNATION_LETTER.fields.find((f) => f.id === 'reason')?.maxLines ?? 0 },
   'resignation-letter.reasonMaxLength': { value: RESIGNATION_LETTER.fields.find((f) => f.id === 'reason')?.maxLength ?? 0 },
+  // QUOTE1112: 견적서·거래명세서 (src/data/forms/quotation.ts, src/lib/form/ledger.ts, src/lib/form/seal.ts).
+  'quotation.itemRows': { value: ITEM_ROWS },
+  'quotation.nameMax': { value: ITEM_NAME_MAX },
+  'quotation.specMax': { value: ITEM_SPEC_MAX },
+  'quotation.priceDigits': { value: ITEM_PRICE_DIGITS },
+  'quotation.qtyDigits': { value: QUANTITY_INT_DIGITS },
+  'quotation.qtyDecimals': { value: QUANTITY_DECIMALS },
+  'quotation.totalDigits': { value: LEDGER_MAX_DIGITS },
+  'quotation.addressMax': { value: QUOTE_FIELDS.find((f) => f.id === 'address')?.maxLength ?? 0 },
+  'quotation.noteMaxLines': { value: QUOTE_FIELDS.find((f) => f.id === 'note')?.maxLines ?? 0 },
+  'quotation.sealMaxMb': { value: SEAL_MAX_BYTES / MB, unit: 'MB' },
+  'quotation.sealMaxPx': { value: SEAL_MAX_PX },
   // CARD1026: QR코드 만들기 (src/lib/qr): the most bytes one QR holds (version 40-M), the 문자 message limit, the quiet zone.
   'qr-code.maxBytes': { value: QR_MAX_BYTES },
   'qr-code.smsMax': { value: SMS_MAX },

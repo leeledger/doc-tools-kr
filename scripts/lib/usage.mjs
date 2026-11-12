@@ -46,7 +46,7 @@ export const DEFAULT_DAYS = 7;
 export const COMPARE_PERIODS = [1, 7, 30];
 
 export const EVENTS = ['pick', 'start', 'success', 'fail', 'download', 'arrive', 'next', 'out', 'land'];
-export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address', 'power-of-attorney', 'loan-note', 'id-photo-camera', 'qr-code', 'business-card', 'resignation-letter'];
+export const TOOLS = ['pdf-merge', 'pdf-compress', 'photo-compress', 'id-photo', 'hwp-to-pdf', 'hwp-viewer', 'stamp-signature', 'remove-background', 'jpg-to-pdf', 'pdf-to-jpg', 'pdf-password', 'image-to-jpg', 'pdf-split', 'pdf-sign', 'hwpx-to-hwp', 'char-count', 'id-copy', 'pdf-edit', 'stamp-maker', 'english-name', 'english-address', 'power-of-attorney', 'loan-note', 'id-photo-camera', 'qr-code', 'business-card', 'resignation-letter', 'quotation'];
 export const PHASES = ['load', 'parse', 'process', 'save'];
 export const VIAS = ['guide', 'direct', 'embed'];
 export const DEVICES = ['mobile', 'tablet', 'desktop'];
@@ -86,12 +86,17 @@ export const ADDR_FIELDS = ['line1', 'line2', 'city', 'state', 'zip', 'country',
 export const FORM_BUILDS = ['blank', 'filled'];
 /** 위임장 만들기 the downloaded file (FORM1020 D9), on download only: HWP | PDF. */
 export const FORM_FORMATS = ['hwp', 'pdf'];
+/**
+ * 견적서·거래명세서 만들기 (QUOTE1112 Q11): which document a filled build made, on start (o = doc instead of build; a
+ * blank build stays build = blank). Never a value, an amount, a row count or whether a seal was used.
+ */
+export const FORM_DOCS = ['quotation', 'transaction-statement'];
 /** 여권·증명사진 인화용 모아찍기 (PRINT1023 P12), on download only: the preset of the sheet. Equal to the presets with a paper size (`mm`, src/data/id-photo-presets.ts; unit test). */
 export const SHEET_PRESETS = ['passport_online', 'id_card', 'driver_license', 'gosi', 'kuksiwon', 'police', 'hanja', 'jlpt', 'half_card'];
 /** Tool -> the one setting its download event may carry (every other download has no o / v). */
-export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format', 'resignation-letter': 'format', 'id-photo': 'sheet' };
+export const DOWNLOAD_SETTING = { 'english-name': 'form', 'english-address': 'field', 'power-of-attorney': 'format', 'loan-note': 'format', 'resignation-letter': 'format', quotation: 'format', 'id-photo': 'sheet' };
 /** Setting key -> its allowed values. */
-export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS, field: ADDR_FIELDS, build: FORM_BUILDS, format: FORM_FORMATS, sheet: SHEET_PRESETS };
+export const SETTINGS = { 'target-kb': KB_BUCKETS, preset: PRESETS, level: LEVEL_IDS, 'target-mb': MB_BUCKETS, mode: MODES, page: PAGE_MODES, ppi: PPI_LEVELS, action: PASSWORD_ACTIONS, to: IMAGE_TARGETS, save: SAVE_MODES, place: PLACE_MODES, basis: COUNT_BASES, mark: MARK_STATES, items: ITEM_KINDS, style: STAMP_STYLES, form: NAME_FORMS, field: ADDR_FIELDS, build: FORM_BUILDS, format: FORM_FORMATS, sheet: SHEET_PRESETS, doc: FORM_DOCS };
 
 export const CODE_RE = /^[a-z-]{1,24}$/;
 export const GUIDE_RE = /^[a-z0-9-]{1,60}$/;
@@ -152,6 +157,7 @@ export const TOOL_OUT = {
   'jpg-to-pdf': ['cp-mfp', 'cp-scanner'],
   'char-count': ['lp-soomgo'],
   'resignation-letter': ['lp-soomgo'],
+  quotation: ['cp-stamp', 'lp-signgate'],
   'loan-note': ['cp-stamp', 'lp-nice', 'lp-allcredit'],
   'power-of-attorney': ['cp-stamp'],
   'english-name': ['lp-agoda', 'lp-klook'],
@@ -396,6 +402,7 @@ export const TOOL_LABELS = {
   'qr-code': 'QR코드 만들기',
   'business-card': '전자명함 만들기',
   'resignation-letter': '사직서 만들기',
+  quotation: '견적서·거래명세서 만들기',
 };
 const PHASE_LABELS = { load: '준비', parse: '파일 읽기', process: '처리', save: '저장' };
 /**
@@ -539,12 +546,14 @@ export const OUT_LABELS = {
 };
 /** The 자리 of the guide rows of the link table (every guide summed). */
 export const OUT_GUIDE_PLACE = '안내 글';
-const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양', form: '이름 모양', field: '복사한 칸', sheet: '모아찍기' };
+const SETTING_LABELS = { 'target-kb': '목표 용량', preset: '증명사진 규격', level: '압축 단계', 'target-mb': '목표 용량', mode: '처리 방식', page: '용지', ppi: '선명도', action: '할 일', to: '저장 형식', save: '저장 방식', place: '넣을 쪽', basis: '목표 기준', mark: '용도 문구', items: '넣은 것', style: '도장 모양', form: '이름 모양', field: '복사한 칸', sheet: '모아찍기', doc: '만든 서류' };
 /** Values whose label depends on the setting (ROMANIZE1016: form `space` is 빈칸, basis `space` stays 공백 포함). */
 export const SETTING_VALUE_LABELS = {
   form: { joined: '붙여 쓰기', hyphen: '붙임표', space: '빈칸' },
   // ADDREN1016: the 영문주소 변환기 copied field.
   field: { line1: 'Address line 1', line2: 'Address line 2', city: 'City', state: 'State·Province', zip: 'ZIP code', country: 'Country', full: '한 줄 주소', road: '영문 도로명주소(결과 목록)' },
+  // QUOTE1112: the 견적서·거래명세서 만들기 document.
+  doc: { quotation: '견적서', 'transaction-statement': '거래명세서' },
 };
 export const VALUE_LABELS = {
   le100: '100KB 이하',

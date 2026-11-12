@@ -59,8 +59,10 @@ describe('affiliate link data (src/data/affiliate.ts)', () => {
       'power-of-attorney': ['cp-stamp'],
       'id-copy': ['cp-mfp'],
       'pdf-edit': ['cp-mfp'],
+      // QUOTE1112 Q14: the 견적서 result's fallback while LinkPrice is off.
+      quotation: ['cp-stamp'],
     });
-    for (const t of ['loan-note', 'power-of-attorney', 'id-copy', 'pdf-edit'] as const) {
+    for (const t of ['loan-note', 'power-of-attorney', 'id-copy', 'pdf-edit', 'quotation'] as const) {
       expect(GUIDE_AFF[t], t).toBeUndefined();
       expect(GUIDE_LEAD[t], t).toBeUndefined();
     }
@@ -182,10 +184,10 @@ describe('LinkPrice links (LP1028, src/data/affiliate.ts)', () => {
     for (const v of ['0', ' 0\n']) expect(lpOn(v), String(v)).toBe(false);
   });
 
-  it('L1 lpBlock: the seven screens with their lead and links (id-photo: ID_PHOTO_LP); off, unknown tool or no link left: null', () => {
-    expect(Object.keys(TOOL_LP).sort()).toEqual(['char-count', 'english-name', 'loan-note', 'pdf-sign', 'resignation-letter', 'stamp-maker', 'stamp-signature']);
+  it('L1 lpBlock: the eight screens with their lead and links (id-photo: ID_PHOTO_LP); off, unknown tool or no link left: null', () => {
+    expect(Object.keys(TOOL_LP).sort()).toEqual(['char-count', 'english-name', 'loan-note', 'pdf-sign', 'quotation', 'resignation-letter', 'stamp-maker', 'stamp-signature']);
     const dests = (t: string) => lpBlock(t, true)!.links.map((l) => l.dest);
-    for (const t of ['pdf-sign', 'stamp-signature', 'stamp-maker']) {
+    for (const t of ['pdf-sign', 'stamp-signature', 'stamp-maker', 'quotation']) {
       expect(lpBlock(t, true), t).toMatchObject({ ad: LP_COPY.ad, lead: LP_COPY.signgate });
       expect(dests(t), t).toEqual(['lp-signgate']);
     }

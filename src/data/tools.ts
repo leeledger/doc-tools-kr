@@ -10,6 +10,8 @@ import { LIMITS as PDF_SPLIT_LIMITS } from '../tools/pdf-split/limits';
 import { LIMITS as PDF_SIGN_LIMITS } from '../tools/pdf-sign/limits';
 import { LIMITS as ID_COPY_LIMITS } from '../tools/id-copy/limits';
 import { LIMITS as PDF_EDIT_LIMITS } from '../tools/pdf-edit/limits';
+import { ITEM_NAME_MAX, ITEM_ROWS, ITEM_SPEC_MAX } from './forms/quotation';
+import { QT_ROWS_SHOWN } from '../tools/quotation/config';
 
 /** HWP numbers in the /hwp-viewer/ and /hwpx-to-hwp/ FAQs, read from the limits the tool uses (MB = 1,000,000 bytes). */
 const hwpMb = (bytes: number): string => `${(bytes / MB_DEC).toLocaleString('ko-KR')} MB`;
@@ -1111,6 +1113,42 @@ export const TOOLS: Tool[] = [
       },
     ],
     keywords: ['사직서 양식', '사직서', '사직서 양식 hwp', '권고사직서', '사직서 쓰는법', '사직서 양식 pdf'],
+  },
+  // QUOTE1112: 견적서·거래명세서 만들기 (src/data/forms/quotation.ts; FAQ numbers from it).
+  {
+    slug: 'quotation',
+    name: '견적서·거래명세서 만들기',
+    title: '견적서·거래명세서 만들기 — 양식 무료, HWP·PDF | 문서딱',
+    description: '견적서와 거래명세서 양식에 품목과 수량, 단가를 쓰면 부가세와 합계를 계산해 한글(HWP)과 PDF로 만들어요.',
+    h1: '견적서·거래명세서 만들기',
+    summary: '품목과 수량, 단가를 쓰면 부가세와 합계를 계산해 견적서나 거래명세서를 한글(HWP)과 PDF 파일로 받을 수 있습니다.',
+    icon: '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h3"/><path d="M14 15h2v3h-2z"/>',
+    status: 'live',
+    updated: '2026-11-12',
+    faq: [
+      {
+        q: '견적서와 거래명세서는 무엇이 다른가요?',
+        a: '견적서는 거래하기 전에 품목과 가격을 미리 알려 주는 서류이고, 거래명세서는 물건이나 일을 넘긴 뒤 무엇을 얼마에 거래했는지 적어 주는 서류입니다. 이 도구에서는 「만들 서류」에서 고르면 같은 칸으로 둘 중 하나를 만들 수 있습니다.',
+      },
+      {
+        q: '부가세는 어떻게 계산되나요?',
+        a: '품목 줄마다 수량과 단가로 값을 내고, 「부가세 별도」면 그 값의 10%(부가가치세법 제30조)를, 「부가세 포함」이면 그 값을 11로 나눈 것을 부가세로 넣습니다. 원 아래는 버리고, 합계는 줄마다 계산한 값을 더한 것입니다. 부가세가 없는 거래라면 「부가세 없음」을 고르세요.',
+      },
+      {
+        q: '품목은 몇 줄까지 넣을 수 있나요?',
+        a: `한 장에 ${ITEM_ROWS}줄까지 넣을 수 있습니다. 처음에는 ${QT_ROWS_SHOWN}줄이 보이고, 「품목 줄 더하기」를 누르면 한 줄씩 늘어납니다. 품명은 ${ITEM_NAME_MAX}자, 규격은 ${ITEM_SPEC_MAX}자까지 쓸 수 있습니다.`,
+      },
+      {
+        q: '엑셀 파일로도 받을 수 있나요?',
+        a: '엑셀 파일은 만들지 않습니다. 한글(HWP)과 PDF로 받을 수 있고, 한글 프로그램이 없다면 PDF로 받으세요. PDF는 휴대폰과 PC 어디서나 열 수 있습니다.',
+      },
+      {
+        q: '이 서류로 세금계산서를 대신할 수 있나요?',
+        a: '아닙니다. 견적서와 거래명세서는 세금계산서가 아니어서, 세금계산서는 따로 발급해야 합니다. 발급은 국세청 홈택스에서 할 수 있습니다.',
+        links: [{ href: 'https://www.hometax.go.kr/', text: '국세청 홈택스' }],
+      },
+    ],
+    keywords: ['견적서 양식', '견적서양식 hwp', '거래명세서 양식', '거래명세표', '견적서', '거래명세서', '견적서 양식 무료'],
   },
   ...(__BG_REMOVE__ ? [BG_REMOVE_TOOL] : []),
   {
