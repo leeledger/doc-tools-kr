@@ -315,6 +315,10 @@ test.describe('PDF에 찍기 and 이미지 복사 (S3)', () => {
     await page.locator('#sm-pdf').click();
     await expect(page.locator('#sm-error')).toHaveText('PNG를 내려받은 뒤 PDF 서명·도장 넣기에서 골라 주세요.');
     await expect(page).toHaveURL(/\/stamp-maker\/$/);
+    // QUOTE1112 Q9: 견적서에 찍기 takes the same path with its own line.
+    await page.locator('#sm-quote').click();
+    await expect(page.locator('#sm-error')).toHaveText('PNG를 내려받은 뒤 견적서 만들기의 「직인 그림 넣기」에서 골라 주세요.');
+    await expect(page).toHaveURL(/\/stamp-maker\/$/);
   });
 
   test('이미지 복사: shown only where a PNG can go to the clipboard; Chromium copies the same PNG', async ({ page, context, browserName }) => {

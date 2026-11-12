@@ -2,7 +2,7 @@
 // HWP faces the text needs (fonts.ts), lays every style out (layout.ts) and paints the tiles, the large preview and the
 // PNG from the same draw list (render.ts). Nothing typed is stored, put in a URL, a file name or the title.
 import { announce, clearAlert } from '../../lib/ui/announce';
-import { HANDOFF_FAILED, sendToPdfSign } from '../../lib/ui/sign-handoff';
+import { HANDOFF_FAILED, HANDOFF_FAILED_QUOTE, sendToPdfSign, sendToQuotation } from '../../lib/ui/sign-handoff';
 import { track } from '../../lib/ui/usage';
 import { facesFor, loadFaces } from './fonts';
 import { applyInk } from './ink';
@@ -249,8 +249,10 @@ export function initStampMaker(pending?: StyleId): void {
   const saveBtn = el('button', { type: 'button', className: 'btn primary', id: 'sm-save', textContent: 'PNG 저장' });
   const copyBtn = el('button', { type: 'button', className: 'btn ghost', id: 'sm-copy', textContent: '이미지 복사', hidden: !canCopyPng() });
   const pdfBtn = el('button', { type: 'button', className: 'btn ghost', id: 'sm-pdf', textContent: 'PDF에 찍기' });
+  // QUOTE1112 Q9: the same PNG as the 견적서·거래명세서 seal picture.
+  const quoteBtn = el('button', { type: 'button', className: 'btn ghost', id: 'sm-quote', textContent: '견적서에 찍기' });
   const signLink = el('a', { className: 'btn ghost', id: 'sm-sign', href: '/stamp-signature/', textContent: '서명도 만들기' });
-  const actions = el('div', { className: 'row sm-actions' }, saveBtn, copyBtn, pdfBtn, signLink);
+  const actions = el('div', { className: 'row sm-actions' }, saveBtn, copyBtn, pdfBtn, quoteBtn, signLink);
   const panelNote = el('p', { className: 'hint', id: 'sm-panel-note', hidden: true });
   panel.append(
     el('div', { className: 'sm-preview' }, previewCanvas, sizeInfo),
@@ -344,7 +346,7 @@ export function initStampMaker(pending?: StyleId): void {
     fSize.input.value = String(mm);
     const r = results.get(id);
     const can = !blocked && typed && !!r?.ok;
-    saveBtn.disabled = copyBtn.disabled = pdfBtn.disabled = !can;
+    saveBtn.disabled = copyBtn.disabled = pdfBtn.disabled = quoteBtn.disabled = !can;
     panelNote.hidden = can || blocked;
     panelNote.textContent = !typed ? COPY.needText : r && !r.ok ? COPY.tooLong : '';
     if (r?.ok) {
@@ -509,6 +511,10 @@ export function initStampMaker(pending?: StyleId): void {
   pdfBtn.addEventListener('click', async () => {
     const png = await makePng();
     if (png && !(await sendToPdfSign(png, 'stamp-maker'))) announce('alert', HANDOFF_FAILED, root);
+  });
+  quoteBtn.addEventListener('click', async () => {
+    const png = await makePng();
+    if (png && !(await sendToQuotation(png, 'stamp-maker'))) announce('alert', HANDOFF_FAILED_QUOTE, root);
   });
 
   // ---------- input ----------
