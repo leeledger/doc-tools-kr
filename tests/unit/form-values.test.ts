@@ -4,7 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { amountHangul, groupDigits } from '../../src/lib/form/amount';
 import { lintSpec, type FormField, type FormSpec } from '../../src/lib/form/spec';
-import { BLANK_DATE, docText, fieldProblem, normalizeAmount, normalizeField, normalizeNumber } from '../../src/lib/form/values';
+import { docText } from '../../src/lib/form/doc-text';
+import { BLANK_DATE, fieldProblem, normalizeAmount, normalizeField, normalizeNumber } from '../../src/lib/form/values';
 import { existsSync } from 'node:fs';
 import { DOC_TEXT_PATHS, stripComments } from '../../scripts/lib/ui-font-chars.mjs';
 

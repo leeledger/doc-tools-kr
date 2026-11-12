@@ -4,7 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { BLANK_DATE, BLANK_SLOT, SIGN_MARK, buildForm, planParagraphs } from '../../src/lib/form/build';
 import { lintSpec } from '../../src/lib/form/spec';
-import { blankValues, docText, normalizeValues } from '../../src/lib/form/values';
+import { docText } from '../../src/lib/form/doc-text';
+import { blankValues, normalizeValues } from '../../src/lib/form/values';
 import { getFormSpec } from '../../src/data/forms';
 import { LOAN_HWP, LOAN_NOTE } from '../../src/data/forms/loan-note';
 import { exportHwp } from '../../src/lib/hwp/export-hwp';

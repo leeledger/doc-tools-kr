@@ -82,9 +82,6 @@ export const QUOTE_FIELDS: FormField[] = [
   { id: 'date', label: '작성일', kind: 'date', maxLength: 10 },
 ];
 
-/** Q6: the amount line. */
-export const AMOUNT_LINE = '합계 금액  일금 {=totalHangul}원정 ({=totalDigits}원) {=vatNote}';
-
 function blocks(title: string, closing: string): FormBlock[] {
   return [
     { type: 'title', doc: title, size: 20 },
@@ -93,7 +90,8 @@ function blocks(title: string, closing: string): FormBlock[] {
     { type: 'gap', size: 10 },
     { type: 'table', docSection: '공급자', rows: ['bizNo', 'bizName', 'ceo', 'address', 'bizType', 'bizItem', 'phone'], colWidths: COLS, rowHeight: ROW },
     { type: 'gap', size: 10 },
-    { type: 'para', doc: AMOUNT_LINE, align: 'left' },
+    // Q6: the amount line (document text under `doc`, so it stays out of the UI glyph sets).
+    { type: 'para', doc: '합계 금액  일금 {=totalHangul}원정 ({=totalDigits}원) {=vatNote}', align: 'left' },
     { type: 'items', rows: ITEM_ROWS, vatField: 'vat', colWidths: ITEM_COLS, rowHeight: ROW },
     { type: 'table', rows: ['note'], colWidths: [COLS[0]! + COLS[1]!, COLS[2]!], rowHeight: ROW },
     { type: 'gap', size: 10 },

@@ -70,7 +70,8 @@ async function loadModules() {
     stdin: {
       contents: [
         "export { buildForm } from './src/lib/form/build.ts';",
-        "export { normalizeValues, docText } from './src/lib/form/values.ts';",
+        "export { normalizeValues } from './src/lib/form/values.ts';",
+        "export { docText } from './src/lib/form/doc-text.ts';",
         "export { FORM_SPECS } from './src/data/forms/index.ts';",
         "export { homeFields as itemFieldIds } from './src/lib/form/spec.ts';",
         "export { exportHwp } from './src/lib/hwp/export-hwp.ts';",

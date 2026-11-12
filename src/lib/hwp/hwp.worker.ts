@@ -7,7 +7,8 @@
 //      {type:'export-hwp'}   (after open: HWPX → HWP with the reload gate, ./export-hwp; the document is freed)
 //      {type:'warm'}         (preload: answers at once; loading this script was the point, never the 10 MB wasm)
 //      {type:'form-build', specId, values} (FORM1020 D4: builds a form from its spec, looked up here by id, and keeps
-//                            it as the open document; answers `parsed` like open, then render / export-hwp as usual)
+//                            it as the open document; answers `parsed` like open, then render / export-hwp as usual;
+//                            QUOTE1112: an optional seal {bytes (PNG, transferred), w, h} for a sealed sign line)
 // Out: progress | scanned | parsed | page | text | hwp {bytes, losses, pagesIn, pageShift} | error {code, detail?} | warm-done
 // The scan runs before the engine loads, so a non-HWP, password or damaged file never downloads the wasm.
 import init, { HwpDocument } from '@rhwp/core';
@@ -20,10 +21,11 @@ import type { TextRun } from './svg-dom';
 import { withEngineRetry } from '../ui/engine-load';
 import { loadRhwpModule } from './wasm-browser';
 import { buildForm } from '../form/build';
+import { sealExtras, type FormSealMsg } from '../form/seal';
 import { normalizeValues } from '../form/values';
 import { getFormSpec } from '../../data/forms';
 
-export type HwpRequest = { type: 'open'; bytes: ArrayBuffer; inflateCap?: number } | { type: 'render'; i: number } | { type: 'text'; i: number } | { type: 'close' } | { type: 'warm' } | { type: 'export-hwp' } | { type: 'form-build'; specId: string; values: Record<string, string> };
+export type HwpRequest = { type: 'open'; bytes: ArrayBuffer; inflateCap?: number } | { type: 'render'; i: number } | { type: 'text'; i: number } | { type: 'close' } | { type: 'warm' } | { type: 'export-hwp' } | { type: 'form-build'; specId: string; values: Record<string, string>; seal?: FormSealMsg };
 
 export type HwpResponse =
   | { type: 'progress'; phase: 'engine'; loaded: number; total: number }
@@ -99,7 +101,7 @@ async function open(buffer: ArrayBuffer, inflateCap?: number): Promise<void> {
 }
 
 /** FORM1020 D4: a new document built from a form spec (never sent as code) and the values (normalized again here). */
-async function formBuild(specId: string, raw: Record<string, string>): Promise<void> {
+async function formBuild(specId: string, raw: Record<string, string>, seal?: FormSealMsg): Promise<void> {
   const spec = getFormSpec(specId);
   if (!spec) throw new HwpError('export', 'unknown form');
   await engine();
@@ -108,7 +110,7 @@ async function formBuild(specId: string, raw: Record<string, string>): Promise<v
   doc = null;
   const built = HwpDocument.createEmpty();
   try {
-    buildForm(built, spec, normalizeValues(spec, raw));
+    buildForm(built, spec, normalizeValues(spec, raw), sealExtras(seal));
   } catch (err) {
     built.free();
     throw err;
@@ -168,7 +170,7 @@ self.onmessage = async (ev: MessageEvent<HwpRequest>) => {
     } else if (msg.type === 'text') {
       text(msg.i);
     } else if (msg.type === 'form-build') {
-      await formBuild(msg.specId, msg.values);
+      await formBuild(msg.specId, msg.values, msg.seal);
     } else if (msg.type === 'export-hwp') {
       exportOpenDocument();
     } else if (msg.type === 'close') {

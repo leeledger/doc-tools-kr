@@ -4,7 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { LEDGER_MAX_DIGITS, computeLedger, vatModeOf } from '../../src/lib/form/ledger';
 import { lintSpec, type FormField, type FormSpec } from '../../src/lib/form/spec';
-import { docText, fieldProblem, groupQuantity, normalizeField, normalizeQuantity } from '../../src/lib/form/values';
+import { docText, groupQuantity } from '../../src/lib/form/doc-text';
+import { fieldProblem, normalizeField, normalizeQuantity } from '../../src/lib/form/values';
 
 const qty: FormField = { id: 'q', label: 'q', kind: 'quantity', maxLength: 12 };
 const price: FormField = { id: 'p', label: 'p', kind: 'amount', maxLength: 16, allowZero: true, maxDigits: 10 };

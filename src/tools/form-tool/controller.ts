@@ -9,12 +9,16 @@
 // failed PDF leaves the HWP: each button has its own error line. 「PDF로 받기」 writes the PDF from the kept pages with the
 // existing exporter (fonts fetched then). Typed text is never stored, sent, put in the URL or in a file name (D7): the
 // files are always `${spec.fileBase}.hwp` / `.pdf`, and the usage events carry only blank|filled and hwp|pdf.
+// QUOTE1112: choice fields are radios (the checked one is the value); `hooks` lets a page add its own parts without
+// growing this shared chunk: the spec to build (a filled build of such a page reports its spec id, never a value),
+// input, a check before a filled build, reset and a seal picture for the build (/quotation/: ../quotation/*.ts).
 import type { PageInfo } from '../../lib/hwp/engine';
 import type { HwpErrorCode } from '../../lib/hwp/errors';
 import type { HwpRequest, HwpResponse } from '../../lib/hwp/hwp.worker';
 import { prefetchRhwpWasm } from '../../lib/hwp/wasm-browser';
-import { groupDigits } from '../../lib/form/amount';
+import { groupDigits } from '../../lib/form/digits';
 import { blankValues, fieldProblem, normalizeAmount, normalizeValues, type FieldProblem } from '../../lib/form/values';
+import type { FormSealMsg } from '../../lib/form/seal';
 import type { FormSpec, FormValues } from '../../lib/form/spec';
 import { announce as live, clearAlert, clearStatus } from '../../lib/ui/announce';
 import { hideEngineError, showEngineError } from '../../lib/ui/engine-error';
@@ -63,6 +67,25 @@ export interface FormCopy {
   pageFailed: string;
 }
 
+/** QUOTE1112: a page's own parts of the form tool (all optional). */
+export interface FormHooks {
+  /** Any input in the form (after the result was marked stale). */
+  input?(target: EventTarget | null): void;
+  /** Before a filled build, after the field checks: false blocks it (the hook shows its own error and focus). */
+  check?(): boolean;
+  /** 모두 지우기, after the fields were cleared. */
+  reset?(): void;
+  /** The seal picture of the next filled build, as the worker takes it (a fresh buffer: it is transferred). */
+  seal?(): FormSealMsg | undefined;
+  /** The spec to build now (several specs share one field list); a filled build then reports its id (FORM_DOCS). */
+  spec?(): FormSpec;
+}
+
+/** What a page's hooks may use: the fields as typed (radios: the checked value). */
+export interface FormHookContext {
+  read(): Record<string, string>;
+}
+
 export interface FormToolConfig {
   spec: FormSpec;
   /** The element id prefix of the page (src/components/FormTool.astro): `${prefix}-tool`, `${prefix}-form` … */
@@ -76,6 +99,8 @@ export interface FormToolConfig {
   today: readonly string[];
   /** The field error lines of amount and number fields (LOAN1022 L-D3; a spec without them needs none). */
   problems?: Readonly<Record<FieldProblem, string>>;
+  /** QUOTE1112: the page's own parts, made once the controller runs. */
+  hooks?: (ctx: FormHookContext) => FormHooks;
 }
 
 export interface FormStart {
@@ -86,9 +111,10 @@ export interface FormStart {
 }
 
 export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
-  const { spec: SPEC, copy: COPY, hwp: FORM_HWP, tool: TOOL } = cfg;
-  const HWP_NAME = withExt(SPEC.fileBase, '.hwp');
-  const PDF_NAME = withExt(SPEC.fileBase, '.pdf');
+  const { copy: COPY, hwp: FORM_HWP, tool: TOOL } = cfg;
+  /** The spec of the last build (the files' names). */
+  let hwpName = '';
+  let pdfName = '';
   const must = <T extends HTMLElement>(id: string): T => mustId<T>(`${cfg.prefix}-${id}`);
   const root = must<HTMLDivElement>('tool');
   const form = must<HTMLFormElement>('form');
@@ -112,13 +138,14 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
   const nextSlot = must<HTMLDivElement>('next');
   const preview = must<HTMLDivElement>('preview');
   const inputs = Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-field]'));
-  const fieldOf = (el: HTMLInputElement | HTMLTextAreaElement) => SPEC.fields.find((f) => f.id === el.dataset.field);
-  /** Amount and number inputs: checked on 「… 만들기」 (fieldProblem), with an error line each. */
+  const fieldOf = (el: HTMLInputElement | HTMLTextAreaElement) => cfg.spec.fields.find((f) => f.id === el.dataset.field);
+  /** Amount, number and quantity inputs: checked on 「… 만들기」 (fieldProblem), with an error line each. */
   const checked = inputs.flatMap((el) => {
     const f = fieldOf(el);
     const error = document.getElementById(`${cfg.prefix}-${el.dataset.field}-error`);
-    return f && error && (f.kind === 'amount' || f.kind === 'number') ? [{ el, f, error, echo: f.kind === 'amount' ? document.getElementById(`${cfg.prefix}-${f.id}-echo`) : null }] : [];
+    return f && error && (f.kind === 'amount' || f.kind === 'number' || f.kind === 'quantity') ? [{ el, f, error, echo: f.kind === 'amount' ? document.getElementById(`${cfg.prefix}-${f.id}-echo`) : null }] : [];
   });
+  const isRadio = (el: HTMLInputElement | HTMLTextAreaElement): el is HTMLInputElement => el.type === 'radio';
 
   let state: State = 'empty';
   let run = 0;
@@ -171,10 +198,10 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
     worker = null;
   }
 
-  function send(msg: HwpRequest): void {
+  function send(msg: HwpRequest, transfer: Transferable[] = []): void {
     if (!worker) return;
     watchdog.kick();
-    worker.postMessage(msg);
+    worker.postMessage(msg, transfer);
   }
 
   /** The result of the last build is gone: URLs revoked, viewer and kept pages dropped, lines cleared. */
@@ -238,12 +265,13 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
     fail('timeout', 'process');
   }
 
-  /** Reads the fields as typed (the page never sends or stores them). */
+  /** Reads the fields as typed (the page never sends or stores them); a radio group gives its checked value. */
   function readInputs(): Record<string, string> {
     const out: Record<string, string> = {};
-    for (const el of inputs) out[el.dataset.field!] = el.value;
+    for (const el of inputs) if (!isRadio(el) || el.checked) out[el.dataset.field!] = el.value;
     return out;
   }
+  const hooks: FormHooks = cfg.hooks?.({ read: readInputs }) ?? {};
 
   // ---------- build ----------
 
@@ -275,8 +303,13 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
 
   function build(k: BuildKind): void {
     if (state === 'building') return;
-    if (k === 'filled' && !fieldsOk()) return;
-    const values: FormValues = k === 'blank' ? blankValues(SPEC) : normalizeValues(SPEC, readInputs());
+    if (k === 'filled' && (!fieldsOk() || hooks.check?.() === false)) return;
+    const spec = hooks.spec?.() ?? cfg.spec;
+    const values: FormValues = k === 'blank' ? blankValues(spec) : normalizeValues(spec, readInputs());
+    // The seal goes into a filled build only (the blank form is for writing by hand).
+    const seal = k === 'filled' ? hooks.seal?.() : undefined;
+    hwpName = withExt(spec.fileBase, '.hwp');
+    pdfName = withExt(spec.fileBase, '.pdf');
     kind = k;
     editedWhileBuilding = false;
     run++;
@@ -289,7 +322,8 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
     phase = 'build';
     setState('building');
     progress(COPY.building, null);
-    track({ e: 'start', t: TOOL, o: 'build', v: k });
+    // QUOTE1112 Q11: a filled build of a several-spec tool names the spec (FORM_DOCS); a blank one stays build = blank.
+    track(hooks.spec && k === 'filled' ? { e: 'start', t: TOOL, o: 'doc', v: spec.id as 'quotation' | 'transaction-statement' } : { e: 'start', t: TOOL, o: 'build', v: k });
     // The document faces and the viewer chunk load while the engine does.
     void loadHwpFonts();
     void import('../hwp-shared/lazy').then((m) => (lazy ??= m)).catch(() => undefined);
@@ -333,7 +367,7 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
     w.onmessageerror = () => {
       if (id === run) fail('oom', 'process');
     };
-    send({ type: 'form-build', specId: SPEC.id, values });
+    send({ type: 'form-build', specId: spec.id, values, seal }, seal ? [seal.bytes] : []);
   }
 
   async function onParsed(pageInfos: PageInfo[], id: number): Promise<void> {
@@ -412,18 +446,18 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
 
   function saveHwp(): void {
     if (state !== 'ready' || isStale || !hwpUrl) return;
-    triggerDownload(hwpUrl, HWP_NAME);
+    triggerDownload(hwpUrl, hwpName);
     track({ e: 'download', t: TOOL, o: 'format', v: 'hwp' });
-    done.textContent = COPY.downloaded(HWP_NAME);
+    done.textContent = COPY.downloaded(hwpName);
     announce(done.textContent);
   }
 
   async function savePdf(): Promise<void> {
     if (state !== 'ready' || isStale || pdfBusy) return;
     if (pdfUrl) {
-      triggerDownload(pdfUrl, PDF_NAME);
+      triggerDownload(pdfUrl, pdfName);
       track({ e: 'download', t: TOOL, o: 'format', v: 'pdf' });
-      done.textContent = COPY.downloaded(PDF_NAME);
+      done.textContent = COPY.downloaded(pdfName);
       announce(done.textContent);
       return;
     }
@@ -444,11 +478,11 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
       });
       if (id !== run || isStale) return;
       pdfUrl = URL.createObjectURL(blob);
-      triggerDownload(pdfUrl, PDF_NAME);
+      triggerDownload(pdfUrl, pdfName);
       track({ e: 'download', t: TOOL, o: 'format', v: 'pdf' });
-      done.textContent = [COPY.downloaded(PDF_NAME), stats.fallbackPages ? COPY.rasterPage : ''].filter(Boolean).join(' ');
+      done.textContent = [COPY.downloaded(pdfName), stats.fallbackPages ? COPY.rasterPage : ''].filter(Boolean).join(' ');
       announce(done.textContent);
-      showNextSteps(nextSlot, TOOL, [{ blob, name: PDF_NAME }]);
+      showNextSteps(nextSlot, TOOL, [{ blob, name: pdfName }]);
     } catch {
       if (id !== run) return;
       usageFail('pdf', 'save');
@@ -480,11 +514,16 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
     run++;
     stopWorker();
     dropResult();
-    for (const el of inputs) el.value = cfg.today.includes(el.dataset.field!) ? start.today() : '';
+    for (const el of inputs) {
+      // A radio group goes back to its default option (the one checked in the page); the radios keep their values.
+      if (isRadio(el)) el.checked = el.defaultChecked;
+      else el.value = cfg.today.includes(el.dataset.field!) ? start.today() : '';
+    }
     for (const c of checked) {
       setProblem(c, null);
       echo(c);
     }
+    hooks.reset?.();
     clearAlert(root);
     clearStatus(root);
     hideEngineError();
@@ -503,6 +542,7 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
   form.addEventListener('focusin', prefetch);
   form.addEventListener('input', (ev) => {
     markStale();
+    hooks.input?.(ev.target);
     const c = checked.find((x) => x.el === ev.target);
     if (!c) return;
     if (c.el.hasAttribute('aria-invalid')) setProblem(c, null);
@@ -533,8 +573,9 @@ export function initFormTool(cfg: FormToolConfig, start: FormStart): void {
   });
 
   if (hwpBtn) hwpBtn.hidden = !FORM_HWP;
-  // An amount typed before the controller ran gets its echo now.
+  // An amount typed before the controller ran gets its echo now (and the page's parts their state).
   for (const c of checked) echo(c);
+  hooks.input?.(null);
   setState('empty');
   if (start.action) {
     prefetch();

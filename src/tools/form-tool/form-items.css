@@ -1,0 +1,27 @@
+/* QUOTE1112 Q3, Q8: the 「만들 서류」 / 부가세 radio groups, the item rows (2 × 2 on a phone, 4 across from 720 px) and the
+   live totals box. Inlined next to form-tool.css on a page whose form has an items block (/quotation/) only. */
+.pa-choice { margin: 0; padding: 0; border: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.pa-choice > legend { padding: 0; margin-bottom: 6px; font-weight: 800; }
+.pa-group.pa-choice { padding: 12px 14px 14px; border: 1px solid var(--line); border-radius: var(--radius); }
+.pa-group.pa-choice > legend { padding: 0 6px; margin-bottom: 0; }
+.pa-radio { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 17px; cursor: pointer; }
+.pa-radio input { width: 22px; height: 22px; margin: 0; accent-color: var(--brand); }
+.pa-radio input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.pa-items { display: grid; gap: 10px; }
+.pa-item { margin: 0; padding: 10px 12px 12px; border: 1px solid var(--line); border-radius: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.pa-item[hidden] { display: none; }
+.pa-item > legend { padding: 0 4px; font-weight: 800; }
+.pa-item .pa-field > label { font-weight: 700; }
+.pa-add { justify-self: start; }
+.pa-add[hidden] { display: none; }
+.pa-totals { padding: 12px 14px; border-radius: 10px; background: var(--surface); display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.pa-totals p { margin: 0; display: flex; justify-content: space-between; gap: 12px; }
+.pa-totals p:last-child { display: block; font-weight: 800; overflow-wrap: anywhere; word-break: keep-all; }
+.pa-totals p:last-child:empty { display: none; }
+.pa-seal { display: grid; gap: 8px; }
+.pa-seal-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.pa-seal img { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.pa-seal img[hidden], .pa-seal button[hidden] { display: none; }
+@media (min-width: 720px) {
+  .pa-item { grid-template-columns: 2fr 1fr 1fr 1.4fr; }
+}

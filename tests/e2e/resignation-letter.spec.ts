@@ -12,7 +12,8 @@ import { loadRhwp } from '../helpers/rhwp-node';
 import { pageTexts } from '../helpers/pdf';
 import { SAMPLE_VALUES } from '../helpers/form-samples';
 import { glyphText } from '../../src/lib/hwp/svg-string';
-import { docText, normalizeValues } from '../../src/lib/form/values';
+import { docText } from '../../src/lib/form/doc-text';
+import { normalizeValues } from '../../src/lib/form/values';
 import { RESIGNATION_LETTER as SPEC } from '../../src/data/forms/resignation-letter';
 
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];

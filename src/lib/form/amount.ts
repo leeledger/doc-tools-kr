@@ -27,5 +27,4 @@ export function amountHangul(digits: string): string {
   return out;
 }
 
-/** 「1,234,567」 for "1234567". */
-export const groupDigits = (digits: string): string => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+export { groupDigits } from './digits';

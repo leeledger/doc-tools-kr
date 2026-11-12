@@ -19,8 +19,10 @@
 import { classifyParseError } from '../hwp/engine';
 import { HwpError } from '../hwp/errors';
 import { BODY_PT, ITEM_COLUMNS, computedSlotIds, type Align, type ComputedSlot, type FormBlock, type FormField, type FormSpec, type FormValues } from './spec';
-import { BLANK_DATE, docText, groupQuantity } from './values';
-import { amountHangul, groupDigits } from './amount';
+import { BLANK_DATE } from './values';
+import { docText, groupQuantity } from './doc-text';
+import { amountHangul } from './amount';
+import { groupDigits } from './digits';
 import { specLedger, type Ledger } from './ledger';
 
 export { BLANK_DATE };
