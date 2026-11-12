@@ -28,7 +28,7 @@ export const QT_COPY: FormCopy = {
 /** Q5, Q8: the rows' error line and the totals box. */
 export const ITEMS_COPY: ItemsCopy = {
   pair: (row: number): string => `품목 ${row}: 수량과 단가를 함께 넣어 주세요.`,
-  tooBig: '100억 원 넘는 금액은 만들 수 없어요.',
+  tooBig: '100억 원 이상인 금액은 만들 수 없어요.',
   supply: '공급가액 합계',
   tax: '부가세',
   total: '합계',

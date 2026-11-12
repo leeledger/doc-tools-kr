@@ -214,7 +214,7 @@ test('수량 without 단가 names the row; 100억 or more and 3 decimals are err
   await expect(page.locator('#qt-i2Price-error')).toHaveText('너무 큰 수예요. 수량은 999,999까지, 단가는 열 자리까지 써 주세요.');
   await page.locator('#qt-i2Price').fill('9999999999');
   await page.locator('#qt-make').click();
-  await expect(page.locator('#qt-items-error')).toHaveText('100억 원 넘는 금액은 만들 수 없어요.');
+  await expect(page.locator('#qt-items-error')).toHaveText('100억 원 이상인 금액은 만들 수 없어요.');
   await expect(page.locator('#qt-totals .pa-hangul')).toHaveText('');
   await page.locator('#qt-i2Qty').fill('1.234');
   await page.locator('#qt-make').click();

@@ -104,6 +104,8 @@ export const TOOL_FACTS = {
   'quotation.qtyDigits': { value: QUANTITY_INT_DIGITS },
   'quotation.qtyDecimals': { value: QUANTITY_DECIMALS },
   'quotation.totalDigits': { value: LEDGER_MAX_DIGITS },
+  // 100억 = 10^LEDGER_MAX_DIGITS; the note's 「100억 원 이상」 reads this in 억.
+  'quotation.limitEok': { value: 10 ** (LEDGER_MAX_DIGITS - 8) },
   'quotation.addressMax': { value: QUOTE_FIELDS.find((f) => f.id === 'address')?.maxLength ?? 0 },
   'quotation.noteMaxLines': { value: QUOTE_FIELDS.find((f) => f.id === 'note')?.maxLines ?? 0 },
   'quotation.sealMaxMb': { value: SEAL_MAX_BYTES / MB, unit: 'MB' },
