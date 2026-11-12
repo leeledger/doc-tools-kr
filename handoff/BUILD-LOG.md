@@ -5122,3 +5122,4 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
   format check; saving 공급자 details (O4); /en/ twin; seal from /stamp-signature/.
 - Tool note: 「100억을 넘으면」 → 「100억 원 이상이면」 (the ledger refuses 11 digits, so exactly 100억 too). The in-tool
   line keeps the brief's 「100억 원 넘는 금액은 만들 수 없어요」 (Arch may want 「100억 원 이상」 there as well).
+- 2026-11-12 QUOTE1112 deploy 1: Richard 1 Must Fix (100억 copy) + 3 Should Fix fixed in 5b9062a by orchestrator; check 0 errors, vitest 2569/2569, build+check-dist OK, quotation e2e 9/9. PR next.
