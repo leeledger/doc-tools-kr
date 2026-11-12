@@ -1067,6 +1067,10 @@ budget('hwp.worker*.js', match(/^_astro\/hwp\.worker[^/]*\.js$/), 90 * KB);
 // 인감증명 form: 「인감」 appears only in the caution (#pa-caution) and its 정부24 link. Budgets: measured + 20 % of the
 // larger build (위임장 initial 9.1 KB default, 10.7 KB in the cloud build with the usage tracker; controller 7.0 KB gzip;
 // FORM1020).
+// QUOTE1112 Q15: the /quotation/ budgets = measured + 20 % of the larger build (production flags: initial 12.6 KB,
+// controller 11.5 KB gzip; BUILD-LOG QUOTE1112 B1).
+const QT_INITIAL_KB = 15.1;
+const QT_LAZY_KB = 13.8;
 const FORM_TOOLS = [
   { slug: 'power-of-attorney', prefix: 'pa', initialKb: 12.8, lazyKb: 8.4 },
   // LOAN1022 L-D11: the same rules and budgets.
@@ -1074,6 +1078,8 @@ const FORM_TOOLS = [
   // RESIGN1027 R12: the same rules and the same shared budgets as POA/loan (review B SF1); measured initial 11.0 KB
   // (production flags; 9.4 default), controller 7.8 KB (BUILD-LOG RESIGN1027 Step B).
   { slug: 'resignation-letter', prefix: 'rs', initialKb: 12.8, lazyKb: 8.4 },
+  // QUOTE1112 Q15: own budgets = measured + 20 % (BUILD-LOG QUOTE1112 B1); the others unchanged.
+  { slug: 'quotation', prefix: 'qt', initialKb: QT_INITIAL_KB, lazyKb: QT_LAZY_KB },
 ];
 for (const t of FORM_TOOLS) {
   const html = pageHtml.get(`${t.slug}/index.html`);
@@ -1091,12 +1097,18 @@ for (const t of FORM_TOOLS) {
   const lazyOwn = [...new Set(controller.flatMap((f) => staticClosure(dist, f)))].filter((f) => !initial.has(f));
   if (!lazyOwn.some((f) => read(f).includes('hwp-error') && read(f).includes('form-build'))) errors.push(`${t.slug} controller: not the form tool controller (no hwp-error / form-build)`);
   for (const f of initial) if (/hwp\.worker|rhwp_bg|HwpDocument|__wbindgen|createViewer|exportPdf/.test(read(f).toString('utf8'))) errors.push(`${f}: the HWP worker, the rhwp glue, the viewer or the PDF export in the /${t.slug}/ initial JS`);
-  for (const f of [...own, ...lazyOwn]) if (/localStorage|sessionStorage|indexedDB|history\.(push|replace)State/.test(read(f).toString('utf8'))) errors.push(`${f}: the /${t.slug}/ scripts use storage or the URL`);
+  for (const f of [...own, ...lazyOwn]) {
+    const js = read(f).toString('utf8');
+    // QUOTE1112 Q9, Q11: /quotation/ may read (and remove) the sign hand-off picture in sessionStorage, nothing else.
+    const handoff = t.slug === 'quotation' && js.includes('docttak:sign-png') && !/localStorage|indexedDB|history\.(push|replace)State/.test(js);
+    if (!handoff && /localStorage|sessionStorage|indexedDB|history\.(push|replace)State/.test(js)) errors.push(`${f}: the /${t.slug}/ scripts use storage or the URL`);
+  }
   const form = new RegExp(String.raw`<form\b[^>]*id="${t.prefix}-form"[^>]*>([\s\S]*?)</form>`).exec(html);
   if (!form) errors.push(`${t.slug}/index.html: no #${t.prefix}-form`);
   else {
     if (/\baction=/.test(form[0].slice(0, form[0].indexOf('>')))) errors.push(`${t.slug}/index.html: #${t.prefix}-form has an action`);
-    if (/<(input|textarea)\b[^>]*\bname=/.test(form[1])) errors.push(`${t.slug}/index.html: a field in #${t.prefix}-form has a name`);
+    // QUOTE1112: a radio needs a name to be a group (nothing submits; the form has no action); no other field has one.
+    if (/<textarea\b[^>]*\bname=|<input\b(?![^>]*\btype="radio")[^>]*\bname=/.test(form[1])) errors.push(`${t.slug}/index.html: a field in #${t.prefix}-form has a name`);
   }
   if (t.slug === 'power-of-attorney') {
     const outside = html.replace(/<div class="notice pa-caution" id="pa-caution">[\s\S]*?<\/div>/, '');
@@ -1112,6 +1124,18 @@ for (const t of FORM_TOOLS) {
     if (!html.includes('id="rs-general"')) errors.push('resignation-letter/index.html: no #rs-general line (R8)');
     const text = html.replace(/<(style|script)\b[\s\S]*?<\/\1>/g, '').replace(/<[^>]+>/g, '');
     for (const bad of ['실업급여를 받', '실업급여를 못', '법적 효력', '공식 양식', '공식 서식', '법정 서식']) if (text.includes(bad)) errors.push(`resignation-letter/index.html: says 「${bad}」`);
+  }
+  // QUOTE1112 Q1, Q3, Q7: the 「이 서류는 세금계산서가 아닙니다」 line with the 홈택스 link; the 「만들 서류」 radio
+  // (견적서 checked); the three 비고 presets; the page never calls the form official or tax advice.
+  if (t.slug === 'quotation') {
+    const notTax = /<p class="notice" id="qt-not-tax">이 서류는 세금계산서가 아닙니다\. 세금계산서는 따로 발급해야 합니다\. <a href="https:\/\/www\.hometax\.go\.kr\/" rel="noopener">국세청 홈택스<\/a><\/p>/.test(html);
+    if (!notTax) errors.push('quotation/index.html: no #qt-not-tax line with the 홈택스 link (Q1)');
+    const docs = [...html.matchAll(/<input type="radio" name="qt-doc" id="qt-doc-([\w-]+)" data-spec="([\w-]+)"[^>]*>/g)];
+    if (docs.map((m) => m[2]).join() !== 'quotation,transaction-statement' || !/data-spec="quotation"[^>]*checked/.test(html)) errors.push('quotation/index.html: the 만들 서류 radio is not 견적서 (checked) · 거래명세서');
+    const presets = [...html.matchAll(/<button type="button" class="pa-preset" data-fill-for="([^"]*)"/g)];
+    if (presets.length !== 3 || presets.some((m) => m[1] !== 'qt-note')) errors.push(`quotation/index.html: ${presets.length} preset button(s) for #qt-note, expected 3`);
+    const text = html.replace(/<(style|script)\b[\s\S]*?<\/\1>/g, '').replace(/<[^>]+>/g, '');
+    for (const bad of ['법적 효력', '공식 양식', '공식 서식', '법정 서식', '세무 상담', '세금계산서로 쓸 수']) if (text.includes(bad)) errors.push(`quotation/index.html: says 「${bad}」`);
   }
   if (/adsbygoogle|pagead2\.googlesyndication/.test(html)) errors.push(`${t.slug}/index.html: carries the AdSense tag (a tool page, not a content page)`);
   for (const m of html.matchAll(/<script\b[^>]*\bsrc="(https?:)?\/\/([^/"]+)/g)) if (!(analytics && m[2] === 'static.cloudflareinsights.com')) errors.push(`${t.slug}/index.html: off-site script ${m[2]}`);

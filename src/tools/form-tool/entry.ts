@@ -8,6 +8,9 @@
 // controller module (a dynamic import, so the controller stays a lazy chunk). RESIGN1027 R5: a preset button
 // (src/components/FormTool.astro) fills its field here, before or after the controller loads: the value, then a bubbling
 // `input` event (the controller marks a built document stale as for typing), focus and the caret at the end.
+// QUOTE1112 Q3, Q8: 「품목 줄 더하기」 shows the next hidden item row and moves focus to its first input (the button goes
+// once every row shows); a change of the 「만들 서류」 radio renames the 만들기 button and the result title; `now` starts
+// the controller at once (a picture handed over by /stamp-maker/ is waiting). All of it before or after the controller.
 import { showEngineError } from '../../lib/ui/engine-error';
 import { withEngineRetry } from '../../lib/ui/engine-load';
 import { isRestingMove, preloadSkipped, SIGNALS } from '../../lib/ui/preload';
@@ -26,6 +29,8 @@ export interface FormEntry {
   today: readonly string[];
   /** The tool's controller module. */
   load: () => Promise<{ init: (start: FormStart) => void }>;
+  /** Start the controller at once. */
+  now?: boolean;
 }
 
 export function startFormTool(cfg: FormEntry): void {
@@ -55,6 +60,17 @@ export function startFormTool(cfg: FormEntry): void {
       },
     ));
   root.addEventListener('click', (ev) => {
+    const add = (ev.target as Element | null)?.closest<HTMLButtonElement>('button[data-add-row]');
+    if (add) {
+      const rows = Array.from(root.querySelectorAll<HTMLFieldSetElement>('fieldset[data-item]'));
+      const next = rows.find((r) => r.hidden);
+      if (next) {
+        next.hidden = false;
+        next.querySelector<HTMLInputElement>('input')?.focus();
+      }
+      add.hidden = !rows.some((r) => r.hidden);
+      return;
+    }
     const btn = (ev.target as Element | null)?.closest<HTMLButtonElement>('button[data-fill-for]');
     const input = btn ? (document.getElementById(btn.dataset.fillFor ?? '') as HTMLInputElement | HTMLTextAreaElement | null) : null;
     if (!btn || !input) return;
@@ -62,6 +78,15 @@ export function startFormTool(cfg: FormEntry): void {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);
+  });
+  root.addEventListener('change', (ev) => {
+    const radio = ev.target as HTMLInputElement | null;
+    const title = radio?.dataset.spec ? radio.dataset.title : undefined;
+    if (!title) return;
+    const make = document.getElementById(`${cfg.prefix}-make`);
+    const head = document.getElementById(`${cfg.prefix}-result-title`);
+    if (make) make.textContent = `${title} 만들기`;
+    if (head) head.textContent = `만든 ${title}`;
   });
   const onNow = (): void => void load();
   for (const ev of NOW) root.addEventListener(ev, onNow, { passive: true });
@@ -85,6 +110,10 @@ export function startFormTool(cfg: FormEntry): void {
     if (w.requestIdleCallback) w.requestIdleCallback(() => void load(), { timeout: 3000 });
     else window.setTimeout(() => void load(), 1000);
   };
+  if (cfg.now) {
+    void load();
+    return;
+  }
   // Save-Data / 2G: only a focus or press in the tool loads it.
   if (!preloadSkipped(connection)) for (const s of SIGNALS) window.addEventListener(s, onSignal, { capture: true, passive: true });
 }

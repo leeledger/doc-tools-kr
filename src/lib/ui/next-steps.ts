@@ -25,7 +25,8 @@ export type NextSource =
   | 'pdf-edit'
   | 'power-of-attorney'
   | 'loan-note'
-  | 'resignation-letter';
+  | 'resignation-letter'
+  | 'quotation';
 
 /**
  * Button order = array order. A tool never offers itself. The 배경 지우기 row exists only in a build with
@@ -55,6 +56,8 @@ export const FLOW = {
   'loan-note': ['pdf-sign', 'pdf-edit', 'pdf-compress'],
   // RESIGN1027 R11: the 사직서 PDF, the same row (the writer signs it).
   'resignation-letter': ['pdf-sign', 'pdf-edit', 'pdf-compress'],
+  // QUOTE1112 Q14: the 견적서·거래명세서 PDF (pdf-merge cannot take a hand-off, so 글자 넣기 instead; BUILD-LOG).
+  quotation: ['pdf-sign', 'pdf-edit', 'pdf-compress'],
   ...(__BG_REMOVE__ ? { 'remove-background': ['jpg-to-pdf', 'photo-compress'] } : {}),
 } as Readonly<Record<NextSource, readonly NextTarget[] | undefined>>;
 

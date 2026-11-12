@@ -1,0 +1,59 @@
+---
+// One field of the form tool widget (src/components/FormTool.astro; split out for QUOTE1112 so an item row can reuse
+// it). Kinds: multiline, date, amount (numeric text input, a live 「10,000,000원」 echo and an error line), number
+// (decimal text input with 「%」 and an error line), quantity (decimal text input and an error line, QUOTE1112), choice
+// (a radio group: the one input kind with a name, so its radios form a group; no form ever submits), text. Presets
+// (RESIGN1027 R5) are buttons under the input. `item`: a field of an item row (no echo: the totals box sums the rows).
+import type { FormField } from '../lib/form/spec';
+
+interface Props {
+  f: FormField;
+  /** The element id prefix. */
+  p: string;
+  item?: boolean;
+  /** The presets' group name (default 「자주 쓰는 이유」, the 사직서's). */
+  presetsLabel?: string;
+}
+
+const { f, p, item = false, presetsLabel = '자주 쓰는 이유' } = Astro.props;
+---
+{f.kind === 'choice' ? (
+  <fieldset class="pa-choice" id={`${p}-${f.id}`}>
+    <legend>{f.label}</legend>
+    {(f.options ?? []).map((o, i) => (
+      <label class="pa-radio"><input type="radio" name={`${p}-${f.id}`} id={`${p}-${f.id}-${o.value}`} data-field={f.id} value={o.value} checked={i === 0}>{o.label}</label>
+    ))}
+  </fieldset>
+) : (
+  <div class={f.kind === 'date' ? 'pa-field pa-date' : 'pa-field'}>
+    <label for={`${p}-${f.id}`}>{f.label}</label>
+    {f.kind === 'multiline' ? (
+      <textarea id={`${p}-${f.id}`} class="pa-input" data-field={f.id} maxlength={f.maxLength} rows={f.maxLines} lang="ko" autocomplete="off" spellcheck="false" aria-describedby={`${p}-${f.id}-hint`}></textarea>
+    ) : f.kind === 'date' ? (
+      <input id={`${p}-${f.id}`} class="pa-input" type="date" data-field={f.id} min="1900-01-01" max="2999-12-31" autocomplete="off">
+    ) : f.kind === 'amount' && item ? (
+      <input id={`${p}-${f.id}`} class="pa-input" type="text" inputmode="numeric" data-field={f.id} maxlength={f.maxLength} autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={`${p}-${f.id}-error`}>
+    ) : f.kind === 'amount' ? (
+      <input id={`${p}-${f.id}`} class="pa-input" type="text" inputmode="numeric" data-field={f.id} maxlength={f.maxLength} autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={`${p}-${f.id}-echo ${p}-${f.id}-error`}>
+    ) : f.kind === 'quantity' ? (
+      <input id={`${p}-${f.id}`} class="pa-input" type="text" inputmode="decimal" data-field={f.id} maxlength={f.maxLength} autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={`${p}-${f.id}-error`}>
+    ) : f.kind === 'number' ? (
+      <span class="pa-unit">
+        <input id={`${p}-${f.id}`} class="pa-input" type="text" inputmode="decimal" data-field={f.id} maxlength={f.maxLength} autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={[f.hint ? `${p}-${f.id}-hint` : '', `${p}-${f.id}-error`].filter(Boolean).join(' ')}>
+        <span aria-hidden="true">%</span>
+      </span>
+    ) : (
+      <input id={`${p}-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={f.hint ? `${p}-${f.id}-hint` : undefined}>
+    )}
+    {f.kind === 'multiline' && <p class="hint" id={`${p}-${f.id}-hint`}>{f.maxLines}줄까지 쓸 수 있습니다.</p>}
+    {f.kind !== 'multiline' && f.hint && <p class="hint" id={`${p}-${f.id}-hint`}>{f.hint}</p>}
+    {f.kind === 'amount' && !item && <p class="pa-echo" id={`${p}-${f.id}-echo`} aria-live="polite"></p>}
+    {(f.kind === 'amount' || f.kind === 'number' || f.kind === 'quantity') && <p class="field-error" id={`${p}-${f.id}-error`}></p>}
+    {f.presets && (
+      <div class="pa-presets" role="group" aria-label={presetsLabel} aria-describedby={`${p}-${f.id}-presets-hint`}>
+        {f.presets.map((x) => <button type="button" class="pa-preset" data-fill-for={`${p}-${f.id}`} data-fill={x.fill}>{x.chip}</button>)}
+      </div>
+    )}
+    {f.presets && <p class="hint" id={`${p}-${f.id}-presets-hint`}>고르면 칸에 들어가요. 고쳐 써도 돼요.</p>}
+  </div>
+)}

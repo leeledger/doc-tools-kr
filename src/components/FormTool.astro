@@ -9,15 +9,23 @@
 // RESIGN1027 R5: a field's presets are buttons under its input (data-fill-for, data-fill); the entry fills on a press;
 // their styles are src/tools/form-tool/form-presets.css, which a page with presets inlines next to form-tool.css.
 // LP1028 L1: `aff`, the result screen's affiliate group (src/data/affiliate.ts resultBlock), last in the result.
+// QUOTE1112 Q3, Q8: `specs`, a 「만들 서류」 radio above the fieldsets (the controller builds the checked spec; the entry
+// renames the 만들기 button); a group with `items` renders its spec's item rows (one fieldset 「품목 n」 each, rows past
+// `shown` hidden until 「품목 줄 더하기」) and the rows' error line before its other fields, the live totals box after them
+// (empty and hidden here: the page's controller fills it, so its words stay out of the preloaded font).
+// Fields render through ./FormField.astro.
 import EngineError from './EngineError.astro';
+import FormFieldView from './FormField.astro';
 import OutLinks from './OutLinks.astro';
 import type { AffBlock } from '../data/affiliate';
-import type { FormField, FormSpec } from '../lib/form/spec';
+import { itemFieldIds, type FormField, type FormSpec } from '../lib/form/spec';
 
 interface Group {
   id: string;
   legend: string;
   fields: string[];
+  /** QUOTE1112: the spec's item rows go first in this group; `shown` of them visible at first. */
+  items?: { shown: number };
 }
 interface Props {
   spec: FormSpec;
@@ -29,9 +37,13 @@ interface Props {
   hwp: boolean;
   /** The result's affiliate group (none: no group). */
   aff?: AffBlock | null;
+  /** QUOTE1112: the documents to pick from (spec id, page word); the first is checked and is `spec`. */
+  specs?: { id: string; label: string }[];
+  /** The presets' group name (./FormField.astro). */
+  presetsLabel?: string;
 }
 
-const { spec, prefix: p, groups, after, hwp, aff = null } = Astro.props;
+const { spec, prefix: p, groups, after, hwp, aff = null, specs = [], presetsLabel } = Astro.props;
 const field = (id: string): FormField => {
   const f = spec.fields.find((x) => x.id === id);
   if (!f) throw new Error(`${spec.id}: no field ${id}`);
@@ -39,41 +51,39 @@ const field = (id: string): FormField => {
 };
 const fieldsets = groups.map((g) => ({ ...g, fields: g.fields.map(field) }));
 const loose = after.map(field);
+const itemsBlock = spec.blocks.find((b) => b.type === 'items');
+const itemRows = itemsBlock && itemsBlock.type === 'items' ? Array.from({ length: itemsBlock.rows }, (_, i) => i + 1) : [];
+const rowFields = (n: number): FormField[] => Object.values(itemFieldIds(n)).map(field);
 ---
 <div id={`${p}-tool`} class="pa" data-state="empty">
   <form class="pa-form" id={`${p}-form`} novalidate autocomplete="off">
+    {specs.length > 1 && (
+      <fieldset class="pa-group pa-choice" id={`${p}-doc`}>
+        <legend>만들 서류</legend>
+        {specs.map((s, i) => (
+          <label class="pa-radio"><input type="radio" name={`${p}-doc`} id={`${p}-doc-${s.id}`} data-spec={s.id} data-title={s.label} value={s.id} checked={i === 0}>{s.label}</label>
+        ))}
+      </fieldset>
+    )}
     {fieldsets.map((g) => (
       <fieldset class="pa-group" id={`${p}-group-${g.id}`}>
         <legend>{g.legend}</legend>
-        {g.fields.map((f) => (
-          <div class={f.kind === 'date' ? 'pa-field pa-date' : 'pa-field'}>
-            <label for={`${p}-${f.id}`}>{f.label}</label>
-            {f.kind === 'multiline' ? (
-              <textarea id={`${p}-${f.id}`} class="pa-input" data-field={f.id} maxlength={f.maxLength} rows={f.maxLines} lang="ko" autocomplete="off" spellcheck="false" aria-describedby={`${p}-${f.id}-hint`}></textarea>
-            ) : f.kind === 'date' ? (
-              <input id={`${p}-${f.id}`} class="pa-input" type="date" data-field={f.id} min="1900-01-01" max="2999-12-31" autocomplete="off">
-            ) : f.kind === 'amount' ? (
-              <input id={`${p}-${f.id}`} class="pa-input" type="text" inputmode="numeric" data-field={f.id} maxlength={f.maxLength} autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={`${p}-${f.id}-echo ${p}-${f.id}-error`}>
-            ) : f.kind === 'number' ? (
-              <span class="pa-unit">
-                <input id={`${p}-${f.id}`} class="pa-input" type="text" inputmode="decimal" data-field={f.id} maxlength={f.maxLength} autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={[f.hint ? `${p}-${f.id}-hint` : '', `${p}-${f.id}-error`].filter(Boolean).join(' ')}>
-                <span aria-hidden="true">%</span>
-              </span>
-            ) : (
-              <input id={`${p}-${f.id}`} class="pa-input" type="text" data-field={f.id} maxlength={f.maxLength} lang="ko" autocomplete="off" spellcheck="false" enterkeyhint="next" aria-describedby={f.hint ? `${p}-${f.id}-hint` : undefined}>
-            )}
-            {f.kind === 'multiline' && <p class="hint" id={`${p}-${f.id}-hint`}>{f.maxLines}줄까지 쓸 수 있습니다.</p>}
-            {f.kind !== 'multiline' && f.hint && <p class="hint" id={`${p}-${f.id}-hint`}>{f.hint}</p>}
-            {f.kind === 'amount' && <p class="pa-echo" id={`${p}-${f.id}-echo`} aria-live="polite"></p>}
-            {(f.kind === 'amount' || f.kind === 'number') && <p class="field-error" id={`${p}-${f.id}-error`}></p>}
-            {f.presets && (
-              <div class="pa-presets" role="group" aria-label="자주 쓰는 이유" aria-describedby={`${p}-${f.id}-presets-hint`}>
-                {f.presets.map((x) => <button type="button" class="pa-preset" data-fill-for={`${p}-${f.id}`} data-fill={x.fill}>{x.chip}</button>)}
-              </div>
-            )}
-            {f.presets && <p class="hint" id={`${p}-${f.id}-presets-hint`}>고르면 칸에 들어가요. 고쳐 써도 돼요.</p>}
+        {g.items && (
+          <div class="pa-items" id={`${p}-items`}>
+            {itemRows.map((n) => (
+              <fieldset class="pa-item" id={`${p}-item-${n}`} data-item={n} hidden={n > g.items!.shown}>
+                <legend>품목 {n}</legend>
+                {rowFields(n).map((f) => <FormFieldView f={f} p={p} item />)}
+              </fieldset>
+            ))}
+            <button type="button" class="btn ghost pa-add" id={`${p}-add-row`} data-add-row hidden={g.items.shown >= itemRows.length}>품목 줄 더하기</button>
+            <p class="field-error" id={`${p}-items-error`} role="alert"></p>
           </div>
-        ))}
+        )}
+        {g.fields.map((f) => <FormFieldView f={f} p={p} presetsLabel={presetsLabel} />)}
+        {g.items && (
+          <div class="pa-totals" id={`${p}-totals`} aria-live="polite" hidden></div>
+        )}
       </fieldset>
     ))}
     {loose.map((f) => (
@@ -84,7 +94,7 @@ const loose = after.map(field);
     ))}
     <slot name="caution" />
     <div class="row pa-actions">
-      <button type="submit" class="btn primary" id={`${p}-make`}>{spec.title} 만들기</button>
+      <button type="submit" class="btn primary" id={`${p}-make`}>{specs[0]?.label ?? spec.title} 만들기</button>
       <button type="button" class="btn ghost" id={`${p}-blank`}>빈 양식으로 받기</button>
       <button type="button" class="btn ghost" id={`${p}-reset`}>모두 지우기</button>
     </div>
@@ -103,7 +113,7 @@ const loose = after.map(field);
   </div>
 
   <div class="pa-result" id={`${p}-result`} tabindex="-1" aria-labelledby={`${p}-result-title`} hidden>
-    <h2 id={`${p}-result-title`}>만든 {spec.title}</h2>
+    <h2 id={`${p}-result-title`}>만든 {specs[0]?.label ?? spec.title}</h2>
     <p class="notice warn" id={`${p}-stale`} hidden></p>
     <div class="row pa-downloads" id={`${p}-downloads`}>
       {hwp && <button type="button" class="btn primary" id={`${p}-hwp`}>한글(HWP)로 받기</button>}

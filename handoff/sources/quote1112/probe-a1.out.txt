@@ -1,0 +1,53 @@
+min width "번호": 2948
+min width "10": 2112
+min width "품명": 2948
+min width "규격": 2948
+min width "수량": 2948
+min width "999,999.99": 6048
+min width "단가": 2948
+min width "9,999,999,999": 7467
+min width "공급가액": 4885
+min width "세액": 2948
+min width "909,090,909": 6601
+min width "합 계": 3451
+min width "가가가가가가가가가가": 10712
+min width "WWWWWWWWWW": 10107
+min width "9": 207
+q1b widths, 13 rows, 15-char amounts: memory p1runs 143 pages 2 gridH 384.5 lines(amount r1) 2 | reload pages 1 gridH 499.5 lines(amount r1) 2
+chosen [3000,5922,3630,6600,7900,7900,7000] 8 rows name20 spec10: memory p1runs 98 pages 2 gridH 415.3 lines(amount r1) 1 | reload pages 1 gridH 876.5 lines(amount r1) 1
+chosen [3000,5922,3630,6600,7900,7900,7000] 8 rows name30 spec16: memory p1runs 90 pages 3 gridH 398.2 lines(amount r1) 1 | reload pages 1 gridH 1388.5 lines(amount r1) 1
+chosen [3000,5922,3630,6600,7900,7900,7000] 10 rows name20 spec10: memory p1runs 98 pages 2 gridH 415.3 lines(amount r1) 1 | reload pages 1 gridH 1081.4 lines(amount r1) 1
+chosen [3000,5922,3630,6600,7900,7900,7000] 10 rows name30 spec16: memory p1runs 90 pages 3 gridH 398.2 lines(amount r1) 1 | reload pages 1 gridH 1721.4 lines(amount r1) 1
+40-row 2-line grid: memory pages 2 runs/page 89/73 | reload pages 1 runs/page 162 reload page0 info {"pageIndex":0,"pageNumber":1,"width":793.7,"height":1122.5,"sectionIndex":0,"marginLeft":113.4,"marginRight":113.4,"mar
+fit [3000,7039,3313,6300,7700,7700,6900] 8 rows name20 spec10: memory p1runs 98 pages 2 gridH 415.3 lines(amount r1) 1 | reload pages 1 gridH 876.5 lines(amount r1) 1
+fit [3000,7039,3313,6300,7700,7700,6900] 8 rows name16 spec10: memory p1runs 94 pages 2 gridH 415.3 lines(amount r1) 1 | reload pages 1 gridH 876.5 lines(amount r1) 1
+fit [3000,6832,3520,6300,7700,7700,6900] 8 rows name12 spec8: memory p1runs 97 pages 2 gridH 411.1 lines(amount r1) 1 | reload pages 1 gridH 705.8 lines(amount r1) 1
+fit [3000,6832,3520,6300,7700,7700,6900] 8 rows name10 spec6: memory p1runs 111 pages 2 gridH 415.9 lines(amount r1) 1 | reload pages 1 gridH 535.2 lines(amount r1) 1
+fit [3000,7039,3313,6300,7700,7700,6900] 10 rows name20 spec10: memory p1runs 98 pages 2 gridH 415.3 lines(amount r1) 1 | reload pages 1 gridH 1081.4 lines(amount r1) 1
+fit [3000,7039,3313,6300,7700,7700,6900] 10 rows name16 spec10: memory p1runs 94 pages 2 gridH 415.3 lines(amount r1) 1 | reload pages 1 gridH 1081.4 lines(amount r1) 1
+fit [3000,6832,3520,6300,7700,7700,6900] 10 rows name12 spec8: memory p1runs 97 pages 2 gridH 411.1 lines(amount r1) 1 | reload pages 1 gridH 868 lines(amount r1) 1
+fit [3000,6832,3520,6300,7700,7700,6900] 10 rows name10 spec6: memory p1runs 111 pages 2 gridH 415.9 lines(amount r1) 1 | reload pages 1 gridH 654.7 lines(amount r1) 1
+fit addr60 8 rows 1-line items: memory p1runs 118 pages 1 gridH 206.4 lines(amount r1) 1 | reload pages 1 gridH 206.4 lines(amount r1) 1
+fit addr60 8 rows 2-line items: memory p1runs 117 pages 2 gridH 364.5 lines(amount r1) 1 | reload pages 1 gridH 364.5 lines(amount r1) 1
+fit addr60 10 rows 1-line items: memory p1runs 132 pages 1 gridH 243.8 lines(amount r1) 1 | reload pages 1 gridH 243.8 lines(amount r1) 1
+fit addr60 10 rows 2-line items: memory p1runs 123 pages 2 gridH 403.2 lines(amount r1) 1 | reload pages 1 gridH 441.4 lines(amount r1) 1
+fit addr30 8 rows 1-line items: memory p1runs 117 pages 1 gridH 206.4 lines(amount r1) 1 | reload pages 1 gridH 206.4 lines(amount r1) 1
+fit addr30 8 rows 2-line items: memory p1runs 122 pages 2 gridH 364.5 lines(amount r1) 1 | reload pages 1 gridH 364.5 lines(amount r1) 1
+fit addr30 10 rows 1-line items: memory p1runs 131 pages 1 gridH 243.8 lines(amount r1) 1 | reload pages 1 gridH 243.8 lines(amount r1) 1
+fit addr30 10 rows 2-line items: memory p1runs 130 pages 2 gridH 441.4 lines(amount r1) 1 | reload pages 1 gridH 441.4 lines(amount r1) 1
+pad 140 min width "번호": 2207
+pad 140 min width "공급가액": 4149
+pad 140 min width "999,999.99": 5306
+pad 140 min width "9,999,999,999": 6725
+pad 140 min width "999,999,999": 5859
+pad 140 min width "합 계": 2708
+pad 140 min width "가가가가가가가가가": 9001
+pad 140 min width "가가가가": 4149
+pad140 [2400,9200,4252,5700,7100,7100,6200] addr60 8 rows name9 spec4: memory p1runs 118 pages 1 gridH 206.4 lines(amount r1) 1 | reload pages 1 gridH 206.4 lines(amount r1) 1
+pad140 [2400,9200,4252,5700,7100,7100,6200] addr60 8 rows name18 spec8: memory p1runs 125 pages 2 gridH 364.5 lines(amount r1) 1 | reload pages 1 gridH 364.5 lines(amount r1) 1
+pad140 [2400,9200,4252,5700,7100,7100,6200] addr60 10 rows name9 spec4: memory p1runs 132 pages 1 gridH 243.8 lines(amount r1) 1 | reload pages 1 gridH 243.8 lines(amount r1) 1
+pad140 [2400,9200,4252,5700,7100,7100,6200] addr60 10 rows name18 spec8: memory p1runs 133 pages 2 gridH 403.2 lines(amount r1) 1 | reload pages 1 gridH 441.4 lines(amount r1) 1
+pad140 [2400,9200,4252,5700,7100,7100,6200] addr40 8 rows name9 spec4: memory p1runs 117 pages 1 gridH 206.4 lines(amount r1) 1 | reload pages 1 gridH 206.4 lines(amount r1) 1
+pad140 [2400,9200,4252,5700,7100,7100,6200] addr40 8 rows name18 spec8: memory p1runs 130 pages 2 gridH 364.5 lines(amount r1) 1 | reload pages 1 gridH 364.5 lines(amount r1) 1
+pad140 [2400,9200,4252,5700,7100,7100,6200] addr40 10 rows name9 spec4: memory p1runs 131 pages 1 gridH 243.8 lines(amount r1) 1 | reload pages 1 gridH 243.8 lines(amount r1) 1
+pad140 [2400,9200,4252,5700,7100,7100,6200] addr40 10 rows name18 spec8: memory p1runs 140 pages 2 gridH 441.4 lines(amount r1) 1 | reload pages 1 gridH 441.4 lines(amount r1) 1

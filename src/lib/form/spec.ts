@@ -8,9 +8,11 @@ export const BODY_PT = 10;
 
 /**
  * text: one line. multiline: up to maxLines lines. date: an ISO date (YYYY-MM-DD) or empty. amount: whole 원, 1–12
- * digits (LOAN1022). number: a decimal, up to 3 digits and 2 decimals (LOAN1022).
+ * digits (LOAN1022; maxDigits fewer, allowZero takes 0). number: a decimal, up to 3 digits and 2 decimals (LOAN1022).
+ * quantity: up to 6 digits and 2 decimals, 0 allowed (QUOTE1112 Q4). choice: one of `options` (a radio group; any
+ * other value is the first option).
  */
-export type FieldKind = 'text' | 'multiline' | 'date' | 'amount' | 'number';
+export type FieldKind = 'text' | 'multiline' | 'date' | 'amount' | 'number' | 'quantity' | 'choice';
 
 export interface FormField {
   id: string;
@@ -39,7 +41,28 @@ export interface FormField {
    * field's text with `fill` (document text and input text, so `fill` is left out of the UI glyph sets).
    */
   presets?: FormPreset[];
+  /** amount only (QUOTE1112 Q4): 0 is an amount (「0」), not the `zero` problem. */
+  allowZero?: boolean;
+  /** amount only: at most this many digits (1–12; default 12, values.ts AMOUNT_MAX_DIGITS). */
+  maxDigits?: number;
+  /** choice only: CHOICE_MIN–CHOICE_MAX options; the first is the default. */
+  options?: FormOption[];
 }
+
+export interface FormOption {
+  /** The value the page sends (ASCII). */
+  value: string;
+  /** The page's words. */
+  label: string;
+  /** Document text (left out of the UI glyph sets). */
+  doc?: string;
+}
+
+/** QUOTE1112 Q4: options per choice field. */
+export const CHOICE_MIN = 2;
+export const CHOICE_MAX = 4;
+/** = values.ts AMOUNT_MAX_DIGITS (the lint needs no values import). */
+const AMOUNT_DIGITS_CAP = 12;
 
 export interface FormPreset {
   /** The button's words. */
@@ -65,8 +88,16 @@ export type FormBlock =
   | { type: 'table'; docSection?: string; rows: string[]; colWidths: number[]; rowHeight: number }
   /** 「2026년 10월 20일」 from a date field; empty → 「     년     월     일」. */
   | { type: 'dateLine'; field: string; align?: Align }
-  /** 「위임인  홍길동  (서명 또는 인)」: docLabel, the field's value (empty → spaces), the sign mark. */
-  | { type: 'signLine'; docLabel: string; field: string; align?: Align }
+  /**
+   * 「위임인  홍길동  (서명 또는 인)」: docLabel, the field's value (empty → spaces), the sign mark (`mark`, default
+   * SIGN_MARK). seal (QUOTE1112 Q4): a seal picture, when the build has one, stands in place of the mark.
+   */
+  | { type: 'signLine'; docLabel: string; field: string; align?: Align; mark?: string; seal?: true }
+  /**
+   * QUOTE1112 Q4: the item grid (번호·품명·규격·수량·단가·공급가액·세액, `rows` item rows, a 합계 row) computed by
+   * ./ledger. The home of every item field (itemFieldIds) and of `vatField` (a choice). colWidths: 7, HWPUNIT.
+   */
+  | { type: 'items'; rows: number; vatField: string; colWidths: number[]; rowHeight: number }
   /** An empty line of `size` points (spacing between blocks). */
   | { type: 'gap'; size: number };
 
@@ -86,10 +117,30 @@ export type FormValues = Record<string, string>;
 /** `{id}` slots of a paragraph. */
 export const slotIds = (doc: string): string[] => [...doc.matchAll(/\{([A-Za-z][\w-]*)\}/g)].map((m) => m[1]!);
 
-/** The fields a block puts on the page as their home (a table row or a date line), in order. */
+/** QUOTE1112 Q4: the computed slots `{=name}` a paragraph of a form with an items block may hold (./ledger). */
+export const COMPUTED_SLOTS = ['totalHangul', 'totalDigits', 'vatNote'] as const;
+export type ComputedSlot = (typeof COMPUTED_SLOTS)[number];
+/** `{=name}` slots of a paragraph (any name; the lint checks them). */
+export const computedSlotIds = (doc: string): string[] => [...doc.matchAll(/\{=([A-Za-z][\w-]*)\}/g)].map((m) => m[1]!);
+
+/** QUOTE1112 Q4: the field ids of item row n (1-based): 품명, 규격, 수량, 단가. */
+export const itemFieldIds = (n: number): { name: string; spec: string; qty: string; price: string } => ({ name: `i${n}Name`, spec: `i${n}Spec`, qty: `i${n}Qty`, price: `i${n}Price` });
+
+/** The kind each item field must have. */
+const ITEM_KINDS = { name: 'text', spec: 'text', qty: 'quantity', price: 'amount' } as const;
+
+/** The item grid's columns. */
+export const ITEM_COLUMNS = 7;
+
+/** The fields a block puts on the page as their home (a table row, a date line, the item grid), in order. */
 export function homeFields(block: FormBlock): string[] {
   if (block.type === 'table') return block.rows;
   if (block.type === 'dateLine') return [block.field];
+  if (block.type === 'items') {
+    const out: string[] = [];
+    for (let n = 1; n <= block.rows; n++) out.push(...Object.values(itemFieldIds(n)));
+    return [...out, block.vatField];
+  }
   return [];
 }
 
@@ -108,7 +159,10 @@ export function referredFields(block: FormBlock): string[] {
  * a dateLine names a date field (a date may also sit in a table row, LOAN1022); docTemplate has `{v}`; docTemplate and
  * docZero only on number fields, docBlank only on amount, number and date fields; presets (RESIGN1027 R5) only on text
  * and multiline fields, 1–PRESETS_MAX of them, each chip and fill non-empty, each fill within maxLength (code points)
- * and maxLines (a text field: one line).
+ * and maxLines (a text field: one line). QUOTE1112 Q4: allowZero and maxDigits (1–12) only on amount fields; options
+ * only on (and required by) choice fields, CHOICE_MIN–CHOICE_MAX of them, values non-empty and unique; at most one
+ * items block, 1+ rows, 7 widths, its item fields of the kinds ITEM_KINDS and its vatField a choice; `{=name}` slots
+ * only in a spec with an items block and only COMPUTED_SLOTS; at most one sign line with a seal; a mark not empty.
  * Returns the problems (empty = valid).
  */
 export function lintSpec(spec: FormSpec): string[] {
@@ -133,6 +187,15 @@ export function lintSpec(spec: FormSpec): string[] {
         if (x.fill.split('\n').length > lines) out.push(`${f.id}: preset ${x.chip} has more than ${lines} lines`);
       }
     }
+    if ((f.allowZero !== undefined || f.maxDigits !== undefined) && f.kind !== 'amount') out.push(`${f.id}: allowZero and maxDigits are for amount fields`);
+    if (f.maxDigits !== undefined && !(Number.isInteger(f.maxDigits) && f.maxDigits >= 1 && f.maxDigits <= AMOUNT_DIGITS_CAP)) out.push(`${f.id}: maxDigits 1–${AMOUNT_DIGITS_CAP}`);
+    if (f.options !== undefined && f.kind !== 'choice') out.push(`${f.id}: options are for choice fields`);
+    if (f.kind === 'choice') {
+      const o = f.options ?? [];
+      if (o.length < CHOICE_MIN || o.length > CHOICE_MAX) out.push(`${f.id}: ${CHOICE_MIN}–${CHOICE_MAX} options`);
+      if (o.some((x) => !x.value || !x.label.trim())) out.push(`${f.id}: option value and label must not be empty`);
+      if (new Set(o.map((x) => x.value)).size !== o.length) out.push(`${f.id}: option values must be unique`);
+    }
   }
   const homes = new Map<string, number>();
   const slotted = new Map<string, number>();
@@ -144,8 +207,30 @@ export function lintSpec(spec: FormSpec): string[] {
       if (i > firstTable && !body(b)) out.push(`block ${i} after the first table must be body text`);
     });
   }
+  const items = spec.blocks.filter((b): b is Extract<FormBlock, { type: 'items' }> => b.type === 'items');
+  if (items.length > 1) out.push('at most one items block');
+  if (spec.blocks.filter((b) => b.type === 'signLine' && b.seal).length > 1) out.push('at most one sign line with a seal');
   spec.blocks.forEach((b) => {
     for (const id of homeFields(b)) homes.set(id, (homes.get(id) ?? 0) + 1);
+    if (b.type === 'para') {
+      for (const c of computedSlotIds(b.doc)) {
+        if (!items.length) out.push(`{=${c}}: computed slots need an items block`);
+        else if (!(COMPUTED_SLOTS as readonly string[]).includes(c)) out.push(`{=${c}}: unknown computed slot`);
+      }
+    }
+    if (b.type === 'signLine' && b.mark !== undefined && !b.mark.trim()) out.push(`${b.field}: sign mark must not be empty`);
+    if (b.type === 'items') {
+      if (!(Number.isInteger(b.rows) && b.rows >= 1)) out.push('items: rows');
+      if (b.colWidths.length !== ITEM_COLUMNS) out.push(`items: ${b.colWidths.length} widths for ${ITEM_COLUMNS} columns`);
+      if (ids.get(b.vatField) && ids.get(b.vatField)!.kind !== 'choice') out.push(`${b.vatField}: vatField needs a choice field`);
+      for (let n = 1; n <= b.rows; n++) {
+        const row = itemFieldIds(n);
+        for (const k of Object.keys(row) as (keyof typeof row)[]) {
+          const f = ids.get(row[k]);
+          if (f && f.kind !== ITEM_KINDS[k]) out.push(`${row[k]}: an item ${k} needs a ${ITEM_KINDS[k]} field`);
+        }
+      }
+    }
     if (b.type === 'para') for (const id of slotIds(b.doc)) slotted.set(id, (slotted.get(id) ?? 0) + 1);
     for (const id of [...homeFields(b), ...referredFields(b)]) if (!ids.has(id)) out.push(`unknown field ${id}`);
     if (b.type === 'table') {

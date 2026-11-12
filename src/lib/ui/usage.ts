@@ -10,7 +10,7 @@ import { detectDevice, type Device } from './device';
 
 export const USAGE_ON: boolean = __USAGE_STATS__;
 
-export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name' | 'english-address' | 'power-of-attorney' | 'loan-note' | 'id-photo-camera' | 'qr-code' | 'business-card' | 'resignation-letter';
+export type UsageTool = 'pdf-merge' | 'pdf-compress' | 'photo-compress' | 'id-photo' | 'hwp-to-pdf' | 'hwp-viewer' | 'stamp-signature' | 'remove-background' | 'jpg-to-pdf' | 'pdf-to-jpg' | 'pdf-password' | 'image-to-jpg' | 'pdf-split' | 'pdf-sign' | 'hwpx-to-hwp' | 'char-count' | 'id-copy' | 'pdf-edit' | 'stamp-maker' | 'english-name' | 'english-address' | 'power-of-attorney' | 'loan-note' | 'id-photo-camera' | 'qr-code' | 'business-card' | 'resignation-letter' | 'quotation';
 /** OUT_DESTS in scripts/lib/usage.mjs (tests/unit/affiliate.test.ts keeps the links' dests equal to it). */
 export type OutDest = 'photo-studio' | 'cp-printer' | 'cp-paper' | 'cp-backdrop' | 'cp-stamp' | 'cp-hancom' | 'cp-mfp' | 'cp-scanner' | 'cp-tripod' | 'lp-signgate' | 'lp-dosirak' | 'lp-usimsa' | 'lp-soomgo' | 'lp-kb-gosi' | 'lp-kb-qnet' | 'lp-kb-history' | 'lp-kb-korcham' | 'lp-kb-teps' | 'lp-kb-kuksiwon' | 'lp-kb-police' | 'lp-kb-hanja' | 'lp-kb-jlpt' | 'lp-nice' | 'lp-allcredit' | 'lp-agoda' | 'lp-klook';
 /** STAMP_STYLES in scripts/lib/usage.mjs (= the 도장 만들기 style ids). */
@@ -22,7 +22,8 @@ const NAME_FORMS: readonly string[] = ['joined', 'hyphen', 'space'];
 export type AddrField = 'line1' | 'line2' | 'city' | 'state' | 'zip' | 'country' | 'full' | 'road';
 const ADDR_FIELDS: readonly string[] = ['line1', 'line2', 'city', 'state', 'zip', 'country', 'full', 'road'];
 /** The form tools (src/tools/form-tool): their download event names the file format. */
-export type FormToolId = 'power-of-attorney' | 'loan-note' | 'resignation-letter';
+export type FormToolId = 'power-of-attorney' | 'loan-note' | 'resignation-letter' | 'quotation';
+const FORM_TOOL_IDS: readonly string[] = ['power-of-attorney', 'loan-note', 'resignation-letter', 'quotation'];
 /** FORM_FORMATS in scripts/lib/usage.mjs: the form tool file downloaded. */
 export type FormFormat = 'hwp' | 'pdf';
 const FORM_FORMATS: readonly string[] = ['hwp', 'pdf'];
@@ -43,7 +44,9 @@ export type UsageSetting =
   | { o: 'mark'; v: 'on' | 'off' }
   | { o: 'items'; v: 'text' | 'date' | 'white' | 'mix' }
   | { o: 'style'; v: StampStyle }
-  | { o: 'build'; v: 'blank' | 'filled' };
+  | { o: 'build'; v: 'blank' | 'filled' }
+  /** 견적서·거래명세서 만들기 (QUOTE1112 Q11): the document of a filled build (FORM_DOCS). */
+  | { o: 'doc'; v: 'quotation' | 'transaction-statement' };
 
 /** What a tool reports. Tool pages never build the payload themselves. */
 export type UsageEvent =
@@ -119,7 +122,7 @@ export function buildPayload(ev: UsageEvent | Arrive | Land, ctx: PayloadContext
   } else if (ev.e === 'download' && ev.t === 'english-address' && 'o' in ev && ev.o === 'field' && ADDR_FIELDS.includes(ev.v)) {
     p.o = ev.o;
     p.v = ev.v;
-  } else if (ev.e === 'download' && (ev.t === 'power-of-attorney' || ev.t === 'loan-note' || ev.t === 'resignation-letter') && 'o' in ev && ev.o === 'format' && FORM_FORMATS.includes(ev.v)) {
+  } else if (ev.e === 'download' && FORM_TOOL_IDS.includes(ev.t) && 'o' in ev && ev.o === 'format' && FORM_FORMATS.includes(ev.v)) {
     p.o = ev.o;
     p.v = ev.v;
   } else if (ev.e === 'download' && ev.t === 'id-photo' && 'o' in ev && ev.o === 'sheet' && SHEET_PRESETS.includes(ev.v)) {

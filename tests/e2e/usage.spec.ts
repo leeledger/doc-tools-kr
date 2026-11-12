@@ -513,6 +513,35 @@ test('사직서 만들기 (RESIGN1027 R9): a preset press sends nothing; start, 
   for (const b of beacons) expect(b.body).not.toMatch(/홍길동|010-1234|5678|2026-11-30|권고|회사의|사직서\.|\.hwp|\.pdf/);
 });
 
+test('견적서·거래명세서 만들기 (QUOTE1112 Q11): a filled build sends only the document enum, a blank one build = blank; never a value, an amount or the seal', async ({ page }) => {
+  test.setTimeout(300_000);
+  const beacons = await record(page);
+  await gotoReady(page, '/quotation/');
+  await page.locator('#qt-ceo').fill('홍길동');
+  await page.locator('#qt-phone').fill('010-1234-5678');
+  await page.locator('#qt-i1Name').fill('사무용 의자');
+  await page.locator('#qt-i1Qty').fill('3');
+  await page.locator('#qt-i1Price').fill('120,000');
+  await page.locator('#qt-doc-transaction-statement').check();
+  await page.locator('#qt-make').click();
+  await expect(page.locator('#qt-tool')).toHaveAttribute('data-state', 'ready', { timeout: 180_000 });
+  await Promise.all([page.waitForEvent('download'), page.locator('#qt-hwp').click()]);
+  await Promise.all([page.waitForEvent('download', { timeout: 90_000 }), page.locator('#qt-pdf').click()]);
+  await page.locator('#qt-blank').click();
+  await expect(page.locator('#qt-tool')).toHaveAttribute('data-state', 'ready', { timeout: 180_000 });
+  const mine = () => beacons.filter((b) => b.ev.t === 'quotation');
+  await expect.poll(() => mine().map((b) => [b.ev.e, b.ev.o ?? '', b.ev.v ?? ''].join(' '))).toEqual([
+    'start doc transaction-statement',
+    'success  ',
+    'download format hwp',
+    'download format pdf',
+    'start build blank',
+    'success  ',
+  ]);
+  expectClean(beacons);
+  for (const b of beacons) expect(b.body).not.toMatch(/홍길동|010-1234|5678|의자|120,000|120000|360,000|360000|견적서\.|명세서\.|\.hwp|\.pdf|seal|직인/);
+});
+
 test('이어서 하기 (CHAIN): the click sends next (o=next, v=target) before the next tool opens; the file arrives there', async ({ page }) => {
   const beacons = await record(page);
   await gotoReady(page, '/pdf-compress/');

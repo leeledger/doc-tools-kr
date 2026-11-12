@@ -2,6 +2,36 @@
 // blank form, and the all-max cases that must still fit one page (every field at maxLength in the widest glyph; a
 // multiline field also as maxLines lines of each length from 15 to 40, which wraps every line).
 import type { FormSpec, FormValues } from '../../src/lib/form/spec';
+import { pngRgba } from './image-writers';
+
+// QUOTE1112: made-up 공급자 ○○상사 / 홍길동; three priced rows and one text-only row.
+const QUOTE_SAMPLE: FormValues = {
+  recvName: '△△주식회사 구매팀',
+  recvBizNo: '000-00-00000',
+  recvPhone: '02-000-0000',
+  bizNo: '000-00-00000',
+  bizName: '○○상사',
+  ceo: '홍길동',
+  address: '서울특별시 ○○구 ○○로 123',
+  bizType: '도소매',
+  bizItem: '사무용품',
+  phone: '010-0000-0000',
+  i1Name: '사무용 의자',
+  i1Spec: '메시',
+  i1Qty: '3',
+  i1Price: '120,000',
+  i2Name: 'A4 복사용지',
+  i2Spec: '80g',
+  i2Qty: '10',
+  i2Price: '25,000',
+  i3Name: '배송비',
+  i3Qty: '1',
+  i3Price: '30,000',
+  i4Name: '설치 포함',
+  vat: 'separate',
+  note: '견적일로부터 30일 동안 유효합니다.',
+  date: '2026-11-12',
+};
 
 export const SAMPLE_VALUES: Readonly<Record<string, FormValues>> = {
   'power-of-attorney': {
@@ -48,17 +78,39 @@ export const SAMPLE_VALUES: Readonly<Record<string, FormValues>> = {
     date: '2026-10-27',
     to: '○○ 주식회사 대표이사',
   },
+  quotation: QUOTE_SAMPLE,
+  'transaction-statement': QUOTE_SAMPLE,
 };
+
+/**
+ * QUOTE1112: the widest quotation that still builds (every line and total under 100억 in every VAT mode): every text
+ * field at maxLength in the widest glyph, and the item grid's widest cells — 999,999.99 (수량), 9,999,999,999 (단가),
+ * an 8,000,000,000 line (10-digit 공급가액, 800,000,000 세액) — in all ITEM_ROWS rows.
+ */
+export function quoteMaxValues(spec: FormSpec, rows: number, vat: string): FormValues {
+  const out = allMaxValues(spec);
+  for (let n = 1; n <= rows; n++) {
+    const [qty, price] = n === 1 ? ['999999.99', '1'] : n === 2 ? ['0.01', '9999999999'] : n === 3 ? ['1', '8000000000'] : ['1', '1'];
+    out[`i${n}Qty`] = qty!;
+    out[`i${n}Price`] = price!;
+  }
+  out.vat = vat;
+  return out;
+}
 
 const WIDE = '가';
 
 /** The longest document text of each kind: an amount of 12 digits (its 한글 the longest), a number of 3 + 2 digits. */
-const MAX_OF: Partial<Record<FormSpec['fields'][number]['kind'], string>> = { date: '2026-12-31', amount: '999999999999', number: '999.99' };
+const MAX_OF: Partial<Record<FormSpec['fields'][number]['kind'], string>> = { date: '2026-12-31', amount: '999999999999', number: '999.99', quantity: '999999.99' };
 
 /** Every field at maxLength (multiline: one line; dates, amounts and numbers at their longest). */
 export function allMaxValues(spec: FormSpec): FormValues {
   const out: FormValues = {};
-  for (const f of spec.fields) out[f.id] = MAX_OF[f.kind] ?? WIDE.repeat(f.maxLength);
+  for (const f of spec.fields) {
+    if (f.kind === 'choice') out[f.id] = f.options?.[0]?.value ?? '';
+    else if (f.kind === 'amount' && f.maxDigits !== undefined) out[f.id] = '9'.repeat(f.maxDigits);
+    else out[f.id] = MAX_OF[f.kind] ?? WIDE.repeat(f.maxLength);
+  }
   return out;
 }
 
@@ -81,3 +133,10 @@ export function allMaxLines(spec: FormSpec, lineLength: number): FormValues {
 }
 
 export const LINE_LENGTHS: readonly number[] = Array.from({ length: 26 }, (_, i) => 15 + i);
+
+/** QUOTE1112: a made-up red seal picture (PNG, w × h) for the sealed builds. */
+export function sealPng(w = 120, h = 100): { bytes: Uint8Array; w: number; h: number; ext: 'png' } {
+  const rgba = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i++) rgba.set([200, 20, 20, 255], i * 4);
+  return { bytes: pngRgba(w, h, rgba), w, h, ext: 'png' };
+}

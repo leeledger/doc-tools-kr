@@ -4994,3 +4994,132 @@ Status: DONE (gates below; Richard review pending). Review request: handoff/REVI
 
 ### SEARCH1031 review round 3 Should Fix (2026-11-01)
 - power-of-attorney.spec setup check now polls that 위임장 만들기 ends at the screen bottom (the old `|| hidden` check always passed). 4/4 on chromium, webkit, mobile-safari, mobile-chrome.
+
+## QUOTE1112 (design) — 견적서·거래명세서 만들기 (Arch, 2026-11-12) — status BRIEFED
+- Brief: handoff/ARCHITECT-BRIEF-QUOTE1112.md (= handoff/ARCHITECT-BRIEF.md; the CONTENT1021 brief it replaces is already archived as ARCHITECT-BRIEF-CONTENT1021.md, byte-identical). Worktree wt/quote1112, branch quote1112, base origin/main 052cd49.
+- Research basis: reports/growth/tool-scout-2026-11-01.md (origin/scout/2026-11-01) rank #2 — Naver keyword tool 2026-10-27: 견적서양식 13,040 + 거래명세서양식 8,370 /mo, PC 71–74 %, recurring weekly use. 이력서 (#1) deferred: 사람인/잡코리아 dominate; HWP photo was unverified. Fresh Naver volumes NOT re-fetched today: main Chrome 9333 is down after a Windows restart and the new profile has no Naver login (owner O3).
+- Usage basis: reports/growth/2026-46.md (증명사진 495/793 successes); the form tools (위임장, 차용증, 사직서) share the FORM1020 engine — reused and extended, not forked.
+- Sources fetched by Arch 2026-11-12: handoff/sources/quote1112/vat-law.txt — 부가가치세법 [시행 2026. 1. 2.] [법률 제21065호], lsiSeq 276117: 제30조 「부가가치세의 세율은 10퍼센트로 한다.」, 제29조①③, 제31조, 제32조①. DRF lawSearch OC=test failed verbatim 「사용자 정보 검증에 실패하였습니다.」; ids taken from https://www.law.go.kr/법령/부가가치세법.
+- Probes (rhwp 0.8.6, Node): probe-q1/q1b/q1c/q1d. insertPicture inline and in a cell: ok, content loss 0, reload keeps the image, reload 1 page. 7-col grid up to 20 rows + two label tables = 1 page with short text; all-max wrapping text = 2 pages in memory but 1 after reload → Bob's A1 must find the cause; gate is the in-memory count.
+- Decisions locked (Q1–Q18 in the brief): slug /quotation/, prefix qt, specs quotation + transaction-statement sharing one field list (page radio picks); engine gains quantity + choice kinds, amount allowZero/maxDigits, an items block (7 columns, 10 rows, 합계 row), computed slots, signLine mark/seal, an optional seal picture; BigInt ledger (line = floor(q×p), 별도 tax = floor(supply/10), 포함 tax = floor(line/11), 없음 tax 0; line-level, totals = sums); 10-digit (under 100억) cap; 「일금 …원정 (…원)」 via own amountHangul; never a 세금계산서 (plain line + 홈택스 link); seal from a file or from /stamp-maker/ via the existing sign-handoff (read once, removed); affiliate on the result only (LinkPrice signgate, Coupang cp-stamp fallback); tool page runtime-cached; guide in Step C.
+- Escalated (non-blocking): O4 — saving 공급자 details on the device for next time would need local storage of values (today's rule: none). Default no.
+- Known Gaps added: 세금계산서/영수증; Excel/DOCX/HWPX; 보관용 2-up; side-by-side party boxes; 단위/per-row 비고/할인; >10 rows; 등록번호 format check; saved 공급자 details (O4); /en/ twin; seal from /stamp-signature/.
+
+## QUOTE1112 build (Bob, 2026-11-12)
+
+### A1 — probe: widths and the memory/reload page split — Status: DONE
+- handoff/sources/quote1112/probe-a1.mjs + probe-a1.out.txt (rhwp 0.8.6, Node 26.13, the probes' fake measureTextWidth).
+- Root cause of q1/q1b's 「2 pages in memory, 1 after reload」: the reloaded document does not paginate a treat-as-char
+  table at all. Proof (probe-a1 §3): a 40-row grid of 2-line cells is 2 pages in memory (89/73 text runs per page) and
+  1 page after reload with all 162 runs on page 0; in §2 the reloaded grid's bbox is 1,721 px tall on a 1,122.5 px A4
+  page and still answers pageCount 1. So the reload count is not a layout check; the in-memory count is the real one
+  (and the PDF path renders the in-memory document). Gate stays: in-memory pages = 1.
+- Wrapping is what grows the grid: amount cells wrap in q1b's 6,400 HU column (15-char amounts) and every wrapped
+  item line adds ~19.8 px (§5: 8 rows 1-line items 206 px, 2-line 364 px).
+- Cell padding: rhwp's default cell padding is 510 HU left/right (getCellProperties). setCellProperties
+  {paddingLeft, paddingRight, applyInnerMargin: true} works and is kept after reload (scratch check, then §6). With 140 HU
+  the one-line minimum widths are: 번호 2,207 · 999,999.99 5,306 · 9,999,999,999 6,725 · 999,999,999 5,859 ·
+  공급가액 4,149 · 9 Hangul 9,001 · 4 Hangul 4,149.
+- Widths chosen (grid cells padded 140 HU left/right, 41,952 in all): 번호 2,400 · 품명 9,200 · 규격 4,252 · 수량 5,700 ·
+  단가 7,100 · 공급가액 7,100 · 세액 6,200 (5–9 % over each one-line minimum; 세액's widest value is 999,999,999 because a
+  total stops at 10 digits). §6: 10 rows of one-line items (9 Hangul 품명, 4 Hangul 규격) = 1 page in memory; 2-line items
+  do not fit even at 8 rows. So item text must stay on one line in the worst case: the final lengths are set in A3 by the
+  real-engine all-max matrix (logged there).
+
+### A2 — engine: quantity, choice, amount allowZero/maxDigits, items block, computed slots, seal; ledger.ts — Status: DONE
+- src/lib/form/spec.ts: kinds `quantity` and `choice` (options 2–4, value/label/doc), amount `allowZero` / `maxDigits`,
+  block `items {rows, vatField, colWidths[7], rowHeight}` (home of i{n}Name/Spec/Qty/Price and the vat choice;
+  itemFieldIds), computed slots `{=totalHangul|totalDigits|vatNote}` (COMPUTED_SLOTS), signLine `mark` / `seal`. Lint
+  covers each (only on the right kind, option count/uniqueness, items widths and item kinds, vatField a choice, slots
+  only with an items block and only known names, one sealed sign line, mark not empty).
+- src/lib/form/values.ts: normalizeQuantity (NFKC, commas/spaces dropped, ≤ 6 digits + ≤ 2 decimals, 0 allowed, written
+  plainly), fieldProblem quantity (7+ digits tooBig, else number), normalizeAmount(raw, maxDigits, allowZero),
+  normalizeChoice (unknown → first option; also for a non-string), docText quantity grouped / choice its option doc.
+  Fixed on the way: `numeric(raw, '')` would have sliced everything (endsWith('') is true) — guarded.
+- src/lib/form/ledger.ts (own code, BigInt): exactly Q5 (line = floor(q×p/100); 별도 floor(supply/10); 포함
+  floor(line/11) and supply = line − tax; 없음 tax 0 and empty cells; compaction; pair; tooBig past 10 digits).
+- src/lib/form/build.ts: buildForm(doc, spec, values, extras?: {seal}) — a spec whose ledger has a problem is not built
+  (HwpError export; the page blocks first); item grid built in step 2 (header, rows, 합계 row merged over 번호…단가),
+  cells padded ITEM_CELL_PAD = 140 HU; computed slots filled in planParagraphs (trailing space trimmed only in a
+  paragraph with computed slots, so POA/loan/resign text is unchanged); seal = insertPicture inline at the end of the
+  sealed sign line, in place of the mark, 4,252 HU on the long side (sealSize). FormDocument gains insertPicture.
+- Tests: tests/unit/form-ledger.test.ts (values, lint, ledger incl. the brief's three cases, 2,000 random 포함 rows,
+  exact past 2^53). form-build / form-values / loan-note / resignation-letter rerun: green.
+
+### A3 — specs 견적서 / 거래명세서 + 1-page matrix — Status: DONE
+- src/data/forms/quotation.ts: QUOTATION + TRANSACTION_STATEMENT share QUOTE_FIELDS (reference-equal); differ in title
+  (「견 적 서」/「거 래 명 세 서」 20 pt), closing line, fileBase. QUOTE_HWP = true. Order: title · 공급받는자 table ·
+  공급자 table · amount line (Q6) · item grid · 비고 table (no section, 3 presets) · closing · date · sign line
+  「공급자  {ceo}  (인)」 with seal. Label tables [5,000 · 8,000 · 28,952] HU (28,952 keeps 60-char 주소 at 3 lines).
+- Decided (Q7 cut, logged): **ITEM_ROWS = 8, 품명 18, 규격 8** instead of 10 rows. Real-engine all-max matrix: 10 rows fit
+  1 page only with 품명 9 / 규격 4 (one line each in the widest glyph); 10/12/4 and 10/10/5 → 2 pages; 9/18/8 → 2;
+  8/20/8 and 8/18/10 → 2 (the third line); 8/18/8 → 1 page in all 36 cases. 18-character 품명 (「사무용 의자 (메시,
+  팔걸이)」) is worth more to a seller than rows 9–10; the brief allows the cut to 8. rhwp layout uses its own metrics
+  (the worker's measure counter), so the Node count is the browser's.
+- 수량 field maxLength 12, 단가 16 (room for commas/원 before normalizing), 단가 allowZero + maxDigits 10.
+- tests/unit/quotation.test.ts: lint/registration/shared fields; the specs differ only in title + closing; no
+  세금계산서/공식/법정/효력 in the documents; sample 별도 = 704,000 (일금 칠십만사천원정); 포함/없음 lines; blank room;
+  seal replaces 「(인)」; sealSize; ledger problems not built; real rhwp matrix 2 specs × blank/sample/all-max × 3 modes ×
+  seal on/off = 36 builds, each 1 page in memory, loss 0, no page shift, every docLabel, paragraph and grid cell drawn,
+  sealed reload draws an `<image>`.
+- tests/helpers/form-samples.ts: QUOTE_SAMPLE (made-up ○○상사 / 홍길동, for both ids), quoteMaxValues (widest values
+  under 100억 in every mode), sealPng; allMaxValues honours maxDigits and choice.
+- scripts/forms/hancom-check.mjs: specs with an items block get blank / sample / all-max (quoteMaxValues) / sealed, and
+  their expected 한글 text = docLabels + every paragraph + every grid cell. This PC: 「SKIP: 한글 not installed (built 20
+  files in Node)」, no rhwp failure → owner O1 still to run at the 한글 PC.
+
+### B1 + B2 — /quotation/ page, totals box, seal, 도장 만들기 「견적서에 찍기」, registration — Status: DONE_WITH_CONCERNS
+- Picked up mid-build (the previous builder ran out of usage after A3; its uncommitted page work reviewed against the
+  brief and kept). Concerns: O1 (한글 with a sealed file) and O2 (phones) stay owner-only; the shared form controller now
+  has little headroom (below).
+- Page src/pages/quotation/index.astro + src/tools/quotation/{config,copy,controller,entry,items,seal}.ts on the generic
+  form tool: FormTool.astro gains `specs` (the 「만들 서류」 radio, 견적서 checked) and group `items` (rows 「품목 n」,
+  3 shown, 「품목 줄 더하기」 up to ITEM_ROWS = 8, the rows' error line, the live totals box); fields split out to
+  src/components/FormField.astro (+ quantity and choice kinds; POA/loan/resign markup unchanged, see the diff below).
+  The form controller gains `hooks` (spec, input, check, reset, seal) so the quotation parts stay in its own chunk;
+  radios read as their checked value and reset to `defaultChecked`; file names follow the built spec.
+- Totals box = lib/form/ledger on the page's normalized values, the same code the worker runs (e2e: box = PDF text =
+  HWP text in 별도/포함/없음). Pair / 100억 problems block the build and name the row.
+- Seal (Q9): PNG/JPG sniffed by bytes, ≤ 2 MB (SEAL_MAX_BYTES = 2 MiB), decoded and re-encoded as PNG ≤ 600 px; the
+  controller transfers a fresh copy per build; the worker accepts only a PNG of sane size (lib/form/seal.ts sealExtras,
+  else built without a seal). /stamp-maker/ 「견적서에 찍기」 → sign-handoff sendToQuotation (same keys, from
+  stamp-maker; HANDOFF_FAILED_QUOTE line) → /quotation/ starts its controller at once, reads once and removes.
+  check-dist allows sessionStorage in /quotation/ scripts only next to the docttak:sign-png key.
+- Usage (Q11): a filled build sends `start o=doc v=quotation|transaction-statement` (instead of build=filled), a blank
+  one build=blank; download format as the other form tools. Decision: the enum rides the start event (the build
+  start), never a value or whether a seal was used (cloud usage spec).
+- Chain FLOW quotation = [pdf-sign, pdf-edit, pdf-compress]: decided over the brief's pdf-merge because pdf-merge
+  cannot receive a hand-off (the other form tools' row). Related links: /stamp-maker/ and /loan-note/ → /quotation/.
+- Affiliate: TOOL_LP quotation {signgate, lp-signgate}, Coupang fallback cp-stamp, TOOL_LEAD stamp-signature;
+  check-dist LP_PAGES / COUPANG_LP_OFF_PAGES 1 each; e2e site + affiliate specs: 0 on load, the group last in the result.
+- Registration: tools.ts (5 FAQs, numbers from the spec), og.json, HOME_DESC_ORDER after resignation-letter, synonyms
+  (견적서·거래명세서·거래명세표), usage TOOLS/labels/FORM_DOCS, bgcloud LOCAL_SCOPE_RE, gen-sw NOT_PRECACHED + sw
+  RUNTIME_PAGES, lighthouserc, qa:visual, docs/COPY.md, tool-facts (11 refs), tool note 2,000+ with 제30조 / 제29조③ /
+  제32조① quoted from handoff/sources/quote1112/vat-law.txt (unit-checked verbatim). Test lists and counts extended
+  (site, polish, affiliate e2e; postbuild, bgcloud, polish unit).
+- Budget fix (root cause, measured): the A2 engine (quantity/choice normalizers) and the B1 hooks put the shared form
+  controller over the POA/loan/resign 8.4 KB lazy budget in the GA-on build of tests/unit/ga.test.ts (loan-note 8.4 >
+  8.4 KB; dist-bgcloud 8,601 of 8,601.6 B). Budget not raised; the shared code trimmed instead: the seal hook hands a
+  ready message, file names computed once per build, radios reset to defaultChecked, fieldProblem one path for
+  amount/quantity, the quantity regex literal. Shared chunk 4,326 → 4,251 B gzip; GA-on build loan-note 8,526 /
+  8,601.6 B (75 B headroom), resign 8,476, POA 8,291. The next engine change must shrink this chunk first.
+- Numbers (this PC, Node 26): /quotation/ initial 11.0 KB default / 12.6 production flags (budget 15.1), controller
+  11.5 / 11.5 (budget 13.8 = measured + 20 %). Glyphs (Q12): 0 new core or late characters vs main (uiCharSets diff of
+  this tree and the main checkout); core 618 / 619 production, preload 92.4 / 92.6 of 92.66 KB, late-800 7.8 / 8 KB.
+  Precache (Q13): 411.9 KB default, 422.3 KB production flags / 450 (/quotation/ runtime-cached; nothing moved).
+- POA / loan / resign dist HTML vs the main checkout's dist (hashes normalized): only the menu entry for /quotation/
+  (and loan-note's new related link, the main dist being a cloud build with 배경 지우기/영문주소 in its menu); form markup
+  identical.
+- Tests fixed on the way: quotation-page unit restored `window` correctly and typed SEAL_COPY; the 없음 e2e asserted
+  「not 1,000」, which 11,000 contains: now asserts the row ends at its 공급가액 (empty 세액 cells).
+- Gates: npm run check 0/0 (14 hints) · vitest full 2,569/2,569 (117 files) · builds default and production flags check-dist OK ·
+  e2e chromium: quotation 9/9, stamp-maker + loan + resign + POA + site + affiliate + polish + pdf-sign 261 passed,
+  hwp-to-pdf + hwp-viewer + hwpx-to-hwp + hubs + search 103 passed, cloud-chromium usage 40 passed · regress:hwp
+  --fixtures-only 10/10 all pass · check:licenses OK · check:quotes --exact on the quotation note: 3 quotes verbatim (law.go.kr
+  200; the full run stalled on jlpt.or.kr UNREACHABLE from this PC, not ours) · commits f798e6b, 02937a7, 239f6d2. Not run here: firefox/webkit/mobile projects and LHCI (CI),
+  forms:hancom with 한글 (O1).
+- Known Gaps (QUOTE1112): Excel/DOCX/HWPX output; 2-up 보관용 page; 단위/per-row 비고 columns; more than 8 rows; 등록번호
+  format check; saving 공급자 details (O4); /en/ twin; seal from /stamp-signature/.
+- Tool note: 「100억을 넘으면」 → 「100억 원 이상이면」 (the ledger refuses 11 digits, so exactly 100억 too). The in-tool
+  line keeps the brief's 「100억 원 넘는 금액은 만들 수 없어요」 (Arch may want 「100억 원 이상」 there as well).
+- 2026-11-12 QUOTE1112 deploy 1: Richard 1 Must Fix (100억 copy) + 3 Should Fix fixed in 5b9062a by orchestrator; check 0 errors, vitest 2569/2569, build+check-dist OK, quotation e2e 9/9. PR next.

@@ -70,10 +70,14 @@ async function loadModules() {
     stdin: {
       contents: [
         "export { buildForm } from './src/lib/form/build.ts';",
-        "export { normalizeValues, docText } from './src/lib/form/values.ts';",
+        "export { normalizeValues } from './src/lib/form/values.ts';",
+        "export { docText } from './src/lib/form/doc-text.ts';",
         "export { FORM_SPECS } from './src/data/forms/index.ts';",
+        "export { homeFields as itemFieldIds } from './src/lib/form/spec.ts';",
         "export { exportHwp } from './src/lib/hwp/export-hwp.ts';",
-        "export { SAMPLE_VALUES, allMaxValues, allMaxLines } from './tests/helpers/form-samples.ts';",
+        "export { SAMPLE_VALUES, allMaxValues, allMaxLines, quoteMaxValues, sealPng } from './tests/helpers/form-samples.ts';",
+        "export { planParagraphs, itemGrid } from './src/lib/form/build.ts';",
+        "export { specLedger } from './src/lib/form/ledger.ts';",
       ].join('\n'),
       resolveDir: ROOT,
       loader: 'ts',
@@ -100,16 +104,35 @@ async function loadModules() {
   return { ...m, Doc: rhwp.HwpDocument };
 }
 
-/** What 한글's text must contain for `spec` filled with `values`. */
-function expected(m, spec, values) {
+/**
+ * What 한글's text must contain for `spec` filled with `values`. QUOTE1112: a form with an items block also needs every
+ * paragraph (the amount line, the closing line, the sign line) and every grid cell; its item fields and the VAT choice
+ * are checked through those, not through docText.
+ */
+function expected(m, spec, values, sealed = false) {
   const out = [];
+  const items = spec.blocks.find((b) => b.type === 'items');
+  const homes = new Set(items ? m.itemFieldIds(items) : []);
   for (const f of spec.fields) {
     if (f.docLabel) out.push(f.docLabel);
+    if (homes.has(f.id)) continue;
     const d = m.docText(f, values[f.id] ?? '');
     if (d.trim()) out.push(d);
   }
   for (const b of spec.blocks) if (b.type === 'table' && b.docSection) out.push(b.docSection);
+  if (items) {
+    for (const p of m.planParagraphs(spec, values, sealed)) if (p.text.trim()) out.push(p.text);
+    for (const row of m.itemGrid(items, m.specLedger(spec, values))) for (const c of row) if (c.trim()) out.push(c);
+  }
   return out;
+}
+
+/** The cases per spec: a form with an items block (QUOTE1112) has its own all-max (under 100억) and a sealed sample. */
+function casesOf(m, spec) {
+  const items = spec.blocks.find((b) => b.type === 'items');
+  const sample = m.SAMPLE_VALUES[spec.id] ?? {};
+  if (!items) return [['blank', {}], ['sample', sample], ['all-max', m.allMaxValues(spec)], ['all-max-lines-25', m.allMaxLines(spec, 25)]];
+  return [['blank', {}], ['sample', sample], ['all-max', m.quoteMaxValues(spec, items.rows, 'separate')], ['sealed', sample, true]];
 }
 
 async function main() {
@@ -131,20 +154,14 @@ async function main() {
   const failures = [];
   const files = [];
   for (const spec of Object.values(m.FORM_SPECS)) {
-    const cases = [
-      ['blank', {}],
-      ['sample', m.SAMPLE_VALUES[spec.id] ?? {}],
-      ['all-max', m.allMaxValues(spec)],
-      ['all-max-lines-25', m.allMaxLines(spec, 25)],
-    ];
-    for (const [name, raw] of cases) {
+    for (const [name, raw, sealed] of casesOf(m, spec)) {
       const values = m.normalizeValues(spec, raw);
       const doc = m.Doc.createEmpty();
-      const pages = m.buildForm(doc, spec, values);
+      const pages = m.buildForm(doc, spec, values, sealed ? { seal: m.sealPng() } : {});
       const r = m.exportHwp(doc, m.Doc);
       const file = join(OUT, `${spec.id}-${name}.hwp`);
       writeFileSync(file, r.bytes);
-      files.push({ spec, name, values, file, pages, losses: r.losses });
+      files.push({ spec, name, values, sealed: !!sealed, file, pages, losses: r.losses });
       if (pages !== 1) failures.push(`${spec.id} ${name}: rhwp ${pages} pages`);
       if (r.losses) failures.push(`${spec.id} ${name}: rhwp reports ${r.losses} losses`);
     }
@@ -159,7 +176,7 @@ async function main() {
     const r = openInHancom(f.file, f.file.replace(/\.hwp$/, '.hancom.pdf'));
     version ||= r.version;
     const text = flat(r.text);
-    const missing = expected(m, f.spec, f.values).filter((s) => !text.includes(flat(s)));
+    const missing = expected(m, f.spec, f.values, f.sealed).filter((s) => !text.includes(flat(s)));
     const ok = r.open && r.pages === 1 && !missing.length;
     console.log(`${ok ? 'PASS' : 'FAIL'} ${f.spec.id} ${f.name}:${r.error ? ` ${r.error};` : ''} open=${r.open} 한글 pages=${r.pages} rhwp pages=${f.pages} bytes=${readFileSync(f.file).length}${missing.length ? ` missing: ${missing.map((s) => s.slice(0, 20)).join(' | ')}` : ''}`);
     if (!ok) failures.push(`${f.spec.id} ${f.name}`);

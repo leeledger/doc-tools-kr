@@ -1,7 +1,7 @@
 // 제휴 링크 (briefs handoff/ARCHITECT-BRIEF-LP1028.md Build Order 8 and handoff/ARCHITECT-BRIEF-AFF1029.md Build Order 7;
 // Coupang on result screens only, owner 2026-10-28): in the default build (LinkPrice and Coupang on, as production) each
 // result screen shows one disclosed group only once there is a result: LinkPrice on /pdf-sign/, /stamp-maker/,
-// /char-count/, /resignation-letter/, /loan-note/, /english-name/ and the /id-photo/ presets of ID_PHOTO_LP; Coupang on the
+// /char-count/, /resignation-letter/, /quotation/, /loan-note/, /english-name/ and the /id-photo/ presets of ID_PHOTO_LP; Coupang on the
 // other /id-photo/ presets, /power-of-attorney/, /id-copy/ and /pdf-edit/. Attributes only: no link is followed, and the
 // no-upload fixture sees no new request on load or reveal.
 import type { Locator, Page } from '@playwright/test';
@@ -134,6 +134,19 @@ test('resignation-letter: the 숨고 group is the last part of the result, hidde
   await expect(page.locator('#rs-tool')).toHaveAttribute('data-state', 'ready');
   await expectLp(page.locator('#rs-result'), LP_COPY.careerRs, ['lp-soomgo']);
   expect(await page.evaluate(() => document.getElementById('rs-result')!.lastElementChild!.classList.contains('out-links'))).toBe(true);
+});
+
+test('quotation (QUOTE1112 Q14): the 공동인증서 group is the last part of the result, hidden before it', async ({ page }) => {
+  await gotoReady(page, '/quotation/');
+  const block = page.locator('#qt-result .out-links');
+  await expect(block).toHaveCount(1);
+  await expect(block).toBeHidden();
+  await page.locator('#qt-blank').click();
+  await expect(page.locator('#qt-tool')).toHaveAttribute('data-state', /^(ready|error)$/, { timeout: 180_000 });
+  await expect(page.locator('#qt-tool')).toHaveAttribute('data-state', 'ready');
+  await expectLp(page.locator('#qt-result'), LP_COPY.signgate, ['lp-signgate']);
+  await expect(page.locator('a[href^="https://link.coupang.com/"]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.getElementById('qt-result')!.lastElementChild!.classList.contains('out-links'))).toBe(true);
 });
 
 test('stamp-maker: the 공동인증서 group shows once a style is picked, not before', async ({ page }) => {

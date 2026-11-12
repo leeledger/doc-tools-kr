@@ -67,9 +67,11 @@ export const EN_DIRS = ['i18n/', 'pages/en/'];
 export const SYSTEM_FONT_PATHS = ['pages/about/', 'pages/contact/', 'data/about.ts', 'components/SiteSearch.astro', 'lib/search/', 'pages/search/'];
 /**
  * LOAN1022 L-D3: files whose text is document text only (drawn in the HWP/PDF faces, never in the UI font): in neither
- * set (paths relative to src/). The 금액 한글 digits and places (일 … 구, 십 백 천, 만 억 조).
+ * set (paths relative to src/). The 금액 한글 digits and places (일 … 구, 십 백 천, 만 억 조). QUOTE1112 Q12: the form
+ * builder too (the sign mark, the item grid's header and 합 계, the 부가세 note; its only other strings are English
+ * error details that are never shown), and the values' document text (lib/form/doc-text.ts, split out of values.ts).
  */
-export const DOC_TEXT_PATHS = ['lib/form/amount.ts'];
+export const DOC_TEXT_PATHS = ['lib/form/amount.ts', 'lib/form/build.ts', 'lib/form/doc-text.ts'];
 /** Punctuation used in generated UI strings (progress, separators, quotes). */
 const FORCED = '…·—–‘’“”©';
 

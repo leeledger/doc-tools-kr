@@ -90,6 +90,8 @@ export const TOOL_AFF: Partial<Record<UsageTool, readonly AffDest[]>> = {
   'jpg-to-pdf': ['cp-mfp', 'cp-scanner'],
   // AFF1029 A2/A3/A6 (loan-note: the fallback while LinkPrice is off).
   'loan-note': ['cp-stamp'],
+  // QUOTE1112 Q14: the 견적서 result's Coupang fallback while LinkPrice is off.
+  quotation: ['cp-stamp'],
   'power-of-attorney': ['cp-stamp'],
   'id-copy': ['cp-mfp'],
   'pdf-edit': ['cp-mfp'],
@@ -124,6 +126,7 @@ export const TOOL_LEAD: Partial<Record<UsageTool, AffLead>> = {
   'pdf-split': 'pdf',
   'jpg-to-pdf': 'scan',
   'loan-note': 'stamp-signature',
+  quotation: 'stamp-signature',
   'power-of-attorney': 'stamp-signature',
   'id-copy': 'pdf',
   'pdf-edit': 'pdf',
@@ -228,6 +231,7 @@ export const TOOL_LP: Partial<Record<UsageTool, { lead: LpLead; dests: readonly 
   'char-count': { lead: 'careerCc', dests: ['lp-soomgo'] },
   'resignation-letter': { lead: 'careerRs', dests: ['lp-soomgo'] },
   'loan-note': { lead: 'credit', dests: ['lp-nice', 'lp-allcredit'] },
+  quotation: { lead: 'signgate', dests: ['lp-signgate'] },
   'english-name': { lead: 'travel', dests: ['lp-agoda', 'lp-klook'] },
 };
 

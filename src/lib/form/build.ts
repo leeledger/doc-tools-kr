@@ -13,11 +13,17 @@
 //   3. applyCharFormat {fontSize: pt×100, bold} only on paragraphs before the first table: on a paragraph after a
 //      table it breaks the page early (a 10 pt format there gave 3 pages). Everything after the first table is body
 //      text (spec lint).
+//   4. QUOTE1112: the seal picture, insertPicture inline at the end of its sign line (probe q1b: ok, loss 0, the
+//      reloaded file draws it). The item grid is built in step 2 like a table, its cells padded ITEM_CELL_PAD.
 // Any call that throws or answers ok:false → HwpError export (memory → oom). One code path.
 import { classifyParseError } from '../hwp/engine';
 import { HwpError } from '../hwp/errors';
-import { BODY_PT, type Align, type FormBlock, type FormField, type FormSpec, type FormValues } from './spec';
-import { BLANK_DATE, docText } from './values';
+import { BODY_PT, ITEM_COLUMNS, computedSlotIds, type Align, type ComputedSlot, type FormBlock, type FormField, type FormSpec, type FormValues } from './spec';
+import { BLANK_DATE } from './values';
+import { docText, groupQuantity } from './doc-text';
+import { amountHangul } from './amount';
+import { groupDigits } from './digits';
+import { specLedger, type Ledger } from './ledger';
 
 export { BLANK_DATE };
 
@@ -34,6 +40,7 @@ export interface FormDocument {
   applyParaFormatInCell(sec: number, para: number, control: number, cell: number, cellPara: number, propsJson: string): string;
   setCellProperties(sec: number, para: number, control: number, cell: number, json: string): string;
   mergeTableCells(sec: number, para: number, control: number, startRow: number, startCol: number, endRow: number, endCol: number): string;
+  insertPicture(sec: number, para: number, offset: number, cellPathJson: string, data: Uint8Array, width: number, height: number, naturalWidthPx: number, naturalHeightPx: number, extension: string, description: string): string;
   pageCount(): number;
 }
 
@@ -41,12 +48,40 @@ export interface FormDocument {
 export const BLANK_SLOT = ' '.repeat(16);
 export const SIGN_MARK = '(서명 또는 인)';
 
+/** QUOTE1112 Q4: a seal picture (PNG bytes, its pixel size), placed by a sign line with `seal`. */
+export interface FormSeal {
+  bytes: Uint8Array;
+  w: number;
+  h: number;
+  ext: 'png';
+}
+
+export interface FormExtras {
+  seal?: FormSeal;
+}
+
+/** The seal's box: 15 mm on the long side (HWPUNIT), the aspect kept. */
+export const SEAL_HU = 4252;
+
+/**
+ * Item grid cells: 140 HWPUNIT left and right padding (rhwp's default is 510). With it every widest amount stays on
+ * one line in the grid's columns (handoff/sources/quote1112/probe-a1.out.txt §6).
+ */
+export const ITEM_CELL_PAD = 140;
+
+/** The item grid's header and its 합계 label (document text). */
+export const ITEM_HEADER = ['번호', '품명', '규격', '수량', '단가', '공급가액', '세액'] as const;
+export const ITEM_TOTAL = '합 계';
+
 interface ParaPlan {
   text: string;
   align: Align;
   size: number;
   bold: boolean;
   table?: Extract<FormBlock, { type: 'table' }>;
+  items?: Extract<FormBlock, { type: 'items' }>;
+  /** A sign line with `seal`: the build's seal picture goes at the end of `text` (which then has no mark). */
+  seal?: boolean;
 }
 
 type Json = Record<string, unknown>;
@@ -85,9 +120,22 @@ const docOf = (spec: FormSpec, values: FormValues, id: string): string => {
   return field ? docText(field, values[id] ?? '') : (values[id] ?? '');
 };
 
-/** The document's paragraphs, top to bottom. */
-export function planParagraphs(spec: FormSpec, values: FormValues): ParaPlan[] {
-  const fill = (doc: string): string => doc.replace(/\{([A-Za-z][\w-]*)\}/g, (_, id: string) => docOf(spec, values, id) || BLANK_SLOT);
+/** QUOTE1112 Q6: the computed slots' text (a ledger with no priced row: the blank form's room to write by hand). */
+export function computedText(ledger: Ledger | null, slot: ComputedSlot): string {
+  if (!ledger?.priced) return slot === 'vatNote' ? '' : BLANK_SLOT;
+  if (slot === 'totalHangul') return amountHangul(ledger.total);
+  if (slot === 'totalDigits') return groupDigits(ledger.total);
+  return ledger.mode === 'none' ? '(부가세 없음)' : '(부가세 포함)';
+}
+
+/** The document's paragraphs, top to bottom. `sealed`: the build has a seal picture. */
+export function planParagraphs(spec: FormSpec, values: FormValues, sealed = false): ParaPlan[] {
+  const ledger = specLedger(spec, values);
+  const fill = (doc: string): string => {
+    const s = doc.replace(/\{([A-Za-z][\w-]*)\}/g, (_, id: string) => docOf(spec, values, id) || BLANK_SLOT);
+    // An empty vatNote at the end leaves no trailing space.
+    return computedSlotIds(doc).length ? s.replace(/\{=([A-Za-z][\w-]*)\}/g, (_, id: ComputedSlot) => computedText(ledger, id)).trimEnd() : s;
+  };
   const out: ParaPlan[] = [];
   for (const b of spec.blocks) {
     if (b.type === 'title') out.push({ text: b.doc, align: 'center', size: b.size, bold: true });
@@ -95,11 +143,53 @@ export function planParagraphs(spec: FormSpec, values: FormValues): ParaPlan[] {
       if (b.onlyIf && !values[b.onlyIf]) continue;
       out.push({ text: fill(b.doc), align: b.align ?? 'justify', size: b.size ?? BODY_PT, bold: b.bold ?? false });
     } else if (b.type === 'table') out.push({ text: '', align: 'center', size: BODY_PT, bold: false, table: b });
+    else if (b.type === 'items') out.push({ text: '', align: 'center', size: BODY_PT, bold: false, items: b });
     else if (b.type === 'dateLine') out.push({ text: docOf(spec, values, b.field) || BLANK_DATE, align: b.align ?? 'center', size: BODY_PT, bold: false });
-    else if (b.type === 'signLine') out.push({ text: `${b.docLabel}  ${docOf(spec, values, b.field) || BLANK_SLOT}  ${SIGN_MARK}`, align: b.align ?? 'right', size: BODY_PT, bold: false });
-    else out.push({ text: ' ', align: 'left', size: b.size, bold: false });
+    else if (b.type === 'signLine') {
+      const seal = sealed && b.seal === true;
+      const head = `${b.docLabel}  ${docOf(spec, values, b.field) || BLANK_SLOT}  `;
+      out.push({ text: seal ? head : head + (b.mark ?? SIGN_MARK), align: b.align ?? 'right', size: BODY_PT, bold: false, ...(seal ? { seal: true } : {}) });
+    } else out.push({ text: ' ', align: 'left', size: b.size, bold: false });
   }
   return out;
+}
+
+/** The text of every grid cell, row by row (header, the item rows, the 합계 row); the alignment per column. */
+export function itemGrid(block: Extract<FormBlock, { type: 'items' }>, ledger: Ledger): string[][] {
+  const rows: string[][] = [[...ITEM_HEADER]];
+  for (let i = 0; i < block.rows; i++) {
+    const r = ledger.rows[i];
+    rows.push(r ? [String(r.n), r.name, r.spec, r.qty ? groupQuantity(r.qty) : '', r.price ? groupDigits(r.price) : '', r.supply ? groupDigits(r.supply) : '', r.tax ? groupDigits(r.tax) : ''] : ['', '', '', '', '', '', '']);
+  }
+  rows.push([ITEM_TOTAL, '', '', '', '', ledger.supply ? groupDigits(ledger.supply) : '', ledger.tax ? groupDigits(ledger.tax) : '']);
+  return rows;
+}
+
+const ITEM_ALIGN: readonly Align[] = ['center', 'left', 'left', 'right', 'right', 'right', 'right'];
+
+/** Builds the item grid `b` in the empty paragraph `paraIdx` (cells filled before the 합계 row's merge). */
+function buildItems(doc: FormDocument, b: Extract<FormBlock, { type: 'items' }>, ledger: Ledger, paraIdx: number): void {
+  const grid = itemGrid(b, ledger);
+  const cols = ITEM_COLUMNS;
+  const created = call('createTableEx', () => doc.createTableEx(JSON.stringify({ sectionIdx: SEC, paraIdx, charOffset: 0, rowCount: grid.length, colCount: cols, treatAsChar: true, colWidths: b.colWidths })));
+  const para = num(created, 'paraIdx', 'createTableEx');
+  const control = num(created, 'controlIdx', 'createTableEx');
+  const cell = JSON.stringify({ height: b.rowHeight, paddingLeft: ITEM_CELL_PAD, paddingRight: ITEM_CELL_PAD, applyInnerMargin: true });
+  grid.forEach((row, r) => {
+    row.forEach((t, c) => {
+      const i = r * cols + c;
+      call('setCellProperties', () => doc.setCellProperties(SEC, para, control, i, cell));
+      const head = r === 0 || r === grid.length - 1;
+      if (t) cellText(doc, para, control, i, t, head && c < 5 ? 'center' : ITEM_ALIGN[c]);
+    });
+  });
+  call('mergeTableCells', () => doc.mergeTableCells(SEC, para, control, grid.length - 1, 0, grid.length - 1, 4));
+}
+
+/** The seal's size in HWPUNIT: SEAL_HU on the long side, the aspect kept. */
+export function sealSize(w: number, h: number): { width: number; height: number } {
+  const long = Math.max(w, h);
+  return { width: Math.max(1, Math.round((SEAL_HU * w) / long)), height: Math.max(1, Math.round((SEAL_HU * h) / long)) };
 }
 
 /** Writes `text` (lines split by "\n") into a cell, one cell paragraph per line, with `align`. */
@@ -138,10 +228,16 @@ function buildTable(doc: FormDocument, spec: FormSpec, values: FormValues, t: Ex
   }
 }
 
-/** Builds `spec` with `values` into `doc` (an HwpDocument.createEmpty()). Returns rhwp's page count. */
-export function buildForm(doc: FormDocument, spec: FormSpec, values: FormValues): number {
+/**
+ * Builds `spec` with `values` into `doc` (an HwpDocument.createEmpty()). Returns rhwp's page count (the in-memory
+ * one: a reloaded file does not paginate tables, QUOTE1112 A1). A spec with an items block whose ledger has a problem
+ * is not built (the page blocks it first). extras.seal goes at the end of the sign line with `seal`, as step 4.
+ */
+export function buildForm(doc: FormDocument, spec: FormSpec, values: FormValues, extras: FormExtras = {}): number {
+  const ledger = specLedger(spec, values);
+  if (ledger?.problems.length) throw new HwpError('export', `ledger: ${ledger.problems.map((p) => p.kind).join(',')}`);
   call('createBlankDocument', () => doc.createBlankDocument());
-  const plan = planParagraphs(spec, values);
+  const plan = planParagraphs(spec, values, !!extras.seal);
   const ends: number[] = [];
   plan.forEach((p, i) => {
     const end = p.text ? num(call('insertText', () => doc.insertText(SEC, i, 0, p.text)), 'charOffset', 'insertText') : 0;
@@ -154,13 +250,22 @@ export function buildForm(doc: FormDocument, spec: FormSpec, values: FormValues)
   });
   plan.forEach((p, i) => {
     if (p.table) buildTable(doc, spec, values, p.table, i);
+    if (p.items && ledger) buildItems(doc, p.items, ledger, i);
   });
-  const firstTable = plan.findIndex((p) => p.table);
+  const firstTable = plan.findIndex((p) => p.table || p.items);
   plan.forEach((p, i) => {
-    if (p.table || (p.size === BODY_PT && !p.bold)) return;
+    if (p.table || p.items || (p.size === BODY_PT && !p.bold)) return;
     if (firstTable >= 0 && i > firstTable) throw new HwpError('export', 'a character shape after a table');
     if (ends[i]! > 0) call('applyCharFormat', () => doc.applyCharFormat(SEC, i, 0, ends[i]!, JSON.stringify({ fontSize: Math.round(p.size * 100), bold: p.bold })));
   });
+  const seal = extras.seal;
+  if (seal) {
+    const at = plan.findIndex((p) => p.seal);
+    if (at >= 0) {
+      const { width, height } = sealSize(seal.w, seal.h);
+      call('insertPicture', () => doc.insertPicture(SEC, at, ends[at]!, '', seal.bytes, width, height, seal.w, seal.h, seal.ext, '직인'));
+    }
+  }
   let pages: number;
   try {
     pages = doc.pageCount();
